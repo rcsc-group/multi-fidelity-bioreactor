@@ -141,6 +141,7 @@ FILE * fp_stats, * fp_norm, * fp_stats2, * fp_stats3;
 
 // Key physical and dimensionless parameters (computed in main)
 double U0, Ub, Re_w, Re_a, We_w, Fr, rhor, mur, Pe_tracer_1, Pe_tracer_2, Pe_oxy_1, Pe_oxy_2, Th, Th_d, Th_2d, U_bio, w_bio, w_bio_st, T_per_st, T_bio, Th_max2, D_in_non, U_in_non, t_change_st, t_mix_st;
+BioreactorParams params;  // global so all events (acceleration, init) can access it
 int MINLEVEL, MAXLEVEL;    // Mesh refinement levels
 
 
@@ -150,7 +151,7 @@ int MINLEVEL, MAXLEVEL;    // Mesh refinement levels
 int main(int argc, char * argv[]){
 
   if (argc < 2) { fprintf(stderr, "Usage: BioReactor params.json\n"); return 1; }
-  BioreactorParams params = params_read(argv[1]);
+  params = params_read(argv[1]);
 
   // Derive legacy scalars from params for the rest of main() unchanged.
   // omega_b (rad/s) and theta_max[0] (deg) replace the old ANGLE/RPM CLI args.
@@ -404,29 +405,43 @@ event oxygen (t=t_mix; i++){
 #if ACCELERATION
 event acceleration(i++)
 {
-  // Regular oscillation (post transition)  
-  if (t >= t_change_st){
-    Th    = Th_max*sin(w_bio_st*t);                     // Angle
-    Th_d  = w_bio_st*Th_max*cos(w_bio_st*t);            // Angular velocity
-    Th_2d = -w_bio_st*w_bio_st*Th_max*sin(w_bio_st*t);  // Angular acceleration
+  // Linear amplitude ramp over t_change_st to avoid impulsive start
+  double ramp = (t < t_change_st) ? t / t_change_st : 1.0;
+
+  // Multi-harmonic angular forcing: θ(t) = Σ_k θ_k · sin(k·ω_b·t + φ_k)
+  // k is harmonic number (dimensionless); k·w_bio_st is the k-th frequency in sim time
+  Th = 0;  Th_d = 0;  Th_2d = 0;
+  for (int k = 1; k <= params.n_harmonics; k++) {
+    double wk  = k * w_bio_st;
+    double Ak  = params.theta_max[k-1] * pi / 180.;  // deg → rad
+    double phk = params.phi_angular[k-1];
+    Th    +=  Ak * sin(wk*t + phk);
+    Th_d  +=  Ak * wk * cos(wk*t + phk);
+    Th_2d += -Ak * wk*wk * sin(wk*t + phk);
+  }
+  Th *= ramp;  Th_d *= ramp;  Th_2d *= ramp;
+
+  // Multi-harmonic horizontal forcing: x(t) = Σ_k A_k · sin(k·ω_h·t + ψ_k)
+  // x_acc is the non-inertial horizontal body force (dimensionless: A/L_bio · (k·w_h_st)²)
+  double x_acc = 0.;
+  if (params.omega_h > 0.) {
+    double w_h_st = params.omega_h * T_bio;  // ω_h non-dimensionalized
+    for (int k = 1; k <= params.n_harmonics; k++) {
+      double wk_h = k * w_h_st;
+      x_acc += -(params.amplitude_h[k-1] / L_piv) * sq(wk_h)
+               * sin(wk_h*t + params.phi_horizontal[k-1]);
+    }
+    x_acc *= ramp;
   }
 
-  // Transition phase (smooth ramp-up)
-  else if (t < t_change_st){
-    Th_max2 = (Th_max-0)/(t_change_st-0)*t;
-    Th    = Th_max2*sin(w_bio_st*t);
-    Th_d  = w_bio_st*Th_max2*cos(w_bio_st*t);
-    Th_2d = -w_bio_st*w_bio_st*Th_max2*sin(w_bio_st*t);
-  }
-   
   face vector av = a;
-  // 1st: gravitational force, 2nd: Coriolis force
-  // 3rd: centrifugal force,   4th: azimuthal force, 5th: no traslational force
+  // av.x: gravity + Coriolis + centrifugal + Euler (azimuthal) + horizontal translation
+  // av.y: gravity + Coriolis + centrifugal + Euler (azimuthal)
   foreach_face(x)
-    av.x[] = -sin(Th)/(Fr*Fr) + 2*Th_d*(u.y[] + u.y[-1,0])*0.5	\
-    + Th_d*Th_d*(x+L_piv*sin(Th)) + Th_2d*(y+L_piv*cos(Th));
+    av.x[] = -sin(Th)/(Fr*Fr) + 2*Th_d*(u.y[] + u.y[-1,0])*0.5
+    + Th_d*Th_d*(x+L_piv*sin(Th)) + Th_2d*(y+L_piv*cos(Th)) + x_acc;
   foreach_face(y)
-    av.y[] = -cos(Th)/(Fr*Fr) - 2*Th_d*(u.x[] + u.x[0,-1])*0.5	\
+    av.y[] = -cos(Th)/(Fr*Fr) - 2*Th_d*(u.x[] + u.x[0,-1])*0.5
     + Th_d*Th_d*(y+L_piv*cos(Th)) - Th_2d*(x+L_piv*sin(Th));
   a = av;
 }

@@ -117,7 +117,7 @@ run: $(EXECUTABLE)
 ifndef PARAMS
 	$(error PARAMS is not set. Usage: make run PARAMS=runs/my_run/params.json)
 endif
-	$(EXECUTABLE) $(PARAMS)
+	cd $(dir $(PARAMS)) && $(abspath $(EXECUTABLE)) $(notdir $(PARAMS))
 
 .PHONY: submit
 submit:
