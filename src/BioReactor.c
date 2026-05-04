@@ -27,6 +27,9 @@
 #define _USE_MATH_DEFINES
 #include <math.h>
 
+// JSON parameter reader (jsmn-based); replaces argv[1..3] with params.json
+#include "params_read.h"
+
 // Flags to control the inclusion of features (set to 1 = enable, 0 = disable)
 #define EMBED            1   // Enable embedded boundary for solid geometry
 #define CONTACT          0   // Enable contact angle boundary condition
@@ -49,10 +52,10 @@
 #define DUMP             0   // Save dump output
 #define NORMCAL          1   // Calculate statistics (norms)
 #define FIGURES          1   // Save figures
-#define VIDEOS           1   // Save videos
+#define VIDEOS           0   // Videos: enable only for diagnostics; not needed in optimization loop
 
 // Output options
-#define OUT_FILES         1   // Output full fields
+#define OUT_FILES         0   // Full-field dumps: enable only for diagnostics; output dir created by simulate.py
 #define OUT_SPECIFIC_TIME 0   // Output data at specific time ranges
 #define OUT_INTERFACE     1   // Save interface geometry
 
@@ -61,7 +64,7 @@
 // ================================================================== //
 //                       SIMULATION SETUP                             //
 // ================================================================== //
-const double NN      = 64;        // Grid resolution (number of cells in each direction)
+int NN;  // Grid resolution: set from params.fidelity as 1<<fidelity in main()
 const double t_change= 30;        // Time at which regular rocking motion is established (in seconds)
 const double th_cont = 90;        // Contact angle for wetting conditions (degrees)
 double t_mix,t_dump;              // Time at which tracer is released, and dump file is saved (computed later)
@@ -146,9 +149,17 @@ int MINLEVEL, MAXLEVEL;    // Mesh refinement levels
 // ================================================================== //
 int main(int argc, char * argv[]){
 
-  double L_bio = atof(argv[1]);  // Reference length scale (m); the length of bioreactor
-  double ANGLE = atof(argv[2]);  // Rocking angle (degrees)
-  double RPM   = atof(argv[3]);  // Rocking frequency ([)RPM)
+  if (argc < 2) { fprintf(stderr, "Usage: BioReactor params.json\n"); return 1; }
+  BioreactorParams params = params_read(argv[1]);
+
+  // Derive legacy scalars from params for the rest of main() unchanged.
+  // omega_b (rad/s) and theta_max[0] (deg) replace the old ANGLE/RPM CLI args.
+  // Multi-harmonic forcing and superellipse geometry will consume params directly
+  // once the acceleration event and init event are extended (next steps).
+  double L_bio = 0.25;                      // Default bag length (m); TODO: add to params.json
+  double ANGLE = params.theta_max[0];       // Fundamental rocking amplitude (degrees)
+  double RPM   = params.omega_b * 60. / (2.*M_PI);  // Convert rad/s → RPM
+  NN = 1 << params.fidelity;               // fidelity → grid cells per side (4→16, 7→128, 9→512)
 
   L0 = 1. [0];  // [0] declares space dimensionless: simulation is fully non-dimensionalized (scaled by L_bio, T_bio, U_bio); Basilisk dimensional analysis requires annotations on literals, not variables
   DT = HUGE [0];  // [0] declares time dimensionless; older qcc omitted the dimensional(u.x[]==Delta/DT) constraint from centered.h that now makes this required
@@ -159,8 +170,8 @@ int main(int argc, char * argv[]){
 #endif
 
 #if AMR
-  MINLEVEL = 7;
-  MAXLEVEL = 9;
+  MAXLEVEL = params.fidelity;
+  MINLEVEL = params.fidelity - 2;
   double F_MAX = 1e-6;    // Refinement threshold for volume fraction
   double U_MAX = 0;       // Refinement threshold for velocity refinement
 #endif

@@ -6,3 +6,7 @@ __pycache__/
 *.pyc
 .venv/
 *.egg-info/
+*.dat
+*.ppm
+*.png
+*.mp4
