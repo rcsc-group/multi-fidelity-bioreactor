@@ -95,6 +95,7 @@ double LL = 1.0;        // Width of the reactor domain (non-dimensionalized by L
 double Ly = 0.286;      // Height of the reactor domain (non-dimensionalized by L_bio)
 double y_init = 0.0;    // Initial liquid height (defines volume fraction f = 1 below this height)
 double L_piv  = 0.143;  // Distance from center to pivot point (rocking axis), affects acceleration computation
+double L_bio  = 0.25;   // Characteristic length (bag half-length, m); global so events can non-dimensionalize with it
 
 
 // ================================================================== //
@@ -157,7 +158,7 @@ int main(int argc, char * argv[]){
   // omega_b (rad/s) and theta_max[0] (deg) replace the old ANGLE/RPM CLI args.
   // Multi-harmonic forcing and superellipse geometry will consume params directly
   // once the acceleration event and init event are extended (next steps).
-  double L_bio = 0.25;                      // Default bag length (m); TODO: add to params.json
+  // L_bio is a global (default 0.25 m); TODO: wire to params.json
   double ANGLE = params.theta_max[0];       // Fundamental rocking amplitude (degrees)
   double RPM   = params.omega_b * 60. / (2.*M_PI);  // Convert rad/s → RPM
   NN = 1 << params.fidelity;               // fidelity → grid cells per side (4→16, 7→128, 9→512)
@@ -428,7 +429,7 @@ event acceleration(i++)
     double w_h_st = params.omega_h * T_bio;  // ω_h non-dimensionalized
     for (int k = 1; k <= params.n_harmonics; k++) {
       double wk_h = k * w_h_st;
-      x_acc += -(params.amplitude_h[k-1] / L_piv) * sq(wk_h)
+      x_acc += -(params.amplitude_h[k-1] / L_bio) * sq(wk_h)
                * sin(wk_h*t + params.phi_horizontal[k-1]);
     }
     x_acc *= ramp;
