@@ -1,0 +1,8 @@
+runs/
+surrogate/
+experiments/results.csv
+build/
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/

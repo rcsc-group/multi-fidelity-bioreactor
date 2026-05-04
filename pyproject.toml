@@ -1,0 +1,19 @@
+[project]
+name = "bioreactor-opt"
+version = "0.1.0"
+description = "Multi-fidelity Bayesian optimization suite for rocking bioreactor conditions"
+requires-python = ">=3.11"
+dependencies = [
+    "numpy",
+    "scipy",
+    "pandas",
+    "pyyaml",
+    "mfbml",        # bessagroup/mfbml — MF-BML surrogate
+    "pytest",
+]
+
+[tool.uv]
+dev-dependencies = [
+    "pytest",
+    "pytest-cov",
+]
