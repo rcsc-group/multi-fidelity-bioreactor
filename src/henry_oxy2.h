@@ -19,12 +19,16 @@ event defaults (i = 0)
 {
   for (scalar s in stracers) {
 #if EMBED
-    s.refine = s.prolongation = refine_embed_linear;
+    // Basilisk >= 2025: set_prolongation() replaces the combined assignment
+    // s.refine = s.prolongation = ... used in the original henry_oxy2.h.
+    s.refine = refine_embed_linear;
+    set_prolongation (s, refine_embed_linear);
 #else
     s.refine  = refine_linear;
 #endif
-    s.restriction = restriction_volume_average;
-    s.dirty = true;
+    // Basilisk >= 2025: set_restriction() replaces direct attribute assignment;
+    // s.dirty was removed from _Attributes (cache invalidation is now internal).
+    set_restriction (s, restriction_volume_average);
   }
 }
 #endif // TREE

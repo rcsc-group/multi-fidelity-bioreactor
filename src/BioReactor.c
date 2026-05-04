@@ -150,7 +150,8 @@ int main(int argc, char * argv[]){
   double ANGLE = atof(argv[2]);  // Rocking angle (degrees)
   double RPM   = atof(argv[3]);  // Rocking frequency ([)RPM)
 
-  L0 = LL;                  // Total domain length
+  L0 = 1. [0];  // [0] declares space dimensionless: simulation is fully non-dimensionalized (scaled by L_bio, T_bio, U_bio); Basilisk dimensional analysis requires annotations on literals, not variables
+  DT = HUGE [0];  // [0] declares time dimensionless; older qcc omitted the dimensional(u.x[]==Delta/DT) constraint from centered.h that now makes this required
   origin(-L0/2., -L0/2.);   // Set coordinate origin to domain center
 
 #if !AMR

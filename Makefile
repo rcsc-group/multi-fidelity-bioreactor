@@ -1,0 +1,146 @@
+# ────────────────────────────────────────────────────────────────────────────────
+#  Rocking Bioreactor 2D  ◇  Unified Makefile
+# ────────────────────────────────────────────────────────────────────────────────
+#
+#  QUICK START ────────────────────────────────────────────────────────────────
+#    $ make                    # build the simulation executable
+#    $ make run PARAMS=runs/my_run/params.json   # run one configuration
+#
+#  COMMON TASKS ────────────────────────────────────────────────────────────────
+#  1) Build the simulation binary
+#       $ make build
+#
+#     with custom compile-time flags:
+#       $ make build LEVEL=7 DEBUG=1
+#
+#  2) Build and run with a params.json
+#       $ make run PARAMS=runs/my_run/params.json
+#
+#  3) Submit a SLURM job for one params.json
+#       $ make submit PARAMS=runs/my_run/params.json
+#       $ make submit PARAMS=runs/my_run/params.json DRYRUN=1   # dry-run only
+#
+#  HOUSE-KEEPING ───────────────────────────────────────────────────────────────
+#       $ make clean        # remove build artifacts
+#       $ make deepclean    # nuke build/, patched headers, logs
+#
+#  OVERRIDABLE VARIABLES ───────────────────────────────────────────────────────
+#       LEVEL       mesh refinement level (default 8; use 4–5 for quick tests)
+#       DEBUG=1     add -g -O0
+#       DRYRUN=1    print sbatch command without submitting
+#       PARAMS      path to params.json (required for 'run' and 'submit')
+#
+#  ENVIRONMENT ─────────────────────────────────────────────────────────────────
+#       Uses qcc from $BASILISK/.. or ~/scratch/basilisk/src/qcc as fallback.
+#       Set $BASILISK before running, or let the Makefile find the scratch build.
+#
+#  Maintainer: Elvis Aguero    │   Last update: <2026-05-04>
+# ────────────────────────────────────────────────────────────────────────────────
+
+
+# ==========================================================
+#  Locate qcc
+#  Prefer the scratch-built qcc over any spack module because
+#  the spack-installed qcc on OSCAR has a hardcoded dead build-
+#  time path (/tmp/yliu385/spack-stage/…) and cannot find its
+#  own headers.  The scratch build uses the real $BASILISK path.
+# ==========================================================
+SCRATCH_QCC := $(HOME)/scratch/basilisk/src/qcc
+ifneq ($(wildcard $(SCRATCH_QCC)),)
+  QCC := $(SCRATCH_QCC)
+else
+  QCC := $(shell command -v qcc 2>/dev/null)
+  ifeq ($(QCC),)
+    $(error "qcc not found. Build from ~/scratch/basilisk/src or add to PATH.")
+  endif
+endif
+
+# Derive $BASILISK from qcc location if not already set
+ifeq ($(BASILISK),)
+  BASILISK := $(dir $(QCC))
+  export BASILISK
+endif
+
+
+# ==========================================================
+#  Compiler flags
+# ==========================================================
+DEBUG ?= 0
+ifeq ($(DEBUG),1)
+  CFLAGS = -g -O0
+else
+  CFLAGS = -O2
+endif
+CFLAGS += -w -fopenmp -Wall -autolink -lm
+
+UNAME_S := $(shell uname -s)
+ifeq ($(UNAME_S),Darwin)
+  OPENGLIBS = -lfb_tiny -framework OpenGL
+else
+  OPENGLIBS = -lfb_tiny -lGL
+endif
+LDFLAGS = -L$(BASILISK)/gl -lglutils $(OPENGLIBS)
+
+
+# ==========================================================
+#  Paths
+# ==========================================================
+SRC_DIR    = src
+BUILD_DIR  = build
+
+SIM_SRC    := $(SRC_DIR)/BioReactor.c
+EXECUTABLE := $(BUILD_DIR)/BioReactor
+
+SRC_HEADERS := $(wildcard $(SRC_DIR)/*.h)
+
+
+# ==========================================================
+#  Build targets
+# ==========================================================
+.PHONY: all build
+all: build
+
+build: $(EXECUTABLE)
+
+$(EXECUTABLE): $(SIM_SRC) $(SRC_HEADERS)
+	@mkdir -p $(BUILD_DIR)
+	$(QCC) $(CFLAGS) $< -o $@ $(LDFLAGS)
+
+
+# ==========================================================
+#  Run / submit targets
+# ==========================================================
+PARAMS ?=
+
+.PHONY: run
+run: $(EXECUTABLE)
+ifndef PARAMS
+	$(error PARAMS is not set. Usage: make run PARAMS=runs/my_run/params.json)
+endif
+	$(EXECUTABLE) $(PARAMS)
+
+.PHONY: submit
+submit:
+ifndef PARAMS
+	$(error PARAMS is not set. Usage: make submit PARAMS=runs/my_run/params.json)
+endif
+	@RUN_DIR=$$(dirname $(PARAMS)); \
+	mkdir -p $$RUN_DIR logs; \
+	if [ "$(DRYRUN)" = "1" ]; then \
+	    echo "[DRYRUN] sbatch --job-name=BioReactor --export=PARAMS=$(PARAMS) config/slurm_template.sh"; \
+	else \
+	    sbatch --job-name=BioReactor \
+	           --export=PARAMS=$(PARAMS) \
+	           config/slurm_template.sh; \
+	fi
+
+
+# ==========================================================
+#  Clean targets
+# ==========================================================
+.PHONY: clean deepclean
+clean:
+	rm -rf $(BUILD_DIR)
+
+deepclean: clean
+	rm -rf logs runs/*/Data_all runs/*/*.dat
