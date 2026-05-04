@@ -429,7 +429,7 @@ event acceleration(i++)
     double w_h_st = params.omega_h * T_bio;  // ω_h non-dimensionalized
     for (int k = 1; k <= params.n_harmonics; k++) {
       double wk_h = k * w_h_st;
-      x_acc += -(params.amplitude_h[k-1] / L_bio) * sq(wk_h)
+      x_acc += (params.amplitude_h[k-1] / L_bio) * sq(wk_h)
                * sin(wk_h*t + params.phi_horizontal[k-1]);
     }
     x_acc *= ramp;
