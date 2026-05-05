@@ -34,6 +34,7 @@ typedef struct {
   double geometry_b;
   double geometry_n;
   double fill_level;
+  double t_end;                 // simulation end time [s]; default 250.0
 } BioreactorParams;
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -70,6 +71,7 @@ static void tok_array(const char *json, jsmntok_t *tokens, int arr_idx,
 
 static BioreactorParams params_read(const char *path) {
   BioreactorParams p = {0};  // zero-initialise; pads harmonic vectors to 0
+  p.t_end = 250.0;           // default if not present in params.json
 
   FILE *fp = fopen(path, "r");
   if (!fp) {
@@ -108,6 +110,8 @@ static BioreactorParams params_read(const char *path) {
       p.omega_h = tok_double(json, &tokens[++i]);
     else if (jsoneq(json, &tokens[i], "fill_level"))
       p.fill_level = tok_double(json, &tokens[++i]);
+    else if (jsoneq(json, &tokens[i], "t_end"))
+      p.t_end = tok_double(json, &tokens[++i]);
     else if (jsoneq(json, &tokens[i], "theta_max")) {
       tok_array(json, tokens, ++i, p.theta_max, N_MAX);
       i += tokens[i].size;

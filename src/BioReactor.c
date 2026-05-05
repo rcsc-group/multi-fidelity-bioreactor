@@ -69,7 +69,7 @@ const double t_change= 30;        // Time at which regular rocking motion is est
 const double th_cont = 90;        // Contact angle for wetting conditions (degrees)
 double t_mix,t_dump;              // Time at which tracer is released, and dump file is saved (computed later)
 const double nMix_cycle = 80;     // Number of cycles for tracer release (used to compute t_mix)
-const double t_end   = 250.0;     // Final simulation time (simulation time unit)
+double t_end;                      // Final simulation time (simulation time unit); set from params.t_end in main()
 
 // Output time intervals (derived from experimental timing)
 const double dt_file = 0.1519*7;  // Interval for saving data to file
@@ -161,7 +161,8 @@ int main(int argc, char * argv[]){
   // L_bio is a global (default 0.25 m); TODO: wire to params.json
   double ANGLE = params.theta_max[0];       // Fundamental rocking amplitude (degrees)
   double RPM   = params.omega_b * 60. / (2.*M_PI);  // Convert rad/s → RPM
-  NN = 1 << params.fidelity;               // fidelity → grid cells per side (4→16, 7→128, 9→512)
+  NN    = 1 << params.fidelity;             // fidelity → grid cells per side (4→16, 7→128, 9→512)
+  t_end = params.t_end;                    // non-dimensional sim time; 1 unit = T_bio seconds
 
   L0 = 1. [0];  // [0] declares space dimensionless: simulation is fully non-dimensionalized (scaled by L_bio, T_bio, U_bio); Basilisk dimensional analysis requires annotations on literals, not variables
   DT = HUGE [0];  // [0] declares time dimensionless; older qcc omitted the dimensional(u.x[]==Delta/DT) constraint from centered.h that now makes this required

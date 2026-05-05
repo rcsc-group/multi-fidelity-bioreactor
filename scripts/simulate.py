@@ -1,0 +1,187 @@
+"""Run a BioReactor simulation locally or via SLURM.
+
+Public API
+----------
+run_local(params, project_root, runs_root)
+    Write params.json, execute binary directly, return run_dir Path.
+
+submit_slurm(params, project_root, runs_root, walltime, **sbatch_kwargs)
+    Write params.json, submit via sbatch, return SLURM job_id string.
+
+wait_for_result(run_dir, timeout, poll)
+    Block until results.json appears in run_dir; return its contents as dict.
+    Raises TimeoutError if the file does not appear within `timeout` seconds.
+
+Typical HPC workflow
+--------------------
+    run_dir  = run_local(params, project_root)      # sets up directory
+    job_id   = submit_slurm(params, project_root)   # submit to SLURM
+    results  = wait_for_result(run_dir)              # block until done
+    kLa      = results["kLa_25"]
+"""
+from __future__ import annotations
+
+import json
+import re
+import subprocess
+import time
+from pathlib import Path
+
+_DEFAULT_TEMPLATE = Path(__file__).parents[1] / "config" / "slurm_template.sh"
+_DEFAULT_BINARY   = Path(__file__).parents[1] / "build" / "BioReactor"
+
+
+def _prepare_run_dir(params: dict, runs_root: Path) -> Path:
+    """Create run directory and write params.json; return run_dir."""
+    run_id  = params.get("run_id", "unnamed")
+    run_dir = runs_root / run_id
+    run_dir.mkdir(parents=True, exist_ok=True)
+    (run_dir / "params.json").write_text(json.dumps(params, indent=2))
+    return run_dir
+
+
+def run_local(
+    params: dict,
+    project_root: Path | str | None = None,
+    runs_root: Path | str | None = None,
+    timeout: int = 86400,
+) -> Path:
+    """Execute BioReactor binary directly (blocks until completion or timeout).
+
+    Parameters
+    ----------
+    params       : BioReactor parameter dict (will be written as params.json)
+    project_root : repo root; defaults to two directories above this file
+    runs_root    : parent directory for run dirs; defaults to project_root/runs
+    timeout      : subprocess timeout in seconds (default 24 h)
+
+    Returns
+    -------
+    Path of the run directory.
+    """
+    project_root = Path(project_root) if project_root else Path(__file__).parents[1]
+    runs_root    = Path(runs_root) if runs_root else project_root / "runs"
+    binary       = project_root / "build" / "BioReactor"
+
+    if not binary.exists():
+        raise FileNotFoundError(f"BioReactor binary not found at {binary}; run 'make build'")
+
+    run_dir = _prepare_run_dir(params, runs_root)
+    try:
+        subprocess.run(
+            [str(binary.resolve()), "params.json"],
+            cwd=run_dir, check=False, timeout=timeout,
+        )
+    except subprocess.TimeoutExpired:
+        pass  # long-running sim; caller can check output files
+    return run_dir
+
+
+def submit_slurm(
+    params: dict,
+    project_root: Path | str | None = None,
+    runs_root: Path | str | None = None,
+    walltime: str = "04:00:00",
+    template: Path | str | None = None,
+    mem: str = "12G",
+    cpus: int = 4,
+) -> str:
+    """Write params.json and submit a SLURM job via sbatch.
+
+    Parameters
+    ----------
+    params       : BioReactor parameter dict
+    project_root : repo root; defaults to two directories above this file
+    runs_root    : parent directory for run dirs; defaults to project_root/runs
+    walltime     : SLURM wall-clock limit (HH:MM:SS)
+    template     : path to SLURM script; defaults to config/slurm_template.sh
+    mem          : memory request (e.g. "12G")
+    cpus         : CPUs per task
+
+    Returns
+    -------
+    SLURM job ID as a string (e.g. "123456").
+    """
+    project_root = Path(project_root) if project_root else Path(__file__).parents[1]
+    runs_root    = Path(runs_root) if runs_root else project_root / "runs"
+    template     = Path(template) if template else _DEFAULT_TEMPLATE
+
+    run_dir      = _prepare_run_dir(params, runs_root)
+    params_path  = (run_dir / "params.json").resolve()
+    logs_dir     = project_root / "logs"
+    logs_dir.mkdir(exist_ok=True)
+
+    cmd = [
+        "sbatch",
+        f"--time={walltime}",
+        f"--mem={mem}",
+        f"--cpus-per-task={cpus}",
+        f"--export=PARAMS={params_path}",
+        str(template.resolve()),
+    ]
+    result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+    # sbatch stdout: "Submitted batch job 123456"
+    match = re.search(r"(\d+)", result.stdout)
+    if not match:
+        raise RuntimeError(f"Could not parse job ID from sbatch output: {result.stdout!r}")
+    return match.group(1)
+
+
+def wait_for_result(
+    run_dir: Path | str,
+    timeout: float = 7200,
+    poll: float = 30,
+) -> dict:
+    """Block until results.json appears in run_dir; return its contents.
+
+    Parameters
+    ----------
+    run_dir : completed run directory (contains params.json)
+    timeout : maximum seconds to wait before raising TimeoutError
+    poll    : polling interval in seconds
+
+    Returns
+    -------
+    dict with kLa_10, kLa_25, kLa_50.
+
+    Raises
+    ------
+    TimeoutError if results.json does not appear within `timeout` seconds.
+    """
+    run_dir     = Path(run_dir)
+    results_file = run_dir / "results.json"
+    deadline    = time.monotonic() + timeout
+
+    while time.monotonic() < deadline:
+        if results_file.exists():
+            return json.loads(results_file.read_text())
+        time.sleep(poll)
+
+    raise TimeoutError(
+        f"results.json not found in {run_dir} after {timeout:.0f}s"
+    )
+
+
+if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Run BioReactor simulation")
+    parser.add_argument("params", help="Path to params.json")
+    parser.add_argument("--slurm", action="store_true", help="Submit via SLURM instead of running locally")
+    parser.add_argument("--walltime", default="04:00:00")
+    parser.add_argument("--wait", action="store_true", help="Wait for results.json after SLURM submission")
+    args = parser.parse_args()
+
+    p = json.loads(Path(args.params).read_text())
+    root = Path(__file__).parents[1]
+
+    if args.slurm:
+        job_id = submit_slurm(p, project_root=root, walltime=args.walltime)
+        print(f"Submitted job {job_id}")
+        if args.wait:
+            run_dir = root / "runs" / p.get("run_id", "unnamed")
+            results = wait_for_result(run_dir)
+            print(json.dumps(results, indent=2))
+    else:
+        run_dir = run_local(p, project_root=root)
+        print(f"Completed: {run_dir}")
