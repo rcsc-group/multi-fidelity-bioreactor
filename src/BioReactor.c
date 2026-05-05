@@ -51,7 +51,7 @@
 #define CFL_COND         0   // Use custom CFL number
 #define DUMP             0   // Save dump output
 #define NORMCAL          1   // Calculate statistics (norms)
-#define FIGURES          1   // Save figures
+#define FIGURES          0   // Figures: enable only for diagnostics; output dirs created by simulate.py
 #define VIDEOS           0   // Videos: enable only for diagnostics; not needed in optimization loop
 
 // Output options
@@ -177,6 +177,9 @@ int main(int argc, char * argv[]){
   double F_MAX = 1e-6;    // Refinement threshold for volume fraction
   double U_MAX = 0;       // Refinement threshold for velocity refinement
 #endif
+
+  // Bag geometry from params (must precede anything that uses Ly or H_bio)
+  Ly = params.geometry_b / L_bio;  // dimensionless half-height; overwrites hardcoded 0.286
 
   // Rocking motion parameters
   R_tr  = 0.0084/L_bio;    // Tracer radius (scaled with domain)
@@ -315,15 +318,22 @@ int main(int argc, char * argv[]){
 // ================================================================== //
 event init (t = 0)
 {
-  // Set volume fraction field (f): f = 1 -> liquid, f = 0 -> air
-  // y_init determines liquid level. Below y_init = liquid; above = gas.
-  fraction (f,y_init-y);
+  // Parametric bag geometry (dimensionless semi-axes)
+  double a_nd = params.geometry_a / L_bio;
+  double b_nd = params.geometry_b / L_bio;  // == Ly
 
-  // Solid geometry setup (if using embedded boundaries)
+  // Fill level: liquid occupies fill_level fraction of bag height, measured from bottom
+  double y_fill = b_nd * (2.*params.fill_level - 1.);
+  fraction(f, y_fill - y);
+
+  // Superellipse solid: |x/a|^n + |y/b|^n = 1
+  // n >= 8 → perfect rectangle (avoids pow() singularities at sharp corners)
   #if EMBED
-  // Create a horizontal solid plate centered at y = 0
-  // `intersection()` defines the region between y = -0.5*Ly and y = 0.5*Ly
-    solid (cs,fs, intersection( -(y-0.5*Ly), -(-y-0.5*Ly) ) );
+  if (params.geometry_n >= 8.)
+    solid(cs, fs, intersection(a_nd - fabs(x), b_nd - fabs(y)));
+  else
+    solid(cs, fs, 1. - pow(fabs(x/a_nd), params.geometry_n)
+                     - pow(fabs(y/b_nd), params.geometry_n));
   #endif
 }
 
