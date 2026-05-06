@@ -71,7 +71,8 @@ static void tok_array(const char *json, jsmntok_t *tokens, int arr_idx,
 
 static BioreactorParams params_read(const char *path) {
   BioreactorParams p = {0};  // zero-initialise; pads harmonic vectors to 0
-  p.t_end = 250.0;           // default if not present in params.json
+  p.n_harmonics = 1;         // default: single sinusoid (pure rocking)
+  p.t_end       = 250.0;     // default if not present in params.json
 
   FILE *fp = fopen(path, "r");
   if (!fp) {
