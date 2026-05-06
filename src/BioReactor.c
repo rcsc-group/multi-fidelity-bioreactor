@@ -65,7 +65,7 @@
 //                       SIMULATION SETUP                             //
 // ================================================================== //
 int NN;  // Grid resolution: set from params.fidelity as 1<<fidelity in main()
-const double t_change= 30;        // Time at which regular rocking motion is established (in seconds)
+#define N_RAMP_CYCLES 3            // Ramp duration in rocking cycles; t_change_st = N_RAMP_CYCLES * T_per_st
 const double th_cont = 90;        // Contact angle for wetting conditions (degrees)
 double t_mix,t_dump;              // Time at which tracer is released, and dump file is saved (computed later)
 const double nMix_cycle = 80;     // Number of cycles for tracer release (used to compute t_mix)
@@ -199,7 +199,7 @@ int main(int argc, char * argv[]){
   w_bio_st = w_bio*T_bio;           // Dimensionless angular velocity
   T_per_st = T_per/T_bio;           // Dimensionless period
   U0     = w_bio_st*Th_max;         // Initial rotational velocity
-  t_change_st = t_change/T_bio;     // When system reaches regular motion (simulation time)
+  t_change_st = N_RAMP_CYCLES * T_per_st;  // ramp over 3 cycles regardless of omega_b
   t_mix      = T_per_st*nMix_cycle; // Time to release tracers (simulation time)
   t_dump = t_mix;                   // Time to dump data (simulation time)
   t_spec_init= t_mix;                       // Initial time to save data in the specific range
