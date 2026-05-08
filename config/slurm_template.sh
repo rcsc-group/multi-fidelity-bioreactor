@@ -21,9 +21,11 @@ if [ -z "${PARAMS:-}" ]; then
     exit 1
 fi
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+# Derive project root from PARAMS (always an absolute path to runs/<id>/params.json).
+# Do NOT use BASH_SOURCE — SLURM stages the script under /var/spool/slurmd, so
+# dirname(BASH_SOURCE) resolves to the SLURM daemon's directory, not the repo.
 RUN_DIR="$(dirname "$PARAMS")"
+PROJECT_ROOT="$(dirname "$(dirname "$RUN_DIR")")"
 
 echo "Project root : $PROJECT_ROOT"
 echo "Run dir      : $RUN_DIR"
