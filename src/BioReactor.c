@@ -79,7 +79,7 @@ double t_spec_init, t_spec_end;   // Specific output window for focused data ext
 const double dt_spec = 0.000530525;  // Very high frequency sampling for specific data
 
 const int    i_fig   = 5000;      // Output interval for figures
-const int    i_norm  = 1000;      // Output interval for statistics
+const double t_out   = 0.1;       // Output interval for statistics [non-dim time]
 const double CFL_num = 0.01	;     // CFL number for time-step stability (used only if CFL_COND is enabled)
 const double N_output= 128;       // Resolution for output file if needed
 
@@ -516,7 +516,7 @@ event logstats (t+=0.1; t <= t_end) {
 
 // Compute simulation statistics
 #if NORMCAL
-event normcal (i+=i_norm){
+event normcal (t+=t_out; t<=t_end){
     //timing s = timer_timing (perf.gt, i, perf.tnc, NULL);
 
     scalar ux_liq[],uy_liq[],ux_liq_abs[],omega[],omega_liq[],oxy_liq[],f_liq[],posY[],c_liq[],c1_liq[],c2_liq[],c3_liq[];
