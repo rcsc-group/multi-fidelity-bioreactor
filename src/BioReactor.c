@@ -158,7 +158,7 @@ int main(int argc, char * argv[]){
   // omega_b (rad/s) and theta_max[0] (deg) replace the old ANGLE/RPM CLI args.
   // Multi-harmonic forcing and superellipse geometry will consume params directly
   // once the acceleration event and init event are extended (next steps).
-  // L_bio is a global (default 0.25 m); TODO: wire to params.json
+  L_bio = params.geometry_a;  // bag half-length (m); sets all non-dim scales
   double ANGLE = params.theta_max[0];       // Fundamental rocking amplitude (degrees)
   double RPM   = params.omega_b * 60. / (2.*M_PI);  // Convert rad/s → RPM
   NN    = 1 << params.fidelity;             // fidelity → grid cells per side (4→16, 7→128, 9→512)
