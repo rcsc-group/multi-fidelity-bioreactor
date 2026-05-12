@@ -200,7 +200,7 @@ int main(int argc, char * argv[]){
   T_per_st = T_per/T_bio;           // Dimensionless period
   U0     = w_bio_st*Th_max;         // Initial rotational velocity
   t_change_st = N_RAMP_CYCLES * T_per_st;  // ramp over 3 cycles regardless of omega_b
-  t_mix      = T_per_st*nMix_cycle; // Time to release tracers (simulation time)
+  t_mix      = T_per_st*params.n_mix_cycles; // rocking cycles before tracer/oxygen start (wired from params.json)
   t_dump = t_mix;                   // Time to dump data (simulation time)
   t_spec_init= t_mix;                       // Initial time to save data in the specific range
   t_spec_end = T_per_st*(nMix_cycle+10);    // End time to save data in the specific range

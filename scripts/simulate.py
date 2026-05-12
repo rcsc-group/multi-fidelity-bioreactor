@@ -22,13 +22,50 @@ Typical HPC workflow
 from __future__ import annotations
 
 import json
+import math
 import re
 import subprocess
 import time
+import warnings
 from pathlib import Path
 
 _DEFAULT_TEMPLATE = Path(__file__).parents[1] / "config" / "slurm_template.sh"
 _DEFAULT_BINARY   = Path(__file__).parents[1] / "build" / "BioReactor"
+
+
+def _t_mix_nd(params: dict) -> float:
+    """Compute the non-dim time at which oxygen/tracer transfer starts.
+
+    Mirrors BioReactor.c: t_mix = T_per_st * n_mix_cycles.
+    """
+    omega_b      = params.get("omega_b", 3.93)
+    L            = params.get("geometry", {}).get("a", 0.25)
+    H            = params.get("geometry", {}).get("b", 0.071)
+    th           = math.radians(params.get("theta_max", [7.0])[0])
+    n_mix_cycles = params.get("n_mix_cycles", 80)
+
+    T_per   = 2 * math.pi / omega_b
+    V       = L / 4 * (H + 0.5 * L * math.tan(th))
+    U       = V / (H * 0.5) / T_per
+    T_bio   = L / U
+    T_per_st = T_per / T_bio
+    return T_per_st * n_mix_cycles
+
+
+def _check_t_end_vs_t_mix(params: dict) -> None:
+    """Warn if t_end is set and is less than t_mix — run will produce no kLa data."""
+    t_end = params.get("t_end")
+    if t_end is None:
+        return  # solver default (250) is always > t_mix
+    t_mix = _t_mix_nd(params)
+    if t_end <= t_mix:
+        warnings.warn(
+            f"t_end={t_end:.1f} <= t_mix≈{t_mix:.1f} (n_mix_cycles="
+            f"{params.get('n_mix_cycles', 80)} rocking cycles). "
+            "The run will complete but tr_oxy.dat will be all zeros and kLa will be NaN.",
+            UserWarning,
+            stacklevel=3,
+        )
 
 
 def _prepare_run_dir(params: dict, runs_root: Path) -> Path:
@@ -63,6 +100,7 @@ def run_local(
     runs_root    = Path(runs_root) if runs_root else project_root / "runs"
     binary       = project_root / "build" / "BioReactor"
 
+    _check_t_end_vs_t_mix(params)
     if not binary.exists():
         raise FileNotFoundError(f"BioReactor binary not found at {binary}; run 'make build'")
 
@@ -105,6 +143,7 @@ def submit_slurm(
     project_root = Path(project_root) if project_root else Path(__file__).parents[1]
     runs_root    = Path(runs_root) if runs_root else project_root / "runs"
     template     = Path(template) if template else _DEFAULT_TEMPLATE
+    _check_t_end_vs_t_mix(params)
 
     run_dir      = _prepare_run_dir(params, runs_root)
     params_path  = (run_dir / "params.json").resolve()

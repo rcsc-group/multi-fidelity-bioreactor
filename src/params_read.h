@@ -34,7 +34,8 @@ typedef struct {
   double geometry_b;
   double geometry_n;
   double fill_level;
-  double t_end;                 // simulation end time [s]; default 250.0
+  double t_end;                 // simulation end time [non-dim]; default 250.0
+  int    n_mix_cycles;          // rocking cycles before oxygen/tracer start; default 80
 } BioreactorParams;
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -71,8 +72,9 @@ static void tok_array(const char *json, jsmntok_t *tokens, int arr_idx,
 
 static BioreactorParams params_read(const char *path) {
   BioreactorParams p = {0};  // zero-initialise; pads harmonic vectors to 0
-  p.n_harmonics = 1;         // default: single sinusoid (pure rocking)
-  p.t_end       = 250.0;     // default if not present in params.json
+  p.n_harmonics   = 1;         // default: single sinusoid (pure rocking)
+  p.t_end         = 250.0;    // default if not present in params.json
+  p.n_mix_cycles  = 80;       // default: 80 rocking cycles (upstream hardcoded value)
 
   FILE *fp = fopen(path, "r");
   if (!fp) {
@@ -113,6 +115,8 @@ static BioreactorParams params_read(const char *path) {
       p.fill_level = tok_double(json, &tokens[++i]);
     else if (jsoneq(json, &tokens[i], "t_end"))
       p.t_end = tok_double(json, &tokens[++i]);
+    else if (jsoneq(json, &tokens[i], "n_mix_cycles"))
+      p.n_mix_cycles = tok_int(json, &tokens[++i]);
     else if (jsoneq(json, &tokens[i], "theta_max")) {
       tok_array(json, tokens, ++i, p.theta_max, N_MAX);
       i += tokens[i].size;
