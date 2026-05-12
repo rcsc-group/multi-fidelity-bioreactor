@@ -5,6 +5,8 @@ Input files (in run_dir):
   vol_frac_interf.dat: i t f_liq_sum f_liq_interf posY_max posY_min
 
 C* (dimensionless dissolved O2 saturation) = oxy_liq_sum / f_liq_sum_mean
+  where oxy_liq = f*oxy/(f*alpha+(1-f))  [liquid-phase oxygen, normalised: 1 at sat.]
+  and   f_liq   = f                       [true liquid volume, not (1-cs)*f]
 
 First-order kinetic model:  dC*/dt = kLa (1 - C*)
 Exact solution:             C*(t) = 1 - exp(-kLa * t)

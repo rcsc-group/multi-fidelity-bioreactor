@@ -530,9 +530,19 @@ event normcal (t+=t_out; t<=t_end){
     foreach(){
       ux_liq[]  = u.x[]*f[];
       uy_liq[]  = u.y[]*f[];
-      oxy_liq[] = oxy[]*f[];
+      // BUG (upstream rcsc-group/BioReactor): oxy[]*f[] mixes gas-phase oxygen into
+      // the integral at interface cells, inflating oxy_liq_sum above its physical bound.
+      // FIX: extract only the liquid-phase contribution via Henry's law activity.
+      // oxy[] = a*(f*alpha + (1-f))  where a = gas-equivalent activity.
+      // Liquid-phase concentration (normalised by saturation = alpha) = f*a = f*oxy/(f*alpha+(1-f)).
+      // Result: oxy_liq=0 in pure gas, oxy_liq=1 in pure liquid at saturation.
+      oxy_liq[] = f[]*oxy[]/(f[]*c_oxy_alpha + (1.-f[]) + 1e-10);
       omega_liq[] = omega[]*f[];
-      f_liq[]   =  (1-cs[])*f[];
+      // BUG (upstream): (1-cs[])*f[] is zero everywhere inside the bag (cs=1 in fluid cells),
+      // so statsf2(f_liq).sum ≈ 0.002 (only bag-wall cut cells) instead of ~0.28 (liquid volume).
+      // Dividing oxy_liq_sum by this tiny number pushed C* >> 1 immediately.
+      // FIX: use f[] directly — statsf2(f).sum = true liquid volume via embed-aware dv().
+      f_liq[]   = f[];
       c_liq[]   = c[]*f[];
       ///*
       c1_liq[]  = c1[]*f[];
