@@ -115,6 +115,15 @@ $(BUILD_DIR)/BioReactor-health: $(SIM_SRC) $(SRC_HEADERS)
 	@mkdir -p $(BUILD_DIR)
 	$(QCC) $(CFLAGS) -DDIAGNOSTICS=1 $< -o $@ $(LDFLAGS)
 
+# Video binary: compiled with VIDEOS=1. Produces mp4s in the run directory.
+# Requires a display/OpenGL context; use the SLURM video template (offscreen via Mesa).
+.PHONY: build-video
+build-video: $(BUILD_DIR)/BioReactor-video
+
+$(BUILD_DIR)/BioReactor-video: $(SIM_SRC) $(SRC_HEADERS)
+	@mkdir -p $(BUILD_DIR)
+	$(QCC) $(CFLAGS) -DVIDEOS=1 $< -o $@ $(LDFLAGS)
+
 
 # ==========================================================
 #  Run / submit targets
