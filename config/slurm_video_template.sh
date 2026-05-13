@@ -16,6 +16,13 @@
 
 set -euo pipefail
 
+# ffmpeg is required by Basilisk's save("*.mp4") to encode video frames.
+# imagemagick is required for save("*.gif").
+# Do NOT load the 'basilisk' module — the cluster's qcc is broken; we use the
+# scratch-built binary at build/BioReactor-video which embeds TinyGL (fb_tiny)
+# and has no runtime dependency on libGL or libGLX.
+module load ffmpeg
+
 if [ -z "${PARAMS:-}" ]; then
     echo "ERROR: PARAMS env var not set. Submit with: sbatch --export=PARAMS=<path> $0" >&2
     exit 1
@@ -30,11 +37,9 @@ echo "params.json  : $PARAMS"
 
 mkdir -p "$RUN_DIR" "$PROJECT_ROOT/logs"
 
-# Basilisk's bview uses OSMesa for offscreen rendering on headless nodes.
-# DISPLAY must be unset so bview falls back to the fb_tiny offscreen framebuffer.
-unset DISPLAY
-
 cd "$RUN_DIR"
+# DISPLAY must be unset — fb_tiny renders to a memory buffer (no X server needed).
+unset DISPLAY
 OMP_NUM_THREADS="${SLURM_CPUS_PER_TASK:-4}" \
     "$PROJECT_ROOT/build/BioReactor-video" params.json
 

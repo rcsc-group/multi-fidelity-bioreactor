@@ -122,7 +122,7 @@ build-video: $(BUILD_DIR)/BioReactor-video
 
 $(BUILD_DIR)/BioReactor-video: $(SIM_SRC) $(SRC_HEADERS)
 	@mkdir -p $(BUILD_DIR)
-	$(QCC) $(CFLAGS) -DVIDEOS=1 $< -o $@ $(LDFLAGS)
+	$(QCC) $(CFLAGS) -DVIDEOS=1 $< -o $@ -L$(BASILISK)/gl -lglutils -lfb_tiny
 
 
 # ==========================================================
