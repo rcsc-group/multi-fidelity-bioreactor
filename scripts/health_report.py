@@ -4,16 +4,21 @@ Usage
 -----
     python scripts/health_report.py runs/health_l6/ runs/health_l7/
 
-Prints three KPIs per run:
-  1. VOF mass drift      — (max-min)/mean of f_liq_sum [%]; threshold < 0.1%
-  2. Interface stability — mean f_liq_interf in 2nd half / 1st half;   threshold < 3
-  3. Velocity quasi-steady — mean post-ramp vel_rms in 2nd half / 1st; threshold < 3
+KPIs per run:
+  1. VOF mass drift        — (max-min)/mean of f_liq_sum [%];       threshold < 0.1%
+  2. Interface stability   — f_liq_interf 2nd/1st half mean;        threshold < 3.0
+  3. Velocity quasi-steady — vel_rms 2nd/1st half mean (post-ramp); threshold [0.5, 2.0]
+  4. CFL estimate          — dt * U_max / dx;                        threshold < 0.6
+  5. KE quasi-steady       — KE 2nd/1st half (post-ramp);           threshold [0.5, 2.0]
+  6. Pressure residual     — max mgp.resa from pressure_diag.dat
+                             (only if DIAGNOSTICS=1 binary was used); threshold < 1e-4
 """
 from __future__ import annotations
 
 import argparse
 import json
 import math
+import re
 import sys
 from pathlib import Path
 
@@ -79,7 +84,7 @@ def kpi_interface_stability(vf: np.ndarray) -> tuple[float, str]:
 
 
 def kpi_velocity_steady(normf: np.ndarray, t_ramp: float) -> tuple[float, str]:
-    """Velocity RMS ratio: 2nd half / 1st half of post-ramp run."""
+    """Velocity RMS ratio: 2nd half / 1st half of post-ramp run. Threshold [0.5, 2.0]."""
     t = normf[:, 1]
     vel_rms = np.sqrt(normf[:, 7] ** 2 + normf[:, 11] ** 2)
     post = vel_rms[t > t_ramp]
@@ -87,8 +92,92 @@ def kpi_velocity_steady(normf: np.ndarray, t_ramp: float) -> tuple[float, str]:
         return float("nan"), "SKIP"
     mid = len(post) // 2
     ratio = post[mid:].mean() / (post[:mid].mean() + 1e-30)
-    status = "OK" if ratio < 3.0 else "FAIL"
+    status = "OK" if 0.5 <= ratio <= 2.0 else "FAIL"
     return ratio, status
+
+
+def _parse_logstats(run_dir: Path) -> list[tuple[int, float, float]]:
+    """Parse logstats.dat → list of (i, t, dt) triples.
+
+    Each line has format: 'i: X t: Y dt: Z #Cells: ...'
+    """
+    pattern = re.compile(r"i:\s*(\d+)\s+t:\s*(\S+)\s+dt:\s*(\S+)")
+    result = []
+    for line in (run_dir / "logstats.dat").read_text().splitlines():
+        m = pattern.match(line.strip())
+        if m:
+            result.append((int(m.group(1)), float(m.group(2)), float(m.group(3))))
+    return result
+
+
+def kpi_cfl(
+    logstats: list[tuple[int, float, float]],
+    normf: np.ndarray,
+    fidelity: int,
+) -> tuple[float, str]:
+    """Estimated CFL = dt * U_max / dx. Threshold < 0.6.
+
+    dx = 1/2^fidelity (non-dim uniform grid).
+    U_max = max(|ux_liq_max|, |uy_liq_max|) from normf columns 9 and 13.
+    dt matched from logstats by step index i (both files output at t+=0.1).
+    """
+    dx = 1.0 / (2**fidelity)
+    dt_by_step = {row[0]: row[2] for row in logstats}
+
+    cfl_vals = []
+    for row in normf:
+        step_i = int(row[0])
+        if step_i not in dt_by_step:
+            continue
+        dt = dt_by_step[step_i]
+        u_max = max(abs(row[9]), abs(row[13]))
+        if u_max > 0:
+            cfl_vals.append(dt * u_max / dx)
+
+    if not cfl_vals:
+        return float("nan"), "SKIP"
+
+    cfl_max = float(np.max(cfl_vals))
+    status = "OK" if cfl_max < 0.6 else "FAIL"
+    return cfl_max, status
+
+
+def kpi_kinetic_energy(normf: np.ndarray, t_ramp: float) -> tuple[float, str]:
+    """KE quasi-steady ratio: 2nd/1st half mean post-ramp. Threshold [0.5, 2.0].
+
+    KE ∝ ux_rms² + uy_rms² (V_liq constant by mass conservation).
+    Lower bound catches stagnant flow; upper bound catches blowup.
+    """
+    t = normf[:, 1]
+    ke = 0.5 * (normf[:, 7] ** 2 + normf[:, 11] ** 2)
+    post = ke[t > t_ramp]
+    if len(post) < 4:
+        return float("nan"), "SKIP"
+    mid = len(post) // 2
+    ratio = float(post[mid:].mean() / (post[:mid].mean() + 1e-30))
+    status = "OK" if 0.5 <= ratio <= 2.0 else "FAIL"
+    return ratio, status
+
+
+def kpi_pressure_residual(run_dir: Path) -> tuple[float, str]:
+    """Max pressure Poisson residual from pressure_diag.dat. Threshold < 1e-4.
+
+    Only written by the DIAGNOSTICS=1 build (BioReactor-health).
+    Returns (nan, 'SKIP') if the file is absent.
+    """
+    pdiag = Path(run_dir) / "pressure_diag.dat"
+    if not pdiag.exists():
+        return float("nan"), "SKIP"
+
+    lines = [l for l in pdiag.read_text().splitlines()
+             if l.strip() and not l.strip().startswith("i")]
+    if not lines:
+        return float("nan"), "SKIP"
+
+    rows = np.array([[float(x) for x in l.split()] for l in lines])
+    mgp_resa_max = float(rows[:, 2].max())
+    status = "OK" if mgp_resa_max < 1e-4 else "FAIL"
+    return mgp_resa_max, status
 
 
 # ── report ───────────────────────────────────────────────────────────────────
@@ -119,14 +208,28 @@ def report(run_dir: Path) -> None:
     drift,     drift_status = kpi_mass_drift(vf)
     iface_rat, iface_status = kpi_interface_stability(vf)
     vel_rat,   vel_status   = kpi_velocity_steady(nf, t_ramp)
+    ke_rat,    ke_status    = kpi_kinetic_energy(nf, t_ramp)
+
+    logstats_path = run_dir / "logstats.dat"
+    if logstats_path.exists():
+        logstats = _parse_logstats(run_dir)
+        cfl_max, cfl_status = kpi_cfl(logstats, nf, params.get("fidelity", 8))
+    else:
+        cfl_max, cfl_status = float("nan"), "SKIP"
+
+    resa_max, resa_status = kpi_pressure_residual(run_dir)
 
     print(f"\n{'='*60}")
     print(f"  Run: {run_dir.name}   (fidelity={params.get('fidelity','?')}, "
           f"t_end={params.get('t_end','?')}, rows={rows_vf}, t_final={t_final:.1f})")
     print(f"{'='*60}")
-    print(f"  KPI 1 — VOF mass drift        : {drift:.4f}%   [{drift_status}]  (threshold < 0.1%)")
-    print(f"  KPI 2 — Interface area ratio  : {iface_rat:.3f}      [{iface_status}]  (threshold < 3.0)")
-    print(f"  KPI 3 — Velocity RMS ratio    : {vel_rat:.3f}      [{vel_status}]  (threshold < 3.0)")
+    print(f"  KPI 1 — VOF mass drift        : {drift:.4f}%       [{drift_status}]  (< 0.1%)")
+    print(f"  KPI 2 — Interface area ratio  : {iface_rat:.3f}         [{iface_status}]  (< 3.0)")
+    print(f"  KPI 3 — Velocity RMS ratio    : {vel_rat:.3f}         [{vel_status}]  ([0.5, 2.0])")
+    print(f"  KPI 4 — CFL estimate          : {cfl_max:.3f}         [{cfl_status}]  (< 0.6)")
+    print(f"  KPI 5 — KE quasi-steady ratio : {ke_rat:.3f}         [{ke_status}]  ([0.5, 2.0])")
+    resa_str = f"{resa_max:.2e}" if not math.isnan(resa_max) else "  n/a "
+    print(f"  KPI 6 — Pressure residual max : {resa_str}     [{resa_status}]  (< 1e-4; needs -health build)")
     print()
 
 

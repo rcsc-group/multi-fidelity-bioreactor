@@ -53,6 +53,9 @@
 #define NORMCAL          1   // Calculate statistics (norms)
 #define FIGURES          0   // Figures: enable only for diagnostics; output dirs created by simulate.py
 #define VIDEOS           0   // Videos: enable only for diagnostics; not needed in optimization loop
+#ifndef DIAGNOSTICS
+#define DIAGNOSTICS      0   // Write pressure_diag.dat (mgp.resa per step); health checks only, not production
+#endif
 
 // Output options
 #define OUT_FILES         0   // Full-field dumps: enable only for diagnostics; output dir created by simulate.py
@@ -513,6 +516,21 @@ event logstats (t+=0.1; t <= t_end) {
       fflush(fp_stats);
     }
 }
+
+// Pressure Poisson residuals — health-check build only (DIAGNOSTICS=1)
+#if DIAGNOSTICS
+event pressure_diagnostics (t+=0.1; t<=t_end) {
+  static FILE *fp_pdiag = NULL;
+  if (!fp_pdiag) {
+    fp_pdiag = fopen("pressure_diag.dat", "w");
+    fprintf(fp_pdiag, "i t mgp_resa mgu_resa mgp_i mgu_i\n");
+  }
+  if (pid() == 0) {
+    fprintf(fp_pdiag, "%d %g %g %g %d %d\n", i, t, mgp.resa, mgu.resa, mgp.i, mgu.i);
+    fflush(fp_pdiag);
+  }
+}
+#endif
 
 // Compute simulation statistics
 #if NORMCAL

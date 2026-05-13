@@ -106,6 +106,15 @@ $(EXECUTABLE): $(SIM_SRC) $(SRC_HEADERS)
 	@mkdir -p $(BUILD_DIR)
 	$(QCC) $(CFLAGS) $< -o $@ $(LDFLAGS)
 
+# Health-check binary: identical to production but compiled with DIAGNOSTICS=1.
+# Writes pressure_diag.dat per run; not for production use.
+.PHONY: build-health
+build-health: $(BUILD_DIR)/BioReactor-health
+
+$(BUILD_DIR)/BioReactor-health: $(SIM_SRC) $(SRC_HEADERS)
+	@mkdir -p $(BUILD_DIR)
+	$(QCC) $(CFLAGS) -DDIAGNOSTICS=1 $< -o $@ $(LDFLAGS)
+
 
 # ==========================================================
 #  Run / submit targets
