@@ -5,11 +5,11 @@ Usage
     python scripts/health_report.py runs/health_l6/ runs/health_l7/
 
 KPIs per run:
-  1. VOF mass drift        — (max-min)/mean of f_liq_sum [%];       threshold < 0.1%
-  2. Interface stability   — f_liq_interf 2nd/1st half mean;        threshold < 3.0
-  3. Velocity quasi-steady — vel_rms 2nd/1st half mean (post-ramp); threshold [0.5, 2.0]
+  1. VOF mass drift        — (max-min)/mean of f_liq_sum [%];       threshold < 0.5%
+  2. Interface stability   — f_liq_interf 2nd/1st half mean;        threshold < 1.5
+  3. Velocity quasi-steady — vel_rms 2nd/1st half mean (post-ramp); threshold [0.7, 1.5]
   4. CFL estimate          — dt * U_max / dx;                        threshold < 0.6
-  5. KE quasi-steady       — KE 2nd/1st half (post-ramp);           threshold [0.5, 2.0]
+  5. KE quasi-steady       — KE 2nd/1st half (post-ramp);           threshold [0.7, 1.5]
   6. Poisson convergence   — max mgp.i from pressure_diag.dat
                              (only if DIAGNOSTICS=1 binary was used); threshold < NITERMAX (1000)
 """
@@ -66,7 +66,7 @@ def kpi_mass_drift(vf: np.ndarray) -> tuple[float, str]:
     """VOF mass drift: (max-min)/mean of f_liq_sum [%]."""
     f = vf[:, 2]
     drift_pct = (f.max() - f.min()) / f.mean() * 100
-    status = "OK" if drift_pct < 0.1 else "FAIL"
+    status = "OK" if drift_pct < 0.5 else "FAIL"
     return drift_pct, status
 
 
@@ -79,12 +79,12 @@ def kpi_interface_stability(vf: np.ndarray) -> tuple[float, str]:
         return float("nan"), "SKIP"
     mid = len(iface) // 2
     ratio = iface[mid:].mean() / (iface[:mid].mean() + 1e-30)
-    status = "OK" if ratio < 3.0 else "FAIL"
+    status = "OK" if ratio < 1.5 else "FAIL"
     return ratio, status
 
 
 def kpi_velocity_steady(normf: np.ndarray, t_ramp: float) -> tuple[float, str]:
-    """Velocity RMS ratio: 2nd half / 1st half of post-ramp run. Threshold [0.5, 2.0]."""
+    """Velocity RMS ratio: 2nd half / 1st half of post-ramp run. Threshold [0.7, 1.5]."""
     t = normf[:, 1]
     vel_rms = np.sqrt(normf[:, 7] ** 2 + normf[:, 11] ** 2)
     post = vel_rms[t > t_ramp]
@@ -92,7 +92,7 @@ def kpi_velocity_steady(normf: np.ndarray, t_ramp: float) -> tuple[float, str]:
         return float("nan"), "SKIP"
     mid = len(post) // 2
     ratio = post[mid:].mean() / (post[:mid].mean() + 1e-30)
-    status = "OK" if 0.5 <= ratio <= 2.0 else "FAIL"
+    status = "OK" if 0.7 <= ratio <= 1.5 else "FAIL"
     return ratio, status
 
 
@@ -155,7 +155,7 @@ def kpi_kinetic_energy(normf: np.ndarray, t_ramp: float) -> tuple[float, str]:
         return float("nan"), "SKIP"
     mid = len(post) // 2
     ratio = float(post[mid:].mean() / (post[:mid].mean() + 1e-30))
-    status = "OK" if 0.5 <= ratio <= 2.0 else "FAIL"
+    status = "OK" if 0.7 <= ratio <= 1.5 else "FAIL"
     return ratio, status
 
 

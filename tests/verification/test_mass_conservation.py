@@ -2,13 +2,12 @@
 
 Physical basis: navier-stokes/conserving.h implements a conservative VOF scheme.
 f_liq_sum = statsf2(f).sum = integral of liquid volume fraction (true liquid volume).
-At fidelity=3 (8×8 cells) with an embedded boundary, O(0.1-0.2%) variation is
-expected from VOF reconstruction at cut cells. A drift > 1% signals a broken
+At fidelity=3 (8×8 cells) with an embedded boundary, O(0.2%) variation is
+expected from VOF reconstruction at cut cells. A drift > 0.5% signals a broken
 VOF reconstruction or an embed mask leak.
 
-Note: the previous threshold of 0.1% was calibrated against a buggy f_liq_sum
-= statsf2((1-cs)*f).sum, which is ~zero in all bulk-liquid cells (cs=1 inside
-the bag), making it trivially constant and not actually testing mass conservation.
+Threshold calibrated from L6 reference run (health_l6_video): 0.21% measured.
+0.5% gives a 2× margin over the measured value.
 """
 import pytest
 from tests.conftest import CANONICAL_PARAMS, run_bioreactor, load_vol_frac
@@ -28,7 +27,7 @@ def test_liquid_volume_conserved(tmp_path):
     mean_f    = f_liq_sum.mean()
     drift     = (f_liq_sum.max() - f_liq_sum.min()) / mean_f
 
-    assert drift < 1e-2, (
-        f"VOF mass drift {drift:.2e} exceeds 1% "
+    assert drift < 5e-3, (
+        f"VOF mass drift {drift:.2e} exceeds 0.5% "
         f"(min={f_liq_sum.min():.6g}, max={f_liq_sum.max():.6g}, mean={mean_f:.6g})"
     )

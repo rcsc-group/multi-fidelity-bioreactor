@@ -42,12 +42,15 @@ def _t_ramp_nd(params: dict) -> float:
 
 @pytest.mark.medium
 def test_velocity_rms_quasi_steady_after_ramp(tmp_path):
-    """Post-ramp liquid velocity RMS must not grow by more than 3× end-to-end.
+    """Post-ramp liquid velocity RMS must stay quasi-steady (ratio in [0.7, 1.5]).
 
     Physical basis: a linearly ramped sinusoidal forcing produces a driven
     quasi-periodic flow.  Once the ramp is complete the RMS kinetic energy
-    oscillates around a stationary mean.  A growth factor > 3 over the
-    post-ramp run indicates numerical blowup or a diverging pseudo-force.
+    oscillates around a stationary mean.  A ratio outside [0.7, 1.5] indicates
+    numerical blowup, continuous acceleration, or a decaying/non-driven flow.
+
+    Threshold calibrated from L6 reference run (health_l6_video): ratio = 1.12.
+    [0.7, 1.5] gives ~35% margin around the measured value on both sides.
 
     Columns in normf.dat (0-indexed):
         1: t, 7: ux_liq_rms, 11: uy_liq_rms
@@ -70,7 +73,7 @@ def test_velocity_rms_quasi_steady_after_ramp(tmp_path):
     mid       = len(post_ramp) // 2
     ratio     = post_ramp[mid:].mean() / (post_ramp[:mid].mean() + 1e-30)
 
-    assert ratio < 3.0, (
-        f"Velocity RMS grew {ratio:.2f}× from first to second half of post-ramp run "
-        f"(blowup or continuous acceleration detected)"
+    assert 0.7 <= ratio <= 1.5, (
+        f"Velocity RMS ratio {ratio:.2f} outside [0.7, 1.5] — "
+        f"expected quasi-steady driven flow post-ramp"
     )

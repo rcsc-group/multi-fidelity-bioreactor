@@ -6,8 +6,11 @@ f_liq_interf signals spurious droplet/filament generation from numerical
 fragmentation — a sign of under-resolution or a broken PLIC reconstruction.
 
 Test: the time-mean of f_liq_interf in the second half of the run must not
-exceed 3× the mean of the first half.  Factor 3 is deliberately generous;
-a healthy run stays within ~20% due to amplitude-variation of the sloshing wave.
+exceed 1.5× the mean of the first half.
+
+Threshold calibrated from L6 reference run (health_l6_video): ratio = 0.998.
+1.5 gives a large margin while firmly catching fragmentation (old threshold 3.0
+was explicitly labelled 'deliberately generous' in the prior version).
 """
 import pytest
 from tests.conftest import CANONICAL_PARAMS, run_bioreactor, load_vol_frac
@@ -31,7 +34,7 @@ def test_interface_area_does_not_blow_up(tmp_path):
     assert mean_first > 0, "First-half interface area is zero — unexpected geometry"
     ratio = mean_second / mean_first
 
-    assert ratio < 3.0, (
+    assert ratio < 1.5, (
         f"Interface area grew by factor {ratio:.2f} between first and second half "
         f"(first_mean={mean_first:.4g}, second_mean={mean_second:.4g})"
     )
