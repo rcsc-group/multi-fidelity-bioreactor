@@ -48,13 +48,17 @@ def test_pressure_diag_file_written(tmp_path):
     )
 
 
-@pytest.mark.medium
-def test_pressure_residuals_below_threshold(tmp_path):
-    """Multigrid pressure residuals must stay < 1e-4 for a healthy run.
+_NITERMAX = 1000  # must match BioReactor.c: NITERMAX = 1000
 
-    Basilisk's centered.h Poisson solver (project()) typically converges to
-    ~1e-6 to 1e-8 per step at fidelity=3. Residuals above 1e-4 indicate
-    either insufficient multigrid iterations or solver divergence.
+
+@pytest.mark.medium
+def test_poisson_solver_converges(tmp_path):
+    """Multigrid Poisson solver must not exhaust its iteration budget.
+
+    project() uses tolerance=TOLERANCE/sq(dt), so mgp.resa is not comparable
+    to a fixed threshold.  The correct health signal is mgp.i < NITERMAX=1000:
+    hitting the budget means the divergence-free constraint was not satisfied
+    and Basilisk would have printed a convergence warning to stderr.
     """
     params = {**CANONICAL_PARAMS, "run_id": "pdiag_residuals", "t_end": 2.0}
     run_dir = _run_health(params, tmp_path)
@@ -68,9 +72,10 @@ def test_pressure_residuals_below_threshold(tmp_path):
     assert len(lines) >= 5, f"Too few rows in pressure_diag.dat: {len(lines)}"
 
     rows = np.array([[float(x) for x in l.split()] for l in lines])
-    mgp_resa = rows[:, 2]   # col 2: mgp final residual
-    resa_max = mgp_resa.max()
+    mgp_i = rows[:, 4]   # col 4: mgp_i (number of V-cycles)
+    max_i = int(mgp_i.max())
 
-    assert resa_max < 1e-4, (
-        f"Max pressure residual {resa_max:.2e} exceeds 1e-4 — Poisson solver not converging"
+    assert max_i < _NITERMAX, (
+        f"Poisson solver hit iteration limit ({max_i} >= {_NITERMAX}) — "
+        "divergence-free constraint not satisfied; check NITERMAX in BioReactor.c"
     )

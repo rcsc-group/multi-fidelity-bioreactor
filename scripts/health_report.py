@@ -10,8 +10,8 @@ KPIs per run:
   3. Velocity quasi-steady — vel_rms 2nd/1st half mean (post-ramp); threshold [0.5, 2.0]
   4. CFL estimate          — dt * U_max / dx;                        threshold < 0.6
   5. KE quasi-steady       — KE 2nd/1st half (post-ramp);           threshold [0.5, 2.0]
-  6. Pressure residual     — max mgp.resa from pressure_diag.dat
-                             (only if DIAGNOSTICS=1 binary was used); threshold < 1e-4
+  6. Poisson convergence   — max mgp.i from pressure_diag.dat
+                             (only if DIAGNOSTICS=1 binary was used); threshold < NITERMAX (1000)
 """
 from __future__ import annotations
 
@@ -159,10 +159,17 @@ def kpi_kinetic_energy(normf: np.ndarray, t_ramp: float) -> tuple[float, str]:
     return ratio, status
 
 
-def kpi_pressure_residual(run_dir: Path) -> tuple[float, str]:
-    """Max pressure Poisson residual from pressure_diag.dat. Threshold < 1e-4.
+_NITERMAX = 1000  # must match BioReactor.c: NITERMAX = 1000
 
-    Only written by the DIAGNOSTICS=1 build (BioReactor-health).
+
+def kpi_pressure_residual(run_dir: Path) -> tuple[float, str]:
+    """Max Poisson solver iteration count from pressure_diag.dat.
+
+    project() passes tolerance=TOLERANCE/sq(dt), so mgp.resa scales with dt
+    and is not directly comparable to a fixed threshold.  The correct health
+    signal is max(mgp.i) < NITERMAX: if the solver exhausts its iteration
+    budget, Basilisk prints a warning and the divergence-free constraint is
+    not satisfied.  Only written by the DIAGNOSTICS=1 build (BioReactor-health).
     Returns (nan, 'SKIP') if the file is absent.
     """
     pdiag = Path(run_dir) / "pressure_diag.dat"
@@ -175,9 +182,9 @@ def kpi_pressure_residual(run_dir: Path) -> tuple[float, str]:
         return float("nan"), "SKIP"
 
     rows = np.array([[float(x) for x in l.split()] for l in lines])
-    mgp_resa_max = float(rows[:, 2].max())
-    status = "OK" if mgp_resa_max < 1e-4 else "FAIL"
-    return mgp_resa_max, status
+    max_i = float(rows[:, 4].max())   # col 4: mgp_i
+    status = "OK" if max_i < _NITERMAX else "FAIL"
+    return max_i, status
 
 
 # ── report ───────────────────────────────────────────────────────────────────
@@ -217,7 +224,7 @@ def report(run_dir: Path) -> None:
     else:
         cfl_max, cfl_status = float("nan"), "SKIP"
 
-    resa_max, resa_status = kpi_pressure_residual(run_dir)
+    max_iter, iter_status = kpi_pressure_residual(run_dir)
 
     print(f"\n{'='*60}")
     print(f"  Run: {run_dir.name}   (fidelity={params.get('fidelity','?')}, "
@@ -228,8 +235,8 @@ def report(run_dir: Path) -> None:
     print(f"  KPI 3 — Velocity RMS ratio    : {vel_rat:.3f}         [{vel_status}]  ([0.5, 2.0])")
     print(f"  KPI 4 — CFL estimate          : {cfl_max:.3f}         [{cfl_status}]  (< 0.6)")
     print(f"  KPI 5 — KE quasi-steady ratio : {ke_rat:.3f}         [{ke_status}]  ([0.5, 2.0])")
-    resa_str = f"{resa_max:.2e}" if not math.isnan(resa_max) else "  n/a "
-    print(f"  KPI 6 — Pressure residual max : {resa_str}     [{resa_status}]  (< 1e-4; needs -health build)")
+    iter_str = f"{int(max_iter):4d}     " if not math.isnan(max_iter) else "  n/a  "
+    print(f"  KPI 6 — Poisson max iters     : {iter_str}     [{iter_status}]  (< {_NITERMAX}; needs -health build)")
     print()
 
 

@@ -125,38 +125,47 @@ class TestKpiKineticEnergy:
         assert status == "SKIP"
 
 
-# ── Pressure residual KPI ─────────────────────────────────────────────────────
+# ── Pressure solver convergence KPI ──────────────────────────────────────────
+# mgp.resa is NOT comparable to a fixed threshold: project() passes
+# tolerance=TOLERANCE/sq(dt), so the effective tolerance scales with dt.
+# The correct health signal is mgp.i < NITERMAX (1000): if the solver hit
+# the iteration budget, Basilisk prints a warning and the field is wrong.
+
+_NITERMAX = 1000   # must match BioReactor.c: NITERMAX = 1000
 
 class TestKpiPressureResidual:
     def test_healthy_residuals_ok(self, tmp_path):
+        # Realistic data: mgp.resa is large (O(10)), but mgp.i is tiny (2-7)
         (tmp_path / "pressure_diag.dat").write_text(
             "i t mgp_resa mgu_resa mgp_i mgu_i\n"
-            "0 0.0 1e-7 1e-7 4 3\n"
-            "24 0.1 2e-7 1.5e-7 5 4\n"
+            "0 0.0 29.8 4e-23 2 1\n"
+            "24 0.1 0.14 7e-16 7 1\n"
         )
-        resa_max, status = kpi_pressure_residual(tmp_path)
+        max_i, status = kpi_pressure_residual(tmp_path)
         assert status == "OK"
-        assert resa_max == pytest.approx(2e-7, rel=1e-3)
+        assert max_i == 7
 
-    def test_high_residuals_fail(self, tmp_path):
+    def test_solver_exhausted_iterations_fails(self, tmp_path):
+        # mgp.i == NITERMAX means the solver never converged — divergence
         (tmp_path / "pressure_diag.dat").write_text(
             "i t mgp_resa mgu_resa mgp_i mgu_i\n"
             "0 0.0 5e-4 3e-4 15 12\n"
+            f"24 0.1 2.0 1.0 {_NITERMAX} 4\n"
         )
-        resa_max, status = kpi_pressure_residual(tmp_path)
+        max_i, status = kpi_pressure_residual(tmp_path)
         assert status == "FAIL"
-        assert resa_max > 1e-4
+        assert max_i == _NITERMAX
 
     def test_missing_file_skips(self, tmp_path):
-        resa_max, status = kpi_pressure_residual(tmp_path)
+        max_i, status = kpi_pressure_residual(tmp_path)
         assert status == "SKIP"
-        assert np.isnan(resa_max)
+        assert np.isnan(max_i)
 
     def test_threshold_boundary(self, tmp_path):
-        # Exactly at threshold (1e-4) should FAIL (tight check: < not <=)
+        # Exactly at NITERMAX should FAIL (< not <=)
         (tmp_path / "pressure_diag.dat").write_text(
             "i t mgp_resa mgu_resa mgp_i mgu_i\n"
-            "0 0.0 1e-4 1e-5 8 6\n"
+            f"0 0.0 1.0 1e-5 {_NITERMAX} 6\n"
         )
         _, status = kpi_pressure_residual(tmp_path)
         assert status == "FAIL"
