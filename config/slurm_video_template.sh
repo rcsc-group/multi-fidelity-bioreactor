@@ -16,12 +16,13 @@
 
 set -euo pipefail
 
-# ffmpeg is required by Basilisk's save("*.mp4") to encode video frames.
-# imagemagick is required for save("*.gif").
-# Do NOT load the 'basilisk' module — the cluster's qcc is broken; we use the
-# scratch-built binary at build/BioReactor-video which embeds TinyGL (fb_tiny)
-# and has no runtime dependency on libGL or libGLX.
+# Basilisk's save("*.mp4") pipes PPM frames through ppm2mp4 (a helper script
+# in the scratch Basilisk tree) which in turn calls ffmpeg.  Both must be
+# findable via which().  We add the scratch Basilisk bin dir to PATH for the
+# helper scripts, and load the ffmpeg module for the encoder itself.
+# Do NOT load the 'basilisk' module — the cluster's qcc is broken.
 module load ffmpeg
+export PATH="$HOME/scratch/basilisk/src:$PATH"
 
 if [ -z "${PARAMS:-}" ]; then
     echo "ERROR: PARAMS env var not set. Submit with: sbatch --export=PARAMS=<path> $0" >&2
