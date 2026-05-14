@@ -112,6 +112,9 @@ def run_local(
         )
     except subprocess.TimeoutExpired:
         pass  # long-running sim; caller can check output files
+
+    from scripts.postprocess import main as _postprocess
+    _postprocess(str(run_dir))
     return run_dir
 
 
@@ -199,6 +202,54 @@ def wait_for_result(
     raise TimeoutError(
         f"results.json not found in {run_dir} after {timeout:.0f}s"
     )
+
+
+def run_trial(
+    params: dict,
+    backend: str = "slurm",
+    kla_key: str = "kLa_25",
+    walltime: str = "04:00:00",
+    timeout: float = 7200,
+    project_root: Path | str | None = None,
+    runs_root: Path | str | None = None,
+) -> float:
+    """Black-box trial: run one simulation and return a single kLa scalar.
+
+    Parameters
+    ----------
+    params       : BioReactor parameter dict
+    backend      : "slurm" (submit + wait) or "local" (blocking subprocess)
+    kla_key      : which saturation level to return — "kLa_10", "kLa_25", or "kLa_50"
+    walltime     : SLURM wall-clock limit (HH:MM:SS); ignored for local backend
+    timeout      : seconds to wait for results.json (SLURM) or subprocess (local)
+    project_root : repo root; defaults to two directories above this file
+    runs_root    : parent for run dirs; defaults to project_root/runs
+
+    Returns
+    -------
+    float — kLa value at the requested saturation level.
+    Returns float('nan') if the key is missing or NaN (failed/incomplete run).
+    Raises TimeoutError if the result does not appear within `timeout` seconds.
+    """
+    project_root = Path(project_root) if project_root else Path(__file__).parents[1]
+    runs_root    = Path(runs_root) if runs_root else project_root / "runs"
+
+    if backend == "local":
+        run_dir = run_local(params, project_root=project_root,
+                            runs_root=runs_root, timeout=int(timeout))
+        results = json.loads((run_dir / "results.json").read_text())
+    elif backend == "slurm":
+        submit_slurm(params, project_root=project_root, runs_root=runs_root,
+                     walltime=walltime)
+        run_dir = runs_root / params.get("run_id", "unnamed")
+        results = wait_for_result(run_dir, timeout=timeout)
+    else:
+        raise ValueError(f"backend must be 'slurm' or 'local', got {backend!r}")
+
+    value = results.get(kla_key, math.nan)
+    if value is None or value != value:   # None or NaN
+        return math.nan
+    return float(value)
 
 
 if __name__ == "__main__":
