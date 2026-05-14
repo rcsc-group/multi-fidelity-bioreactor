@@ -52,7 +52,9 @@
 #define DUMP             0   // Save dump output
 #define NORMCAL          1   // Calculate statistics (norms)
 #define FIGURES          0   // Figures: enable only for diagnostics; output dirs created by simulate.py
+#ifndef VIDEOS
 #define VIDEOS           0   // Videos: enable only for diagnostics; not needed in optimization loop
+#endif
 #ifndef DIAGNOSTICS
 #define DIAGNOSTICS      0   // Write pressure_diag.dat (mgp.resa per step); health checks only, not production
 #endif
