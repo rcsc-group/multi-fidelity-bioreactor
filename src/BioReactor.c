@@ -634,12 +634,12 @@ event movies_output(t = t_mix; t += dt_video; t<=t_end)
      Body frame: crop to bag half-height Ly/2 + 20% margin.
      Lab frame:  crop to envelope of rotating bag corner + 20% margin. */
   double _margin_b = (Ly/2) * 1.2;
-  int    _h_body   = (int)(1200.0 * _margin_b * 2.0 / 0.638);
+  int    _h_body   = ((int)(1200.0 * _margin_b * 2.0 / 0.638) / 2) * 2;  // h264 needs even height
   double _fov_body = 2.0 * atan(_margin_b / 1.5) * (180.0 / M_PI);
 
   double _y_lab_max = 0.5*sin(fabs(Th_max)) + (Ly/2)*cos(fabs(Th_max));
   double _margin_l  = _y_lab_max * 1.2;
-  int    _h_lab     = (int)(1200.0 * _margin_l * 2.0 / 0.638);
+  int    _h_lab     = ((int)(1200.0 * _margin_l * 2.0 / 0.638) / 2) * 2;  // h264 needs even height
   double _fov_lab   = 2.0 * atan(_margin_l / 1.5) * (180.0 / M_PI);
 
   // vorticity — body frame
