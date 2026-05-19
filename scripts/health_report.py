@@ -232,9 +232,9 @@ def report(run_dir: Path) -> None:
     print(f"{'='*60}")
     print(f"  KPI 1 — VOF mass drift        : {drift:.4f}%       [{drift_status}]  (< 0.1%)")
     print(f"  KPI 2 — Interface area ratio  : {iface_rat:.3f}         [{iface_status}]  (< 3.0)")
-    print(f"  KPI 3 — Velocity RMS ratio    : {vel_rat:.3f}         [{vel_status}]  ([0.5, 2.0])")
+    print(f"  KPI 3 — Velocity RMS ratio    : {vel_rat:.3f}         [{vel_status}]  ([0.7, 1.5])")
     print(f"  KPI 4 — CFL estimate          : {cfl_max:.3f}         [{cfl_status}]  (< 0.6)")
-    print(f"  KPI 5 — KE quasi-steady ratio : {ke_rat:.3f}         [{ke_status}]  ([0.5, 2.0])")
+    print(f"  KPI 5 — KE quasi-steady ratio : {ke_rat:.3f}         [{ke_status}]  ([0.7, 1.5])")
     iter_str = f"{int(max_iter):4d}     " if not math.isnan(max_iter) else "  n/a  "
     print(f"  KPI 6 — Poisson max iters     : {iter_str}     [{iter_status}]  (< {_NITERMAX}; needs -health build)")
     print()
