@@ -629,33 +629,69 @@ event movies_output(t = t_mix; t += dt_video; t<=t_end)
 
   vorticity (u,omega);
 
-  // vorticity
+  /* View dimensions adapted to bag geometry so empty domain space is stripped.
+     Camera sits at z ≈ -(1 + L0/2) = -1.5; full vertical span at fov=24° ≈ 0.638.
+     Body frame: crop to bag half-height Ly/2 + 20% margin.
+     Lab frame:  crop to envelope of rotating bag corner + 20% margin. */
+  double _margin_b = (Ly/2) * 1.2;
+  int    _h_body   = (int)(1200.0 * _margin_b * 2.0 / 0.638);
+  double _fov_body = 2.0 * atan(_margin_b / 1.5) * (180.0 / M_PI);
+
+  double _y_lab_max = 0.5*sin(fabs(Th_max)) + (Ly/2)*cos(fabs(Th_max));
+  double _margin_l  = _y_lab_max * 1.2;
+  int    _h_lab     = (int)(1200.0 * _margin_l * 2.0 / 0.638);
+  double _fov_lab   = 2.0 * atan(_margin_l / 1.5) * (180.0 / M_PI);
+
+  // vorticity — body frame
   clear();
-  view(width=1200,height=1200,fov=24.0,ty=0.0);
-  draw_vof("f",lw=2);    // outlines interfaces
-  squares("omega",map=cool_warm,min=-50.0,max=50.0);  // maps scalar fields to color
+  view(width=1200,height=_h_body,fov=_fov_body,ty=0.0);
+  draw_vof("f",lw=2);
+  squares("omega",map=cool_warm,min=-50.0,max=50.0);
   draw_vof("cs","fs");
   sprintf(timestring,"t=%2.03fs",t*T_bio);
-  draw_string(timestring,pos=4,lc={0,0,0},lw=2);   // overlays timestamp
+  draw_string(timestring,pos=4,lc={0,0,0},lw=2);
   save("vorticity3.mp4");
   save("vorticity.png");
 
-  // volume fraction
+  // vorticity — lab frame (view rotated by current tilt angle Th)
   clear();
-  view(width=1200,height=1200,fov=24.0,ty=0.0);
+  view(width=1200,height=_h_lab,fov=_fov_lab,
+       quat={0,0,sin(Th/2),cos(Th/2)},ty=0.0);
+  draw_vof("f",lw=2);
+  squares("omega",map=cool_warm,min=-50.0,max=50.0);
+  draw_vof("cs","fs");
+  sprintf(timestring,"t=%2.03fs",t*T_bio);
+  draw_string(timestring,pos=4,lc={0,0,0},lw=2);
+  save("vorticity_lab.mp4");
+  save("vorticity_lab.png");
+
+  // volume fraction — body frame
+  clear();
+  view(width=1200,height=_h_body,fov=_fov_body,ty=0.0);
   draw_vof("f",lw=2);
   squares("f",map=cool_warm,min=0.0,max=1.0);
   draw_vof("cs","fs");
-  //cells();
   sprintf(timestring,"t=%2.03fs",t*T_bio);
   draw_string(timestring,pos=4,lc={0,0,0},lw=2);
   save("volume_fraction3.mp4");
   save("volume_fraction.png");
 
-#if TRACER
-  // tracer
+  // volume fraction — lab frame
   clear();
-  view(width=1200,height=1200,fov=24.0,ty=0.0);
+  view(width=1200,height=_h_lab,fov=_fov_lab,
+       quat={0,0,sin(Th/2),cos(Th/2)},ty=0.0);
+  draw_vof("f",lw=2);
+  squares("f",map=cool_warm,min=0.0,max=1.0);
+  draw_vof("cs","fs");
+  sprintf(timestring,"t=%2.03fs",t*T_bio);
+  draw_string(timestring,pos=4,lc={0,0,0},lw=2);
+  save("volume_fraction_lab.mp4");
+  save("volume_fraction_lab.png");
+
+#if TRACER
+  // tracer — body frame
+  clear();
+  view(width=1200,height=_h_body,fov=_fov_body,ty=0.0);
   draw_vof("f",lw=2);
   squares("c",map=cool_warm,min=0.0,max=1.0);
   draw_vof("cs","fs");
@@ -664,9 +700,21 @@ event movies_output(t = t_mix; t += dt_video; t<=t_end)
   save("tracer.mp4");
   save("tracer.png");
 
-  // tracer1
+  // tracer — lab frame
   clear();
-  view(width=1200,height=1200,fov=24.0,ty=0.0);
+  view(width=1200,height=_h_lab,fov=_fov_lab,
+       quat={0,0,sin(Th/2),cos(Th/2)},ty=0.0);
+  draw_vof("f",lw=2);
+  squares("c",map=cool_warm,min=0.0,max=1.0);
+  draw_vof("cs","fs");
+  sprintf(timestring,"t=%2.03fs",t*T_bio);
+  draw_string(timestring,pos=4,lc={0,0,0},lw=2);
+  save("tracer_lab.mp4");
+  save("tracer_lab.png");
+
+  // tracer1 — body frame
+  clear();
+  view(width=1200,height=_h_body,fov=_fov_body,ty=0.0);
   draw_vof("f",lw=2);
   squares("c1",map=cool_warm,min=0.0,max=1.0);
   draw_vof("cs","fs");
@@ -675,9 +723,21 @@ event movies_output(t = t_mix; t += dt_video; t<=t_end)
   save("tracer1.mp4");
   save("tracer1.png");
 
-  // tracer2
+  // tracer1 — lab frame
   clear();
-  view(width=1200,height=1200,fov=24.0,ty=0.0);
+  view(width=1200,height=_h_lab,fov=_fov_lab,
+       quat={0,0,sin(Th/2),cos(Th/2)},ty=0.0);
+  draw_vof("f",lw=2);
+  squares("c1",map=cool_warm,min=0.0,max=1.0);
+  draw_vof("cs","fs");
+  sprintf(timestring,"t=%2.03fs",t*T_bio);
+  draw_string(timestring,pos=4,lc={0,0,0},lw=2);
+  save("tracer1_lab.mp4");
+  save("tracer1_lab.png");
+
+  // tracer2 — body frame
+  clear();
+  view(width=1200,height=_h_body,fov=_fov_body,ty=0.0);
   draw_vof("f",lw=2);
   squares("c2",map=cool_warm,min=0.0,max=1.0);
   draw_vof("cs","fs");
@@ -686,9 +746,21 @@ event movies_output(t = t_mix; t += dt_video; t<=t_end)
   save("tracer2.mp4");
   save("tracer2.png");
 
-  // tracer3
+  // tracer2 — lab frame
   clear();
-  view(width=1200,height=1200,fov=24.0,ty=0.0);
+  view(width=1200,height=_h_lab,fov=_fov_lab,
+       quat={0,0,sin(Th/2),cos(Th/2)},ty=0.0);
+  draw_vof("f",lw=2);
+  squares("c2",map=cool_warm,min=0.0,max=1.0);
+  draw_vof("cs","fs");
+  sprintf(timestring,"t=%2.03fs",t*T_bio);
+  draw_string(timestring,pos=4,lc={0,0,0},lw=2);
+  save("tracer2_lab.mp4");
+  save("tracer2_lab.png");
+
+  // tracer3 — body frame
+  clear();
+  view(width=1200,height=_h_body,fov=_fov_body,ty=0.0);
   draw_vof("f",lw=2);
   squares("c3",map=cool_warm,min=0.0,max=1.0);
   draw_vof("cs","fs");
@@ -696,11 +768,24 @@ event movies_output(t = t_mix; t += dt_video; t<=t_end)
   draw_string(timestring,pos=4,lc={0,0,0},lw=2);
   save("tracer3.mp4");
   save("tracer3.png");
-#endif
-// oxygen
-#if OXYGEN
+
+  // tracer3 — lab frame
   clear();
-  view(width=1200,height=1200,fov=24.0,ty=0.0);
+  view(width=1200,height=_h_lab,fov=_fov_lab,
+       quat={0,0,sin(Th/2),cos(Th/2)},ty=0.0);
+  draw_vof("f",lw=2);
+  squares("c3",map=cool_warm,min=0.0,max=1.0);
+  draw_vof("cs","fs");
+  sprintf(timestring,"t=%2.03fs",t*T_bio);
+  draw_string(timestring,pos=4,lc={0,0,0},lw=2);
+  save("tracer3_lab.mp4");
+  save("tracer3_lab.png");
+#endif
+
+#if OXYGEN
+  // oxygen — body frame
+  clear();
+  view(width=1200,height=_h_body,fov=_fov_body,ty=0.0);
   draw_vof("f",lw=2);
   squares("oxy",map=cool_warm,min=0.0,max=0.033);
   draw_vof("cs","fs");
@@ -708,6 +793,18 @@ event movies_output(t = t_mix; t += dt_video; t<=t_end)
   draw_string(timestring,pos=4,lc={0,0,0},lw=2);
   save("oxygen3.mp4");
   save("oxygen.png");
+
+  // oxygen — lab frame
+  clear();
+  view(width=1200,height=_h_lab,fov=_fov_lab,
+       quat={0,0,sin(Th/2),cos(Th/2)},ty=0.0);
+  draw_vof("f",lw=2);
+  squares("oxy",map=cool_warm,min=0.0,max=0.033);
+  draw_vof("cs","fs");
+  sprintf(timestring,"t=%2.03fs",t*T_bio);
+  draw_string(timestring,pos=4,lc={0,0,0},lw=2);
+  save("oxygen_lab.mp4");
+  save("oxygen_lab.png");
 #endif
 }
 #endif
