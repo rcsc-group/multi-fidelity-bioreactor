@@ -644,7 +644,7 @@ event movies_output(t = t_mix; t += dt_video; t<=t_end)
 
   // vorticity — body frame
   clear();
-  view(width=1200,height=_h_body,fov=_fov_body,ty=0.0);
+  view(width=1200,height=_h_body,fov=_fov_body,quat={0,0,0,1},ty=0.0);
   draw_vof("f",lw=2);
   squares("omega",map=cool_warm,min=-50.0,max=50.0);
   draw_vof("cs","fs");
@@ -667,7 +667,7 @@ event movies_output(t = t_mix; t += dt_video; t<=t_end)
 
   // volume fraction — body frame
   clear();
-  view(width=1200,height=_h_body,fov=_fov_body,ty=0.0);
+  view(width=1200,height=_h_body,fov=_fov_body,quat={0,0,0,1},ty=0.0);
   draw_vof("f",lw=2);
   squares("f",map=cool_warm,min=0.0,max=1.0);
   draw_vof("cs","fs");
@@ -691,7 +691,7 @@ event movies_output(t = t_mix; t += dt_video; t<=t_end)
 #if TRACER
   // tracer — body frame
   clear();
-  view(width=1200,height=_h_body,fov=_fov_body,ty=0.0);
+  view(width=1200,height=_h_body,fov=_fov_body,quat={0,0,0,1},ty=0.0);
   draw_vof("f",lw=2);
   squares("c",map=cool_warm,min=0.0,max=1.0);
   draw_vof("cs","fs");
@@ -714,7 +714,7 @@ event movies_output(t = t_mix; t += dt_video; t<=t_end)
 
   // tracer1 — body frame
   clear();
-  view(width=1200,height=_h_body,fov=_fov_body,ty=0.0);
+  view(width=1200,height=_h_body,fov=_fov_body,quat={0,0,0,1},ty=0.0);
   draw_vof("f",lw=2);
   squares("c1",map=cool_warm,min=0.0,max=1.0);
   draw_vof("cs","fs");
@@ -737,7 +737,7 @@ event movies_output(t = t_mix; t += dt_video; t<=t_end)
 
   // tracer2 — body frame
   clear();
-  view(width=1200,height=_h_body,fov=_fov_body,ty=0.0);
+  view(width=1200,height=_h_body,fov=_fov_body,quat={0,0,0,1},ty=0.0);
   draw_vof("f",lw=2);
   squares("c2",map=cool_warm,min=0.0,max=1.0);
   draw_vof("cs","fs");
@@ -760,7 +760,7 @@ event movies_output(t = t_mix; t += dt_video; t<=t_end)
 
   // tracer3 — body frame
   clear();
-  view(width=1200,height=_h_body,fov=_fov_body,ty=0.0);
+  view(width=1200,height=_h_body,fov=_fov_body,quat={0,0,0,1},ty=0.0);
   draw_vof("f",lw=2);
   squares("c3",map=cool_warm,min=0.0,max=1.0);
   draw_vof("cs","fs");
@@ -785,7 +785,7 @@ event movies_output(t = t_mix; t += dt_video; t<=t_end)
 #if OXYGEN
   // oxygen — body frame
   clear();
-  view(width=1200,height=_h_body,fov=_fov_body,ty=0.0);
+  view(width=1200,height=_h_body,fov=_fov_body,quat={0,0,0,1},ty=0.0);
   draw_vof("f",lw=2);
   squares("oxy",map=cool_warm,min=0.0,max=0.033);
   draw_vof("cs","fs");
