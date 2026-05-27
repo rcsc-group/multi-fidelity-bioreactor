@@ -1,0 +1,44 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Chained simulation sweep — parameter scan via checkpoint restart.
+# Run with: python scripts/chain.py config/chain_config.yaml
+#
+# Each value in sweep.values becomes one SLURM job.  Job k+1 restores the
+# checkpoint.dump written by job k, so transients from the parameter change
+# decay in n_transition_cycles instead of the full n_mix_cycles.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ── Fixed params (same for all segments) ─────────────────────────────────────
+fidelity: 5                      # 2^fidelity grid cells per side (5 → 32×32)
+geometry: {a: 0.25, b: 0.071, n: 2.0}
+fill_level: 0.7
+
+# ── Timing ───────────────────────────────────────────────────────────────────
+n_mix_cycles: 80         # rocking cycles before O₂ injection for segment 0
+n_transition_cycles: 10  # rocking cycles before O₂ re-injection for segments 1+
+                         # Rule of thumb: ~3–5× the rocking period decay time
+t_buffer: 150            # non-dim time to measure kLa after O₂ injection (same per segment)
+                         # Must satisfy: t_buffer > ln(2) / kLa_nd_min ≈ 138 for kLa_50
+
+# ── Sweep ────────────────────────────────────────────────────────────────────
+# One simulation segment per entry in values.  The named parameter varies;
+# all other motion params (from the section below) are held constant.
+#
+# Supported scalar params: omega_b, omega_h
+# Supported vector params: theta_max_0/1/2, amplitude_h_0/1/2,
+#                          phi_angular_1/2, phi_horizontal_0/1/2
+sweep:
+  parameter: omega_b
+  values: [1.0, 1.1, 1.2]
+
+# ── Base motion (non-swept params; constant across all segments) ──────────────
+motion:
+  n_harmonics: 1
+  theta_max: [5.0, 0.0, 0.0]      # rocking amplitudes per harmonic (degrees)
+  phi_angular: [0.0, 0.0, 0.0]    # phase offsets; [0] always 0
+  omega_h: 0.0                    # horizontal oscillation frequency (rad/s); 0 = off
+  amplitude_h: [0.0, 0.0, 0.0]    # horizontal amplitudes (m)
+  phi_horizontal: [0.0, 0.0, 0.0]
+
+# ── Submission ───────────────────────────────────────────────────────────────
+submit: true             # false → write params files only, no sbatch
+walltime: "02:00:00"     # SLURM wall-clock limit per segment job

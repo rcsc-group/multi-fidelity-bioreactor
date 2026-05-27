@@ -1,0 +1,28 @@
+# Smoke test: 2-segment chain at fidelity 3, very short runs.
+# Validates the checkpoint restart logic before submitting long jobs.
+# Run with: python scripts/chain.py config/chain_config_smoke.yaml
+
+fidelity: 3
+geometry: {a: 0.20, b: 0.09, n: 2.0}
+fill_level: 0.4
+
+# Timing: short enough to complete in a few minutes
+n_mix_cycles: 5           # very short mix period
+n_transition_cycles: 3    # very short transition
+t_buffer: 10              # minimal kLa window
+
+sweep:
+  parameter: omega_b
+  values: [3.14159, 6.28318]   # 0.5 Hz then 1.0 Hz
+
+motion:
+  n_harmonics: 1
+  theta_max: [5.0, 0.0, 0.0]
+  phi_angular: [0.3, 0.0, 0.0]
+  omega_h: 6.28318
+  amplitude_h: [0.02, 0.0, 0.0]
+  phi_horizontal: [0.3, 0.0, 0.0]
+
+videos: false
+submit: true
+walltime: "00:30:00"

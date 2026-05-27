@@ -1,0 +1,50 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Multi-fidelity Bayesian Optimisation config
+# Run with: python scripts/loop.py config/bo_config.yaml
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Where the f3dasm ExperimentData directory will be created (or resumed from).
+# Relative paths are resolved from the project root.
+experiment_dir: experiments/bo_run_001
+
+# ── Fidelity levels ──────────────────────────────────────────────────────────
+# Grid size is NN = 2^fidelity.  Approximate wall-clock times on OSCAR:
+#   fidelity 5 →  32×32,   ~5–15 min   (cheap, many LF samples)
+#   fidelity 6 →  64×64,   ~20–40 min
+#   fidelity 7 → 128×128,  ~1–2 h     (accurate, few HF samples)
+lf_fidelity: 5
+hf_fidelity: 7
+
+# ── Initial design of experiments (Latin Hypercube Sampling) ─────────────────
+# These runs are submitted in parallel before the BO loop starts.
+# Rule of thumb: n_lf_init ≈ 10× the number of free parameters in the LF model;
+# n_hf_init ≈ 3–5 to seed the transfer-learning correlation.
+n_lf_init: 8
+n_hf_init: 3
+
+# ── Bayesian optimisation loop ────────────────────────────────────────────────
+# Each iteration submits one HF run at the highest-EI point.
+# Total HF evaluations = n_hf_init + n_iter.
+n_iter: 20
+
+# Which kLa threshold to maximise: kLa_10, kLa_25, or kLa_50.
+# kLa_25 is a standard industry metric (25 % saturation reached).
+kla_key: kLa_25
+
+# Number of random candidates evaluated by the EI acquisition function.
+# Increase for higher-dimensional spaces; 2000 is sufficient for this 18-D space.
+n_candidates: 2000
+
+# ── SLURM settings ───────────────────────────────────────────────────────────
+walltime: "02:00:00"   # wall-clock limit per simulation job
+
+# Timeout in seconds to wait for a single job's results.json to appear.
+# 7200 = 2 h; set higher if HF jobs routinely exceed this.
+job_timeout: 7200
+
+# Extra non-dimensional time to simulate AFTER the oxygen mixing ramp ends.
+# t_end is computed per-run as t_mix(params) + t_buffer, so it adapts to
+# different frequencies and geometries automatically.
+# Rule of thumb: t_buffer > ln(2) / kLa_nd_min ≈ ln(2) / 0.005 ≈ 140.
+# 150 is conservative and covers the full kLa_50 range.
+t_buffer: 150

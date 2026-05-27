@@ -6,9 +6,15 @@ requires-python = ">=3.11"
 dependencies = [
     "numpy",
     "scipy",
+    "scikit-learn",
+    "matplotlib",
+    "Pillow",
     "pandas",
     "pyyaml",
-    "mfbml",        # bessagroup/mfbml — MF-BML surrogate
+    "f3dasm>=1.5",
+    "mfbml @ git+https://github.com/JiaxiangYi96/mfbml.git",
+    "mfpml @ git+https://github.com/JiaxiangYi96/mfpml.git",
+    "torch",
     "pytest",
 ]
 

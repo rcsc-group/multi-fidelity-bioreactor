@@ -33,10 +33,17 @@ echo "params.json  : $PARAMS"
 
 mkdir -p "$RUN_DIR" "$PROJECT_ROOT/logs"
 
-# Run simulation (binary must already be compiled via 'make build')
+# Run simulation (binary must already be compiled via 'make build').
+# DUMP, if set, is the absolute path to a checkpoint.dump from a previous
+# segment; the binary will restore it and start from that flow field.
 cd "$RUN_DIR"
-OMP_NUM_THREADS="${SLURM_CPUS_PER_TASK:-4}" \
-    "$PROJECT_ROOT/build/BioReactor" params.json
+if [ -n "${DUMP:-}" ]; then
+    OMP_NUM_THREADS="${SLURM_CPUS_PER_TASK:-4}" \
+        "$PROJECT_ROOT/build/BioReactor" params.json "$DUMP"
+else
+    OMP_NUM_THREADS="${SLURM_CPUS_PER_TASK:-4}" \
+        "$PROJECT_ROOT/build/BioReactor" params.json
+fi
 
 # Extract kLa and write results.json
 "$PROJECT_ROOT/.venv/bin/python" "$PROJECT_ROOT/scripts/postprocess.py" "$RUN_DIR"

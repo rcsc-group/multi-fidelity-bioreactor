@@ -116,6 +116,76 @@ def main(run_dir: str) -> dict:
     return results
 
 
+def validate_params(params: dict) -> None:
+    """Raise ValueError if params are out of bounds or structurally malformed.
+
+    Reads bounds from config/param_space.yaml (resolved relative to this file).
+    Raises ValueError with the offending parameter name in the message.
+    """
+    import yaml  # only needed here
+
+    _PARAM_SPACE = Path(__file__).parents[1] / "config" / "param_space.yaml"
+    spec = yaml.safe_load(_PARAM_SPACE.read_text())
+    n_max = spec["N_max"]
+    pspace = spec["parameters"]
+
+    def _check_scalar(name: str, val: float) -> None:
+        lo, hi = pspace[name]["bounds"]
+        if not (lo <= val <= hi):
+            raise ValueError(f"{name}={val!r} out of bounds [{lo}, {hi}]")
+
+    def _check_vector(name: str, vec: list, key: str | None = None,
+                      n_active: int | None = None) -> None:
+        if len(vec) != n_max:
+            raise ValueError(f"{name} must have length {n_max}, got {len(vec)}")
+        bounds = pspace[key or name]["bounds"]
+        active = n_active if n_active is not None else n_max
+        for i, v in enumerate(vec):
+            if i < active:
+                lo, hi = bounds
+                if not (lo <= v <= hi):
+                    raise ValueError(f"{name}[{i}]={v!r} out of bounds [{lo}, {hi}]")
+            else:
+                if v != 0.0:
+                    raise ValueError(f"{name}[{i}] must be 0.0 (padding), got {v!r}")
+
+    _check_scalar("omega_b", params["omega_b"])
+
+    n_harm = params.get("n_harmonics", 1)
+    lo, hi = pspace["n_harmonics"]["bounds"]
+    if not (lo <= n_harm <= hi):
+        raise ValueError(f"n_harmonics={n_harm!r} out of bounds [{lo}, {hi}]")
+
+    _check_vector("theta_max", params["theta_max"], n_active=n_harm)
+
+    phi_ang = params["phi_angular"]
+    if len(phi_ang) != n_max:
+        raise ValueError(f"phi_angular must have length {n_max}, got {len(phi_ang)}")
+    if phi_ang[0] != 0.0:
+        raise ValueError(f"phi_angular[0] must be 0.0 (time-origin reference), got {phi_ang[0]!r}")
+    for i, v in enumerate(phi_ang[1:n_harm], start=1):
+        lo, hi = pspace["phi_angular"]["bounds"]
+        if not (lo <= v <= hi):
+            raise ValueError(f"phi_angular[{i}]={v!r} out of bounds [{lo}, {hi}]")
+    for i, v in enumerate(phi_ang[n_harm:], start=n_harm):
+        if v != 0.0:
+            raise ValueError(f"phi_angular[{i}] must be 0.0 (padding), got {v!r}")
+
+    _check_scalar("omega_h", params["omega_h"])
+    _check_vector("amplitude_h", params["amplitude_h"], n_active=n_harm)
+    _check_vector("phi_horizontal", params["phi_horizontal"], n_active=n_harm)
+
+    geom = params["geometry"]
+    for sub in ("a", "b", "n"):
+        key = f"geometry.{sub}"
+        lo, hi = pspace[key]["bounds"]
+        v = geom[sub]
+        if not (lo <= v <= hi):
+            raise ValueError(f"geometry.{sub}={v!r} out of bounds [{lo}, {hi}]")
+
+    _check_scalar("fill_level", params["fill_level"])
+
+
 if __name__ == "__main__":
     import sys
     if len(sys.argv) != 2:

@@ -1,0 +1,28 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Sampling config — generate and (optionally) submit a batch of simulation runs
+# Run with: python scripts/sample.py config/sample_config.yaml
+# ─────────────────────────────────────────────────────────────────────────────
+
+experiment_dir: experiments/lhs_run_001
+
+# ── Sampling ─────────────────────────────────────────────────────────────────
+sampling:
+  strategy: latin   # latin | random | grid | sobol
+  n_samples: 20
+  seed: 0
+
+# ── Fidelity ─────────────────────────────────────────────────────────────────
+fidelity: 5   # 2^fidelity grid cells per side (5 → 32×32, ~5–15 min each)
+
+# ── Simulation length ────────────────────────────────────────────────────────
+# t_end is computed PER RUN as:  t_end = t_mix(params) + t_buffer
+# t_mix is the non-dim ramp time before oxygen transfer starts.
+# t_buffer must be long enough for C* to reach the target saturation level:
+#   kLa_25: t_buffer > -ln(0.75) / kLa_nd_min ≈ 0.29 / 0.005 ≈ 58
+#   kLa_50: t_buffer > -ln(0.50) / kLa_nd_min ≈ 0.69 / 0.005 ≈ 138
+# 150 is conservative and covers kLa_50 for all expected conditions.
+t_buffer: 150
+
+# ── Submission ───────────────────────────────────────────────────────────────
+submit: true          # set false to write params files without submitting
+walltime: "00:30:00"  # SLURM wall-clock limit per job

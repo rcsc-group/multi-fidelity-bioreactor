@@ -1,48 +1,54 @@
 """Tests for suggest.py — acquisition function and candidate generation."""
-import csv
 import json
-import math
 from pathlib import Path
 
+import numpy as np
+import pandas as pd
 import pytest
+from f3dasm import ExperimentData
 
 from scripts.suggest import main as suggest_main
 
 N_MAX = 3
 
 
-def _write_minimal_results_csv(path: Path, n_lf: int = 5):
-    """Write a minimal results.csv with synthetic LF runs."""
-    rows = []
-    for i in range(n_lf):
-        rows.append({
-            "run_id": f"lf_{i}",
-            "fidelity": 7,
-            "omega_b": 2.0 + i * 0.5,
-            "n_harmonics": 1,
-            "theta_max_0": 5.0, "theta_max_1": 0.0, "theta_max_2": 0.0,
-            "phi_angular_0": 0.0, "phi_angular_1": 0.0, "phi_angular_2": 0.0,
-            "omega_h": 0.0,
-            "amplitude_h_0": 0.0, "amplitude_h_1": 0.0, "amplitude_h_2": 0.0,
-            "phi_horizontal_0": 0.0, "phi_horizontal_1": 0.0, "phi_horizontal_2": 0.0,
-            "geometry_a": 0.25, "geometry_b": 0.071, "geometry_tilt": 0.0,
-            "fill_level": 0.5,
-            "kLa_25": 0.005 + i * 0.001,
-        })
-    fieldnames = rows[0].keys()
-    with open(path, "w", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
-        writer.writeheader()
-        writer.writerows(rows)
+def _make_experiment_data(tmp_dir: Path, n_lf: int = 8, n_hf: int = 3) -> Path:
+    rng = np.random.default_rng(0)
+    rows_in, rows_out = [], []
+    for fidelity, n in ((5, n_lf), (7, n_hf)):
+        for i in range(n):
+            rows_in.append({
+                "omega_b": rng.uniform(1.57, 6.28),
+                "n_harmonics": 1,
+                "theta_max_0": rng.uniform(2, 7), "theta_max_1": 0.0, "theta_max_2": 0.0,
+                "phi_angular_0": 0.0, "phi_angular_1": 0.0, "phi_angular_2": 0.0,
+                "omega_h": 0.0,
+                "amplitude_h_0": 0.0, "amplitude_h_1": 0.0, "amplitude_h_2": 0.0,
+                "phi_horizontal_0": 0.0, "phi_horizontal_1": 0.0, "phi_horizontal_2": 0.0,
+                "geometry_a": 0.25, "geometry_b": 0.071, "geometry_n": rng.uniform(2, 8),
+                "fill_level": rng.uniform(0.3, 0.7),
+                "fidelity": fidelity,
+            })
+            rows_out.append({
+                "kLa_10": rng.uniform(0.002, 0.015),
+                "kLa_25": rng.uniform(0.003, 0.02),
+                "kLa_50": rng.uniform(0.002, 0.018),
+            })
+    ed = ExperimentData(
+        input_data=pd.DataFrame(rows_in),
+        output_data=pd.DataFrame(rows_out),
+    )
+    exp_dir = tmp_dir / "experiment"
+    ed.store(str(exp_dir))
+    return exp_dir
 
 
 def test_candidates_within_bounds(tmp_path):
     """All suggested parameters are within param_space.yaml bounds."""
-    results_csv = tmp_path / "results.csv"
-    _write_minimal_results_csv(results_csv)
+    exp_dir = _make_experiment_data(tmp_path)
     param_space = Path("config/param_space.yaml")
 
-    candidate = suggest_main(str(results_csv), str(param_space))
+    candidate = suggest_main(str(exp_dir), str(param_space))
 
     assert 1.57 <= candidate["omega_b"] <= 6.28
     assert 0.3 <= candidate["fill_level"] <= 0.7
@@ -50,22 +56,20 @@ def test_candidates_within_bounds(tmp_path):
 
 def test_phi_angular_zero_always_fixed(tmp_path):
     """phi_angular[0] == 0.0 in every suggested candidate."""
-    results_csv = tmp_path / "results.csv"
-    _write_minimal_results_csv(results_csv)
+    exp_dir = _make_experiment_data(tmp_path)
     param_space = Path("config/param_space.yaml")
 
-    candidate = suggest_main(str(results_csv), str(param_space))
+    candidate = suggest_main(str(exp_dir), str(param_space))
 
     assert candidate["phi_angular"][0] == 0.0
 
 
 def test_vectors_zero_padded_to_nmax(tmp_path):
     """theta_max, phi_angular, amplitude_h, phi_horizontal all have length N_max."""
-    results_csv = tmp_path / "results.csv"
-    _write_minimal_results_csv(results_csv)
+    exp_dir = _make_experiment_data(tmp_path)
     param_space = Path("config/param_space.yaml")
 
-    candidate = suggest_main(str(results_csv), str(param_space))
+    candidate = suggest_main(str(exp_dir), str(param_space))
 
     for vec in ("theta_max", "phi_angular", "amplitude_h", "phi_horizontal"):
         assert len(candidate[vec]) == N_MAX, f"{vec} must have length {N_MAX}"

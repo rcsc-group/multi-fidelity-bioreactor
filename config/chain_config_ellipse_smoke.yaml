@@ -1,0 +1,27 @@
+# Smoke test for uf-scaling fix in checkpoint restart.
+# 2-segment chain: seg0 (omega_b=π) + seg1 (omega_b=2π), fidelity 3.
+# Run: python scripts/chain.py config/chain_config_ellipse_smoke.yaml
+
+fidelity: 3
+geometry: {a: 0.20, b: 0.09, n: 2.0}
+fill_level: 0.4
+
+n_mix_cycles: 5
+n_transition_cycles: 3
+t_buffer: 15
+
+sweep:
+  parameter: omega_b
+  values: [3.14159, 6.28318]
+
+motion:
+  n_harmonics: 1
+  theta_max: [5.0, 0.0, 0.0]
+  phi_angular: [0.3, 0.0, 0.0]
+  omega_h: 6.28318
+  amplitude_h: [0.02, 0.0, 0.0]
+  phi_horizontal: [0.3, 0.0, 0.0]
+
+videos: false
+submit: true
+walltime: "00:30:00"

@@ -126,6 +126,8 @@ def submit_slurm(
     template: Path | str | None = None,
     mem: str = "12G",
     cpus: int = 4,
+    checkpoint: str | None = None,
+    dependency: str | None = None,
 ) -> str:
     """Write params.json and submit a SLURM job via sbatch.
 
@@ -138,6 +140,10 @@ def submit_slurm(
     template     : path to SLURM script; defaults to config/slurm_template.sh
     mem          : memory request (e.g. "12G")
     cpus         : CPUs per task
+    checkpoint   : absolute path to checkpoint.dump for restart runs; if set,
+                   DUMP env var is exported so the binary receives it as argv[2]
+    dependency   : SLURM dependency string, e.g. "afterok:12345"; passed as
+                   --dependency to sbatch (enables chained job submission)
 
     Returns
     -------
@@ -153,14 +159,21 @@ def submit_slurm(
     logs_dir     = project_root / "logs"
     logs_dir.mkdir(exist_ok=True)
 
+    export_str = f"PARAMS={params_path}"
+    if checkpoint:
+        export_str += f",DUMP={checkpoint}"
+
     cmd = [
         "sbatch",
         f"--time={walltime}",
         f"--mem={mem}",
         f"--cpus-per-task={cpus}",
-        f"--export=PARAMS={params_path}",
+        f"--export={export_str}",
         str(template.resolve()),
     ]
+    if dependency:
+        cmd.insert(1, f"--dependency={dependency}")
+
     result = subprocess.run(cmd, capture_output=True, text=True, check=True)
     # sbatch stdout: "Submitted batch job 123456"
     match = re.search(r"(\d+)", result.stdout)

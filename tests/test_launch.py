@@ -15,7 +15,7 @@ VALID_PARAMS = {
     "omega_h": 2.1,
     "amplitude_h": [0.01, 0.005, 0.0],
     "phi_horizontal": [0.0, 0.78, 0.0],
-    "geometry": {"a": 0.25, "b": 0.071, "tilt": 0.0},
+    "geometry": {"a": 0.25, "b": 0.071, "n": 2.0},
     "fill_level": 0.5,
 }
 

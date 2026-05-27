@@ -78,7 +78,7 @@ double t_end;                      // Final simulation time (simulation time uni
 
 // Output time intervals (derived from experimental timing)
 const double dt_file = 0.1519*7;  // Interval for saving data to file
-const double dt_video= 0.6074/10; // Interval for video frames
+const double dt_video= 0.6074/5;  // Interval for video frames
 const double dt_Fig  = 0.1519*7;  // Interval for figure output
 double t_spec_init, t_spec_end;   // Specific output window for focused data extraction
 const double dt_spec = 0.000530525;  // Very high frequency sampling for specific data
@@ -148,6 +148,10 @@ FILE * fp_stats, * fp_norm, * fp_stats2, * fp_stats3;
 // Key physical and dimensionless parameters (computed in main)
 double U0, Ub, Re_w, Re_a, We_w, Fr, rhor, mur, Pe_tracer_1, Pe_tracer_2, Pe_oxy_1, Pe_oxy_2, Th, Th_d, Th_2d, U_bio, w_bio, w_bio_st, T_per_st, T_bio, Th_max2, D_in_non, U_in_non, t_change_st, t_mix_st;
 BioreactorParams params;  // global so all events (acceleration, init) can access it
+// Restart / checkpoint support
+static double t_ramp_start      = 0.0;   // simulation time when the current ramp began
+static double t_dump_checkpoint = 0.0;   // simulation time to write checkpoint.dump
+static const char * restart_file = NULL; // argv[2] if this is a restart run
 int MINLEVEL, MAXLEVEL;    // Mesh refinement levels
 
 
@@ -209,6 +213,40 @@ int main(int argc, char * argv[]){
   t_dump = t_mix;                   // Time to dump data (simulation time)
   t_spec_init= t_mix;                       // Initial time to save data in the specific range
   t_spec_end = T_per_st*(nMix_cycle+10);    // End time to save data in the specific range
+
+  // ── Checkpoint restart ─────────────────────────────────────────────────────
+  // Detected via params.t_checkpoint > 0 (set by chain.py for restart segments).
+  // params.t_end is a RELATIVE duration; the C code adds params.t_checkpoint.
+  // All timing is computed HERE (before run()) so that the Basilisk event system
+  // registers t_dump_checkpoint at the correct value — not as a placeholder that
+  // gets overridden too late.  restore() itself is called in event init so that
+  // the grid infrastructure is fully active.
+  if (params.t_checkpoint > 0.0) {
+    if (argc < 3) {
+      fprintf (stderr, "ERROR: t_checkpoint > 0 in params but no dump file given (argv[2])\n");
+      return 1;
+    }
+    restart_file     = argv[2];
+    // w_bio_st is constant across omega_b (since T_bio ∝ 1/omega_b), so the non-dim
+    // rocking pattern is identical for all frequencies — no ramp needed.  Set
+    // t_ramp_start so that elapsed = ramp_dur at t=t_checkpoint → ramp = 1 immediately.
+    t_ramp_start     = params.t_checkpoint - N_RAMP_CYCLES * T_per_st;
+    t_mix            = params.t_checkpoint + T_per_st * params.n_mix_cycles;
+    t_dump           = t_mix;
+    t_spec_init      = t_mix;
+    t_spec_end       = t_mix + T_per_st * 10;
+    {
+      double t_end_abs = params.t_checkpoint + params.t_end;
+      int n_per        = (int)(t_end_abs / T_per_st) + 1;
+      t_dump_checkpoint = n_per * T_per_st;
+      t_end            = t_dump_checkpoint;
+    }
+  } else {
+    // Fresh run: extend t_end to the next period boundary for clean phase alignment.
+    int n_per = (int)(t_end / T_per_st) + 1;
+    t_dump_checkpoint = n_per * T_per_st;
+    t_end = t_dump_checkpoint;
+  }
 
   // Dimensionless numbers
   Re_w = rho_w*U_bio*L_bio/mu_w;            // Reynolds number of water
@@ -324,23 +362,94 @@ int main(int argc, char * argv[]){
 // ================================================================== //
 event init (t = 0)
 {
-  // Parametric bag geometry (dimensionless semi-axes)
-  double a_nd = params.geometry_a / L_bio;
-  double b_nd = params.geometry_b / L_bio;  // == Ly
+  if (restart_file) {
+    // ── Checkpoint restart ────────────────────────────────────────────────
+    // restore() is called here so that Basilisk's grid infrastructure is
+    // fully active.  It sets t = t_checkpoint and restores all fields.
+    // All timing was already computed in main() from params.t_checkpoint so
+    // the event system has the correct t_dump_checkpoint before run().
+    restore (file = restart_file);
+    // fs (embed face fractions) is a face field — excluded from Basilisk dumps.
+    // After restore, fs=0 everywhere: the NS solver sees no solid walls and the
+    // velocity collapses on the first timestep.  Re-compute fs from the same
+    // static geometry used at fresh-start (rocking is body forces, not moving solid).
+#if EMBED
+    {
+      double a_nd = params.geometry_a / L_bio;
+      double b_nd = params.geometry_b / L_bio;
+      if (params.geometry_n >= 8.)
+        solid (cs, fs, intersection(a_nd - fabs(x), b_nd - fabs(y)));
+      else
+        solid (cs, fs, 1. - pow(fabs(x/a_nd), params.geometry_n)
+                          - pow(fabs(y/b_nd), params.geometry_n));
+    }
+#endif
+    // Rescale stored velocity and pressure to the new segment's non-dim frame.
+    // U_bio ∝ omega_b (fixed geometry, theta_max) → scale = omega_b_prev / omega_b.
+    // Without this, the restored velocity is 2× too large when frequency doubles.
+    if (params.omega_b_prev > 0.) {
+      double su = params.omega_b_prev / params.omega_b;
+      foreach() {
+        u.x[] *= su;
+        u.y[] *= su;
+        p[]   *= su * su;
+        pf[]  *= su * su;   // half-step pressure (BCG tracer advection), same scale as p
+      }
+      // uf (face-centered velocity) must also be rescaled.  centered.h's
+      // advection scheme (BCG), the VOF step, and the AMR adapt-at-t=0
+      // all use uf directly before it is rebuilt from u.  Without this,
+      // the first Poisson projection sees a factor-of-(1/su)^2 kinetic
+      // energy mismatch and destroys the restored velocity field.
+      foreach_face()
+        uf.x[] *= su;
+      boundary ({u.x, u.y, p, pf, uf.x, uf.y});
+      // Scale g (combined pressure-gradient + acceleration term from BCG predictor).
+      // g is stored in the checkpoint in seg0 non-dim units.  With ramp=1 immediately,
+      // the acceleration part of g is correct (w_bio_st is constant across omega_b).
+      // The pressure-gradient part scales as su² (same as p).  Scale by su² to keep
+      // the pressure-gradient contribution accurate in the first BCG half-step.
+      foreach() {
+        g.x[] *= su * su;
+        g.y[] *= su * su;
+      }
+      boundary ({g.x, g.y});
+      // Print ux_liq_rms immediately after scale (goes to slurm_*.err)
+      {
+        double ux2 = 0., vol = 0.;
+        foreach(reduction(+:ux2) reduction(+:vol)) {
+          if (f[] >= 0.5 && cs[] == 1) {
+            ux2 += u.x[]*u.x[]*dv(); vol += dv();
+          }
+        }
+        if (pid() == 0)
+          fprintf(stderr, "RESTART_DEBUG init: t=%.6g su=%.4g t_ramp_start=%.6g ux_liq_rms=%.6g\n",
+                  t, params.omega_b_prev/params.omega_b, t_ramp_start, sqrt(ux2/max(vol,1e-10)));
+      }
+    }
+    // Reset liquid oxygen — each segment is a fresh kLa experiment.
+    foreach()
+      if (cs[] == 1 && f[] >= 0.5) oxy[] = 0.;
+    boundary ({oxy});
+  } else {
+    // ── Fresh start ────────────────────────────────────────────────────────
+    // Parametric bag geometry (dimensionless semi-axes)
+    double a_nd = params.geometry_a / L_bio;
+    double b_nd = params.geometry_b / L_bio;  // == Ly
 
-  // Fill level: liquid occupies fill_level fraction of bag height, measured from bottom
-  double y_fill = b_nd * (2.*params.fill_level - 1.);
-  fraction(f, y_fill - y);
+    // Fill level: liquid occupies fill_level fraction of bag height, measured from bottom
+    double y_fill = b_nd * (2.*params.fill_level - 1.);
+    fraction(f, y_fill - y);
 
-  // Superellipse solid: |x/a|^n + |y/b|^n = 1
-  // n >= 8 → perfect rectangle (avoids pow() singularities at sharp corners)
-  #if EMBED
-  if (params.geometry_n >= 8.)
-    solid(cs, fs, intersection(a_nd - fabs(x), b_nd - fabs(y)));
-  else
-    solid(cs, fs, 1. - pow(fabs(x/a_nd), params.geometry_n)
-                     - pow(fabs(y/b_nd), params.geometry_n));
-  #endif
+    // Superellipse solid: |x/a|^n + |y/b|^n = 1
+    // n >= 8 → perfect rectangle (avoids pow() singularities at sharp corners)
+    #if EMBED
+    if (params.geometry_n >= 8.)
+      solid(cs, fs, intersection(a_nd - fabs(x), b_nd - fabs(y)));
+    else
+      solid(cs, fs, 1. - pow(fabs(x/a_nd), params.geometry_n)
+                       - pow(fabs(y/b_nd), params.geometry_n));
+    #endif
+  }
 }
 
 
@@ -422,8 +531,27 @@ event oxygen (t=t_mix; i++){
 #if ACCELERATION
 event acceleration(i++)
 {
-  // Linear amplitude ramp over t_change_st to avoid impulsive start
-  double ramp = (t < t_change_st) ? t / t_change_st : 1.0;
+  // Linear amplitude ramp: N_RAMP_CYCLES of rocking from t_ramp_start.
+  // For fresh runs t_ramp_start=0, giving the same result as before.
+  // For checkpoint restarts t_ramp_start=t_checkpoint, ramping the new params
+  // smoothly from zero over N_RAMP_CYCLES periods of the new frequency.
+  double elapsed  = t - t_ramp_start;
+  double ramp_dur = N_RAMP_CYCLES * T_per_st;
+  double ramp     = (elapsed < ramp_dur) ? elapsed / ramp_dur : 1.0;
+
+  // Per-step diagnostics for restart runs: print every 5 steps for first 100 steps.
+  // Helps identify when and why velocity crashes after checkpoint restore.
+  if (restart_file) {
+    static int _dbg_step = 0;
+    _dbg_step++;
+    if ((_dbg_step <= 10 || _dbg_step % 5 == 0) && _dbg_step <= 100 && pid() == 0) {
+      double _ux2 = 0., _vol = 0.;
+      foreach(reduction(+:_ux2) reduction(+:_vol))
+        if (f[] >= 0.5 && cs[] == 1) { _ux2 += u.x[]*u.x[]*dv(); _vol += dv(); }
+      fprintf(stderr, "STEP_DEBUG step=%d i=%d t=%.6g elapsed=%.6g ramp=%.6g ux_rms=%.6g\n",
+              _dbg_step, i, t, elapsed, ramp, sqrt(_ux2/max(_vol,1e-10)));
+    }
+  }
 
   // Multi-harmonic angular forcing: θ(t) = Σ_k θ_k · sin(k·ω_b·t + φ_k)
   // k is harmonic number (dimensionless); k·w_bio_st is the k-th frequency in sim time
@@ -464,6 +592,21 @@ event acceleration(i++)
 }
 #endif
 
+
+// Write a Basilisk checkpoint at the first complete period boundary after t_end.
+// The checkpoint is always at θ=0 (zero-crossing) — clean phase alignment for
+// the next segment's soft-start ramp.  Controlled by t_dump_checkpoint global.
+event dump_checkpoint (t = t_dump_checkpoint) {
+  if (pid() == 0)
+    fprintf (ferr, "checkpoint: writing checkpoint.dump at t=%.4g\n", t);
+  // p and pf have nodump=true by default in centered.h (they're reconstructed
+  // from scratch after a restore, causing a first-step velocity crash).
+  // Force them into the checkpoint so the restart Poisson solve starts from
+  // the correct pressure and applies only a tiny correction.
+  p.nodump = pf.nodump = false;
+  dump (file = "checkpoint.dump");
+  p.nodump = pf.nodump = true;
+}
 
 // ================================================================== //
 //                           OTHER OPTIONS                            //
@@ -620,192 +763,54 @@ event normcal (t+=t_out; t<=t_end){
 }
 #endif
 
-// Make videos
+// Make videos — field data exported as binary frames; rendered by scripts/render_videos.py
 #if VIDEOS
-event movies_output(t = t_mix; t += dt_video; t<=t_end)
+int _vframe = 0;
+
+event movies_output(t = t_mix; t += dt_video; t <= t_end)
 {
-  scalar omega[], ff[], cc[], oxyy[];
-  char timestring[100];
+  if (_vframe == 0)
+    system("mkdir -p frames");
 
-  vorticity (u,omega);
+  char fpath[512];
+  sprintf(fpath, "frames/frame_%06d.bin", _vframe);
+  FILE *fp = fopen(fpath, "wb");
+  if (!fp) { fprintf(stderr, "movies_output: cannot open %s\n", fpath); return; }
 
-  /* View dimensions adapted to bag geometry so empty domain space is stripped.
-     Camera sits at z ≈ -(1 + L0/2) = -1.5; full vertical span at fov=24° ≈ 0.638.
-     Body frame: crop to bag half-height Ly/2 + 20% margin.
-     Lab frame:  crop to envelope of rotating bag corner + 20% margin. */
-  double _margin_b = (Ly/2) * 1.2;
-  int    _h_body   = ((int)(1200.0 * _margin_b * 2.0 / 0.638) / 2) * 2;  // h264 needs even height
-  double _fov_body = 2.0 * atan(_margin_b / 1.5) * (180.0 / M_PI);
+  int    n    = NN;  // NN = 1<<fidelity, set in main(); avoids MAXLEVEL/grid depth ambiguity
+  double t_nd = t;
 
-  double _y_lab_max = 0.5*sin(fabs(Th_max)) + (Ly/2)*cos(fabs(Th_max));
-  double _margin_l  = _y_lab_max * 1.2;
-  int    _h_lab     = ((int)(1200.0 * _margin_l * 2.0 / 0.638) / 2) * 2;  // h264 needs even height
-  double _fov_lab   = 2.0 * atan(_margin_l / 1.5) * (180.0 / M_PI);
+  // Horizontal displacement (lab frame): X_lab = sum_k A_k * sin(k*w_h*t + phi_k)
+  double xh_nd = 0.0;
+  if (params.omega_h > 0.) {
+    double w_h_nd = params.omega_h * T_bio;
+    for (int k = 1; k <= params.n_harmonics; k++) {
+      double wk = k * w_h_nd;
+      xh_nd += (params.amplitude_h[k-1] / L_bio) * sin(wk*t + params.phi_horizontal[k-1]);
+    }
+  }
 
-  // vorticity — body frame
-  clear();
-  view(width=1200,height=_h_body,fov=_fov_body,quat={0,0,0,1},ty=0.0);
-  draw_vof("f",lw=2);
-  squares("omega",map=cool_warm,min=-50.0,max=50.0);
-  draw_vof("cs","fs");
-  sprintf(timestring,"t=%2.03fs",t*T_bio);
-  draw_string(timestring,pos=4,lc={0,0,0},lw=2);
-  save("vorticity3.mp4");
-  save("vorticity.png");
+  // Header: n (int32), t (float64), Th (float64), xh_nd (float64)
+  fwrite(&n,     sizeof(int),    1, fp);
+  fwrite(&t_nd,  sizeof(double), 1, fp);
+  fwrite(&Th,    sizeof(double), 1, fp);
+  fwrite(&xh_nd, sizeof(double), 1, fp);
 
-  // vorticity — lab frame (view rotated by current tilt angle Th)
-  clear();
-  view(width=1200,height=_h_lab,fov=_fov_lab,
-       quat={0,0,sin(Th/2),cos(Th/2)},ty=0.0);
-  draw_vof("f",lw=2);
-  squares("omega",map=cool_warm,min=-50.0,max=50.0);
-  draw_vof("cs","fs");
-  sprintf(timestring,"t=%2.03fs",t*T_bio);
-  draw_string(timestring,pos=4,lc={0,0,0},lw=2);
-  save("vorticity_lab.mp4");
-  save("vorticity_lab.png");
-
-  // volume fraction — body frame
-  clear();
-  view(width=1200,height=_h_body,fov=_fov_body,quat={0,0,0,1},ty=0.0);
-  draw_vof("f",lw=2);
-  squares("f",map=cool_warm,min=0.0,max=1.0);
-  draw_vof("cs","fs");
-  sprintf(timestring,"t=%2.03fs",t*T_bio);
-  draw_string(timestring,pos=4,lc={0,0,0},lw=2);
-  save("volume_fraction3.mp4");
-  save("volume_fraction.png");
-
-  // volume fraction — lab frame
-  clear();
-  view(width=1200,height=_h_lab,fov=_fov_lab,
-       quat={0,0,sin(Th/2),cos(Th/2)},ty=0.0);
-  draw_vof("f",lw=2);
-  squares("f",map=cool_warm,min=0.0,max=1.0);
-  draw_vof("cs","fs");
-  sprintf(timestring,"t=%2.03fs",t*T_bio);
-  draw_string(timestring,pos=4,lc={0,0,0},lw=2);
-  save("volume_fraction_lab.mp4");
-  save("volume_fraction_lab.png");
-
-#if TRACER
-  // tracer — body frame
-  clear();
-  view(width=1200,height=_h_body,fov=_fov_body,quat={0,0,0,1},ty=0.0);
-  draw_vof("f",lw=2);
-  squares("c",map=cool_warm,min=0.0,max=1.0);
-  draw_vof("cs","fs");
-  sprintf(timestring,"t=%2.03fs",t*T_bio);
-  draw_string(timestring,pos=4,lc={0,0,0},lw=2);
-  save("tracer.mp4");
-  save("tracer.png");
-
-  // tracer — lab frame
-  clear();
-  view(width=1200,height=_h_lab,fov=_fov_lab,
-       quat={0,0,sin(Th/2),cos(Th/2)},ty=0.0);
-  draw_vof("f",lw=2);
-  squares("c",map=cool_warm,min=0.0,max=1.0);
-  draw_vof("cs","fs");
-  sprintf(timestring,"t=%2.03fs",t*T_bio);
-  draw_string(timestring,pos=4,lc={0,0,0},lw=2);
-  save("tracer_lab.mp4");
-  save("tracer_lab.png");
-
-  // tracer1 — body frame
-  clear();
-  view(width=1200,height=_h_body,fov=_fov_body,quat={0,0,0,1},ty=0.0);
-  draw_vof("f",lw=2);
-  squares("c1",map=cool_warm,min=0.0,max=1.0);
-  draw_vof("cs","fs");
-  sprintf(timestring,"t=%2.03fs",t*T_bio);
-  draw_string(timestring,pos=4,lc={0,0,0},lw=2);
-  save("tracer1.mp4");
-  save("tracer1.png");
-
-  // tracer1 — lab frame
-  clear();
-  view(width=1200,height=_h_lab,fov=_fov_lab,
-       quat={0,0,sin(Th/2),cos(Th/2)},ty=0.0);
-  draw_vof("f",lw=2);
-  squares("c1",map=cool_warm,min=0.0,max=1.0);
-  draw_vof("cs","fs");
-  sprintf(timestring,"t=%2.03fs",t*T_bio);
-  draw_string(timestring,pos=4,lc={0,0,0},lw=2);
-  save("tracer1_lab.mp4");
-  save("tracer1_lab.png");
-
-  // tracer2 — body frame
-  clear();
-  view(width=1200,height=_h_body,fov=_fov_body,quat={0,0,0,1},ty=0.0);
-  draw_vof("f",lw=2);
-  squares("c2",map=cool_warm,min=0.0,max=1.0);
-  draw_vof("cs","fs");
-  sprintf(timestring,"t=%2.03fs",t*T_bio);
-  draw_string(timestring,pos=4,lc={0,0,0},lw=2);
-  save("tracer2.mp4");
-  save("tracer2.png");
-
-  // tracer2 — lab frame
-  clear();
-  view(width=1200,height=_h_lab,fov=_fov_lab,
-       quat={0,0,sin(Th/2),cos(Th/2)},ty=0.0);
-  draw_vof("f",lw=2);
-  squares("c2",map=cool_warm,min=0.0,max=1.0);
-  draw_vof("cs","fs");
-  sprintf(timestring,"t=%2.03fs",t*T_bio);
-  draw_string(timestring,pos=4,lc={0,0,0},lw=2);
-  save("tracer2_lab.mp4");
-  save("tracer2_lab.png");
-
-  // tracer3 — body frame
-  clear();
-  view(width=1200,height=_h_body,fov=_fov_body,quat={0,0,0,1},ty=0.0);
-  draw_vof("f",lw=2);
-  squares("c3",map=cool_warm,min=0.0,max=1.0);
-  draw_vof("cs","fs");
-  sprintf(timestring,"t=%2.03fs",t*T_bio);
-  draw_string(timestring,pos=4,lc={0,0,0},lw=2);
-  save("tracer3.mp4");
-  save("tracer3.png");
-
-  // tracer3 — lab frame
-  clear();
-  view(width=1200,height=_h_lab,fov=_fov_lab,
-       quat={0,0,sin(Th/2),cos(Th/2)},ty=0.0);
-  draw_vof("f",lw=2);
-  squares("c3",map=cool_warm,min=0.0,max=1.0);
-  draw_vof("cs","fs");
-  sprintf(timestring,"t=%2.03fs",t*T_bio);
-  draw_string(timestring,pos=4,lc={0,0,0},lw=2);
-  save("tracer3_lab.mp4");
-  save("tracer3_lab.png");
-#endif
-
-#if OXYGEN
-  // oxygen — body frame
-  clear();
-  view(width=1200,height=_h_body,fov=_fov_body,quat={0,0,0,1},ty=0.0);
-  draw_vof("f",lw=2);
-  squares("oxy",map=cool_warm,min=0.0,max=0.033);
-  draw_vof("cs","fs");
-  sprintf(timestring,"t=%2.03fs",t*T_bio);
-  draw_string(timestring,pos=4,lc={0,0,0},lw=2);
-  save("oxygen3.mp4");
-  save("oxygen.png");
-
-  // oxygen — lab frame
-  clear();
-  view(width=1200,height=_h_lab,fov=_fov_lab,
-       quat={0,0,sin(Th/2),cos(Th/2)},ty=0.0);
-  draw_vof("f",lw=2);
-  squares("oxy",map=cool_warm,min=0.0,max=0.033);
-  draw_vof("cs","fs");
-  sprintf(timestring,"t=%2.03fs",t*T_bio);
-  draw_string(timestring,pos=4,lc={0,0,0},lw=2);
-  save("oxygen_lab.mp4");
-  save("oxygen_lab.png");
-#endif
+  // VOF field f interpolated onto n×n uniform grid, row-major (j=0 → y=Y0 = bottom)
+  double dx  = L0 / n;
+  float *buf = (float *)malloc(n * n * sizeof(float));
+  int idx = 0;
+  for (int j = 0; j < n; j++) {
+    double yj = Y0 + (j + 0.5) * dx;
+    for (int i = 0; i < n; i++) {
+      double xi = X0 + (i + 0.5) * dx;
+      buf[idx++] = (float)interpolate(f, xi, yj);
+    }
+  }
+  fwrite(buf, sizeof(float), n * n, fp);
+  free(buf);
+  fclose(fp);
+  _vframe++;
 }
 #endif
 

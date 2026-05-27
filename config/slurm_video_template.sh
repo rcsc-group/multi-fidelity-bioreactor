@@ -29,8 +29,8 @@ if [ -z "${PARAMS:-}" ]; then
     exit 1
 fi
 
-RUN_DIR="$(dirname "$PARAMS")"
-PROJECT_ROOT="$(dirname "$(dirname "$RUN_DIR")")"
+RUN_DIR="$(realpath "$(dirname "$PARAMS")")"
+PROJECT_ROOT="$(realpath "$(dirname "$(dirname "$RUN_DIR")")")"
 
 echo "Project root : $PROJECT_ROOT"
 echo "Run dir      : $RUN_DIR"
@@ -41,9 +41,15 @@ mkdir -p "$RUN_DIR" "$PROJECT_ROOT/logs"
 cd "$RUN_DIR"
 # DISPLAY must be unset — fb_tiny renders to a memory buffer (no X server needed).
 unset DISPLAY
-OMP_NUM_THREADS="${SLURM_CPUS_PER_TASK:-4}" \
-    "$PROJECT_ROOT/build/BioReactor-video" params.json
+if [ -n "${DUMP:-}" ]; then
+    OMP_NUM_THREADS="${SLURM_CPUS_PER_TASK:-4}" \
+        "$PROJECT_ROOT/build/BioReactor-video" params.json "$DUMP"
+else
+    OMP_NUM_THREADS="${SLURM_CPUS_PER_TASK:-4}" \
+        "$PROJECT_ROOT/build/BioReactor-video" params.json
+fi
 
 "$PROJECT_ROOT/.venv/bin/python" "$PROJECT_ROOT/scripts/postprocess.py" "$RUN_DIR"
+"$PROJECT_ROOT/.venv/bin/python" "$PROJECT_ROOT/scripts/render_videos.py" "$RUN_DIR"
 
 echo "Done. Videos and results written to $RUN_DIR"

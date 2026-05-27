@@ -36,6 +36,9 @@ typedef struct {
   double fill_level;
   double t_end;                 // simulation end time [non-dim]; default 250.0
   int    n_mix_cycles;          // rocking cycles before oxygen/tracer start; default 80
+  // Checkpoint restart fields (set by chain.py for restart segments; 0 for fresh runs)
+  double t_checkpoint;          // absolute non-dim time of the restored checkpoint
+  double omega_b_prev;          // omega_b of the segment that wrote the checkpoint
 } BioreactorParams;
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -133,6 +136,10 @@ static BioreactorParams params_read(const char *path) {
       tok_array(json, tokens, ++i, p.phi_horizontal, N_MAX);
       i += tokens[i].size;
     }
+    else if (jsoneq(json, &tokens[i], "t_checkpoint"))
+      p.t_checkpoint = tok_double(json, &tokens[++i]);
+    else if (jsoneq(json, &tokens[i], "omega_b_prev"))
+      p.omega_b_prev = tok_double(json, &tokens[++i]);
     else if (jsoneq(json, &tokens[i], "geometry")) {
       // geometry is a nested object; walk its key-value pairs
       i++;  // move to the object token
