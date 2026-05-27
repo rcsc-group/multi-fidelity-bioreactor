@@ -179,3 +179,62 @@ def test_prev_omega_b_still_set_on_restart():
     chain = build_chain(_CFG)
     for k in range(1, len(chain)):
         assert "omega_b_prev" in chain[k]
+
+
+# ── initial_checkpoint support ────────────────────────────────────────────────
+
+_INITIAL_CK = {
+    "run_id":   "deadbeef",
+    "t_dump":    50.0,
+    "omega_b":   1.0,
+    "theta_max": [5.0, 0.0, 0.0],
+    "phi_angular": [0.0, 0.0, 0.0],
+    "omega_h": 0.0,
+    "amplitude_h": [0.0, 0.0, 0.0],
+    "phi_horizontal": [0.0, 0.0, 0.0],
+}
+
+_CFG_WITH_CK = {
+    **_CFG,
+    "n_transition_cycles": 5,
+    "initial_checkpoint": _INITIAL_CK,
+}
+
+
+def test_initial_checkpoint_all_segments_are_restarts():
+    """With initial_checkpoint every segment (including k=0) must have t_checkpoint."""
+    chain = build_chain(_CFG_WITH_CK)
+    for k, p in enumerate(chain):
+        assert "t_checkpoint" in p, f"segment {k} missing t_checkpoint"
+
+
+def test_initial_checkpoint_seg0_uses_t_dump():
+    """Segment 0 t_checkpoint equals initial_checkpoint.t_dump."""
+    chain = build_chain(_CFG_WITH_CK)
+    assert math.isclose(chain[0]["t_checkpoint"], _INITIAL_CK["t_dump"])
+
+
+def test_initial_checkpoint_seg0_prev_fields_from_initial_ck():
+    """Segment 0 _prev motion fields come from initial_checkpoint params."""
+    chain = build_chain(_CFG_WITH_CK)
+    assert chain[0]["omega_b_prev"]    == _INITIAL_CK["omega_b"]
+    assert chain[0]["theta_max_prev"]  == _INITIAL_CK["theta_max"]
+    assert chain[0]["omega_h_prev"]    == _INITIAL_CK["omega_h"]
+
+
+def test_initial_checkpoint_all_use_transition_cycles():
+    """With initial_checkpoint every segment uses n_transition_cycles, not n_mix_cycles."""
+    chain = build_chain(_CFG_WITH_CK)
+    for k, p in enumerate(chain):
+        assert p["n_mix_cycles"] == _CFG_WITH_CK["n_transition_cycles"], (
+            f"segment {k} should use n_transition_cycles"
+        )
+
+
+def test_initial_checkpoint_checkpoint_times_advance():
+    """Each segment's t_checkpoint is strictly greater than the previous."""
+    chain = build_chain(_CFG_WITH_CK)
+    for k in range(1, len(chain)):
+        assert chain[k]["t_checkpoint"] > chain[k - 1]["t_checkpoint"], (
+            f"segment {k} t_checkpoint should exceed segment {k-1}"
+        )

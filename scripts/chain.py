@@ -79,8 +79,14 @@ def _apply_sweep_param(params: dict, sweep_param: str, value: float) -> dict:
 def build_chain(cfg: dict) -> list[dict]:
     """Return one params dict per sweep value.
 
-    Segment 0 uses the full n_mix_cycles (fresh run).
-    Segments 1+ use n_transition_cycles and a shorter relative t_end.
+    Normal mode (no initial_checkpoint):
+      Segment 0 is a fresh run (n_mix_cycles).
+      Segments 1+ restart from the previous segment's checkpoint (n_transition_cycles).
+
+    Restart-from-existing mode (initial_checkpoint present):
+      ALL segments restart — segment 0 from the provided checkpoint,
+      subsequent segments from their predecessor.  n_transition_cycles is used
+      for every segment's n_mix_cycles.
     """
     motion          = cfg["motion"]
     sweep_param     = cfg["sweep"]["parameter"]
@@ -92,6 +98,8 @@ def build_chain(cfg: dict) -> list[dict]:
     n_transition    = int(cfg["n_transition_cycles"])
     t_buffer        = float(cfg["t_buffer"])
 
+    initial_ck      = cfg.get("initial_checkpoint")   # optional
+
     # T_per_nd is constant for fixed geometry/theta_max (independent of omega_b).
     # Use seg-0 params to compute it once for all checkpoint time calculations.
     base0 = {
@@ -101,10 +109,23 @@ def build_chain(cfg: dict) -> list[dict]:
     base0 = _apply_sweep_param(base0, sweep_param, sweep_values[0])
     T_per_nd = _t_period_nd({**base0, "geometry": geometry})
 
+    # Seed checkpoint state from initial_checkpoint or zero (fresh start).
+    if initial_ck:
+        t_checkpoint = float(initial_ck["t_dump"])
+        prev_omega_b: float | None = float(initial_ck["omega_b"])
+        prev_motion: dict | None   = {
+            "theta_max":      list(initial_ck.get("theta_max",      [5.0, 0.0, 0.0])),
+            "phi_angular":    list(initial_ck.get("phi_angular",    [0.0, 0.0, 0.0])),
+            "omega_h":        float(initial_ck.get("omega_h",       0.0)),
+            "amplitude_h":    list(initial_ck.get("amplitude_h",    [0.0, 0.0, 0.0])),
+            "phi_horizontal": list(initial_ck.get("phi_horizontal", [0.0, 0.0, 0.0])),
+        }
+    else:
+        t_checkpoint = 0.0
+        prev_omega_b = None
+        prev_motion  = None
+
     chain: list[dict] = []
-    t_checkpoint = 0.0          # absolute checkpoint time; 0 for fresh runs
-    prev_omega_b: float | None = None
-    prev_motion: dict | None = None   # full motion params of the previous segment
 
     for k, val in enumerate(sweep_values):
         # Base motion params with sweep value applied
@@ -119,7 +140,8 @@ def build_chain(cfg: dict) -> list[dict]:
         }
         base = _apply_sweep_param(base, sweep_param, val)
 
-        n_mix = n_mix_cycles if k == 0 else n_transition
+        is_restart = (k > 0) or (initial_ck is not None)
+        n_mix = n_transition if is_restart else n_mix_cycles
         t_end = n_mix * T_per_nd + t_buffer   # relative to this segment's start
 
         params = {
@@ -131,7 +153,7 @@ def build_chain(cfg: dict) -> list[dict]:
             "t_end":        t_end,
             **base,
         }
-        if k > 0:
+        if is_restart:
             # Restart segment: checkpoint time, omega_b rescaling, and full
             # prev-motion params for smooth-step parameter interpolation in C.
             params["t_checkpoint"]        = t_checkpoint
@@ -170,13 +192,16 @@ def submit_chain(cfg: dict) -> list[str]:
 
     job_ids: list[str] = []
     prev_run_id: str | None = None
+    initial_ck  = cfg.get("initial_checkpoint")
 
     for k, params in enumerate(chain):
-        checkpoint = (
-            str((runs_root / prev_run_id / "checkpoint.dump").resolve())
-            if prev_run_id is not None
-            else None
-        )
+        if k == 0 and initial_ck:
+            # First segment restarts from an externally supplied checkpoint.
+            checkpoint = str(Path(initial_ck["checkpoint_path"]).resolve())
+        elif prev_run_id is not None:
+            checkpoint = str((runs_root / prev_run_id / "checkpoint.dump").resolve())
+        else:
+            checkpoint = None
         dependency = f"afterok:{job_ids[k-1]}" if k > 0 else None
 
         print(
