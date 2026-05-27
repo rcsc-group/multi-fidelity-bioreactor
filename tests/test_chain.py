@@ -122,3 +122,60 @@ def test_theta_max_sweep_parameter():
         assert math.isclose(chain[k]["theta_max"][0], val), (
             f"segment {k} theta_max[0]={chain[k]['theta_max'][0]}, expected {val}"
         )
+
+
+# ── _prev motion param propagation ───────────────────────────────────────────
+
+_MOTION_PREV_FIELDS = [
+    "theta_max_prev",
+    "phi_angular_prev",
+    "amplitude_h_prev",
+    "phi_horizontal_prev",
+    "omega_h_prev",
+]
+
+
+def test_fresh_segment_has_no_prev_motion_params():
+    """Segment 0 must not carry _prev motion fields (it has no predecessor)."""
+    chain = build_chain(_CFG)
+    for field in _MOTION_PREV_FIELDS:
+        assert field not in chain[0], f"seg0 should not have {field}"
+
+
+def test_restart_segments_have_all_prev_motion_params():
+    """Every restart segment carries all five _prev motion fields."""
+    chain = build_chain(_CFG)
+    for k in range(1, len(chain)):
+        for field in _MOTION_PREV_FIELDS:
+            assert field in chain[k], f"segment {k} missing {field}"
+
+
+def test_prev_motion_params_match_previous_segment():
+    """_prev fields in segment k equal the live motion params of segment k-1."""
+    chain = build_chain(_CFG)
+    for k in range(1, len(chain)):
+        prev = chain[k - 1]
+        cur  = chain[k]
+        assert cur["theta_max_prev"]      == prev["theta_max"]
+        assert cur["phi_angular_prev"]    == prev["phi_angular"]
+        assert cur["amplitude_h_prev"]    == prev["amplitude_h"]
+        assert cur["phi_horizontal_prev"] == prev["phi_horizontal"]
+        assert math.isclose(cur["omega_h_prev"], prev["omega_h"])
+
+
+def test_prev_motion_params_reflect_swept_theta_max():
+    """When theta_max_0 is swept, theta_max_prev[0] in seg k mirrors seg k-1's value."""
+    cfg = {
+        **_CFG,
+        "sweep": {"parameter": "theta_max_0", "values": [3.0, 5.0, 8.0]},
+    }
+    chain = build_chain(cfg)
+    assert math.isclose(chain[1]["theta_max_prev"][0], 3.0)
+    assert math.isclose(chain[2]["theta_max_prev"][0], 5.0)
+
+
+def test_prev_omega_b_still_set_on_restart():
+    """omega_b_prev is still populated on restart segments (existing behaviour)."""
+    chain = build_chain(_CFG)
+    for k in range(1, len(chain)):
+        assert "omega_b_prev" in chain[k]

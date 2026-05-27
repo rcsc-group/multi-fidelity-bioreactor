@@ -227,10 +227,9 @@ int main(int argc, char * argv[]){
       return 1;
     }
     restart_file     = argv[2];
-    // w_bio_st is constant across omega_b (since T_bio ∝ 1/omega_b), so the non-dim
-    // rocking pattern is identical for all frequencies — no ramp needed.  Set
-    // t_ramp_start so that elapsed = ramp_dur at t=t_checkpoint → ramp = 1 immediately.
-    t_ramp_start     = params.t_checkpoint - N_RAMP_CYCLES * T_per_st;
+    // Smooth-step interpolation starts AT the checkpoint and runs N_RAMP_CYCLES forward.
+    // alpha goes 0→1 over [t_checkpoint, t_checkpoint + N_RAMP_CYCLES*T_per_st].
+    t_ramp_start     = params.t_checkpoint;
     t_mix            = params.t_checkpoint + T_per_st * params.n_mix_cycles;
     t_dump           = t_mix;
     t_spec_init      = t_mix;
@@ -531,16 +530,16 @@ event oxygen (t=t_mix; i++){
 #if ACCELERATION
 event acceleration(i++)
 {
-  // Linear amplitude ramp: N_RAMP_CYCLES of rocking from t_ramp_start.
-  // For fresh runs t_ramp_start=0, giving the same result as before.
-  // For checkpoint restarts t_ramp_start=t_checkpoint, ramping the new params
-  // smoothly from zero over N_RAMP_CYCLES periods of the new frequency.
+  // Smooth-step parameter interpolation: alpha: 0→1 over N_RAMP_CYCLES.
+  // For fresh runs, *_prev fields are 0 → reproduces the original cold-start ramp.
+  // For restarts, *_prev fields carry the previous segment's values → smooth transition
+  // between two fully-forced steady states without ever underdriving the system.
   double elapsed  = t - t_ramp_start;
   double ramp_dur = N_RAMP_CYCLES * T_per_st;
-  double ramp     = (elapsed < ramp_dur) ? elapsed / ramp_dur : 1.0;
+  double x_ss     = (elapsed < ramp_dur) ? elapsed / ramp_dur : 1.0;
+  double alpha    = 3.*x_ss*x_ss - 2.*x_ss*x_ss*x_ss;   // smooth-step ∈ [0,1]
 
   // Per-step diagnostics for restart runs: print every 5 steps for first 100 steps.
-  // Helps identify when and why velocity crashes after checkpoint restore.
   if (restart_file) {
     static int _dbg_step = 0;
     _dbg_step++;
@@ -548,35 +547,40 @@ event acceleration(i++)
       double _ux2 = 0., _vol = 0.;
       foreach(reduction(+:_ux2) reduction(+:_vol))
         if (f[] >= 0.5 && cs[] == 1) { _ux2 += u.x[]*u.x[]*dv(); _vol += dv(); }
-      fprintf(stderr, "STEP_DEBUG step=%d i=%d t=%.6g elapsed=%.6g ramp=%.6g ux_rms=%.6g\n",
-              _dbg_step, i, t, elapsed, ramp, sqrt(_ux2/max(_vol,1e-10)));
+      fprintf(stderr, "STEP_DEBUG step=%d i=%d t=%.6g elapsed=%.6g alpha=%.4g ux_rms=%.6g\n",
+              _dbg_step, i, t, elapsed, alpha, sqrt(_ux2/max(_vol,1e-10)));
     }
   }
 
-  // Multi-harmonic angular forcing: θ(t) = Σ_k θ_k · sin(k·ω_b·t + φ_k)
-  // k is harmonic number (dimensionless); k·w_bio_st is the k-th frequency in sim time
+  // Multi-harmonic angular forcing with smooth-step interpolation of amplitude and phase.
+  // For each harmonic k: Ak and phk are interpolated from _prev → current over N_RAMP_CYCLES.
   Th = 0;  Th_d = 0;  Th_2d = 0;
   for (int k = 1; k <= params.n_harmonics; k++) {
     double wk  = k * w_bio_st;
-    double Ak  = params.theta_max[k-1] * pi / 180.;  // deg → rad
-    double phk = params.phi_angular[k-1];
+    double Ak  = ((1.-alpha)*params.theta_max_prev[k-1]
+                +     alpha *params.theta_max[k-1]) * pi / 180.;
+    double phk =  (1.-alpha)*params.phi_angular_prev[k-1]
+                +     alpha *params.phi_angular[k-1];
     Th    +=  Ak * sin(wk*t + phk);
     Th_d  +=  Ak * wk * cos(wk*t + phk);
     Th_2d += -Ak * wk*wk * sin(wk*t + phk);
   }
-  Th *= ramp;  Th_d *= ramp;  Th_2d *= ramp;
 
-  // Multi-harmonic horizontal forcing: x(t) = Σ_k A_k · sin(k·ω_h·t + ψ_k)
-  // x_acc is the non-inertial horizontal body force (dimensionless: A/L_bio · (k·w_h_st)²)
+  // Multi-harmonic horizontal forcing with smooth-step interpolation.
   double x_acc = 0.;
-  if (params.omega_h > 0.) {
-    double w_h_st = params.omega_h * T_bio;  // ω_h non-dimensionalized
-    for (int k = 1; k <= params.n_harmonics; k++) {
-      double wk_h = k * w_h_st;
-      x_acc += (params.amplitude_h[k-1] / L_bio) * sq(wk_h)
-               * sin(wk_h*t + params.phi_horizontal[k-1]);
+  {
+    double omega_h_now = (1.-alpha)*params.omega_h_prev + alpha*params.omega_h;
+    if (omega_h_now > 0.) {
+      double w_h_st = omega_h_now * T_bio;
+      for (int k = 1; k <= params.n_harmonics; k++) {
+        double wk_h = k * w_h_st;
+        double Ah   = (1.-alpha)*params.amplitude_h_prev[k-1]
+                    +     alpha *params.amplitude_h[k-1];
+        double phh  = (1.-alpha)*params.phi_horizontal_prev[k-1]
+                    +     alpha *params.phi_horizontal[k-1];
+        x_acc += (Ah / L_bio) * sq(wk_h) * sin(wk_h*t + phh);
+      }
     }
-    x_acc *= ramp;
   }
 
   face vector av = a;

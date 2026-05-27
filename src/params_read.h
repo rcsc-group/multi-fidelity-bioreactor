@@ -37,8 +37,16 @@ typedef struct {
   double t_end;                 // simulation end time [non-dim]; default 250.0
   int    n_mix_cycles;          // rocking cycles before oxygen/tracer start; default 80
   // Checkpoint restart fields (set by chain.py for restart segments; 0 for fresh runs)
-  double t_checkpoint;          // absolute non-dim time of the restored checkpoint
-  double omega_b_prev;          // omega_b of the segment that wrote the checkpoint
+  double t_checkpoint;               // absolute non-dim time of the restored checkpoint
+  double omega_b_prev;               // omega_b of the segment that wrote the checkpoint
+  // Smooth-step motion interpolation: prev values for all sweepable motion params.
+  // C code interpolates from *_prev → current over N_RAMP_CYCLES via smooth-step.
+  // For fresh runs these stay 0, reproducing the original cold-start amplitude ramp.
+  double theta_max_prev[N_MAX];
+  double phi_angular_prev[N_MAX];
+  double amplitude_h_prev[N_MAX];
+  double phi_horizontal_prev[N_MAX];
+  double omega_h_prev;
 } BioreactorParams;
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -140,6 +148,24 @@ static BioreactorParams params_read(const char *path) {
       p.t_checkpoint = tok_double(json, &tokens[++i]);
     else if (jsoneq(json, &tokens[i], "omega_b_prev"))
       p.omega_b_prev = tok_double(json, &tokens[++i]);
+    else if (jsoneq(json, &tokens[i], "theta_max_prev")) {
+      tok_array(json, tokens, ++i, p.theta_max_prev, N_MAX);
+      i += tokens[i].size;
+    }
+    else if (jsoneq(json, &tokens[i], "phi_angular_prev")) {
+      tok_array(json, tokens, ++i, p.phi_angular_prev, N_MAX);
+      i += tokens[i].size;
+    }
+    else if (jsoneq(json, &tokens[i], "amplitude_h_prev")) {
+      tok_array(json, tokens, ++i, p.amplitude_h_prev, N_MAX);
+      i += tokens[i].size;
+    }
+    else if (jsoneq(json, &tokens[i], "phi_horizontal_prev")) {
+      tok_array(json, tokens, ++i, p.phi_horizontal_prev, N_MAX);
+      i += tokens[i].size;
+    }
+    else if (jsoneq(json, &tokens[i], "omega_h_prev"))
+      p.omega_h_prev = tok_double(json, &tokens[++i]);
     else if (jsoneq(json, &tokens[i], "geometry")) {
       // geometry is a nested object; walk its key-value pairs
       i++;  // move to the object token

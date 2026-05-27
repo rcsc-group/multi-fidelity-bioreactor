@@ -104,6 +104,7 @@ def build_chain(cfg: dict) -> list[dict]:
     chain: list[dict] = []
     t_checkpoint = 0.0          # absolute checkpoint time; 0 for fresh runs
     prev_omega_b: float | None = None
+    prev_motion: dict | None = None   # full motion params of the previous segment
 
     for k, val in enumerate(sweep_values):
         # Base motion params with sweep value applied
@@ -131,10 +132,15 @@ def build_chain(cfg: dict) -> list[dict]:
             **base,
         }
         if k > 0:
-            # Restart segment: pass absolute checkpoint time and previous omega_b
-            # so C code can compute correct timing before run() and rescale fields.
-            params["t_checkpoint"] = t_checkpoint
-            params["omega_b_prev"] = prev_omega_b
+            # Restart segment: checkpoint time, omega_b rescaling, and full
+            # prev-motion params for smooth-step parameter interpolation in C.
+            params["t_checkpoint"]        = t_checkpoint
+            params["omega_b_prev"]        = prev_omega_b
+            params["theta_max_prev"]      = list(prev_motion["theta_max"])
+            params["phi_angular_prev"]    = list(prev_motion["phi_angular"])
+            params["amplitude_h_prev"]    = list(prev_motion["amplitude_h"])
+            params["phi_horizontal_prev"] = list(prev_motion["phi_horizontal"])
+            params["omega_h_prev"]        = float(prev_motion["omega_h"])
 
         chain.append(params)
 
@@ -143,6 +149,7 @@ def build_chain(cfg: dict) -> list[dict]:
         n_per = int(t_end_abs / T_per_nd) + 1
         t_checkpoint = n_per * T_per_nd
         prev_omega_b = float(base["omega_b"])
+        prev_motion  = base
 
     return chain
 
