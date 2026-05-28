@@ -159,7 +159,7 @@ def submit_slurm(
     logs_dir     = project_root / "logs"
     logs_dir.mkdir(exist_ok=True)
 
-    export_str = f"PARAMS={params_path}"
+    export_str = f"ALL,PARAMS={params_path}"
     if checkpoint:
         export_str += f",DUMP={checkpoint}"
 
