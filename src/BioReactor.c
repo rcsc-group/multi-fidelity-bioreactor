@@ -425,12 +425,12 @@ event init (t = 0)
                   t, params.omega_b_prev/params.omega_b, t_ramp_start, sqrt(ux2/max(vol,1e-10)));
       }
     }
-    // Reset oxygen in ALL internal cells (liquid AND gas) for a clean kLa baseline.
-    // Gas-phase oxy from the previous segment remains at ~1 in the checkpoint;
-    // if only liquid is zeroed, gas oxy immediately diffuses back in and corrupts
-    // the dissolved-oxygen curve used for kLa fitting (non-zero C₀ → NaN kLa).
+    // Reset oxy in every cell (fluid AND solid/cut-cell region) for a clean kLa
+    // baseline.  Restricting to cs[]==1 leaves stale checkpoint values in solid and
+    // cut cells; statsf2(oxy_liq) iterates over all cells so any non-zero oxy there
+    // propagates NaN through the f[]*oxy[]/(...) formula → NaN kLa throughout.
     foreach()
-      if (cs[] == 1) oxy[] = 0.;
+      oxy[] = 0.;
     boundary ({oxy});
   } else {
     // ── Fresh start ────────────────────────────────────────────────────────
