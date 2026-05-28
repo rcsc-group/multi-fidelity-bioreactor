@@ -425,13 +425,33 @@ event init (t = 0)
                   t, params.omega_b_prev/params.omega_b, t_ramp_start, sqrt(ux2/max(vol,1e-10)));
       }
     }
-    // Reset oxy in every cell (fluid AND solid/cut-cell region) for a clean kLa
-    // baseline.  Restricting to cs[]==1 leaves stale checkpoint values in solid and
-    // cut cells; statsf2(oxy_liq) iterates over all cells so any non-zero oxy there
-    // propagates NaN through the f[]*oxy[]/(...) formula → NaN kLa throughout.
-    foreach()
+    // Re-apply the prolongation/restriction setup from event defaults(i=0) in
+    // henry_oxy2.h.  That event fires at i=0 on a fresh start but is skipped on
+    // restart (i resumes from the checkpoint value, so i==0 is never seen again).
+    // Basilisk's dump/restore does NOT serialize scalar function-pointer attributes
+    // (restriction, prolongation, refine), so they revert to defaults.  Without
+    // restriction_volume_average the multigrid h_relax propagates NaN from solid
+    // cells (cm=0 → d=0 → c[]=n/0) into fluid cells → NaN kLa and tracer sums.
+#if TREE
+    for (scalar s in stracers) {
+      s.refine = refine_embed_linear;
+      set_prolongation (s, refine_embed_linear);
+      set_restriction (s, restriction_volume_average);
+    }
+#endif
+
+    // Reset ALL stracers (oxy and passive tracers) to zero so that the kLa and
+    // mixing-time measurements start from a clean baseline.  Without this, stale
+    // checkpoint values in the stracers (including any NaN residuals from the
+    // prior segment's multigrid solve in solid cells) survive into the restart.
+    foreach() {
       oxy[] = 0.;
-    boundary ({oxy});
+      c[]   = 0.;
+      c1[]  = 0.;
+      c2[]  = 0.;
+      c3[]  = 0.;
+    }
+    boundary (stracers);
   } else {
     // ── Fresh start ────────────────────────────────────────────────────────
     // Parametric bag geometry (dimensionless semi-axes)
