@@ -169,6 +169,7 @@ def submit_slurm(
 
     cmd = [
         "sbatch",
+        "--no-requeue",           # prevent SLURM from re-running on node failure
         f"--time={walltime}",
         f"--mem={mem}",
         f"--cpus-per-task={cpus}",
