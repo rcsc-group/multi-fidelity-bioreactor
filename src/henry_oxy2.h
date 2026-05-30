@@ -265,6 +265,18 @@ event tracer_diffusion (i++)
     q.D = D;
     q.beta = beta;
 
+    // Touch non-leaf cells of c, r, D via foreach_cell() to extend qcc's stencil
+    // analysis for these scalars to include non-leaf levels.  Without this, qcc
+    // only sees r (and c, D) accessed via the EMBED-filtered leaf foreach() above,
+    // giving an incomplete stencil.  tree_restriction → halo_restriction uses the
+    // stencil to compute coarse halos; with the incomplete stencil, it produces
+    // O(1e141) coarse residuals from O(0.07) leaf values, blowing up h_relax and
+    // producing NaN kLa on every checkpoint restart.  These foreach_cell() reads
+    // extend the stencil at qcc compile time — they are live (not dead code) but
+    // are no-ops at runtime since they write nothing.
+    foreach_cell()
+      if (!is_leaf(cell)) (void)(c[] + r[] + D.x[]);
+
     // from mgstats poisson
     ///*
     scalar aa = c;
