@@ -159,7 +159,11 @@ def submit_slurm(
     logs_dir     = project_root / "logs"
     logs_dir.mkdir(exist_ok=True)
 
-    export_str = f"ALL,PARAMS={params_path}"
+    # Use NONE instead of ALL to avoid SLURM "user env retrieval failed" on nodes
+    # with LDAP issues.  The SLURM script only needs PARAMS and DUMP; all
+    # executables use absolute paths so PATH is not required.  SLURM_* vars
+    # (SLURM_CPUS_PER_TASK etc.) are always injected regardless of --export.
+    export_str = f"NONE,PARAMS={params_path}"
     if checkpoint:
         export_str += f",DUMP={checkpoint}"
 

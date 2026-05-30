@@ -367,7 +367,10 @@ event init (t = 0)
     // fully active.  It sets t = t_checkpoint and restores all fields.
     // All timing was already computed in main() from params.t_checkpoint so
     // the event system has the correct t_dump_checkpoint before run().
-    restore (file = restart_file);
+    if (!restore (file = restart_file)) {
+      fprintf (stderr, "ERROR: restore() failed to open '%s' — aborting\n", restart_file);
+      exit (1);
+    }
     // fs (embed face fractions) is a face field — excluded from Basilisk dumps.
     // After restore, fs=0 everywhere: the NS solver sees no solid walls and the
     // velocity collapses on the first timestep.  Re-compute fs from the same
@@ -412,18 +415,7 @@ event init (t = 0)
         g.y[] *= su * su;
       }
       boundary ({g.x, g.y});
-      // Print ux_liq_rms immediately after scale (goes to slurm_*.err)
-      {
-        double ux2 = 0., vol = 0.;
-        foreach(reduction(+:ux2) reduction(+:vol)) {
-          if (f[] >= 0.5 && cs[] == 1) {
-            ux2 += u.x[]*u.x[]*dv(); vol += dv();
-          }
-        }
-        if (pid() == 0)
-          fprintf(stderr, "RESTART_DEBUG init: t=%.6g su=%.4g t_ramp_start=%.6g ux_liq_rms=%.6g\n",
-                  t, params.omega_b_prev/params.omega_b, t_ramp_start, sqrt(ux2/max(vol,1e-10)));
-      }
+
     }
     // Re-apply the prolongation/restriction setup from event defaults(i=0) in
     // henry_oxy2.h.  That event fires at i=0 on a fresh start but is skipped on
@@ -440,17 +432,14 @@ event init (t = 0)
     }
 #endif
 
-    // Reset ALL stracers (oxy and passive tracers) to zero so that the kLa and
-    // mixing-time measurements start from a clean baseline.  Without this, stale
-    // checkpoint values in the stracers (including any NaN residuals from the
-    // prior segment's multigrid solve in solid cells) survive into the restart.
-    foreach() {
-      oxy[] = 0.;
-      c[]   = 0.;
-      c1[]  = 0.;
-      c2[]  = 0.;
-      c3[]  = 0.;
-    }
+    // Reset ALL stracers to zero at EVERY multigrid level.  foreach() only
+    // touches leaf cells; coarse-level cells retain stale checkpoint values.
+    // When oxy is injected at t_mix, h_residual uses face_gradient_x(a,0)
+    // which reads coarse neighbors — if those are stale (nonzero from the
+    // prior segment's kLa phase), restriction(res) propagates a large/NaN
+    // initial residual into h_relax, corrupting the correction field.
+    // reset() iterates over every cell at every tree level and sets s[]=0.
+    reset (stracers, 0.);
     boundary (stracers);
   } else {
     // ── Fresh start ────────────────────────────────────────────────────────
@@ -562,18 +551,6 @@ event acceleration(i++)
   double x_ss     = (elapsed < ramp_dur) ? elapsed / ramp_dur : 1.0;
   double alpha    = 3.*x_ss*x_ss - 2.*x_ss*x_ss*x_ss;   // smooth-step ∈ [0,1]
 
-  // Per-step diagnostics for restart runs: print every 5 steps for first 100 steps.
-  if (restart_file) {
-    static int _dbg_step = 0;
-    _dbg_step++;
-    if ((_dbg_step <= 10 || _dbg_step % 5 == 0) && _dbg_step <= 100 && pid() == 0) {
-      double _ux2 = 0., _vol = 0.;
-      foreach(reduction(+:_ux2) reduction(+:_vol))
-        if (f[] >= 0.5 && cs[] == 1) { _ux2 += u.x[]*u.x[]*dv(); _vol += dv(); }
-      fprintf(stderr, "STEP_DEBUG step=%d i=%d t=%.6g elapsed=%.6g alpha=%.4g ux_rms=%.6g\n",
-              _dbg_step, i, t, elapsed, alpha, sqrt(_ux2/max(_vol,1e-10)));
-    }
-  }
 
   // Multi-harmonic angular forcing with smooth-step interpolation of amplitude and phase.
   // For each harmonic k: Ak and phk are interpolated from _prev → current over N_RAMP_CYCLES.

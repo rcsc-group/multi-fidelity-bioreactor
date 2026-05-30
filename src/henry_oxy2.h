@@ -47,30 +47,28 @@ event vof (i++)
   for (scalar c in stracers) {
 
     scalar phi1 = new scalar, phi2 = new scalar;
-    //scalar aa = new scalar;
-    
+
     c.phi1 = phi1, c.phi2 = phi2;
 
     // scalar_clone: src/grid/cartesian-common.h
     scalar_clone (phi1, c);
     scalar_clone (phi2, c);
     phi2.inverse = true;
-    // phi1.inverse = true;
-    
+
     f.tracers = list_append (f.tracers, phi1);
     f.tracers = list_append (f.tracers, phi2);
 
     foreach() {
       double a = c[]/(f[]*c.alpha + (1. - f[]));
-      //aa[]   = c[]/(f[]*c.alpha + (1. - f[]));
       phi1[] = a*f[]*c.alpha;
       phi2[] = a*(1. - f[]);
-      //fprintf(stdout,"%.3g, %.3g, %.3g %.3g %.3g\n",phi1[],phi2[],f[],c[],aa[]);
     }
-    
-    // added
-    //vof_advection({phi1},i);
-    //vof_advection({phi2},i);
+
+    // Restrict phi1/phi2 from leaf cells to all coarse levels before VOF
+    // advection accesses them.  On restart, scalar pool memory may contain NaN
+    // at coarse levels (the foreach() above only sets leaf cells).  VOF
+    // advection reads coarse values at coarse-fine boundaries → NaN in oxy.
+    restriction ({phi1, phi2});
   }
   //*/
 }
@@ -97,14 +95,22 @@ static void h_relax (scalar * al, scalar * bl, int l, void * data)
   foreach_level_or_leaf (l) {
     // -lambda[] = cm[]/dt
     double n = - sq(Delta)*b[], d = cm[]/dt*sq(Delta);
-    foreach_dimension() {  
+    foreach_dimension() {
+      // Pe-limit: after restriction, coarse-level beta can still drive Pe > 2.
+      // Clamp |beta| at each level so the Gauss-Seidel update is monotone.
+      double b1 = beta.x[1], b0 = beta.x[];
+      {
+        double bmax1 = 2.*D.x[1]/Delta, bmax0 = 2.*D.x[]/Delta;
+        if (b1 >  bmax1) b1 =  bmax1; else if (b1 < -bmax1) b1 = -bmax1;
+        if (b0 >  bmax0) b0 =  bmax0; else if (b0 < -bmax0) b0 = -bmax0;
+      }
       n += D.x[1]*a[1] + D.x[]*a[-1] +
-	Delta*(beta.x[1]*a[1] - beta.x[]*a[-1])/2.; // added terms in henry.h
+	Delta*(b1*a[1] - b0*a[-1])/2.; // added terms in henry.h
       d += D.x[1] + D.x[] -
-	Delta*(beta.x[1] - beta.x[])/2.; // added terms in henry.h
+	Delta*(b1 - b0)/2.; // added terms in henry.h
     }
 
-    ///*      
+    ///*
 #if EMBED
     if (p->embed_flux){
       double c;
@@ -117,8 +123,14 @@ static void h_relax (scalar * al, scalar * bl, int l, void * data)
     else
 #endif // EMBED
     //*/
-    
-    c[] = n/d;
+    // Guard: beta terms can drive d <= 0 for large-alpha tracers at thin VOF
+    // interface cells (ff→0 makes beta ≈ −D/ff → large).  Clamp d to a floor
+    // proportional to the diagonal cm/dt term so the relaxation stays bounded.
+    {
+      double d_floor = cm[]/dt * sq(Delta) * 1e-12;
+      if (d < d_floor) d = d_floor;
+      c[] = n/d;
+    }
   }
 }
 //*/
@@ -135,10 +147,27 @@ static double h_residual (scalar * al, scalar * bl, scalar * resl, void * data)
 #if TREE
   /// conservative coarse/fine discretisation (2nd order) //
   face vector g[];
+  // Zero non-leaf res[] cells before the leaf foreach() writes leaf residuals.
+  // foreach() only visits LEAF cells; coarse (non-leaf) cells retain whatever
+  // was in the scalar pool from a previous use of this slot.  mg_cycle calls
+  // restriction(res) which averages over ALL children including non-leaf ones —
+  // stale coarse pool values (up to ~1e20) propagate into the level-0 restricted
+  // residual and blow up h_relax.  This is harmless on fresh runs (pool near-zero)
+  // but causes NaN kLa on every checkpoint restart.
+  foreach_cell()
+    if (!is_leaf(cell))
+      res[] = 0.;
   foreach_face()
-    // second term is added: beta.x[]
-    g.x[] = D.x[]*face_gradient_x (a, 0) + beta.x[]*face_value (a, 0);
-  
+    g.x[] = 0.;
+  foreach_face() {
+    // Pe-limit beta at each face (coarse-level beta can exceed 2D/Delta after
+    // restriction even when leaf-level values were Pe-limited in tracer_diffusion).
+    double b_lim = beta.x[];
+    double bmax  = 2.*D.x[]/Delta;
+    if (b_lim >  bmax) b_lim =  bmax;
+    if (b_lim < -bmax) b_lim = -bmax;
+    g.x[] = D.x[]*face_gradient_x (a, 0) + b_lim*face_value (a, 0);
+  }
   foreach (reduction(max:maxres)) {
     // -lambda[] = cm[]/dt;
     res[] = b[] + cm[]/dt*a[];
@@ -154,7 +183,7 @@ static double h_residual (scalar * al, scalar * bl, scalar * resl, void * data)
     }
 #endif // EMBED
     //*/
-    
+
     if (fabs (res[]) > maxres)
       maxres = fabs (res[]);
   }
@@ -176,11 +205,11 @@ static double h_residual (scalar * al, scalar * bl, scalar * resl, void * data)
     }
 #endif // EMBED
     //*/
-    
+
     if (fabs (res[]) > maxres)
       maxres = fabs (res[]);
   }
-#endif // !TREE    
+#endif // !TREE
   return maxres;
 }
 //*/
@@ -198,7 +227,7 @@ event tracer_diffusion (i++)
     c = \phi_1 + \phi_2
     $$
     and these fields are then discarded. */
-    
+
     scalar phi1 = c.phi1, phi2 = c.phi2, r[];
 
     foreach() {
@@ -206,7 +235,11 @@ event tracer_diffusion (i++)
       r[] = - cm[]*c[]/dt;
     }
     delete ({phi1, phi2});
-        
+    // Propagate the leaf-only phi1+phi2 update to all coarse tree levels so
+    // mg_solve starts from a consistent state.  Without this, stale checkpoint
+    // values at coarse levels cause the first V-cycle to diverge in restarts.
+    restriction ({c});
+
     /**
     The diffusion equation for $c$ is then solved using the multigrid
     solver and the residual and relaxation functions defined above. */
@@ -217,20 +250,20 @@ event tracer_diffusion (i++)
       D.x[] = fm.x[]*c.D1*c.D2/(c.D1*(1. - ff) + ff*c.D2);
       beta.x[] = - D.x[]*(c.alpha - 1.)/
 	(ff*c.alpha + (1. - ff))*(f[] - f[-1])/Delta;
+      // Limit |beta| to cell-Pe ≤ 2: the central-difference Gauss-Seidel
+      // relaxation diverges when |beta|*Delta/D > 2.  Thin VOF interface
+      // cells (ff→0) with large alpha drive Pe → ∞ and blow up h_relax.
+      {
+        double beta_max = 2.*D.x[]/Delta;
+        if (beta.x[] > beta_max) beta.x[] = beta_max;
+        if (beta.x[] < -beta_max) beta.x[] = -beta_max;
+      }
     }
-  
+
     restriction ({D, beta, cm});
     struct HDiffusion q;
     q.D = D;
     q.beta = beta;
-
-    // before multigrid solver
-    //foreach_face()
-      // face vector q: no errors; no NaN
-      //fprintf(stdout,"%.3g, %.3g, %.3g, %.3g \n",D.x[],D.y[],beta.x[],beta.y[]);
-
-      // cell-centered: tracer and residual
-      //fprintf(stdout,"before %.3g %.3g\n",c[],r[]);      
 
     // from mgstats poisson
     ///*
@@ -240,18 +273,9 @@ event tracer_diffusion (i++)
       q.embed_flux = embed_flux;
 #endif //EMBED
     //*/
-    
+
     mg_solve ({c}, {r}, h_residual, h_relax, &q);
-    //poisson ({c}, {r}, h_residual, h_relax, &q);
 
-    // Poisson solver
-    // return poisson (f,r,p.D,lambda);
-
-    // after multigrid solver
-    //foreach()
-      // cell-centered: tracer and residual      
-      //fprintf(stdout,"after %.3g %.3g\n",c[],r[]);
-    
     //*/
   }
 }
@@ -261,7 +285,7 @@ event tracer_diffusion (i++)
 
 ~~~bib
 @article{haroun2010,
-  title = {Volume of fluid method for interfacial reactive mass transfer: 
+  title = {Volume of fluid method for interfacial reactive mass transfer:
            application to stable liquid film},
   author = {Haroun, Y and Legendre, D and Raynal, L},
   journal = {Chemical Engineering Science},
