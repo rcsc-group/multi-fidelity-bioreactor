@@ -1,0 +1,21 @@
+{
+  "fidelity":    3,
+  "geometry":    {"a": 0.25, "b": 0.071, "n": 2.0},
+  "fill_level":  0.5,
+  "n_harmonics": 1,
+  "theta_max":   [7.0, 0.0, 0.0],
+  "phi_angular": [0.0, 0.0, 0.0],
+  "omega_h":     0.0,
+  "amplitude_h": [0.0, 0.0, 0.0],
+  "phi_horizontal": [0.0, 0.0, 0.0],
+
+  "omega_b": [3.14159, 6.28318],
+
+  "_sweep": {
+    "n_mix_cycles":        3,
+    "n_transition_cycles": 3,
+    "t_buffer":            5.0,
+    "walltime":            "00:10:00",
+    "submit":              false
+  }
+}

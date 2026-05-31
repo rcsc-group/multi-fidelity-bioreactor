@@ -8,17 +8,111 @@ Publication: [doi: 10.1016/j.ijmultiphaseflow.2025.105375](https://www.sciencedi
 
 ## Table of contents
 
+0. [Glossary](#0-glossary)
 1. [Setup](#1-setup)
-2. [Workflow A — Single run](#2-workflow-a--single-run)
-3. [Workflow B — Chained parameter sweep](#3-workflow-b--chained-parameter-sweep)
-4. [Workflow C — Batch sampling](#4-workflow-c--batch-sampling)
-5. [Workflow D — Multi-fidelity Bayesian optimisation](#5-workflow-d--multi-fidelity-bayesian-optimisation)
-6. [Video generation](#6-video-generation)
-7. [params.json reference](#7-paramsjson-reference)
-8. [Output files reference](#8-output-files-reference)
-9. [Fidelity guide](#9-fidelity-guide)
-10. [Project structure](#10-project-structure)
-11. [Test suite](#11-test-suite)
+2. [Scripts at a glance](#2-scripts-at-a-glance)
+3. [Workflow A — Single run](#3-workflow-a--single-run)
+4. [Workflow B — Chained parameter sweep (YAML)](#4-workflow-b--chained-parameter-sweep-yaml)
+5. [Workflow C — Batch sampling](#5-workflow-c--batch-sampling)
+6. [Workflow D — Multi-fidelity Bayesian optimisation](#6-workflow-d--multi-fidelity-bayesian-optimisation)
+7. [Workflow E — JSON multi-param sweep](#7-workflow-e--json-multi-param-sweep)
+8. [Video generation](#8-video-generation)
+9. [params.json reference](#9-paramsjson-reference)
+10. [Output files reference](#10-output-files-reference)
+11. [Fidelity guide](#11-fidelity-guide)
+12. [Project structure](#12-project-structure)
+13. [Test suite](#13-test-suite)
+
+---
+
+## 0. Glossary
+
+Plain-language definitions of every technical term used in this document.
+If you are new to CFD or HPC, read this section first.
+
+**kLa (mass-transfer coefficient)**
+The rate at which oxygen dissolves from the air into the liquid in the bag,
+measured per unit time. Higher kLa = better mixing and faster oxygenation.
+`kLa_25` is the value when the liquid has reached 25 % of full oxygen saturation
+and is the standard industrial metric. Units: 1/time (non-dimensional in this code).
+
+**Rocking period (T)**
+The time it takes the bag to complete one full back-and-forth rock.
+Related to rocking frequency: T = 2π / ω_b. Shorter period = faster rocking.
+
+**Angular frequency (ω_b, omega\_b)**
+How fast the bag rocks, measured in radians per second (rad/s).
+1 Hz = 2π ≈ 6.28 rad/s. A typical bioreactor runs at 0.3–2 Hz.
+
+**Non-dimensional time**
+Simulation time is scaled by the characteristic sloshing timescale T_bio = L / U_bio,
+where L is the bag length and U_bio is the typical sloshing velocity.
+This makes results independent of the exact bag size or fluid speed, so
+one non-dim time unit means roughly "one sloshing timescale has passed."
+Physical time in seconds = t × T_bio.
+
+**Fidelity / grid level**
+How fine the computational mesh (grid) is. Grid size = 2^fidelity × 2^fidelity cells.
+Higher fidelity = more cells = more accurate results, but slower and more memory-intensive.
+Fidelity 3 (8×8) takes seconds; fidelity 7 (128×128) takes hours.
+See [§11 Fidelity guide](#11-fidelity-guide) for a full table.
+
+**Checkpoint / checkpoint restart**
+A snapshot of the full simulation state (fluid velocity, volume fraction, dissolved oxygen,
+etc.) saved to a binary file called `checkpoint.dump`.
+A later simulation can *restore* this snapshot and continue from that exact point,
+skipping the warm-up phase. This is used in chained sweeps to save 70–90 % of compute time.
+
+**Segment**
+One SLURM job in a chained sweep. Each segment is a complete, self-contained simulation
+that starts either from scratch (segment 0) or from the checkpoint left by the previous segment.
+
+**Chain**
+A sequence of segments linked by checkpoint restart. SLURM ensures segment k+1 starts
+only after segment k finishes successfully (`--dependency=afterok`).
+
+**n_mix_cycles**
+The number of rocking cycles to run *before* injecting oxygen. Used to let the flow
+reach a steady state before taking measurements. Typical value: 80 cycles for a fresh start,
+10 for a checkpoint restart (flow is already developed).
+
+**t_buffer**
+The duration (in non-dim time) of the kLa measurement window after oxygen injection.
+Larger t_buffer gives a longer average and more stable kLa estimate, at the cost of more
+compute time. Typical value: 150 non-dim time units.
+
+**Superellipse (geometry.n)**
+The mathematical shape of the bag cross-section. n=2 is a standard ellipse;
+n=8 or more looks like a rounded rectangle. The shape is controlled by
+`geometry.a` (half-width), `geometry.b` (half-height), and `geometry.n` (roundness).
+
+**Surrogate model**
+A fast mathematical approximation of kLa built by fitting to existing simulation data.
+Once trained, it can predict kLa for any parameter combination in milliseconds
+(vs. hours for a real simulation). Used in Bayesian optimisation to guide where to sample next.
+
+**Bayesian optimisation (BO)**
+An algorithm that iteratively chooses which parameter combination to simulate next,
+based on a balance between exploring unknown regions (*exploration*) and refining
+around the best results found so far (*exploitation*). Uses the surrogate to evaluate
+candidates cheaply. The expected improvement (*EI*) acquisition function quantifies
+how promising each candidate is.
+
+**DoE (Design of Experiments)**
+An initial set of simulation runs that covers the parameter space broadly before
+optimisation begins. Used to build the first surrogate model.
+Common strategy: Latin Hypercube Sampling (LHS), which spreads points evenly.
+
+**SLURM**
+The job scheduler on OSCAR (Brown University HPC). You submit a job with `sbatch`;
+SLURM queues it and runs it on a compute node when resources are available.
+Jobs communicate via environment variables and output files — never interact
+with SLURM interactively from a login node.
+
+**HPC / OSCAR**
+High-Performance Computing cluster at Brown University. Always verify you are on a
+*compute node* (not a login node) before running expensive simulations.
+Login nodes are shared; compute nodes are allocated exclusively per job.
 
 ---
 
@@ -49,13 +143,30 @@ All scripts must be run from within `.venv`. Throughout this document
 
 ---
 
-## 2. Workflow A — Single run
+## 2. Scripts at a glance
+
+| Script | How to run | What it does |
+|--------|-----------|--------------|
+| `simulate.py` | `python simulate.py params.json --slurm --wait` | Submit or run one simulation; wait for `results.json` |
+| `launch.py` | `python launch.py params.json` | Set up a run directory and write a SLURM script, but do **not** submit |
+| `chain.py` | `python chain.py config.yaml` | Sweep **one** parameter across values via a YAML config, using checkpoint restart between segments |
+| `sweep.py` | `python sweep.py config.json` | Sweep **any combination** of parameters from a JSON file (zip or cartesian); groups runs by checkpoint compatibility |
+| `sample.py` | `python sample.py config.yaml` | Space-filling batch of independent runs (Latin Hypercube or random) |
+| `loop.py` | `python loop.py config.yaml` | Full Bayesian optimisation loop (DoE → train surrogate → suggest → repeat) |
+| `postprocess.py` | `python postprocess.py runs/my_run/` | Extract kLa from `tr_oxy.dat` and write `results.json` |
+| `render_videos.py` | `python render_videos.py runs/my_run/` | Convert frame dumps to MP4 videos (requires `BioReactor-video`) |
+| `suggest.py` | `python suggest.py exp_dir param_space.yaml` | Print the next highest-EI parameter point to stdout |
+| `train_surrogate.py` | `python train_surrogate.py exp_dir model.pkl` | Train the multi-fidelity surrogate from existing run data |
+
+---
+
+## 3. Workflow A — Single run
 
 Use this for one-off simulations, debugging, or manual parameter exploration.
 
 ### Step 1 — Write a params.json
 
-Create `runs/my_run/params.json` (see [§7](#7-paramsjson-reference) for all fields):
+Create `runs/my_run/params.json` (see [§9](#9-paramsjson-reference) for all fields):
 
 ```json
 {
@@ -114,12 +225,16 @@ python scripts/launch.py path/to/params.json [runs_root]
 
 ---
 
-## 3. Workflow B — Chained parameter sweep
+## 4. Workflow B — Chained parameter sweep (YAML)
 
-Use this when you want to sweep one parameter (e.g. rocking frequency) across
-several values.  Instead of starting each run cold (80 cycle transient), each
-segment restores the checkpoint from the previous one — the flow field is
-already developed, so only ~10 transition cycles are needed.
+Use this when you want to sweep **one** parameter (e.g. rocking frequency `omega_b`)
+across several values using a YAML config file.
+Instead of starting each run cold (80-cycle transient), each segment (SLURM job)
+restores the checkpoint from the previous one — the flow is already developed,
+so only ~10 transition cycles are needed.
+
+> **Tip:** To sweep multiple parameters simultaneously, or to write configs in JSON,
+> use [Workflow E](#7-workflow-e--json-multi-param-sweep) instead.
 
 ```
 seg 0  ──── fresh start, 80 mix cycles ────────────────► checkpoint.dump
@@ -204,9 +319,9 @@ Check that:
 
 ---
 
-## 4. Workflow C — Batch sampling
+## 5. Workflow C — Batch sampling
 
-Use this to generate a space-filling design of experiments across the parameter
+Use this to generate a space-filling design of experiments (DoE) across the parameter
 space without running the BO loop.
 
 ### Step 1 — Write a sample config
@@ -250,7 +365,7 @@ print(data)
 
 ---
 
-## 5. Workflow D — Multi-fidelity Bayesian optimisation
+## 6. Workflow D — Multi-fidelity Bayesian optimisation
 
 Maximises kLa over the parameter space using a multi-fidelity surrogate
 (kernel-ridge regression + linear regression + Gaussian process).
@@ -319,7 +434,131 @@ Prints a JSON params dict to stdout (the highest-EI candidate).
 
 ---
 
-## 6. Video generation
+## 7. Workflow E — JSON multi-param sweep
+
+Use this when you want to sweep over **any combination of parameters** — including
+geometry, fidelity, timing, and all motion parameters — using a single JSON file.
+
+Like Workflow B, runs are chained via checkpoint restart within groups of
+compatible simulations (same fidelity and geometry). Across groups with different
+fidelities or geometries, jobs run independently in parallel.
+
+### How lists are interpreted
+
+Write a normal `params.json` file. Any parameter can be swept by giving it a
+**list of values** instead of a single value:
+
+| How you write it | What it means |
+|-----------------|---------------|
+| `"omega_b": 3.14` | Fixed value — same for every simulation |
+| `"omega_b": [3.14, 6.28, 9.42]` | Sweep: try all three values |
+| `"fidelity": [5, 7]` | Sweep: run once at fidelity 5, once at fidelity 7 |
+| `"theta_max": [7.0, 0.0, 0.0]` | **Fixed** 3-element vector — NOT a sweep |
+| `"theta_max": [[5.0,0,0], [7.0,0,0]]` | Sweep: two different rocking amplitudes |
+| `"geometry": [{"a":0.2,"b":0.09,"n":2}, {"a":0.25,"b":0.071,"n":8}]` | Sweep: two bag shapes |
+
+**Vector parameters** (`theta_max`, `phi_angular`, `amplitude_h`, `phi_horizontal`)
+are only treated as a sweep when their elements are themselves lists (nested lists).
+A plain list of three numbers is always interpreted as a single vector value.
+
+### Zip vs. cartesian expansion
+
+- **All swept lists the same length N** → **zip**: N simulations, element k of
+  each list goes into simulation k together.
+  Example: `"omega_b":[1,2,3], "fill_level":[0.4,0.5,0.6]` → 3 sims:
+  `(omega_b=1, fill=0.4)`, `(omega_b=2, fill=0.5)`, `(omega_b=3, fill=0.6)`.
+
+- **Lists of different lengths** → **cartesian product**: every combination.
+  Example: `"omega_b":[1,2]`, `"fill_level":[0.3,0.5,0.7]` → 6 sims:
+  `(1,0.3)`, `(1,0.5)`, `(1,0.7)`, `(2,0.3)`, `(2,0.5)`, `(2,0.7)`.
+
+### Checkpoint grouping
+
+Checkpoint restart is only valid between simulations that share the same
+**fidelity and geometry** (the computational grid must be identical).
+The sweep runner automatically groups simulations by `(fidelity, geometry)` and
+submits each group as a separate chain. Groups with different fidelities or
+geometries run in parallel with no checkpoint between them.
+
+### Step 1 — Write a sweep config
+
+Copy and edit `config/sweep_example.json`:
+
+```json
+{
+  "fidelity":    3,
+  "geometry":    {"a": 0.25, "b": 0.071, "n": 2.0},
+  "fill_level":  0.5,
+  "n_harmonics": 1,
+  "theta_max":   [7.0, 0.0, 0.0],
+  "phi_angular": [0.0, 0.0, 0.0],
+  "omega_h":     0.0,
+  "amplitude_h": [0.0, 0.0, 0.0],
+  "phi_horizontal": [0.0, 0.0, 0.0],
+
+  "omega_b": [3.14159, 6.28318],
+
+  "_sweep": {
+    "n_mix_cycles":        3,
+    "n_transition_cycles": 3,
+    "t_buffer":            5.0,
+    "walltime":            "00:10:00",
+    "submit":              false
+  }
+}
+```
+
+The `"_sweep"` key holds sweep-control options that are **not** simulation parameters:
+
+| Option | Meaning |
+|--------|---------|
+| `n_mix_cycles` | Rocking cycles before O₂ injection for the **first** segment of each group (fresh start) |
+| `n_transition_cycles` | Rocking cycles before O₂ re-injection for **restart** segments (flow is already developed) |
+| `t_buffer` | Length of the kLa measurement window in non-dim time |
+| `walltime` | SLURM time limit per segment (`HH:MM:SS`) |
+| `submit` | `true` → submit via `sbatch`; `false` → write `params.json` files only (dry run) |
+
+> **Note:** If you include `n_mix_cycles` in the **body** of the JSON (not inside `_sweep`)
+> as a list, each simulation uses its own value from the sweep — the `_sweep.n_mix_cycles`
+> and `_sweep.n_transition_cycles` chain defaults are then ignored for that sweep.
+
+### Step 2 — Dry-run first
+
+Set `"submit": false` and check that params files are written correctly:
+
+```bash
+python scripts/sweep.py config/sweep_example.json
+```
+
+The script prints one line per segment. Check that `t_end > n_mix_cycles × T_period`
+(otherwise kLa will be NaN) and that restart segments have `t_checkpoint > 0`.
+
+### Step 3 — Submit
+
+Set `"submit": true` and rerun:
+
+```bash
+python scripts/sweep.py config/my_sweep.json
+```
+
+Output:
+```
+Group 0 (fidelity=3, a=0.25, b=0.071, n=2.0) — 2 segment(s)
+  [seg 0] run=abc12345  omega_b=3.142  n_mix=3  t_end≈6.8  → job 1234567
+  [seg 1] run=def67890  omega_b=6.283  n_mix=3  t_end≈6.8  → job 1234568
+```
+
+SLURM job IDs are printed per segment. Job k+1 will not start until job k completes.
+
+### Step 4 — Verify results
+
+After all jobs complete:
+- Restart segment: `runs/<seg1_id>/logstats.dat` must start at `t > 0` (not at `t=0`)
+- All segments: `runs/<id>/results.json` must contain finite (non-NaN) kLa values
+
+---
+
+## 8. Video generation
 
 Videos require the `BioReactor-video` binary and `ffmpeg`.
 
@@ -351,7 +590,7 @@ The `frames/` directory is deleted after encoding.
 
 ---
 
-## 7. params.json reference
+## 9. params.json reference
 
 All fields for `runs/<run_id>/params.json`.
 
@@ -359,38 +598,45 @@ All fields for `runs/<run_id>/params.json`.
 
 | Field | Type | Units | Default | Description |
 |-------|------|-------|---------|-------------|
-| `omega_b` | float | rad/s | required | Fundamental rocking angular frequency. 1 Hz = 2π ≈ 6.28 rad/s |
-| `n_harmonics` | int | — | 1 | Number of active harmonics (1–3). Vectors always padded to length 3 |
-| `theta_max` | float[3] | degrees | [7,0,0] | Rocking amplitude per harmonic. Index 0 is the fundamental |
-| `phi_angular` | float[3] | rad | [0,0,0] | Rocking phase per harmonic. Index 0 is **always forced to 0** at read time |
-| `omega_h` | float | rad/s | 0.0 | Horizontal translation frequency. Set to 0 to disable |
-| `amplitude_h` | float[3] | m | [0,0,0] | Horizontal translation amplitude per harmonic |
-| `phi_horizontal` | float[3] | rad | [0,0,0] | Horizontal translation phase per harmonic |
+| `omega_b` | float | rad/s | required | Fundamental rocking angular frequency (how fast the bag rocks back and forth). 1 Hz = 2π ≈ 6.28 rad/s |
+| `n_harmonics` | int | — | 1 | Number of active harmonics (1–3). A harmonic is a frequency component; 1 means pure sinusoidal rocking at `omega_b`. Vectors always padded to length 3 |
+| `theta_max` | float[3] | degrees | [7,0,0] | Maximum rocking angle per harmonic. Index 0 is the fundamental (dominant) harmonic. Typical range: 2–15 degrees |
+| `phi_angular` | float[3] | rad | [0,0,0] | Phase offset of rocking per harmonic (delays or advances the timing). Index 0 is **always forced to 0** — it is the global time reference |
+| `omega_h` | float | rad/s | 0.0 | Horizontal translation frequency. Set to 0.0 to disable horizontal motion |
+| `amplitude_h` | float[3] | m | [0,0,0] | Horizontal translation amplitude per harmonic (how far the bag slides sideways) |
+| `phi_horizontal` | float[3] | rad | [0,0,0] | Phase offset of horizontal translation per harmonic |
 
 ### Geometry
 
 | Field | Type | Units | Default | Description |
 |-------|------|-------|---------|-------------|
-| `geometry.a` | float | m | 0.25 | Bag half-width (horizontal semi-axis) |
-| `geometry.b` | float | m | 0.071 | Bag half-height (vertical semi-axis) |
-| `geometry.n` | float | — | 8.0 | Superellipse exponent: 2 = ellipse, n ≥ 8 ≈ rectangle |
-| `fill_level` | float | fraction | 0.5 | Fraction of bag volume filled with liquid (0.3–0.7) |
+| `geometry.a` | float | m | 0.25 | Bag half-width (horizontal semi-axis; half the total bag width) |
+| `geometry.b` | float | m | 0.071 | Bag half-height (vertical semi-axis; half the total bag height) |
+| `geometry.n` | float | — | 8.0 | Superellipse exponent controlling bag shape: n=2 gives an ellipse, n≥8 gives a rounded rectangle |
+| `fill_level` | float | fraction | 0.5 | Fraction of bag volume filled with liquid (0 = empty, 1 = full). Typical range: 0.3–0.7 |
 
 ### Simulation control
 
 | Field | Type | Units | Default | Description |
 |-------|------|-------|---------|-------------|
-| `run_id` | string | — | required | Unique tag; output goes to `runs/{run_id}/` |
-| `fidelity` | int | — | required | Basilisk grid level: grid is 2^fidelity × 2^fidelity cells |
-| `n_mix_cycles` | int | — | 80 | Rocking cycles before O₂ is injected. Ensures flow is fully developed |
-| `t_end` | float | non-dim | 250.0 | Simulation end time. Computed automatically by `simulate.py` and `chain.py`; set manually only for custom runs |
+| `run_id` | string | — | required | Unique label for this run; output files go to `runs/{run_id}/` |
+| `fidelity` | int | — | required | Basilisk grid level; the computational mesh is 2^fidelity × 2^fidelity cells. Higher = more accurate and slower. See [§11](#11-fidelity-guide) |
+| `n_mix_cycles` | int | — | 80 | Number of complete rocking cycles to run before injecting oxygen. Used to let the flow field reach a steady state before kLa measurement begins |
+| `t_end` | float | non-dim | 250.0 | When to stop the simulation (in non-dimensional time). Computed automatically by `simulate.py`, `chain.py`, and `sweep.py`; only set manually for custom runs |
 
-### Checkpoint restart (set by chain.py; do not set manually)
+### Checkpoint restart (set automatically by chain.py and sweep.py)
+
+Do not set these manually — they are populated by the sweep scripts.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `t_checkpoint` | float | Absolute non-dim time of the restored checkpoint (0 for fresh runs) |
-| `omega_b_prev` | float | `omega_b` of the segment that wrote the checkpoint (used to rescale fields) |
+| `t_checkpoint` | float | Absolute non-dim time at which the restored checkpoint was saved (0 for fresh runs) |
+| `omega_b_prev` | float | Rocking frequency of the segment that wrote the checkpoint; used to smoothly ramp to the new frequency |
+| `theta_max_prev` | float[3] | Rocking amplitude of the previous segment |
+| `phi_angular_prev` | float[3] | Rocking phase of the previous segment |
+| `amplitude_h_prev` | float[3] | Horizontal translation amplitude of the previous segment |
+| `phi_horizontal_prev` | float[3] | Horizontal translation phase of the previous segment |
+| `omega_h_prev` | float | Horizontal translation frequency of the previous segment |
 
 ### Notes
 
@@ -408,7 +654,7 @@ translation, set `omega_h: 0.0` and all `amplitude_h` to zero.
 
 ---
 
-## 8. Output files reference
+## 10. Output files reference
 
 All files land in `runs/{run_id}/`.
 
@@ -432,7 +678,7 @@ Time `t` is non-dimensional; `t_physical = t × T_bio`.
 
 ---
 
-## 9. Fidelity guide
+## 11. Fidelity guide
 
 | fidelity | grid | typical runtime | use for |
 |----------|------|-----------------|---------|
@@ -449,7 +695,7 @@ submitting fidelity-7 jobs.
 
 ---
 
-## 10. Project structure
+## 12. Project structure
 
 ```
 rocking-bioreactor-2d/
@@ -465,7 +711,8 @@ rocking-bioreactor-2d/
 │   ├── postprocess.py        # kLa extraction from tr_oxy.dat → results.json
 │   ├── render_videos.py      # frame dumps → volume_fraction*.mp4 via ffmpeg
 │   ├── launch.py             # set up run directory + SLURM script (no submit)
-│   ├── chain.py              # Workflow B: chained sweep via checkpoint restart
+│   ├── chain.py              # Workflow B: chained sweep (one param, YAML config)
+│   ├── sweep.py              # Workflow E: JSON multi-param sweep (zip / cartesian)
 │   ├── sample.py             # Workflow C: LHS / random / grid / Sobol batch sampling
 │   ├── loop.py               # Workflow D: multi-fidelity BO loop
 │   ├── suggest.py            # EI acquisition: suggest next HF point
@@ -479,11 +726,13 @@ rocking-bioreactor-2d/
 │   ├── sample_config.yaml        # Workflow C config (batch sampling)
 │   ├── chain_config.yaml         # Workflow B config (generic sweep template)
 │   ├── chain_config_ellipse.yaml # Workflow B config (ellipse bag, 4 frequencies)
-│   └── chain_config_smoke.yaml   # Workflow B config (fidelity-3 smoke test)
+│   ├── chain_config_smoke.yaml   # Workflow B config (fidelity-3 smoke test)
+│   └── sweep_example.json        # Workflow E example / smoke test (2-segment, fidelity 3)
 │
 ├── tests/
 │   ├── conftest.py               # Shared fixtures (run_bioreactor, CANONICAL_PARAMS)
 │   ├── test_chain.py             # chain.py unit tests (build_chain)
+│   ├── test_sweep.py             # sweep.py unit tests (detect, expand, group, build)
 │   ├── test_param_schema.py      # params_read schema tests
 │   ├── test_launch.py            # launch.py unit tests
 │   ├── test_suggest.py           # suggest.py unit tests
@@ -502,7 +751,7 @@ rocking-bioreactor-2d/
 
 ---
 
-## 11. Test suite
+## 13. Test suite
 
 ```bash
 source .venv/bin/activate
