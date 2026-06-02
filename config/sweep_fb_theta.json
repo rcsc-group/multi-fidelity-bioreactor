@@ -1,0 +1,75 @@
+{
+  "_comment": [
+    "2D sweep: rocking frequency (omega_b) × maximum rocking angle (theta_max).",
+    "",
+    "Scientific basis",
+    "----------------",
+    "Kim et al. (2025) swept f_b and theta_max independently (OPAT): 10 frequency",
+    "values at theta_max=7° and 6 angle values at f_b=32.5 rpm.  This sweep fills",
+    "in the full 10×6 factorial, revealing:",
+    "  - Interaction effects: does the resonance at f_b≈22.5 rpm persist at small",
+    "    angles (theta_max≤3°)?  Does the turbulent transition at 37.5 rpm shift",
+    "    when the forcing amplitude decreases?",
+    "  - The kLa–shear Pareto frontier in (f_b, theta_max) space: both quantities",
+    "    increase monotonically along each OPAT axis; the 2D map shows whether",
+    "    off-diagonal combinations offer a better trade-off.",
+    "  - The small-angle vortex anomaly (extra counter-rotating vortices at",
+    "    theta_max≤3°, observed in the paper) across all frequencies.",
+    "",
+    "Parameter limits",
+    "----------------",
+    "omega_b: same 10-point grid as sweep_fb_fill.json [15–37.5 rpm].",
+    "theta_max: paper's 6-point angle grid [2°–7°].",
+    "  Lower bound 2°: paper's lower limit; below 2° the sloshing is quasi-static",
+    "    and the code's ramp time dominates over the measurement window.",
+    "  Upper bound 7°: paper's upper limit; above 7° wave breaking and interface–",
+    "    wall contact become likely (contact-angle model not yet implemented).",
+    "fill_level: fixed at 0.5 (paper's value, enables direct comparison).",
+    "geometry: paper's 2L cellbag rectangle.",
+    "",
+    "Expansion: cartesian product (10 × 6 = 60 runs).",
+    "Checkpoint groups: 6 groups × 10 segments, grouped by theta_max[0].",
+    "  Within each group, segments chain from low→high f_b at fixed angle,",
+    "  using smooth-step angular interpolation across the transition.",
+    "  6 chains run in parallel on SLURM — total wall clock ≈ 10 × walltime."
+  ],
+
+  "fidelity":       5,
+  "geometry":       {"a": 0.25, "b": 0.071, "n": 8.0},
+  "fill_level":     0.5,
+  "phi_angular":    [0.0, 0.0, 0.0],
+  "omega_h":        0.0,
+  "amplitude_h":    [0.0, 0.0, 0.0],
+  "phi_horizontal": [0.0, 0.0, 0.0],
+  "n_harmonics":    1,
+
+  "omega_b": [
+    1.5708,
+    1.8326,
+    2.0944,
+    2.3562,
+    2.6180,
+    2.8798,
+    3.1416,
+    3.4034,
+    3.6652,
+    3.9270
+  ],
+
+  "theta_max": [
+    [2.0, 0.0, 0.0],
+    [3.0, 0.0, 0.0],
+    [4.0, 0.0, 0.0],
+    [5.0, 0.0, 0.0],
+    [6.0, 0.0, 0.0],
+    [7.0, 0.0, 0.0]
+  ],
+
+  "_sweep": {
+    "n_mix_cycles":        80,
+    "n_transition_cycles": 10,
+    "t_buffer":            30.0,
+    "walltime":            "00:30:00",
+    "submit":              true
+  }
+}

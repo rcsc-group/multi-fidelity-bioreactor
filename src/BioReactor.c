@@ -500,7 +500,10 @@ event tracer(t = t_mix){
   // Vertical mixing-top side
   #if VERTICAL_MIXUP
   foreach(){
-    if ((f[] == 1) && (cs[]==1) && (y >= -Ly*0.5*0.5))
+    // f[]>0.5 (majority-liquid) instead of f[]==1 (exact) so that near-interface
+    // cells are included — at coarse resolutions f never reaches exactly 1.0 in
+    // the top liquid layer, causing c2 to remain 0 throughout the run.
+    if ((f[] > 0.5) && (cs[]==1) && (y >= -Ly*0.5*0.5))
       c2[] = 1.0;    // Upper half of liquid
   }
   #endif

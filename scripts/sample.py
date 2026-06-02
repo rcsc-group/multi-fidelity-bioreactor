@@ -38,9 +38,9 @@ from scripts.loop import _build_domain, _compute_t_end
 
 _STRATEGY_ALIASES = {
     "latin":  "latin_sampler",
-    "random": "random",
+    "random": "random_sampler",
     "grid":   "grid",
-    "sobol":  "sobol",
+    "sobol":  "sobol_sampler",
 }
 
 

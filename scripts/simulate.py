@@ -128,6 +128,7 @@ def submit_slurm(
     cpus: int = 4,
     checkpoint: str | None = None,
     dependency: str | None = None,
+    begin: str | None = None,
 ) -> str:
     """Write params.json and submit a SLURM job via sbatch.
 
@@ -178,6 +179,8 @@ def submit_slurm(
     ]
     if dependency:
         cmd.insert(1, f"--dependency={dependency}")
+    if begin:
+        cmd.insert(1, f"--begin={begin}")
 
     result = subprocess.run(cmd, capture_output=True, text=True, check=True)
     # sbatch stdout: "Submitted batch job 123456"

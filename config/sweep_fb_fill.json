@@ -1,0 +1,69 @@
+{
+  "_comment": [
+    "2D sweep: rocking frequency (omega_b) × fill level.",
+    "",
+    "Scientific basis",
+    "----------------",
+    "The first sloshing natural frequency f1 = (1/2π)√(g·k1·tanh(k1·h_b))",
+    "with k1=π/Lx, h_b=fill·Ly shifts with fill level.  The paper (Kim et al.",
+    "2025) identifies a 3:1 superharmonic resonance at f_b≈22.5 rpm for fill=0.5.",
+    "This sweep maps how that resonance locus moves across fill levels:",
+    "  fill=0.30 → resonance near f_b=17.5 rpm  (f1≈54.2 rpm)",
+    "  fill=0.40 → resonance near f_b=20.0 rpm  (f1≈62.0 rpm)",
+    "  fill=0.50 → resonance near f_b=22.5 rpm  (f1≈68.6 rpm, paper-confirmed)",
+    "  fill=0.60 → resonance near f_b=25.0 rpm  (f1≈74.1 rpm)",
+    "  fill=0.70 → resonance near f_b=27.5 rpm  (f1≈78.9 rpm)",
+    "",
+    "Parameter limits",
+    "----------------",
+    "omega_b: paper's 10-point frequency grid [15–37.5 rpm], converted to rad/s.",
+    "  Lower bound 15 rpm (1.5708 rad/s): paper's lower limit; below this the",
+    "    steady streaming is very weak and simulation time becomes impractical.",
+    "  Upper bound 37.5 rpm (3.9270 rad/s): paper's laminar–turbulent transition.",
+    "fill_level: [0.30, 0.70] matching config/param_space.yaml bounds.",
+    "  Lower bound 0.30: shallow-water regime begins; below this, wave breaking",
+    "    near the walls is likely and the current code lacks a contact-angle model.",
+    "  Upper bound 0.70: above this the air headspace (~0.021 m) becomes so thin",
+    "    that gas-phase resistance dominates kLa rather than liquid-side transport.",
+    "theta_max: fixed at 7.0° (paper's primary sweep angle — strongest effects).",
+    "geometry: paper's 2L cellbag rectangle (a=Lx=0.25m, b=Ly=0.071m, n=8≈rect).",
+    "",
+    "Expansion: cartesian product (10 × 5 = 50 runs).",
+    "Checkpoint groups: 5 groups × 10 segments, grouped by fill_level.",
+    "  Runs sharing the same fill_level form one chain (f_b steps from low→high).",
+    "  Different fill levels are physically incompatible for checkpoint restart",
+    "  (the VOF interface height is encoded in the checkpoint field)."
+  ],
+
+  "fidelity":       5,
+  "geometry":       {"a": 0.25, "b": 0.071, "n": 8.0},
+  "theta_max":      [7.0, 0.0, 0.0],
+  "phi_angular":    [0.0, 0.0, 0.0],
+  "omega_h":        0.0,
+  "amplitude_h":    [0.0, 0.0, 0.0],
+  "phi_horizontal": [0.0, 0.0, 0.0],
+  "n_harmonics":    1,
+
+  "omega_b": [
+    1.5708,
+    1.8326,
+    2.0944,
+    2.3562,
+    2.6180,
+    2.8798,
+    3.1416,
+    3.4034,
+    3.6652,
+    3.9270
+  ],
+
+  "fill_level": [0.30, 0.40, 0.50, 0.60, 0.70],
+
+  "_sweep": {
+    "n_mix_cycles":        80,
+    "n_transition_cycles": 10,
+    "t_buffer":            30.0,
+    "walltime":            "00:30:00",
+    "submit":              true
+  }
+}

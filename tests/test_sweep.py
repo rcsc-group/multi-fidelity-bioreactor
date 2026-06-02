@@ -227,6 +227,33 @@ def test_mixed_fidelity_grouping():
     assert sizes == [1, 2]
 
 
+def test_grouping_by_fill_level():
+    """Different fill_level → 2 groups (incompatible checkpoint fields)."""
+    sims = [_make_params(fill_level=0.3), _make_params(fill_level=0.5)]
+    groups = group_by_checkpoint_key(sims)
+    assert len(groups) == 2
+
+
+def test_grouping_by_theta_max():
+    """Different theta_max[0] → 2 groups (parallel chain efficiency)."""
+    sims = [
+        _make_params(theta_max=[5.0, 0.0, 0.0]),
+        _make_params(theta_max=[7.0, 0.0, 0.0]),
+    ]
+    groups = group_by_checkpoint_key(sims)
+    assert len(groups) == 2
+
+
+def test_same_fill_and_theta_one_group():
+    """Same fidelity, geometry, fill_level, and theta_max → still 1 group."""
+    sims = [
+        _make_params(omega_b=1.0, fill_level=0.5, theta_max=[7.0, 0.0, 0.0]),
+        _make_params(omega_b=2.0, fill_level=0.5, theta_max=[7.0, 0.0, 0.0]),
+    ]
+    groups = group_by_checkpoint_key(sims)
+    assert len(groups) == 1
+
+
 # ── build_segment_list ────────────────────────────────────────────────────────
 
 def _group_of_two():
@@ -300,6 +327,199 @@ def test_fixed_params_propagated():
         assert merged["fill_level"] == 0.5
         assert merged["fidelity"] == 5
         assert merged["geometry"] == {"a": 0.25, "b": 0.071, "n": 2.0}
+
+
+# ── submit_sweep video isolation tests ───────────────────────────────────────
+
+from unittest.mock import call, patch
+from scripts.sweep import submit_sweep, submit_sweep_videos
+
+
+def _minimal_sweep_cfg(tmp_path: Path, n_omega: int = 2) -> Path:
+    """Write a minimal sweep config JSON to tmp_path and return its path."""
+    import json
+    cfg = {
+        "fidelity": 3,
+        "geometry": {"a": 0.25, "b": 0.071, "n": 8.0},
+        "fill_level": 0.5,
+        "theta_max": [7.0, 0.0, 0.0],
+        "phi_angular": [0.0, 0.0, 0.0],
+        "omega_h": 0.0,
+        "amplitude_h": [0.0, 0.0, 0.0],
+        "phi_horizontal": [0.0, 0.0, 0.0],
+        "n_harmonics": 1,
+        "omega_b": [1.571, 1.833][:n_omega],
+        "_sweep": {
+            "n_mix_cycles": 3,
+            "n_transition_cycles": 3,
+            "t_buffer": 5.0,
+            "walltime": "00:05:00",
+            "submit": True,
+        },
+    }
+    p = tmp_path / "sweep_test.json"
+    p.write_text(json.dumps(cfg))
+    return p
+
+
+def test_submit_sweep_staggers_chain_starts(tmp_path):
+    """Seg-0 of chain g_idx>0 must have begin=now+N to prevent simultaneous
+    dependency releases that cause SLURM to cancel jobs with Reason=Dependency.
+
+    Root cause: when N chains all finish seg-0 simultaneously and release N seg-1
+    dependencies at once, SLURM cancels the excess even if parents completed 0:0.
+    Staggered --begin ensures seg-0s start (and therefore finish) at different times.
+    """
+    import json
+    cfg = {
+        "fidelity": 3,
+        "geometry": {"a": 0.25, "b": 0.071, "n": 8.0},
+        "fill_level": [0.3, 0.5],       # 2 groups → 2 chains
+        "theta_max": [7.0, 0.0, 0.0],
+        "phi_angular": [0.0, 0.0, 0.0],
+        "omega_h": 0.0, "amplitude_h": [0.0, 0.0, 0.0],
+        "phi_horizontal": [0.0, 0.0, 0.0], "n_harmonics": 1,
+        "omega_b": [1.571, 1.833, 2.094],  # 3 values (3≠2) → cartesian → 3 segs/chain
+        "_sweep": {"n_mix_cycles": 3, "n_transition_cycles": 3,
+                   "t_buffer": 5.0, "walltime": "00:05:00",
+                   "submit": True, "chain_stagger_s": 300},
+    }
+    cfg_path = tmp_path / "stagger_test.json"
+    cfg_path.write_text(json.dumps(cfg))
+
+    begin_args = []
+    def fake_submit(*a, begin=None, **kw):
+        begin_args.append(begin)
+        return str(10000 + len(begin_args))
+
+    with patch("scripts.simulate.submit_slurm", side_effect=fake_submit):
+        submit_sweep(cfg_path)
+
+    # 2 groups × 3 segments = 6 submit calls
+    assert len(begin_args) == 6
+    # Group 0 seg-0: begin=None (starts immediately)
+    assert begin_args[0] is None
+    # Group 0 seg-1, seg-2: begin=None (afterok chain, no stagger)
+    assert begin_args[1] is None
+    assert begin_args[2] is None
+    # Group 1 seg-0: begin=now+300 (staggered by one interval)
+    assert begin_args[3] == "now+300"
+    # Group 1 seg-1, seg-2: begin=None (afterok chain)
+    assert begin_args[4] is None
+    assert begin_args[5] is None
+
+
+def test_submit_sweep_does_not_submit_video_jobs(tmp_path):
+    """submit_sweep must submit ONLY sim jobs — no video jobs inline.
+
+    Root cause of cascade failure: video jobs co-scheduled with sim jobs on
+    the same node; a video failure CANCELLED the next sim segment via SLURM's
+    afterok dependency propagation.  Videos must be submitted separately after
+    all sims complete.
+    """
+    cfg = _minimal_sweep_cfg(tmp_path)
+    with patch("scripts.simulate.submit_slurm", return_value="99999") as mock_sbatch:
+        submit_sweep(cfg)
+    # All calls should use the default sim template, NOT the video template
+    video_template = str(_PROJECT_ROOT / "config" / "slurm_video_template.sh")
+    for c in mock_sbatch.call_args_list:
+        template_used = str(c.kwargs.get("template") or "")
+        assert "video" not in template_used, (
+            f"submit_sweep submitted a video job inline — this causes cascade cancellations. "
+            f"Call: {c}"
+        )
+
+
+def test_submit_sweep_sim_job_ids_only_in_dependency_chain(tmp_path):
+    """Sim job dependencies must chain only through sim job IDs, never video IDs."""
+    cfg = _minimal_sweep_cfg(tmp_path, n_omega=2)
+    submitted_ids = []
+
+    def fake_submit(**kwargs):
+        job_id = str(10000 + len(submitted_ids))
+        submitted_ids.append(job_id)
+        return job_id
+
+    with patch("scripts.simulate.submit_slurm", side_effect=lambda *a, **kw: fake_submit(**kw)):
+        submit_sweep(cfg)
+
+    # With 2 omega_b values → 1 chain of 2 segments
+    # seg0: dependency=None, seg1: dependency=afterok:seg0_id
+    # There should be exactly 2 sim jobs and seg1's dependency is seg0's id
+    assert len(submitted_ids) == 2
+    # If video jobs were inline they'd inflate this count — 2 means sim-only ✓
+
+
+def test_submit_sweep_videos_passes_checkpoint_for_restart_segments(tmp_path):
+    """submit_sweep_videos must export DUMP for restart segments (t_checkpoint>0).
+
+    Without the checkpoint path, BioReactor-video exits with code 1, which
+    previously co-cancelled the next simulation segment on the same node.
+    """
+    import json
+
+    # Create a fake restart run dir
+    run_dir = tmp_path / "fake_restart_run"
+    run_dir.mkdir()
+    params = {**_BASE, "run_id": "fake_restart_run",
+              "t_checkpoint": 5.0, "n_mix_cycles": 3, "t_end": 10.0,
+              "omega_b_prev": 1.571, "theta_max_prev": [7.0, 0.0, 0.0],
+              "phi_angular_prev": [0.0, 0.0, 0.0],
+              "amplitude_h_prev": [0.0, 0.0, 0.0],
+              "phi_horizontal_prev": [0.0, 0.0, 0.0],
+              "omega_h_prev": 0.0}
+    (run_dir / "params.json").write_text(json.dumps(params))
+    # Fake checkpoint.dump
+    (run_dir / "checkpoint.dump").write_bytes(b"fake")
+
+    with patch("scripts.simulate.submit_slurm", return_value="55555") as mock_sbatch:
+        job_ids = submit_sweep_videos([run_dir])
+
+    assert job_ids == ["55555"]
+    # The checkpoint kwarg must be the path to checkpoint.dump
+    call_kwargs = mock_sbatch.call_args.kwargs
+    assert call_kwargs.get("checkpoint") is not None, (
+        "submit_sweep_videos did not pass checkpoint for a restart segment — "
+        "BioReactor-video would exit with code 1"
+    )
+    assert "checkpoint.dump" in call_kwargs["checkpoint"]
+
+
+def test_submit_sweep_videos_skips_restart_without_checkpoint(tmp_path):
+    """submit_sweep_videos skips a restart segment whose checkpoint.dump is missing."""
+    import json
+
+    run_dir = tmp_path / "missing_ck"
+    run_dir.mkdir()
+    params = {**_BASE, "run_id": "missing_ck",
+              "t_checkpoint": 5.0, "n_mix_cycles": 3, "t_end": 10.0}
+    (run_dir / "params.json").write_text(json.dumps(params))
+    # No checkpoint.dump — simulate a missing file
+
+    with patch("scripts.simulate.submit_slurm", return_value="55556") as mock_sbatch:
+        job_ids = submit_sweep_videos([run_dir])
+
+    assert job_ids == [], "Should skip run with missing checkpoint.dump"
+    mock_sbatch.assert_not_called()
+
+
+def test_submit_sweep_videos_no_dependency(tmp_path):
+    """Video jobs must have dependency=None so failures cannot cascade to any other job."""
+    import json
+
+    run_dir = tmp_path / "fresh_run"
+    run_dir.mkdir()
+    params = {**_BASE, "run_id": "fresh_run",
+              "n_mix_cycles": 3, "t_end": 10.0}
+    (run_dir / "params.json").write_text(json.dumps(params))
+
+    with patch("scripts.simulate.submit_slurm", return_value="55557") as mock_sbatch:
+        submit_sweep_videos([run_dir])
+
+    call_kwargs = mock_sbatch.call_args.kwargs
+    assert call_kwargs.get("dependency") is None, (
+        "Video jobs must have dependency=None to prevent cascade cancellations"
+    )
 
 
 # ── SLURM integration test ────────────────────────────────────────────────────

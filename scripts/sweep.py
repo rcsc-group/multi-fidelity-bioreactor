@@ -68,7 +68,7 @@ def detect_sweep_params(raw: dict) -> dict[str, list]:
     """
     sweep: dict[str, list] = {}
     for key, val in raw.items():
-        if key == "_sweep":
+        if key.startswith("_"):   # skip _sweep, _comment, and any other metadata keys
             continue
         if not isinstance(val, list):
             continue
@@ -186,6 +186,9 @@ def parse_sweep_config(path: str | Path) -> tuple[list[dict], dict]:
     """
     raw = json.loads(Path(path).read_text())
     options = dict(raw.pop("_sweep", {}))
+    # Remove remaining metadata keys (_comment, etc.) — they are not sim params
+    for k in [k for k in list(raw) if k.startswith("_")]:
+        raw.pop(k)
 
     sweep_params = detect_sweep_params(raw)
     combos = expand_combinations(sweep_params)
@@ -204,14 +207,25 @@ def parse_sweep_config(path: str | Path) -> tuple[list[dict], dict]:
 def submit_sweep(path: str | Path) -> list[str]:
     """End-to-end: parse → expand → group → chain → submit.
 
-    Returns a flat list of all SLURM job IDs (or dry-run tags).
+    Returns a flat list of all simulation SLURM job IDs (or dry-run tags).
+
+    Videos are NOT submitted inline.  Submit them after all simulations
+    complete via submit_sweep_videos() to avoid co-scheduling video and sim
+    jobs on the same node — a video job failure would otherwise CANCEL the
+    next sim segment via SLURM's dependency propagation.
     """
     params_list, options = parse_sweep_config(path)
     groups = group_by_checkpoint_key(params_list)
 
-    runs_root = _PROJECT_ROOT / "runs"
-    walltime  = options.get("walltime", "04:00:00")
-    submit    = bool(options.get("submit", True))
+    runs_root    = _PROJECT_ROOT / "runs"
+    walltime     = options.get("walltime", "04:00:00")
+    submit       = bool(options.get("submit", True))
+    # Stagger seg-0 start times so chains don't pile up on the SLURM scheduler.
+    # When N chains all release their seg-1 dependency at the same second, SLURM
+    # cancels the excess with Reason=Dependency even if the parent completed 0:0.
+    # 300s between chain starts (5 min) is enough for the previous chain's seg-0
+    # to have started before the next chain's seg-0 is released.
+    chain_stagger_s = int(options.get("chain_stagger_s", 10))
 
     all_job_ids: list[str] = []
 
@@ -232,6 +246,9 @@ def submit_sweep(path: str | Path) -> list[str]:
                 if prev_run_id is not None else None
             )
             dependency = f"afterok:{all_job_ids[-1]}" if k > 0 else None
+            # Stagger seg-0 start times to prevent simultaneous dependency release.
+            # Chain g_idx starts g_idx * chain_stagger_s seconds from now.
+            begin = f"now+{g_idx * chain_stagger_s}" if (k == 0 and g_idx > 0) else None
 
             print(
                 f"  [seg {k}] run={params['run_id']}"
@@ -249,6 +266,7 @@ def submit_sweep(path: str | Path) -> list[str]:
                     walltime=walltime,
                     checkpoint=checkpoint,
                     dependency=dependency,
+                    begin=begin,
                 )
                 all_job_ids.append(job_id)
                 print(f"  → job {job_id}")
@@ -266,6 +284,58 @@ def submit_sweep(path: str | Path) -> list[str]:
     return all_job_ids
 
 
+def submit_sweep_videos(run_dirs: list[Path | str]) -> list[str]:
+    """Submit independent video jobs for a list of completed run directories.
+
+    Each video job depends only on itself having a valid params.json and
+    checkpoint.dump (for restart segments).  Jobs are submitted with NO
+    inter-job dependency so a single failure cannot cascade.
+
+    Call this after all simulation jobs from submit_sweep have completed.
+
+    Returns list of submitted SLURM job IDs.
+    """
+    video_template = _PROJECT_ROOT / "config" / "slurm_video_template.sh"
+    if not video_template.exists():
+        raise FileNotFoundError(f"Video template not found: {video_template}")
+
+    runs_root = _PROJECT_ROOT / "runs"
+    job_ids: list[str] = []
+
+    for run_dir in run_dirs:
+        run_dir = Path(run_dir)
+        params_path = run_dir / "params.json"
+        if not params_path.exists():
+            print(f"  SKIP {run_dir.name}: no params.json")
+            continue
+
+        params = json.loads(params_path.read_text())
+
+        # Pass checkpoint for restart segments so BioReactor-video can restore state
+        checkpoint: str | None = None
+        if params.get("t_checkpoint", 0.0) > 0.0:
+            ck_path = run_dir / "checkpoint.dump"
+            if ck_path.exists():
+                checkpoint = str(ck_path.resolve())
+            else:
+                print(f"  SKIP {run_dir.name}: restart segment but checkpoint.dump missing")
+                continue
+
+        job_id = simulate.submit_slurm(
+            params,
+            project_root=_PROJECT_ROOT,
+            runs_root=runs_root,
+            walltime="00:30:00",
+            template=video_template,
+            checkpoint=checkpoint,
+            dependency=None,   # fully independent — no cascade risk
+        )
+        job_ids.append(job_id)
+        print(f"  {run_dir.name}  → video job {job_id}")
+
+    return job_ids
+
+
 # ── helpers ───────────────────────────────────────────────────────────────────
 
 def _checkpoint_key(params: dict) -> tuple:
@@ -274,7 +344,11 @@ def _checkpoint_key(params: dict) -> tuple:
         a, b, n = g.get("a", 0.25), g.get("b", 0.071), g.get("n", 8.0)
     else:
         a, b, n = 0.25, 0.071, 8.0
-    return (params.get("fidelity", 7), a, b, n)
+    # fill_level changes the interface height → incompatible checkpoint fields
+    fill = round(float(params.get("fill_level", 0.5)), 4)
+    # theta_max[0] groups chains by angle for parallel execution efficiency
+    th = round(float((params.get("theta_max") or [7.0])[0]), 4)
+    return (params.get("fidelity", 7), a, b, n, fill, th)
 
 
 # ── CLI ───────────────────────────────────────────────────────────────────────
