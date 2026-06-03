@@ -138,7 +138,19 @@ double Th_max, T_per, R_tr, x_tr, y_tr;
 
 // Scalars to track tracer concentrations and oxygen
 scalar c[], oxy[], c1[], c2[], c3[];   // for tracer and oxygen transfer
-scalar * stracers = {c,oxy,c1,c2,c3};
+// Conditional stracers list: only include scalars that are active.
+// Required for MPI correctness — unused scalars must not appear in stracers
+// when their compile-time flags are off, or boundary reductions will
+// reference uninitialised memory across MPI ranks.
+#if TRACER && OXYGEN
+scalar * stracers = {c, oxy, c1, c2, c3};
+#elif TRACER
+scalar * stracers = {c, c1, c2, c3};
+#elif OXYGEN
+scalar * stracers = {oxy};
+#else
+scalar * stracers = NULL;
+#endif
 double (* gradient) (double, double, double) = minmod2;   // Custom slope limiter function (used for scalar gradients)
 
 // Buffers for file naming and output file pointers for statistics
@@ -174,7 +186,11 @@ int main(int argc, char * argv[]){
   t_end = params.t_end;                    // non-dimensional sim time; 1 unit = T_bio seconds
 
   L0 = 1. [0];  // [0] declares space dimensionless: simulation is fully non-dimensionalized (scaled by L_bio, T_bio, U_bio); Basilisk dimensional analysis requires annotations on literals, not variables
-  DT = HUGE [0];  // [0] declares time dimensionless; older qcc omitted the dimensional(u.x[]==Delta/DT) constraint from centered.h that now makes this required
+  // DT: maximum allowed timestep (dimensionless).  HUGE is fine for serial/OpenMP
+  // but MPI's global dtmax reduction can behave unexpectedly with infinity on
+  // some implementations.  1.0 [0] (one non-dim time unit) is always larger than
+  // the CFL-limited dt (~dx/U_max << 1) so it never artificially constrains the step.
+  DT = 1. [0];
   origin(-L0/2., -L0/2.);   // Set coordinate origin to domain center
 
 #if !AMR

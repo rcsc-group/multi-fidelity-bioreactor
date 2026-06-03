@@ -125,6 +125,20 @@ $(BUILD_DIR)/BioReactor-video: $(SIM_SRC) $(SRC_HEADERS)
 	$(QCC) $(CFLAGS) -DVIDEOS=1 $< -o $@ -L$(BASILISK)/gl -lglutils -lfb_tiny
 
 
+# MPI binary: compiled with _MPI=1 using mpicc as the CC99 backend.
+# Requires OpenMPI to be loaded: module load openmpi
+# Submit via slurm_mpi_template.sh (uses srun --mpi=pmix).
+# Do NOT use OMP_NUM_THREADS with this binary; parallelism is MPI-only.
+.PHONY: build-mpi
+build-mpi: $(BUILD_DIR)/BioReactor-mpi
+
+$(BUILD_DIR)/BioReactor-mpi: $(SIM_SRC) $(SRC_HEADERS)
+	@mkdir -p $(BUILD_DIR)
+	module load openmpi && \
+	CC99='mpicc -std=c99 -D_XOPEN_SOURCE=700 -D_GNU_SOURCE=1' \
+	$(QCC) $(CFLAGS) -D_MPI=1 $< -o $@ -lm
+
+
 # ==========================================================
 #  Run / submit targets
 # ==========================================================
