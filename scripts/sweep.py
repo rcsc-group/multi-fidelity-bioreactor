@@ -205,29 +205,25 @@ def parse_sweep_config(path: str | Path) -> tuple[list[dict], dict]:
 
 
 def submit_sweep(path: str | Path) -> list[str]:
-    """End-to-end: parse → expand → group → chain → submit.
+    """End-to-end: parse → expand → group → submit seg-0 jobs only.
 
-    Returns a flat list of all simulation SLURM job IDs (or dry-run tags).
+    Returns a list of seg-0 SLURM job IDs (one per chain).
 
-    Videos are NOT submitted inline.  Submit them after all simulations
-    complete via submit_sweep_videos() to avoid co-scheduling video and sim
-    jobs on the same node — a video job failure would otherwise CANCEL the
-    next sim segment via SLURM's dependency propagation.
+    Chain continuation uses self-submission: each segment's SLURM script
+    submits the next segment upon completion (via next_run_id in params.json).
+    This eliminates afterok: dependency chains, which OSCAR's SLURM cancels
+    instead of queuing when simultaneous dependency releases hit the CPU cap.
     """
     params_list, options = parse_sweep_config(path)
     groups = group_by_checkpoint_key(params_list)
 
-    runs_root    = _PROJECT_ROOT / "runs"
-    walltime     = options.get("walltime", "04:00:00")
-    submit       = bool(options.get("submit", True))
-    # Stagger seg-0 start times so chains don't pile up on the SLURM scheduler.
-    # When N chains all release their seg-1 dependency at the same second, SLURM
-    # cancels the excess with Reason=Dependency even if the parent completed 0:0.
-    # 300s between chain starts (5 min) is enough for the previous chain's seg-0
-    # to have started before the next chain's seg-0 is released.
-    chain_stagger_s = int(options.get("chain_stagger_s", 10))
+    runs_root = _PROJECT_ROOT / "runs"
+    walltime  = options.get("walltime", "04:00:00")
+    cpus      = int(options.get("cpus", 4))
+    mem       = str(options.get("mem", "12G"))
+    submit    = bool(options.get("submit", True))
 
-    all_job_ids: list[str] = []
+    seg0_job_ids: list[str] = []
 
     swept_keys = frozenset(detect_sweep_params(
         json.loads(Path(path).read_text())
@@ -235,53 +231,66 @@ def submit_sweep(path: str | Path) -> list[str]:
 
     for g_idx, (key, group) in enumerate(groups.items()):
         segments = build_segment_list(group, options, swept_keys=swept_keys)
-        prev_run_id: str | None = None
 
         print(f"\nGroup {g_idx} (fidelity={key[0]}, a={key[1]}, b={key[2]}, n={key[3]})"
               f" — {len(segments)} segment(s)")
 
+        # Write ALL params.json files upfront, wiring next_run_id for self-submission
+        prev_run_id: str | None = None
         for k, params in enumerate(segments):
-            checkpoint = (
+            next_run_id = segments[k + 1]["run_id"] if k + 1 < len(segments) else None
+            checkpoint  = (
                 str((runs_root / prev_run_id / "checkpoint.dump").resolve())
                 if prev_run_id is not None else None
             )
-            dependency = f"afterok:{all_job_ids[-1]}" if k > 0 else None
-            # Stagger seg-0 start times to prevent simultaneous dependency release.
-            # Chain g_idx starts g_idx * chain_stagger_s seconds from now.
-            begin = f"now+{g_idx * chain_stagger_s}" if (k == 0 and g_idx > 0) else None
+            # Store SLURM opts so the template can pass them to the next job
+            params["next_run_id"] = next_run_id
+            params["_walltime"]   = walltime
+            params["_mem"]        = mem
+
+            run_dir = runs_root / params["run_id"]
+            run_dir.mkdir(parents=True, exist_ok=True)
+            (run_dir / "params.json").write_text(json.dumps(params, indent=2))
+            if checkpoint:
+                (run_dir / "checkpoint_path.txt").write_text(checkpoint)
 
             print(
                 f"  [seg {k}] run={params['run_id']}"
                 f"  omega_b={params.get('omega_b', '?'):.4g}"
                 f"  n_mix={params['n_mix_cycles']}"
-                f"  t_end≈{params['t_end']:.1f}",
+                f"  t_end≈{params['t_end']:.1f}"
+                f"  → {'next:' + next_run_id[:8] if next_run_id else 'last'}",
                 end="",
             )
 
-            if submit:
-                job_id = simulate.submit_slurm(
-                    params,
-                    project_root=_PROJECT_ROOT,
-                    runs_root=runs_root,
-                    walltime=walltime,
-                    checkpoint=checkpoint,
-                    dependency=dependency,
-                    begin=begin,
-                )
-                all_job_ids.append(job_id)
-                print(f"  → job {job_id}")
-            else:
-                run_dir = runs_root / params["run_id"]
-                run_dir.mkdir(parents=True, exist_ok=True)
-                (run_dir / "params.json").write_text(json.dumps(params, indent=2))
-                if checkpoint:
-                    (run_dir / "checkpoint_path.txt").write_text(checkpoint)
-                print("  → params written (dry run)")
-                all_job_ids.append(f"dry-{k}")
-
             prev_run_id = params["run_id"]
+            print()
 
-    return all_job_ids
+        # Submit ONLY seg-0 — it self-submits all successors on completion
+        seg0_params    = segments[0]
+        seg0_run_id    = seg0_params["run_id"]
+        seg0_checkpoint = None  # seg-0 is always a fresh run
+
+        if submit:
+            job_id = simulate.submit_slurm(
+                seg0_params,
+                project_root=_PROJECT_ROOT,
+                runs_root=runs_root,
+                walltime=walltime,
+                cpus=cpus,
+                mem=mem,
+                checkpoint=seg0_checkpoint,
+                dependency=None,
+                begin=None,
+            )
+            seg0_job_ids.append(job_id)
+            print(f"  → submitted seg-0 as job {job_id} (chain self-submits from here)")
+        else:
+            seg0_job_ids.append(f"dry-{g_idx}")
+            print(f"  → dry run (seg-0 params written, chain would self-submit)")
+
+    print(f"\nDone. {len(seg0_job_ids)} chain(s) started: {seg0_job_ids}")
+    return seg0_job_ids
 
 
 def submit_sweep_videos(run_dirs: list[Path | str]) -> list[str]:

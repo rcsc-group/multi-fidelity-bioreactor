@@ -362,13 +362,15 @@ def _minimal_sweep_cfg(tmp_path: Path, n_omega: int = 2) -> Path:
     return p
 
 
-def test_submit_sweep_staggers_chain_starts(tmp_path):
-    """Seg-0 of chain g_idx>0 must have begin=now+N to prevent simultaneous
-    dependency releases that cause SLURM to cancel jobs with Reason=Dependency.
+def test_submit_sweep_only_submits_seg0_per_chain(tmp_path):
+    """submit_sweep must submit ONLY seg-0 for each chain (self-submission model).
 
-    Root cause: when N chains all finish seg-0 simultaneously and release N seg-1
-    dependencies at once, SLURM cancels the excess even if parents completed 0:0.
-    Staggered --begin ensures seg-0s start (and therefore finish) at different times.
+    Root cause of cascade failures: upfront afterok: dependency chains caused
+    OSCAR's SLURM to cancel jobs instead of queueing them when the CPU cap was
+    hit by simultaneously released dependencies.
+
+    Fix: each SLURM job self-submits its successor via next_run_id in params.json.
+    submit_sweep now only submits seg-0 jobs — one per chain.
     """
     import json
     cfg = {
@@ -379,34 +381,29 @@ def test_submit_sweep_staggers_chain_starts(tmp_path):
         "phi_angular": [0.0, 0.0, 0.0],
         "omega_h": 0.0, "amplitude_h": [0.0, 0.0, 0.0],
         "phi_horizontal": [0.0, 0.0, 0.0], "n_harmonics": 1,
-        "omega_b": [1.571, 1.833, 2.094],  # 3 values (3≠2) → cartesian → 3 segs/chain
+        "omega_b": [1.571, 1.833, 2.094],  # 3 values → cartesian → 3 segs/chain
         "_sweep": {"n_mix_cycles": 3, "n_transition_cycles": 3,
-                   "t_buffer": 5.0, "walltime": "00:05:00",
-                   "submit": True, "chain_stagger_s": 300},
+                   "t_buffer": 5.0, "walltime": "00:05:00", "submit": True},
     }
-    cfg_path = tmp_path / "stagger_test.json"
+    cfg_path = tmp_path / "self_submit_test.json"
     cfg_path.write_text(json.dumps(cfg))
 
-    begin_args = []
-    def fake_submit(*a, begin=None, **kw):
-        begin_args.append(begin)
-        return str(10000 + len(begin_args))
+    submitted = []
+    def fake_submit(*a, **kw):
+        submitted.append(kw)
+        return str(10000 + len(submitted))
 
     with patch("scripts.simulate.submit_slurm", side_effect=fake_submit):
-        submit_sweep(cfg_path)
+        job_ids = submit_sweep(cfg_path)
 
-    # 2 groups × 3 segments = 6 submit calls
-    assert len(begin_args) == 6
-    # Group 0 seg-0: begin=None (starts immediately)
-    assert begin_args[0] is None
-    # Group 0 seg-1, seg-2: begin=None (afterok chain, no stagger)
-    assert begin_args[1] is None
-    assert begin_args[2] is None
-    # Group 1 seg-0: begin=now+300 (staggered by one interval)
-    assert begin_args[3] == "now+300"
-    # Group 1 seg-1, seg-2: begin=None (afterok chain)
-    assert begin_args[4] is None
-    assert begin_args[5] is None
+    # 2 chains → exactly 2 submit calls (one seg-0 per chain)
+    assert len(submitted) == 2, f"Expected 2 submissions (seg-0 only), got {len(submitted)}"
+    assert len(job_ids) == 2
+
+    # All submitted jobs must have dependency=None (no afterok chains)
+    for call in submitted:
+        assert call.get("dependency") is None, \
+            "submit_sweep must not set SLURM dependencies — chain uses self-submission"
 
 
 def test_submit_sweep_does_not_submit_video_jobs(tmp_path):
@@ -430,24 +427,29 @@ def test_submit_sweep_does_not_submit_video_jobs(tmp_path):
         )
 
 
-def test_submit_sweep_sim_job_ids_only_in_dependency_chain(tmp_path):
-    """Sim job dependencies must chain only through sim job IDs, never video IDs."""
-    cfg = _minimal_sweep_cfg(tmp_path, n_omega=2)
-    submitted_ids = []
-
-    def fake_submit(**kwargs):
-        job_id = str(10000 + len(submitted_ids))
-        submitted_ids.append(job_id)
-        return job_id
-
-    with patch("scripts.simulate.submit_slurm", side_effect=lambda *a, **kw: fake_submit(**kw)):
+def test_submit_sweep_writes_next_run_id_for_chain(tmp_path):
+    """All segments except the last must have next_run_id in params.json."""
+    import json
+    cfg = _minimal_sweep_cfg(tmp_path, n_omega=3)  # 3 segs/chain
+    with patch("scripts.simulate.submit_slurm", return_value="99999"):
         submit_sweep(cfg)
 
-    # With 2 omega_b values → 1 chain of 2 segments
-    # seg0: dependency=None, seg1: dependency=afterok:seg0_id
-    # There should be exactly 2 sim jobs and seg1's dependency is seg0's id
-    assert len(submitted_ids) == 2
-    # If video jobs were inline they'd inflate this count — 2 means sim-only ✓
+    runs_root = _PROJECT_ROOT / "runs"
+    # Find the submitted seg-0 run dir (has next_run_id set)
+    seg0_dirs = [d for d in runs_root.iterdir()
+                 if d.is_dir() and (d/"params.json").exists()]
+    params_with_next = [json.loads((d/"params.json").read_text())
+                        for d in seg0_dirs
+                        if json.loads((d/"params.json").read_text()).get("next_run_id")]
+    assert len(params_with_next) > 0, "No params.json has next_run_id set"
+
+    # Last segment must have next_run_id = None
+    params_without_next = [json.loads((d/"params.json").read_text())
+                           for d in seg0_dirs
+                           if json.loads((d/"params.json").read_text()).get("next_run_id") is None
+                           and "fidelity" in json.loads((d/"params.json").read_text())]
+    assert any(p.get("next_run_id") is None for p in params_without_next), \
+        "Last segment should have next_run_id=None"
 
 
 def test_submit_sweep_videos_passes_checkpoint_for_restart_segments(tmp_path):

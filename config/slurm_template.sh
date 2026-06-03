@@ -49,3 +49,43 @@ fi
 "$PROJECT_ROOT/.venv/bin/python" "$PROJECT_ROOT/scripts/postprocess.py" "$RUN_DIR"
 
 echo "Done. Results written to $RUN_DIR/results.json"
+
+# Self-submitting chain: if this segment has a successor, submit it now.
+# This avoids upfront dependency graphs (afterok:) which OSCAR's SLURM
+# cancels instead of queuing when the CPU cap is hit simultaneously.
+NEXT_RUN=$(python3 -c "
+import json, sys
+try:
+    p = json.load(open(sys.argv[1]))
+    print(p.get('next_run_id', ''))
+except:
+    print('')
+" "$PARAMS" 2>/dev/null)
+
+if [ -n "$NEXT_RUN" ]; then
+    NEXT_PARAMS="$PROJECT_ROOT/runs/$NEXT_RUN/params.json"
+    NEXT_DUMP="$RUN_DIR/checkpoint.dump"
+    WALLTIME=$(python3 -c "
+import json, sys
+try:
+    p = json.load(open(sys.argv[1]))
+    print(p.get('_walltime', '04:00:00'))
+except:
+    print('04:00:00')
+" "$NEXT_PARAMS" 2>/dev/null)
+    MEM=$(python3 -c "
+import json, sys
+try:
+    p = json.load(open(sys.argv[1]))
+    print(p.get('_mem', '12G'))
+except:
+    print('12G')
+" "$NEXT_PARAMS" 2>/dev/null)
+    sbatch --no-requeue \
+        --time="$WALLTIME" \
+        --mem="$MEM" \
+        --cpus-per-task="${SLURM_CPUS_PER_TASK:-4}" \
+        --export="NONE,PARAMS=$NEXT_PARAMS,DUMP=$NEXT_DUMP" \
+        "$PROJECT_ROOT/config/slurm_template.sh"
+    echo "Submitted next segment: $NEXT_RUN"
+fi
