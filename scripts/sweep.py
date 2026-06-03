@@ -204,6 +204,44 @@ def parse_sweep_config(path: str | Path) -> tuple[list[dict], dict]:
     return params_list, options
 
 
+def _init_experiment_store(path: Path, options: dict,
+                            params_list: list[dict]) -> str | None:
+    """Create the ExperimentData store for this sweep and return its path.
+
+    The store lives at experiments/<config_stem>/ and is the canonical diary
+    for all runs produced by this sweep config.  Each completed segment will
+    append its inputs and all 10 KPIs via postprocess._register_to_experiment_store.
+
+    Returns the absolute path string to store in each segment's params.json
+    as _experiment_dir, or None if f3dasm is unavailable.
+    """
+    import time as _time
+    try:
+        import pandas as pd
+        from f3dasm import ExperimentData
+    except ImportError:
+        return None
+
+    exp_name = path.stem                  # e.g. "sweep_fb_theta_l7"
+    exp_dir  = _PROJECT_ROOT / "experiments" / exp_name
+    exp_dir.mkdir(parents=True, exist_ok=True)
+
+    # Write sweep provenance metadata alongside the ED store
+    meta = {
+        "config_file":   str(path.resolve()),
+        "created_at":    _time.strftime("%Y-%m-%dT%H:%M:%SZ", _time.gmtime()),
+        "n_runs_planned": len(params_list),
+        "sweep_options": {k: v for k, v in options.items()
+                          if not k.startswith("_")},
+    }
+    (exp_dir / "_sweep_metadata.json").write_text(
+        json.dumps(meta, indent=2)
+    )
+
+    print(f"  Experiment store: {exp_dir}")
+    return str(exp_dir)
+
+
 def submit_sweep(path: str | Path) -> list[str]:
     """End-to-end: parse → expand → group → submit seg-0 jobs only.
 
@@ -213,6 +251,11 @@ def submit_sweep(path: str | Path) -> list[str]:
     submits the next segment upon completion (via next_run_id in params.json).
     This eliminates afterok: dependency chains, which OSCAR's SLURM cancels
     instead of queuing when simultaneous dependency releases hit the CPU cap.
+
+    An ExperimentData store is created at experiments/<config_stem>/ and is
+    the canonical provenance record for all runs in this sweep.  Each
+    segment's params.json carries _experiment_dir so postprocess.py can
+    register results directly into the store when the job finishes.
     """
     params_list, options = parse_sweep_config(path)
     groups = group_by_checkpoint_key(params_list)
@@ -222,6 +265,9 @@ def submit_sweep(path: str | Path) -> list[str]:
     cpus      = int(options.get("cpus", 4))
     mem       = str(options.get("mem", "12G"))
     submit    = bool(options.get("submit", True))
+
+    # Create the canonical experiment store for this sweep
+    experiment_dir = _init_experiment_store(Path(path), options, params_list)
 
     seg0_job_ids: list[str] = []
 
@@ -244,9 +290,12 @@ def submit_sweep(path: str | Path) -> list[str]:
                 if prev_run_id is not None else None
             )
             # Store SLURM opts so the template can pass them to the next job
-            params["next_run_id"] = next_run_id
-            params["_walltime"]   = walltime
-            params["_mem"]        = mem
+            params["next_run_id"]       = next_run_id
+            params["_walltime"]         = walltime
+            params["_mem"]              = mem
+            # Store experiment dir so postprocess.py can register results
+            if experiment_dir:
+                params["_experiment_dir"] = experiment_dir
 
             run_dir = runs_root / params["run_id"]
             run_dir.mkdir(parents=True, exist_ok=True)

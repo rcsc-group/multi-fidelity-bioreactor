@@ -125,9 +125,17 @@ def _submit_and_wait(params: dict, cfg: dict) -> dict | None:
 
 
 def _append_to_ed(ed: ExperimentData, params: dict, results: dict,
-                  fidelity: int) -> ExperimentData:
-    """Append one completed run to ExperimentData and return the updated object."""
+                  fidelity: int, phase: str = "unknown",
+                  bo_iteration: int | None = None) -> ExperimentData:
+    """Append one completed run to ExperimentData and return the updated object.
+
+    Stores all 10 postprocessing KPIs plus provenance metadata (run_id,
+    timestamp, phase, bo_iteration) so the ED is the complete record of
+    every run rather than a subset.
+    """
+    import time
     row_in = {
+        "run_id":          params.get("run_id", ""),
         "omega_b":         params["omega_b"],
         "n_harmonics":     params["n_harmonics"],
         "theta_max_0":     params["theta_max"][0],
@@ -148,13 +156,23 @@ def _append_to_ed(ed: ExperimentData, params: dict, results: dict,
         "geometry_n":      params["geometry"]["n"],
         "fill_level":      params["fill_level"],
         "fidelity":        fidelity,
+        "phase":           phase,
+        "bo_iteration":    bo_iteration if bo_iteration is not None else -1,
+        "completed_at":    time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
     }
     new_ed = ExperimentData(
         input_data=pd.DataFrame([row_in]),
         output_data=pd.DataFrame([{
-            "kLa_10": results.get("kLa_10", float("nan")),
-            "kLa_25": results.get("kLa_25", float("nan")),
-            "kLa_50": results.get("kLa_50", float("nan")),
+            "kLa_10":       results.get("kLa_10",       float("nan")),
+            "kLa_25":       results.get("kLa_25",       float("nan")),
+            "kLa_50":       results.get("kLa_50",       float("nan")),
+            "kLa_inst_10":  results.get("kLa_inst_10",  float("nan")),
+            "kLa_inst_25":  results.get("kLa_inst_25",  float("nan")),
+            "kLa_inst_50":  results.get("kLa_inst_50",  float("nan")),
+            "dtmix_0.50":   results.get("dtmix_0.50",   float("nan")),
+            "dtmix_0.75":   results.get("dtmix_0.75",   float("nan")),
+            "dtmix_0.95":   results.get("dtmix_0.95",   float("nan")),
+            "vor_mean":     results.get("vor_mean",     float("nan")),
         }]),
     )
     return ed + new_ed
@@ -215,7 +233,8 @@ def run_loop(cfg: dict) -> None:
             results = _submit_and_wait(params, cfg)
             if results is None:
                 continue
-            ed = _append_to_ed(ed, params, results, fid)
+            phase_tag = "doe_lf" if fid == lf_fidelity else "doe_hf"
+            ed = _append_to_ed(ed, params, results, fid, phase=phase_tag)
             ed.store(str(exp_dir))
             print(f"    {kla_key}={results.get(kla_key, 'nan'):.4f}")
 
@@ -257,7 +276,8 @@ def run_loop(cfg: dict) -> None:
         kla_val = results.get(kla_key, float("nan"))
         print(f"  Result: {kla_key}={kla_val:.5f}")
 
-        ed = _append_to_ed(ed, candidate, results, hf_fidelity)
+        ed = _append_to_ed(ed, candidate, results, hf_fidelity,
+                           phase="bo", bo_iteration=it)
         ed.store(str(exp_dir))
 
         if kla_val > best_so_far:

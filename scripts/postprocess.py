@@ -125,6 +125,7 @@ from __future__ import annotations
 
 import json
 import math
+import time
 from pathlib import Path
 
 import numpy as np
@@ -506,7 +507,88 @@ def main(run_dir: str, params: dict | None = None) -> dict:
     results["vor_mean"] = _compute_vor_mean(path, params)
 
     (path / "results.json").write_text(json.dumps(results, indent=2))
+    _register_to_experiment_store(path, params, results)
     return results
+
+
+def _register_to_experiment_store(run_dir: Path, params: dict,
+                                   results: dict) -> None:
+    """Append this run's inputs and outputs to the experiment's ExperimentData store.
+
+    The store path is read from params["_experiment_dir"]. If absent, this
+    function is a no-op. File locking prevents corruption when multiple SLURM
+    jobs finish simultaneously and all try to update the same store.
+
+    The ExperimentData store is the canonical diary of every experiment:
+    it records the full parameter set, all 10 KPIs, and provenance metadata
+    (run_id, fidelity, timestamp, chain segment) for every run.
+    """
+    exp_dir_str = params.get("_experiment_dir")
+    if not exp_dir_str:
+        return
+
+    exp_dir = Path(exp_dir_str)
+    if not exp_dir.exists():
+        return
+
+    try:
+        import filelock
+        import pandas as pd
+        from f3dasm import ExperimentData
+    except ImportError:
+        return  # optional dependency; skip silently
+
+    lock_path = exp_dir / "experiment_data.lock"
+    lock = filelock.FileLock(str(lock_path), timeout=60)
+
+    row_in = {
+        "run_id":           params.get("run_id", ""),
+        "omega_b":          params.get("omega_b", float("nan")),
+        "n_harmonics":      params.get("n_harmonics", 1),
+        "theta_max_0":      (params.get("theta_max") or [float("nan")])[0],
+        "theta_max_1":      (params.get("theta_max") or [0, float("nan")])[1] if len(params.get("theta_max") or []) > 1 else 0.0,
+        "theta_max_2":      (params.get("theta_max") or [0, 0, float("nan")])[2] if len(params.get("theta_max") or []) > 2 else 0.0,
+        "phi_angular_0":    (params.get("phi_angular") or [0.0])[0],
+        "phi_angular_1":    (params.get("phi_angular") or [0.0, 0.0])[1] if len(params.get("phi_angular") or []) > 1 else 0.0,
+        "phi_angular_2":    (params.get("phi_angular") or [0.0, 0.0, 0.0])[2] if len(params.get("phi_angular") or []) > 2 else 0.0,
+        "omega_h":          params.get("omega_h", 0.0),
+        "amplitude_h_0":    (params.get("amplitude_h") or [0.0])[0],
+        "amplitude_h_1":    (params.get("amplitude_h") or [0.0, 0.0])[1] if len(params.get("amplitude_h") or []) > 1 else 0.0,
+        "amplitude_h_2":    (params.get("amplitude_h") or [0.0, 0.0, 0.0])[2] if len(params.get("amplitude_h") or []) > 2 else 0.0,
+        "phi_horizontal_0": (params.get("phi_horizontal") or [0.0])[0],
+        "phi_horizontal_1": (params.get("phi_horizontal") or [0.0, 0.0])[1] if len(params.get("phi_horizontal") or []) > 1 else 0.0,
+        "phi_horizontal_2": (params.get("phi_horizontal") or [0.0, 0.0, 0.0])[2] if len(params.get("phi_horizontal") or []) > 2 else 0.0,
+        "geometry_a":       (params.get("geometry") or {}).get("a", float("nan")),
+        "geometry_b":       (params.get("geometry") or {}).get("b", float("nan")),
+        "geometry_n":       (params.get("geometry") or {}).get("n", float("nan")),
+        "fill_level":       params.get("fill_level", float("nan")),
+        "fidelity":         params.get("fidelity", float("nan")),
+        "t_checkpoint":     params.get("t_checkpoint", 0.0),
+        "completed_at":     time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    }
+    row_out = {k: results.get(k, float("nan")) for k in (
+        "kLa_10", "kLa_25", "kLa_50",
+        "kLa_inst_10", "kLa_inst_25", "kLa_inst_50",
+        "dtmix_0.50", "dtmix_0.75", "dtmix_0.95",
+        "vor_mean",
+    )}
+
+    new_ed = ExperimentData(
+        input_data=pd.DataFrame([row_in]),
+        output_data=pd.DataFrame([row_out]),
+    )
+
+    try:
+        with lock:
+            store_path = exp_dir / "experiment_data"
+            if store_path.exists():
+                existing = ExperimentData.from_file(str(exp_dir))
+                combined = existing + new_ed
+                combined.store(str(exp_dir))
+            else:
+                new_ed.store(str(exp_dir))
+    except Exception:
+        pass  # never let ED registration crash the simulation postprocessing
 
 
 def validate_params(params: dict) -> None:
