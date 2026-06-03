@@ -136,7 +136,7 @@ $(BUILD_DIR)/BioReactor-mpi: $(SIM_SRC) $(SRC_HEADERS)
 	@mkdir -p $(BUILD_DIR)
 	module load openmpi && \
 	CC99='mpicc -std=c99 -D_XOPEN_SOURCE=700 -D_GNU_SOURCE=1' \
-	$(QCC) $(CFLAGS) -D_MPI=1 $< -o $@ -lm
+	$(QCC) $(CFLAGS) -D_MPI=1 $< -o $@ -L$(BASILISK)/gl -lglutils -lfb_tiny
 
 
 # ==========================================================
