@@ -15,6 +15,10 @@
 
 set -euo pipefail
 
+# ffmpeg + Basilisk's ppm2mp4 helper are required for in-simulation video rendering.
+module load ffmpeg
+export PATH="$HOME/scratch/basilisk/src:$PATH"
+
 # PARAMS must be an absolute path to params.json (set by --export on sbatch)
 if [ -z "${PARAMS:-}" ]; then
     echo "ERROR: PARAMS env var not set. Submit with: sbatch --export=PARAMS=<path> $0" >&2
@@ -33,16 +37,18 @@ echo "params.json  : $PARAMS"
 
 mkdir -p "$RUN_DIR" "$PROJECT_ROOT/logs"
 
-# Run simulation (binary must already be compiled via 'make build').
-# DUMP, if set, is the absolute path to a checkpoint.dump from a previous
-# segment; the binary will restore it and start from that flow field.
+# Run simulation with video output enabled.
+# BioReactor-video is compiled with -DVIDEOS=1 and produces mp4s alongside
+# the normal data files — no second simulation pass needed.
+# fb_tiny renders to a memory buffer; unset DISPLAY so it doesn't try X11.
+unset DISPLAY
 cd "$RUN_DIR"
 if [ -n "${DUMP:-}" ]; then
     OMP_NUM_THREADS="${SLURM_CPUS_PER_TASK:-4}" \
-        "$PROJECT_ROOT/build/BioReactor" params.json "$DUMP"
+        "$PROJECT_ROOT/build/BioReactor-video" params.json "$DUMP"
 else
     OMP_NUM_THREADS="${SLURM_CPUS_PER_TASK:-4}" \
-        "$PROJECT_ROOT/build/BioReactor" params.json
+        "$PROJECT_ROOT/build/BioReactor-video" params.json
 fi
 
 # Extract kLa and write results.json
