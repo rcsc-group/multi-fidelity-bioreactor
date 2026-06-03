@@ -68,8 +68,9 @@ One SLURM job in a chained sweep. Each segment is a complete, self-contained sim
 that starts either from scratch (segment 0) or from the checkpoint left by the previous segment.
 
 **Chain**
-A sequence of segments linked by checkpoint restart. SLURM ensures segment k+1 starts
-only after segment k finishes successfully (`--dependency=afterok`).
+A sequence of segments linked by checkpoint restart. Each segment automatically submits
+its successor when it completes successfully (self-submitting chain). No external scheduler
+bookkeeping is required.
 
 **n_mix_cycles**
 The number of rocking cycles to run *before* injecting oxygen. Used to let the flow
@@ -79,7 +80,8 @@ reach a steady state before taking measurements. Typical value: 80 cycles for a 
 **t_buffer**
 The duration (in non-dim time) of the kLa measurement window after oxygen injection.
 Larger t_buffer gives a longer average and more stable kLa estimate, at the cost of more
-compute time. Typical value: 150 non-dim time units.
+compute time. Rule of thumb: t_buffer > ln(2) / kLa_expected. At fidelity 7, kLa ≈ 0.03–0.1,
+so t_buffer = 30–50 is sufficient. At fidelity 5, kLa ≈ 0.1–0.5, so t_buffer = 10–30 suffices.
 
 **Superellipse (geometry.n)**
 The mathematical shape of the bag cross-section. n=2 is a standard ellipse;
@@ -133,13 +135,12 @@ spack module has a broken header path — never use `module load basilisk`).
 ### Install Python dependencies
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -e .
+pip install uv      # one-time, if not already installed
+uv sync
 ```
 
-All scripts must be run from within `.venv`. Throughout this document
-`.venv/bin/python` is abbreviated as `python` for clarity.
+Run all scripts via `uv run python scripts/foo.py ...` or `uv run pytest`.
+`uv` manages the virtual environment automatically — no manual activation needed.
 
 ---
 
@@ -147,16 +148,18 @@ All scripts must be run from within `.venv`. Throughout this document
 
 | Script | How to run | What it does |
 |--------|-----------|--------------|
-| `simulate.py` | `python simulate.py params.json --slurm --wait` | Submit or run one simulation; wait for `results.json` |
-| `launch.py` | `python launch.py params.json` | Set up a run directory and write a SLURM script, but do **not** submit |
-| `chain.py` | `python chain.py config.yaml` | Sweep **one** parameter across values via a YAML config, using checkpoint restart between segments |
-| `sweep.py` | `python sweep.py config.json` | Sweep **any combination** of parameters from a JSON file (zip or cartesian); groups runs by checkpoint compatibility |
-| `sample.py` | `python sample.py config.yaml` | Space-filling batch of independent runs (Latin Hypercube or random) |
-| `loop.py` | `python loop.py config.yaml` | Full Bayesian optimisation loop (DoE → train surrogate → suggest → repeat) |
-| `postprocess.py` | `python postprocess.py runs/my_run/` | Extract kLa from `tr_oxy.dat` and write `results.json` |
-| `render_videos.py` | `python render_videos.py runs/my_run/` | Convert frame dumps to MP4 videos (requires `BioReactor-video`) |
-| `suggest.py` | `python suggest.py exp_dir param_space.yaml` | Print the next highest-EI parameter point to stdout |
-| `train_surrogate.py` | `python train_surrogate.py exp_dir model.pkl` | Train the multi-fidelity surrogate from existing run data |
+| `simulate.py` | `uv run python simulate.py params.json --slurm --wait` | Submit or run one simulation; wait for `results.json` |
+| `launch.py` | `uv run python launch.py params.json` | Set up a run directory and write a SLURM script, but do **not** submit |
+| `chain.py` | `uv run python chain.py config.yaml` | Sweep **one** parameter across values via a YAML config, using checkpoint restart between segments |
+| `sweep.py` | `uv run python sweep.py config.json` | Sweep **any combination** of parameters from a JSON file (zip or cartesian); groups runs by checkpoint compatibility; chains self-submit |
+| `sample.py` | `uv run python sample.py config.yaml` | Space-filling batch of independent runs (Latin Hypercube or random) |
+| `loop.py` | `uv run python loop.py config.yaml` | Full Bayesian optimisation loop (DoE → train surrogate → suggest → repeat) |
+| `postprocess.py` | `uv run python postprocess.py runs/my_run/` | Extract kLa, mixing time, and vorticity from run output files → `results.json` |
+| `collect_results.py` | `uv run python collect_results.py --sweep config/my_sweep.json` | Aggregate all `results.json` files into a single CSV |
+| `plot_heatmaps.py` | `uv run python plot_heatmaps.py` | Generate KPI heatmap figures from all completed sweep results → `experiments/figures/` |
+| `render_videos.py` | `uv run python render_videos.py runs/my_run/` | Convert raw frame dumps to MP4 videos (called automatically by SLURM jobs) |
+| `suggest.py` | `uv run python suggest.py exp_dir param_space.yaml` | Print the next highest-EI parameter point to stdout |
+| `train_surrogate.py` | `uv run python train_surrogate.py exp_dir model.pkl` | Train the multi-fidelity surrogate from existing run data |
 
 ---
 
@@ -200,19 +203,32 @@ make submit PARAMS=runs/my_run/params.json
 python scripts/simulate.py runs/my_run/params.json --slurm --wait --walltime 04:00:00
 ```
 
-### Step 3 — Extract kLa
+### Step 3 — Postprocess
 
 ```bash
-python scripts/postprocess.py runs/my_run/
+uv run python scripts/postprocess.py runs/my_run/
 ```
 
-Writes `runs/my_run/results.json`:
+Writes `runs/my_run/results.json` with ten KPIs:
+
 ```json
-{"kLa_10": 0.0031, "kLa_25": 0.0028, "kLa_50": 0.0024}
+{
+  "kLa_10": 0.085,  "kLa_25": 0.074,  "kLa_50": 0.055,
+  "kLa_inst_10": 0.093, "kLa_inst_25": 0.059, "kLa_inst_50": 0.046,
+  "dtmix_0.50": 3.95,   "dtmix_0.75": 5.92,   "dtmix_0.95": 15.8,
+  "vor_mean": 1.374
+}
 ```
 
-`kLa_10/25/50` are the mass-transfer coefficients at 10 %, 25 %, and 50 % oxygen saturation.
-`kLa_25` is the standard industry metric.
+| Key | Description | Unit |
+|-----|-------------|------|
+| `kLa_10/25/50` | O₂ transfer rate at 10/25/50 % saturation (5-point log-linear fit) | 1/t_nd |
+| `kLa_inst_10/25/50` | Same, estimated instantaneously via dC*/dt | 1/t_nd |
+| `dtmix_0.50/0.75/0.95` | Time for tracer to reach 50/75/95 % homogeneity | seconds |
+| `vor_mean` | Period-averaged mean absolute vorticity (steady streaming strength) | 1/s |
+
+`kLa_25` is the standard industrial metric. `vor_mean` is the hydrodynamic
+root cause: stronger steady streaming → faster mixing and higher kLa.
 
 ### Alternatively — set up the directory without submitting
 
@@ -514,8 +530,10 @@ The `"_sweep"` key holds sweep-control options that are **not** simulation param
 |--------|---------|
 | `n_mix_cycles` | Rocking cycles before O₂ injection for the **first** segment of each group (fresh start) |
 | `n_transition_cycles` | Rocking cycles before O₂ re-injection for **restart** segments (flow is already developed) |
-| `t_buffer` | Length of the kLa measurement window in non-dim time |
+| `t_buffer` | Length of the kLa measurement window in non-dim time (see Glossary for sizing guidance) |
 | `walltime` | SLURM time limit per segment (`HH:MM:SS`) |
+| `cpus` | CPUs per job (OpenMP threads). Default: 4. Use 16 for fidelity ≥ 7 |
+| `mem` | Memory per job (e.g. `"16G"`). Default: `"12G"` |
 | `submit` | `true` → submit via `sbatch`; `false` → write `params.json` files only (dry run) |
 
 > **Note:** If you include `n_mix_cycles` in the **body** of the JSON (not inside `_sweep`)
@@ -535,20 +553,24 @@ The script prints one line per segment. Check that `t_end > n_mix_cycles × T_pe
 
 ### Step 3 — Submit
 
-Set `"submit": true` and rerun:
+Set `"submit": true` and run:
 
 ```bash
-python scripts/sweep.py config/my_sweep.json
+uv run python scripts/sweep.py config/my_sweep.json
 ```
 
 Output:
 ```
 Group 0 (fidelity=3, a=0.25, b=0.071, n=2.0) — 2 segment(s)
-  [seg 0] run=abc12345  omega_b=3.142  n_mix=3  t_end≈6.8  → job 1234567
-  [seg 1] run=def67890  omega_b=6.283  n_mix=3  t_end≈6.8  → job 1234568
+  [seg 0] run=abc12345  omega_b=3.142  n_mix=3  t_end≈6.8  → next:def67890
+  [seg 1] run=def67890  omega_b=6.283  n_mix=3  t_end≈6.8  → last
+  → submitted seg-0 as job 1234567 (chain self-submits from here)
 ```
 
-SLURM job IDs are printed per segment. Job k+1 will not start until job k completes.
+Only seg-0 of each chain is submitted to SLURM upfront. Each segment automatically
+submits its successor at the end of its SLURM script. This means at most one job per
+chain is ever in the queue at a time — chains progress at their own pace without
+waiting on each other's SLURM state.
 
 ### Step 4 — Verify results
 
@@ -560,33 +582,29 @@ After all jobs complete:
 
 ## 8. Video generation
 
-Videos require the `BioReactor-video` binary and `ffmpeg`.
+Videos are generated automatically during every simulation run — no separate step
+is required. All SLURM jobs use `BioReactor-video`, which renders frames inline
+and encodes them to MP4 at the end of each segment.
 
-### Single video run
+### Output files produced per run
+
+| File | Content |
+|------|---------|
+| `vorticity3.mp4` | Vorticity field (body frame) |
+| `volume_fraction3.mp4` | VOF interface (body frame) |
+| `oxygen3.mp4` | Dissolved oxygen concentration |
+| `tracer.mp4` | Tracer mixing (top-half injection) |
+
+All MP4s land in `runs/<run_id>/` alongside the data files.
+
+### Build requirements
 
 ```bash
-make build-video
-make submit PARAMS=runs/my_run/params.json TEMPLATE=config/slurm_video_template.sh
+make build-video    # compiles BioReactor-video (only needed if binary is stale)
 ```
 
-Or use `chain.py` with `videos: true` — it automatically selects the video template
-and calls `render_videos.py` after each segment.
-
-### Render videos from an existing run directory
-
-```bash
-python scripts/render_videos.py runs/my_run/
-```
-
-Reads `frames/frame_XXXXXX.bin` dumps from the video binary and produces:
-
-| File | View |
-|------|------|
-| `volume_fraction.mp4` | Body frame (bag at rest, fluid moves) |
-| `volume_fraction_lab.mp4` | Lab frame (bag rocks, fluid follows) |
-
-The `frames/` directory is deleted after encoding.
-`ffmpeg` must be available (`module load ffmpeg` on OSCAR).
+`ffmpeg` and Basilisk's `ppm2mp4` helper are loaded automatically by the SLURM
+template (`module load ffmpeg`). No additional setup is required.
 
 ---
 
@@ -664,11 +682,13 @@ All files land in `runs/{run_id}/`.
 | `logstats.dat` | BioReactor | `i t dt #Cells wall_time cpu_time` — one row per 0.1 non-dim time |
 | `normf.dat` | BioReactor | `i t Omega_liq_avg Omega_liq_rms ... ux ... uy ...` — vorticity and velocity norms in liquid phase |
 | `vol_frac_interf.dat` | BioReactor | `i t f_liq_sum f_liq_interf posY_max posY_min` — liquid volume, interface length, interface y-extent |
-| `tr_oxy.dat` | BioReactor | `i t oxy_liq_sum oxy_liq_sum2 c_liq_sum ...` — dissolved O₂ and tracer integrals; written from `t_mix` onward |
-| `results.json` | postprocess.py | `{"kLa_10": ..., "kLa_25": ..., "kLa_50": ...}` — kLa at 10/25/50 % saturation |
+| `tr_oxy.dat` | BioReactor | `i t oxy_liq_sum oxy_liq_sum2 [c_liq...] c2_liq_sum c2_liq_sum2 ...` — dissolved O₂ and tracer integrals; written from `t_mix` onward |
+| `results.json` | postprocess.py | Ten KPIs: `kLa_10/25/50`, `kLa_inst_10/25/50`, `dtmix_0.50/0.75/0.95`, `vor_mean` |
 | `checkpoint.dump` | BioReactor | Binary Basilisk dump at the end of each run (for chain restart) |
-| `volume_fraction.mp4` | render_videos.py | Body-frame VOF animation (requires BioReactor-video) |
-| `volume_fraction_lab.mp4` | render_videos.py | Lab-frame VOF animation (requires BioReactor-video) |
+| `vorticity3.mp4` | BioReactor-video | Vorticity field animation |
+| `volume_fraction3.mp4` | BioReactor-video | VOF interface animation (body frame) |
+| `oxygen3.mp4` | BioReactor-video | Dissolved oxygen concentration |
+| `tracer.mp4` | BioReactor-video | Tracer mixing animation |
 
 All `.dat` files have a one-line header beginning with `i`.
 Time `t` is non-dimensional; `t_physical = t × T_bio`.
@@ -680,14 +700,20 @@ Time `t` is non-dimensional; `t_physical = t × T_bio`.
 
 ## 11. Fidelity guide
 
-| fidelity | grid | typical runtime | use for |
-|----------|------|-----------------|---------|
-| 3 | 8×8 | seconds | import / smoke test only |
-| 4 | 16×16 | ~2 min | quick single-parameter scan |
-| 5 | 32×32 | ~5–15 min | low-fidelity surrogate data, BO DoE |
-| 6 | 64×64 | ~30 min | mid-fidelity check |
-| 7 | 128×128 | ~2–4 h | standard production / HF BO runs |
-| 9 | 512×512 | ~days | high-fidelity reference / publication |
+Runtimes are per segment (one SLURM job) with the sweep t_end of ~35–98 nondim units.
+
+| Fidelity | Grid | 4 CPUs | 16 CPUs | Use for |
+|----------|------|--------|---------|---------|
+| 3 | 8×8 | seconds | — | Smoke tests, CI |
+| 4 | 16×16 | ~2 min | — | Quick debugging |
+| 5 | 32×32 | ~2 min | ~1 min | BO DoE, low-fidelity surrogate |
+| 6 | 64×64 | ~15 min | ~5 min | Mid-fidelity check |
+| 7 | 128×128 | ~2 h | ~30 min | Standard production sweeps |
+| 9 | 512×512 | ~days | ~hours | High-fidelity reference |
+| 10 | 1024×1024 | — | ~days | Publication (Kim et al. 2025) |
+
+For sweeps: use **fidelity 5** (fast, qualitative) or **fidelity 7 at 16 CPUs** (production).
+Specify `"cpus": 16` in `_sweep` when using fidelity ≥ 7.
 
 For the optimization suite, `lf_fidelity: 5` and `hf_fidelity: 7` are the
 recommended pair. Always smoke-test new workflows at fidelity 3 before
@@ -708,45 +734,60 @@ rocking-bioreactor-2d/
 │
 ├── scripts/
 │   ├── simulate.py           # Core API: run_local() / submit_slurm() / wait_for_result()
-│   ├── postprocess.py        # kLa extraction from tr_oxy.dat → results.json
-│   ├── render_videos.py      # frame dumps → volume_fraction*.mp4 via ffmpeg
+│   ├── postprocess.py        # 10 KPIs from run output files → results.json
+│   ├── collect_results.py    # Aggregate all results.json across runs → CSV
+│   ├── plot_heatmaps.py      # KPI heatmaps from sweep results → experiments/figures/
+│   ├── render_videos.py      # Called automatically by SLURM: frame dumps → mp4
 │   ├── launch.py             # set up run directory + SLURM script (no submit)
 │   ├── chain.py              # Workflow B: chained sweep (one param, YAML config)
-│   ├── sweep.py              # Workflow E: JSON multi-param sweep (zip / cartesian)
+│   ├── sweep.py              # Workflow E: JSON multi-param sweep (zip / cartesian; self-submitting chains)
 │   ├── sample.py             # Workflow C: LHS / random / grid / Sobol batch sampling
 │   ├── loop.py               # Workflow D: multi-fidelity BO loop
 │   ├── suggest.py            # EI acquisition: suggest next HF point
 │   └── train_surrogate.py    # Train KRR-LR-GPR multi-fidelity surrogate
 │
 ├── config/
-│   ├── slurm_template.sh         # SBATCH script for standard kLa runs
-│   ├── slurm_video_template.sh   # SBATCH script for video runs (loads ffmpeg)
+│   ├── slurm_template.sh         # SBATCH script for all simulation runs (videos included)
+│   ├── slurm_video_template.sh   # SBATCH script for standalone video reruns
 │   ├── param_space.yaml          # Parameter bounds for optimization suite
 │   ├── bo_config.yaml            # Workflow D config (multi-fidelity BO)
 │   ├── sample_config.yaml        # Workflow C config (batch sampling)
 │   ├── chain_config.yaml         # Workflow B config (generic sweep template)
 │   ├── chain_config_ellipse.yaml # Workflow B config (ellipse bag, 4 frequencies)
 │   ├── chain_config_smoke.yaml   # Workflow B config (fidelity-3 smoke test)
-│   └── sweep_example.json        # Workflow E example / smoke test (2-segment, fidelity 3)
+│   ├── sweep_example.json        # Workflow E example / smoke test (2-segment, fidelity 3)
+│   ├── sweep_fb_theta.json       # theta_max × omega_b sweep (fidelity 5)
+│   ├── sweep_fb_theta_l7.json    # theta_max × omega_b sweep (fidelity 7, 16 CPUs)
+│   ├── sweep_fb_fill.json        # fill_level × omega_b sweep (fidelity 5)
+│   └── sweep_fb_fill_l7.json     # fill_level × omega_b sweep (fidelity 7, 16 CPUs)
 │
 ├── tests/
 │   ├── conftest.py               # Shared fixtures (run_bioreactor, CANONICAL_PARAMS)
 │   ├── test_chain.py             # chain.py unit tests (build_chain)
-│   ├── test_sweep.py             # sweep.py unit tests (detect, expand, group, build)
+│   ├── test_sweep.py             # sweep.py unit tests (detect, expand, group, build, self-submit)
+│   ├── test_sample.py            # sample.py unit tests (row_to_params, run_sampling)
 │   ├── test_param_schema.py      # params_read schema tests
 │   ├── test_launch.py            # launch.py unit tests
 │   ├── test_suggest.py           # suggest.py unit tests
 │   ├── test_train_surrogate.py   # surrogate training unit tests
-│   ├── test_postprocess.py       # kLa extraction unit tests
-│   └── test_simulate.py          # simulate.py unit tests (mocked sbatch)
+│   ├── test_postprocess.py       # postprocessing unit tests
+│   ├── test_simulate.py          # simulate.py unit tests (mocked sbatch)
+│   ├── integration/
+│   │   └── test_bioreactor_runs.py  # end-to-end output file checks
+│   └── verification/
+│       ├── test_grid_convergence.py  # velocity RMS convergence L5 vs L6
+│       ├── test_mass_conservation.py
+│       ├── test_oxygen_monotonicity.py
+│       └── ...                       # other physics verification tests
 │
-├── experiments/              # f3dasm ExperimentData stores (Workflow C & D output)
+├── experiments/
+│   └── figures/              # Heatmap PDFs generated by plot_heatmaps.py (committed)
 ├── surrogate/                # Pickled surrogate models
 ├── runs/                     # Per-run I/O directories (gitignored)
 ├── build/                    # Compiled binaries (gitignored)
 ├── logs/                     # SLURM stdout/stderr logs (gitignored)
 ├── Makefile                  # make build / build-video / run / submit / clean
-└── pyproject.toml            # Python dependencies (activate .venv before use)
+└── pyproject.toml            # Python dependencies (managed by uv)
 ```
 
 ---
@@ -754,16 +795,14 @@ rocking-bioreactor-2d/
 ## 13. Test suite
 
 ```bash
-source .venv/bin/activate
+# Fast unit tests only (no binary, no SLURM — ~10 s)
+uv run python -m pytest tests/ -m "not medium and not hpc"
 
-# Fast unit tests only (no binary, no SLURM — seconds)
-pytest tests/ -m "not medium and not hpc"
+# Include numerical verification tests (runs binary at fidelity 3, ~10 min)
+uv run python -m pytest tests/ -m "not hpc"
 
-# Include numerical health tests (runs binary at fidelity 3, ~5–10 min)
-pytest tests/ -m "not hpc"
-
-# Full suite including SLURM smoke tests (needs cluster allocation)
-pytest tests/
+# Full suite including SLURM integration test (needs cluster allocation, ~15 min)
+uv run python -m pytest tests/
 ```
 
 ---

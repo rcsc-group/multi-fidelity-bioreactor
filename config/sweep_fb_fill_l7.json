@@ -1,0 +1,27 @@
+{
+  "fidelity":       7,
+  "geometry":       {"a": 0.25, "b": 0.071, "n": 8.0},
+  "theta_max":      [7.0, 0.0, 0.0],
+  "phi_angular":    [0.0, 0.0, 0.0],
+  "omega_h":        0.0,
+  "amplitude_h":    [0.0, 0.0, 0.0],
+  "phi_horizontal": [0.0, 0.0, 0.0],
+  "n_harmonics":    1,
+
+  "omega_b": [
+    1.5708, 1.8326, 2.0944, 2.3562, 2.6180,
+    2.8798, 3.1416, 3.4034, 3.6652, 3.9270
+  ],
+
+  "fill_level": [0.30, 0.40, 0.50, 0.60, 0.70],
+
+  "_sweep": {
+    "n_mix_cycles":        80,
+    "n_transition_cycles": 10,
+    "t_buffer":            50.0,
+    "walltime":            "02:00:00",
+    "cpus":                16,
+    "mem":                 "16G",
+    "submit":              true
+  }
+}
