@@ -31,6 +31,32 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "hpc: SLURM-required; fidelity 5-7")
 
 
+@pytest.fixture(scope="session", autouse=True)
+def ensure_binaries_current():
+    """Rebuild BioReactor and BioReactor-video if sources are newer than binaries.
+
+    Runs once per test session via `make build build-video`.  Make's own
+    timestamp logic makes this a no-op when nothing has changed.  The MPI
+    binary (BioReactor-mpi) is excluded — it requires `module load openmpi`
+    and is intentionally a manual build step.
+
+    Fails the session immediately if the build fails, surfacing compile errors
+    before any test tries to run the binary with stale code.
+    """
+    result = subprocess.run(
+        ["make", "build", "build-video", "build-mpi"],
+        cwd=PROJECT_ROOT,
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        pytest.fail(
+            f"Binary build failed before tests could run.\n"
+            f"stdout:\n{result.stdout}\n"
+            f"stderr:\n{result.stderr}"
+        )
+
+
 def run_bioreactor(params: dict, tmp_path: pathlib.Path, timeout: int = 300) -> pathlib.Path:
     """Write params.json into a fresh run dir, execute BioReactor, return run_dir.
 
