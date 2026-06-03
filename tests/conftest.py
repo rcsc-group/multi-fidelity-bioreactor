@@ -44,7 +44,7 @@ def ensure_binaries_current():
     before any test tries to run the binary with stale code.
     """
     result = subprocess.run(
-        ["make", "build", "build-video", "build-mpi"],
+        ["make", "build", "build-video", "build-mpi", "build-mpi-video"],
         cwd=PROJECT_ROOT,
         capture_output=True,
         text=True,

@@ -50,9 +50,9 @@ except:
 " "$PARAMS" 2>/dev/null)
 
 # Binary must be in /oscar/scratch (accessible from compute nodes)
-BINARY="/oscar/scratch/eaguerov/BioReactor-mpi"
+BINARY="/oscar/scratch/eaguerov/BioReactor-mpi-video"
 if [ ! -f "$BINARY" ]; then
-    echo "ERROR: $BINARY not found. Run: cp build/BioReactor-mpi $BINARY" >&2
+    echo "ERROR: $BINARY not found. Run: cp build/BioReactor-mpi-video $BINARY" >&2
     exit 1
 fi
 

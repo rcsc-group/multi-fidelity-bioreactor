@@ -29,7 +29,7 @@ import time
 import warnings
 from pathlib import Path
 
-_DEFAULT_TEMPLATE = Path(__file__).parents[1] / "config" / "slurm_template.sh"
+_DEFAULT_TEMPLATE = Path(__file__).parents[1] / "config" / "slurm_mpi_template.sh"
 _DEFAULT_BINARY   = Path(__file__).parents[1] / "build" / "BioReactor"
 
 
