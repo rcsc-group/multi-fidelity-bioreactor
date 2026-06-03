@@ -164,15 +164,41 @@ def submit_slurm(
     # with LDAP issues.  The SLURM script only needs PARAMS and DUMP; all
     # executables use absolute paths so PATH is not required.  SLURM_* vars
     # (SLURM_CPUS_PER_TASK etc.) are always injected regardless of --export.
-    export_str = f"NONE,PARAMS={params_path}"
+    #
+    # MPI exception: /oscar/data/dharri15/ is not mounted on MPI compute nodes.
+    # When the MPI template is used, stage params.json and checkpoint to
+    # /oscar/scratch at submission time (login node has full filesystem access),
+    # then pass the scratch paths as PARAMS/DUMP so srun workers can read them.
+    _mpi_template = (project_root / "config" / "slurm_mpi_template.sh").resolve()
+    _using_mpi    = Path(template).resolve() == _mpi_template
+    if _using_mpi:
+        import shutil as _shutil
+        scratch_base = Path("/oscar/scratch/eaguerov/mpi_runs") / params["run_id"]
+        scratch_base.mkdir(parents=True, exist_ok=True)
+        # Store canonical path so the MPI job can write results back to Lustre
+        canon_params = json.loads(params_path.read_text())
+        canon_params["_canonical_run_dir"] = str(run_dir.resolve())
+        scratch_params = scratch_base / "params.json"
+        scratch_params.write_text(json.dumps(canon_params, indent=2))
+        effective_params = scratch_params
+        if checkpoint:
+            scratch_ck = scratch_base / "checkpoint.dump"
+            _shutil.copy2(checkpoint, scratch_ck)
+            checkpoint = str(scratch_ck)
+    else:
+        effective_params = params_path
+
+    export_str = f"NONE,PARAMS={effective_params}"
     if checkpoint:
         export_str += f",DUMP={checkpoint}"
 
+    # MPI jobs use --mem-per-cpu (per rank) instead of --mem (total per node)
+    mem_flag = "--mem-per-cpu" if _using_mpi else "--mem"
     cmd = [
         "sbatch",
         "--no-requeue",           # prevent SLURM from re-running on node failure
         f"--time={walltime}",
-        f"--mem={mem}",
+        f"{mem_flag}={mem}",
         f"--cpus-per-task={cpus}",
         f"--export={export_str}",
         str(template.resolve()),

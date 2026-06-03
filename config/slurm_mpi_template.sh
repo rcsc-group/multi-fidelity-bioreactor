@@ -3,11 +3,15 @@
 # Uses srun --mpi=pmix to launch across ntasks MPI ranks.
 # Build the binary first: make build-mpi
 #
+# IMPORTANT: submit via simulate.py with template=slurm_mpi_template.sh.
+# simulate.py stages params.json to /oscar/scratch before submitting so
+# PARAMS points to scratch (accessible from MPI compute nodes).
+#
 #SBATCH --job-name=bioreactor-mpi
 #SBATCH --output=logs/slurm_%j.out
 #SBATCH --error=logs/slurm_%j.err
 #SBATCH --time=04:00:00
-#SBATCH --mem-per-cpu=4G
+
 #SBATCH --ntasks=16
 #SBATCH --cpus-per-task=1
 #SBATCH --mail-type=FAIL
@@ -19,36 +23,64 @@ module load openmpi
 module load ffmpeg
 export PATH="$HOME/scratch/basilisk/src:$PATH"
 
+# Set HOME so srun workers can initialise OpenMPI's opal layer.
+if [ -z "${HOME:-}" ]; then
+    export HOME=$(getent passwd "$(id -u)" | cut -d: -f6)
+fi
+
 if [ -z "${PARAMS:-}" ]; then
-    echo "ERROR: PARAMS env var not set. Submit with: sbatch --export=PARAMS=<path> $0" >&2
+    echo "ERROR: PARAMS env var not set (must point to /oscar/scratch)." >&2
     exit 1
 fi
 
-RUN_DIR="$(dirname "$PARAMS")"
-PROJECT_ROOT="$(dirname "$(dirname "$RUN_DIR")")"
-
-echo "Project root : $PROJECT_ROOT"
-echo "Run dir      : $RUN_DIR"
+SCRATCH_RUN="$(dirname "$PARAMS")"
+echo "Scratch run  : $SCRATCH_RUN"
 echo "params.json  : $PARAMS"
 echo "MPI ranks    : ${SLURM_NTASKS:-16}"
+echo "HOME         : $HOME"
 
-mkdir -p "$RUN_DIR" "$PROJECT_ROOT/logs"
+# Canonical Lustre run dir (for results collection after the simulation)
+CANON_RUN=$(python3 -c "
+import json, sys
+try:
+    p = json.load(open(sys.argv[1]))
+    print(p.get('_canonical_run_dir', ''))
+except:
+    print('')
+" "$PARAMS" 2>/dev/null)
 
-unset DISPLAY
-cd "$RUN_DIR"
-if [ -n "${DUMP:-}" ]; then
-    srun --mpi=pmix \
-        "$PROJECT_ROOT/build/BioReactor-mpi" params.json "$DUMP"
-else
-    srun --mpi=pmix \
-        "$PROJECT_ROOT/build/BioReactor-mpi" params.json
+# Binary must be in /oscar/scratch (accessible from compute nodes)
+BINARY="/oscar/scratch/eaguerov/BioReactor-mpi"
+if [ ! -f "$BINARY" ]; then
+    echo "ERROR: $BINARY not found. Run: cp build/BioReactor-mpi $BINARY" >&2
+    exit 1
 fi
 
-uv run python "$PROJECT_ROOT/scripts/postprocess.py" "$RUN_DIR"
+unset DISPLAY
+if [ -n "${DUMP:-}" ]; then
+    srun --mpi=pmix --mem=0 --chdir="$SCRATCH_RUN" --export=HOME \
+        "$BINARY" "$PARAMS" "$DUMP"
+else
+    srun --mpi=pmix --mem=0 --chdir="$SCRATCH_RUN" --export=HOME \
+        "$BINARY" "$PARAMS"
+fi
 
-echo "Done. Results written to $RUN_DIR/results.json"
+echo "Simulation complete. Syncing results..."
 
-# Self-submitting chain: submit next segment on completion
+# Copy output files to canonical Lustre path for postprocessing
+if [ -n "$CANON_RUN" ] && [ "$CANON_RUN" != "$SCRATCH_RUN" ]; then
+    mkdir -p "$CANON_RUN"
+    rsync -a --exclude="params.json" "$SCRATCH_RUN/" "$CANON_RUN/"
+    PROJECT_ROOT="$(dirname "$(dirname "$CANON_RUN")")"
+    uv run python "$PROJECT_ROOT/scripts/postprocess.py" "$CANON_RUN"
+    echo "Done. Results written to $CANON_RUN/results.json"
+else
+    PROJECT_ROOT="$(cd "$SCRATCH_RUN/../../.." && pwd)"
+    uv run python "$PROJECT_ROOT/scripts/postprocess.py" "$SCRATCH_RUN"
+    echo "Done. Results written to $SCRATCH_RUN/results.json"
+fi
+
+# Self-submitting chain (next segment must also be staged to scratch)
 NEXT_RUN=$(python3 -c "
 import json, sys
 try:
@@ -58,39 +90,28 @@ except:
     print('')
 " "$PARAMS" 2>/dev/null)
 
-if [ -n "$NEXT_RUN" ]; then
-    NEXT_PARAMS="$PROJECT_ROOT/runs/$NEXT_RUN/params.json"
-    NEXT_DUMP="$RUN_DIR/checkpoint.dump"
-    WALLTIME=$(python3 -c "
-import json, sys
-try:
-    p = json.load(open(sys.argv[1]))
-    print(p.get('_walltime', '04:00:00'))
-except:
-    print('04:00:00')
-" "$NEXT_PARAMS" 2>/dev/null)
-    MEM=$(python3 -c "
-import json, sys
-try:
-    p = json.load(open(sys.argv[1]))
-    print(p.get('_mem', '4G'))
-except:
-    print('4G')
-" "$NEXT_PARAMS" 2>/dev/null)
-    NTASKS=$(python3 -c "
-import json, sys
-try:
-    p = json.load(open(sys.argv[1]))
-    print(p.get('_ntasks', 16))
-except:
-    print(16)
-" "$NEXT_PARAMS" 2>/dev/null)
-    sbatch --no-requeue \
-        --time="$WALLTIME" \
-        --mem-per-cpu="$MEM" \
-        --ntasks="$NTASKS" \
-        --cpus-per-task=1 \
-        --export="NONE,PARAMS=$NEXT_PARAMS,DUMP=$NEXT_DUMP" \
-        "$PROJECT_ROOT/config/slurm_mpi_template.sh"
-    echo "Submitted next segment: $NEXT_RUN"
+if [ -n "$NEXT_RUN" ] && [ -n "$CANON_RUN" ]; then
+    NEXT_CANON="$(dirname "$CANON_RUN")/$NEXT_RUN"
+    NEXT_PARAMS_CANON="$NEXT_CANON/params.json"
+    if [ -f "$NEXT_PARAMS_CANON" ]; then
+        NEXT_SCRATCH="/oscar/scratch/eaguerov/mpi_runs/$NEXT_RUN"
+        mkdir -p "$NEXT_SCRATCH"
+        cp "$NEXT_CANON/checkpoint.dump" "$NEXT_SCRATCH/checkpoint.dump" 2>/dev/null || true
+        cp "$NEXT_PARAMS_CANON" "$NEXT_SCRATCH/params.json"
+        WALLTIME=$(python3 -c "import json,sys; p=json.load(open(sys.argv[1])); print(p.get('_walltime','04:00:00'))" "$NEXT_PARAMS_CANON" 2>/dev/null)
+        MEM=$(python3 -c "import json,sys; p=json.load(open(sys.argv[1])); print(p.get('_mem','4G'))" "$NEXT_PARAMS_CANON" 2>/dev/null)
+        NTASKS=$(python3 -c "import json,sys; p=json.load(open(sys.argv[1])); print(p.get('_ntasks',16))" "$NEXT_PARAMS_CANON" 2>/dev/null)
+        NEXT_DUMP_ARG=""
+        if [ -f "$NEXT_SCRATCH/checkpoint.dump" ]; then
+            NEXT_DUMP_ARG="DUMP=$NEXT_SCRATCH/checkpoint.dump"
+        fi
+        sbatch --no-requeue \
+            --time="$WALLTIME" \
+            --mem-per-cpu="$MEM" \
+            --ntasks="$NTASKS" \
+            --cpus-per-task=1 \
+            --export="NONE,PARAMS=$NEXT_SCRATCH/params.json${NEXT_DUMP_ARG:+,$NEXT_DUMP_ARG}" \
+            "$(dirname "$CANON_RUN")/../../config/slurm_mpi_template.sh"
+        echo "Submitted next segment: $NEXT_RUN"
+    fi
 fi
