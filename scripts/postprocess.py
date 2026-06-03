@@ -432,6 +432,102 @@ def _compute_vor_mean(run_dir: Path, params: dict) -> float:
     return vor_nd / T_bio
 
 
+# ── simulation quality KPIs (Appendix A & B of Kim et al. 2025) ──────────────
+
+def _compute_vel_rms_qss(run_dir: Path, params: dict) -> float:
+    """Global quality KPI: combined velocity RMS in the quasi-steady regime.
+
+    Defined in Appendix A of Kim et al. (2025) as the convergence metric for
+    grid resolution.  They plot u'_x,rms and u'_y,rms against resolution levels
+    (n_L = 2^5 … 2^11) and show convergence to the n_L = 2^11 reference.
+
+    Here we compute::
+
+        vel_rms_qss = mean_{t_ramp < t < t_inject} sqrt(u_x,rms²(t) + u_y,rms²(t))
+
+    averaged over the post-ramp quasi-steady window before oxygen injection.
+    A single number capturing the overall flow intensity at the resolved scale.
+    Comparing this across fidelity levels directly reproduces the paper's
+    Appendix A convergence check.
+
+    Returns NaN if normf.dat is absent or the quasi-steady window is too short.
+    """
+    normf_path = run_dir / "normf.dat"
+    tr_path    = run_dir / "tr_oxy.dat"
+    if not normf_path.exists():
+        return math.nan
+
+    arr   = _load_dat(normf_path)
+    if arr.shape[0] < 10 or arr.shape[1] < 12:
+        return math.nan
+
+    t    = arr[:, 1]
+    vel  = np.sqrt(arr[:, 7] ** 2 + arr[:, 11] ** 2)   # u_x,rms + u_y,rms
+
+    _, T_per_nd = _t_scales(params)
+    t_ramp = 3.0 * T_per_nd
+
+    # Upper bound: injection time (start of oxygen/tracer phase)
+    t_inject = float("nan")
+    if tr_path.exists():
+        tr = _load_dat(tr_path)
+        if tr.shape[0] > 0 and tr.shape[1] > 2:
+            oxy = tr[:, 2]
+            vf_path = run_dir / "vol_frac_interf.dat"
+            if vf_path.exists():
+                vf = _load_dat(vf_path)
+                f_mean = float(vf[:, 2].mean()) if vf.shape[0] > 0 else 1.0
+                c_star = oxy / max(f_mean, 1e-10)
+                inj = np.where(c_star > 1e-4)[0]
+                if len(inj):
+                    t_inject = float(tr[inj[0], 1])
+
+    mask = t > t_ramp
+    if not math.isnan(t_inject):
+        mask &= t < t_inject
+
+    if mask.sum() < 5:
+        return math.nan
+
+    return float(np.mean(vel[mask]))
+
+
+def _compute_kla_fit_rmse_25(t: np.ndarray, c_star: np.ndarray) -> float:
+    """Local quality KPI: RMSE of the 5-point log-linear fit for kLa_25.
+
+    Defined in Appendix B of Kim et al. (2025) as the discriminating metric
+    between global and local kLa fitting methods.  The paper shows the local
+    5-point fit has an order-of-magnitude lower RMSE than the global fit,
+    confirming it better captures the instantaneous transfer rate.
+
+    RMSE is computed over the same 5-point window used for kLa_25::
+
+        RMSE = sqrt( mean( (ln(1−C*_data) − ln(1−C*_fit))² ) )
+
+    Low RMSE (< 0.01 typical) means the exponential model fits cleanly at
+    the C*=0.25 crossing — the kLa_25 value is reliable.
+    High RMSE indicates noise or model mismatch at that measurement point.
+
+    Returns NaN if C* never reaches 0.25 or fewer than 5 points exist.
+    """
+    if len(t) < MIN_WINDOW:
+        return math.nan
+    idx = np.argmax(c_star >= 0.25)
+    if c_star[idx] < 0.25:
+        return math.nan
+    half = MIN_WINDOW // 2
+    lo = max(0, idx - half)
+    hi = min(len(t), lo + MIN_WINDOW)
+    lo = max(0, hi - MIN_WINDOW)
+    t_win  = t[lo:hi]
+    cs_win = np.clip(c_star[lo:hi], 0.0, 1.0 - 1e-10)
+    y      = np.log(1.0 - cs_win)
+    slope, intercept = np.polyfit(t_win, y, 1)
+    y_fit  = slope * t_win + intercept
+    rmse   = float(np.sqrt(np.mean((y - y_fit) ** 2)))
+    return rmse
+
+
 # ── main entry point ──────────────────────────────────────────────────────────
 
 def main(run_dir: str, params: dict | None = None) -> dict:
@@ -487,6 +583,7 @@ def main(run_dir: str, params: dict | None = None) -> dict:
         "kLa_inst_10": math.nan, "kLa_inst_25": math.nan, "kLa_inst_50": math.nan,
         "dtmix_0.50": math.nan, "dtmix_0.75": math.nan, "dtmix_0.95": math.nan,
         "vor_mean": math.nan,
+        "vel_rms_qss": math.nan, "kla_fit_rmse_25": math.nan,
     }
 
     try:
@@ -504,7 +601,9 @@ def main(run_dir: str, params: dict | None = None) -> dict:
         "kLa_inst_50": _kla_inst_at_threshold(t, c_star, 0.50),
     }
     results.update(_compute_mixing_metrics(path, params))
-    results["vor_mean"] = _compute_vor_mean(path, params)
+    results["vor_mean"]          = _compute_vor_mean(path, params)
+    results["vel_rms_qss"]       = _compute_vel_rms_qss(path, params)
+    results["kla_fit_rmse_25"]   = _compute_kla_fit_rmse_25(t, c_star)
 
     (path / "results.json").write_text(json.dumps(results, indent=2))
     _register_to_experiment_store(path, params, results)
@@ -571,6 +670,7 @@ def _register_to_experiment_store(run_dir: Path, params: dict,
         "kLa_inst_10", "kLa_inst_25", "kLa_inst_50",
         "dtmix_0.50", "dtmix_0.75", "dtmix_0.95",
         "vor_mean",
+        "vel_rms_qss", "kla_fit_rmse_25",
     )}
 
     new_ed = ExperimentData(
