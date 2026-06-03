@@ -52,7 +52,11 @@ else
 fi
 
 # Extract kLa and write results.json
-"$PROJECT_ROOT/.venv/bin/python" "$PROJECT_ROOT/scripts/postprocess.py" "$RUN_DIR"
+# Run postprocessing — errors are warned but never abort the chain.
+# A postprocess failure must not prevent the next segment from being submitted;
+# results.json can be regenerated later with `python scripts/postprocess.py <run_dir>`.
+"$PROJECT_ROOT/.venv/bin/python" "$PROJECT_ROOT/scripts/postprocess.py" "$RUN_DIR" \
+    || echo "WARNING: postprocess.py failed for $RUN_DIR — chain continues" >&2
 
 echo "Done. Results written to $RUN_DIR/results.json"
 
@@ -71,6 +75,14 @@ except:
 if [ -n "$NEXT_RUN" ]; then
     NEXT_PARAMS="$PROJECT_ROOT/runs/$NEXT_RUN/params.json"
     NEXT_DUMP="$RUN_DIR/checkpoint.dump"
+    if [ ! -f "$NEXT_PARAMS" ]; then
+        echo "ERROR: next segment params not found: $NEXT_PARAMS" >&2
+        exit 1
+    fi
+    if [ ! -f "$NEXT_DUMP" ]; then
+        echo "ERROR: checkpoint.dump missing for $RUN_DIR — cannot start next segment" >&2
+        exit 1
+    fi
     WALLTIME=$(python3 -c "
 import json, sys
 try:
