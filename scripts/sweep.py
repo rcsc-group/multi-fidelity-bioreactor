@@ -2,8 +2,8 @@
 
 Any param in a params JSON can be "swept" by giving it a list of values.
 The system expands to individual simulation configs using zip or cartesian
-product, groups them by checkpoint compatibility (fidelity + geometry), and
-submits each group as a checkpoint-restart chain.
+product, then either submits each run independently (default) or groups them
+into checkpoint-restart chains (opt-in).
 
 Sweep detection
 ---------------
@@ -18,15 +18,19 @@ Expansion
 - All swept lists the same length N → zip: N simulations, element-wise.
 - Swept lists with different lengths → cartesian product.
 
-Checkpoint grouping
+Checkpoint grouping (opt-in via "chain": true in _sweep)
 -------------------
 Checkpoint restart requires identical Basilisk grid structure (same fidelity
 and geometry).  Simulations are clustered by (fidelity, a, b, n); each cluster
-is submitted as an independent chain.
+is submitted as an independent chain.  NOTE: MPI checkpoint restart is broken
+in the current Basilisk version (stale coarse MPI ghost cells → SIGFPE on first
+multigrid solve after injection).  Serial checkpoint restart works.
 
 Sweep control options (in "_sweep" key of the JSON):
-  n_mix_cycles:        mixing cycles for segment 0 of each group (default 80)
-  n_transition_cycles: mixing cycles for restart segments (default 10)
+  chain:               false (default) → each combination is an independent
+                       fresh MPI run; true → checkpoint-restart chains (serial)
+  n_mix_cycles:        mixing cycles for each run / seg-0 of each chain (default 80)
+  n_transition_cycles: mixing cycles for restart segments when chain=true (default 10)
   t_buffer:            non-dim kLa measurement window (default 150.0)
   walltime:            SLURM walltime string (default "04:00:00")
   submit:              true → sbatch; false → write params only (dry run)
@@ -243,37 +247,96 @@ def _init_experiment_store(path: Path, options: dict,
 
 
 def submit_sweep(path: str | Path) -> list[str]:
-    """End-to-end: parse → expand → group → submit seg-0 jobs only.
+    """End-to-end: parse → expand → submit.
 
-    Returns a list of seg-0 SLURM job IDs (one per chain).
+    Default mode (chain=false in _sweep): every combination is submitted as a
+    fully independent fresh MPI run — no checkpoint dependency, all jobs can
+    run in parallel.  Returns one job ID per combination.
 
-    Chain continuation uses self-submission: each segment's SLURM script
-    submits the next segment upon completion (via next_run_id in params.json).
-    This eliminates afterok: dependency chains, which OSCAR's SLURM cancels
-    instead of queuing when simultaneous dependency releases hit the CPU cap.
+    Chain mode (chain=true in _sweep): combinations sharing the same grid
+    structure (fidelity + geometry) are grouped into checkpoint-restart chains.
+    Only seg-0 of each chain is submitted; the SLURM script self-submits
+    subsequent segments on completion.  Returns one job ID per chain.
+    NOTE: MPI checkpoint restart is currently broken (Basilisk coarse-ghost
+    bug); chain mode should only be used with the serial template.
 
-    An ExperimentData store is created at experiments/<config_stem>/ and is
-    the canonical provenance record for all runs in this sweep.  Each
-    segment's params.json carries _experiment_dir so postprocess.py can
-    register results directly into the store when the job finishes.
+    An ExperimentData store is created at experiments/<config_stem>/ in both
+    modes and is the canonical provenance record for all runs in this sweep.
     """
     params_list, options = parse_sweep_config(path)
-    groups = group_by_checkpoint_key(params_list)
 
-    runs_root = _PROJECT_ROOT / "runs"
-    walltime  = options.get("walltime", "04:00:00")
-    cpus      = int(options.get("cpus", 4))
-    mem       = str(options.get("mem", "12G"))
-    submit    = bool(options.get("submit", True))
+    runs_root    = _PROJECT_ROOT / "runs"
+    walltime     = options.get("walltime", "04:00:00")
+    cpus         = int(options.get("cpus", 4))
+    mem          = str(options.get("mem", "12G"))
+    submit       = bool(options.get("submit", True))
+    use_chain    = bool(options.get("chain", False))   # default: independent
 
-    # Create the canonical experiment store for this sweep
     experiment_dir = _init_experiment_store(Path(path), options, params_list)
+    job_ids: list[str] = []
 
-    seg0_job_ids: list[str] = []
+    if not use_chain:
+        # ── Independent mode (default) ──────────────────────────────────────
+        # Each combination is a self-contained fresh run with n_mix_cycles from
+        # the config (or default 80).  All jobs are submitted upfront and are
+        # fully independent — no next_run_id, no checkpoint dependency.
+        n_mix = int(options.get("n_mix_cycles", 80))
+        t_buf = float(options.get("t_buffer", 150.0))
 
+        print(f"  Experiment store: {experiment_dir or '(f3dasm unavailable)'}")
+        print(f"  Mode: independent (chain=false) — {len(params_list)} runs\n")
+
+        for i, raw_p in enumerate(params_list):
+            p = {k: (list(v) if isinstance(v, list) else v) for k, v in raw_p.items()}
+            p["run_id"]       = uuid4().hex[:8]
+            p["n_mix_cycles"] = p.get("n_mix_cycles", n_mix)
+            T_per             = _t_period_nd(p)
+            p["t_end"]        = p["n_mix_cycles"] * T_per + t_buf
+            p["_walltime"]    = walltime
+            p["_mem"]         = mem
+            if experiment_dir:
+                p["_experiment_dir"] = experiment_dir
+
+            run_dir = runs_root / p["run_id"]
+            run_dir.mkdir(parents=True, exist_ok=True)
+            (run_dir / "params.json").write_text(json.dumps(p, indent=2))
+
+            print(
+                f"  [{i:3d}] run={p['run_id']}"
+                f"  omega_b={p.get('omega_b', '?'):.4g}"
+                f"  n_mix={p['n_mix_cycles']}"
+                f"  t_end≈{p['t_end']:.1f}",
+                end="",
+            )
+
+            if submit:
+                job_id = simulate.submit_slurm(
+                    p,
+                    project_root=_PROJECT_ROOT,
+                    runs_root=runs_root,
+                    walltime=walltime,
+                    cpus=cpus,
+                    mem=mem,
+                )
+                job_ids.append(job_id)
+                print(f"  → job {job_id}")
+            else:
+                job_ids.append(f"dry-{i}")
+                print(f"  → dry run")
+
+        print(f"\nDone. {len(job_ids)} independent run(s) submitted: {job_ids}")
+        return job_ids
+
+    # ── Chain mode (opt-in, chain=true) ─────────────────────────────────────
+    # Preserved for serial+checkpoint sweeps.  Groups by grid structure and
+    # submits seg-0 only; the SLURM script self-submits subsequent segments.
+    groups     = group_by_checkpoint_key(params_list)
     swept_keys = frozenset(detect_sweep_params(
         json.loads(Path(path).read_text())
     ).keys())
+
+    print(f"  Experiment store: {experiment_dir or '(f3dasm unavailable)'}")
+    print(f"  Mode: chained (chain=true) — {len(groups)} chain(s)\n")
 
     for g_idx, (key, group) in enumerate(groups.items()):
         segments = build_segment_list(group, options, swept_keys=swept_keys)
@@ -281,7 +344,6 @@ def submit_sweep(path: str | Path) -> list[str]:
         print(f"\nGroup {g_idx} (fidelity={key[0]}, a={key[1]}, b={key[2]}, n={key[3]})"
               f" — {len(segments)} segment(s)")
 
-        # Write ALL params.json files upfront, wiring next_run_id for self-submission
         prev_run_id: str | None = None
         for k, params in enumerate(segments):
             next_run_id = segments[k + 1]["run_id"] if k + 1 < len(segments) else None
@@ -289,11 +351,9 @@ def submit_sweep(path: str | Path) -> list[str]:
                 str((runs_root / prev_run_id / "checkpoint.dump").resolve())
                 if prev_run_id is not None else None
             )
-            # Store SLURM opts so the template can pass them to the next job
-            params["next_run_id"]       = next_run_id
-            params["_walltime"]         = walltime
-            params["_mem"]              = mem
-            # Store experiment dir so postprocess.py can register results
+            params["next_run_id"] = next_run_id
+            params["_walltime"]   = walltime
+            params["_mem"]        = mem
             if experiment_dir:
                 params["_experiment_dir"] = experiment_dir
 
@@ -311,15 +371,10 @@ def submit_sweep(path: str | Path) -> list[str]:
                 f"  → {'next:' + next_run_id[:8] if next_run_id else 'last'}",
                 end="",
             )
-
             prev_run_id = params["run_id"]
             print()
 
-        # Submit ONLY seg-0 — it self-submits all successors on completion
-        seg0_params    = segments[0]
-        seg0_run_id    = seg0_params["run_id"]
-        seg0_checkpoint = None  # seg-0 is always a fresh run
-
+        seg0_params = segments[0]
         if submit:
             job_id = simulate.submit_slurm(
                 seg0_params,
@@ -328,18 +383,16 @@ def submit_sweep(path: str | Path) -> list[str]:
                 walltime=walltime,
                 cpus=cpus,
                 mem=mem,
-                checkpoint=seg0_checkpoint,
-                dependency=None,
-                begin=None,
+                checkpoint=None,
             )
-            seg0_job_ids.append(job_id)
+            job_ids.append(job_id)
             print(f"  → submitted seg-0 as job {job_id} (chain self-submits from here)")
         else:
-            seg0_job_ids.append(f"dry-{g_idx}")
+            job_ids.append(f"dry-{g_idx}")
             print(f"  → dry run (seg-0 params written, chain would self-submit)")
 
-    print(f"\nDone. {len(seg0_job_ids)} chain(s) started: {seg0_job_ids}")
-    return seg0_job_ids
+    print(f"\nDone. {len(job_ids)} chain(s) started: {job_ids}")
+    return job_ids
 
 
 def submit_sweep_videos(run_dirs: list[Path | str]) -> list[str]:
