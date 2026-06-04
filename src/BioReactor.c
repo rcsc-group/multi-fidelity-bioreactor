@@ -792,16 +792,21 @@ int _vframe = 0;
 
 event movies_output(t = t_mix; t += dt_video; t <= t_end)
 {
-  if (_vframe == 0)
-    system("mkdir -p frames");
+  // MPI-safe video output:
+  // interpolate() is collective (MPI_Allreduce per point) — ALL ranks must call it.
+  // File I/O is guarded to rank 0 only so no two ranks open the same file.
+  // _vframe increments on all ranks so the counter stays in sync.
+#if _MPI
+  if (pid() == 0)
+#endif
+  {
+    if (_vframe == 0)
+      system("mkdir -p frames");
+  }
 
-  char fpath[512];
-  sprintf(fpath, "frames/frame_%06d.bin", _vframe);
-  FILE *fp = fopen(fpath, "wb");
-  if (!fp) { fprintf(stderr, "movies_output: cannot open %s\n", fpath); return; }
-
-  int    n    = NN;  // NN = 1<<fidelity, set in main(); avoids MAXLEVEL/grid depth ambiguity
+  int    n    = NN;  // NN = 1<<fidelity, set in main()
   double t_nd = t;
+  double dx   = L0 / n;
 
   // Horizontal displacement (lab frame): X_lab = sum_k A_k * sin(k*w_h*t + phi_k)
   double xh_nd = 0.0;
@@ -813,14 +818,9 @@ event movies_output(t = t_mix; t += dt_video; t <= t_end)
     }
   }
 
-  // Header: n (int32), t (float64), Th (float64), xh_nd (float64)
-  fwrite(&n,     sizeof(int),    1, fp);
-  fwrite(&t_nd,  sizeof(double), 1, fp);
-  fwrite(&Th,    sizeof(double), 1, fp);
-  fwrite(&xh_nd, sizeof(double), 1, fp);
-
-  // VOF field f interpolated onto n×n uniform grid, row-major (j=0 → y=Y0 = bottom)
-  double dx  = L0 / n;
+  // VOF field f interpolated onto n×n uniform grid, row-major (j=0 → y=Y0 = bottom).
+  // Run on ALL ranks — interpolate() uses MPI_Allreduce internally and requires
+  // every rank to participate for each (xi, yj) query.
   float *buf = (float *)malloc(n * n * sizeof(float));
   int idx = 0;
   for (int j = 0; j < n; j++) {
@@ -830,9 +830,28 @@ event movies_output(t = t_mix; t += dt_video; t <= t_end)
       buf[idx++] = (float)interpolate(f, xi, yj);
     }
   }
-  fwrite(buf, sizeof(float), n * n, fp);
+
+  // Only rank 0 writes; all ranks already have the correct buf values.
+#if _MPI
+  if (pid() == 0)
+#endif
+  {
+    char fpath[512];
+    sprintf(fpath, "frames/frame_%06d.bin", _vframe);
+    FILE *fp = fopen(fpath, "wb");
+    if (fp) {
+      fwrite(&n,     sizeof(int),    1, fp);
+      fwrite(&t_nd,  sizeof(double), 1, fp);
+      fwrite(&Th,    sizeof(double), 1, fp);
+      fwrite(&xh_nd, sizeof(double), 1, fp);
+      fwrite(buf,    sizeof(float), n * n, fp);
+      fclose(fp);
+    } else {
+      fprintf(stderr, "movies_output: cannot open %s\n", fpath);
+    }
+  }
+
   free(buf);
-  fclose(fp);
   _vframe++;
 }
 #endif
