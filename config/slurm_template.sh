@@ -100,6 +100,7 @@ except:
     print('12G')
 " "$NEXT_PARAMS" 2>/dev/null)
     sbatch --no-requeue \
+        --chdir="$PROJECT_ROOT" \
         --time="$WALLTIME" \
         --mem="$MEM" \
         --cpus-per-task="${SLURM_CPUS_PER_TASK:-4}" \
