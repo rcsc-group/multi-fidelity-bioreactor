@@ -10,3 +10,4 @@ __pycache__/
 *.ppm
 *.png
 *.mp4
+!docs/**/*.mp4

@@ -1,0 +1,39 @@
+{
+  "run_id": "canonical_kim2024",
+  "omega_b": 3.93,
+  "n_harmonics": 1,
+  "theta_max": [
+    7.0,
+    0.0,
+    0.0
+  ],
+  "phi_angular": [
+    0.0,
+    0.0,
+    0.0
+  ],
+  "omega_h": 0.0,
+  "amplitude_h": [
+    0.0,
+    0.0,
+    0.0
+  ],
+  "phi_horizontal": [
+    0.0,
+    0.0,
+    0.0
+  ],
+  "geometry": {
+    "a": 0.25,
+    "b": 0.071,
+    "n": 8.0
+  },
+  "fill_level": 0.5,
+  "fidelity": 7,
+  "n_mix_cycles": 80,
+  "t_end": 147.294,
+  "_walltime": "01:00:00",
+  "_mem": "2G",
+  "_ntasks": 16,
+  "_canonical_run_dir": "/oscar/data/dharri15/eaguerov/Github/BioReactor3D/dev/rocking-bioreactor-2d/runs/canonical_kim2024"
+}
