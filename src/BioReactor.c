@@ -515,20 +515,30 @@ event tracer(t = t_mix){
 
   // Vertical mixing-top side
   #if VERTICAL_MIXUP
-  foreach(){
-    // f[]>0.5 (majority-liquid) instead of f[]==1 (exact) so that near-interface
-    // cells are included — at coarse resolutions f never reaches exactly 1.0 in
-    // the top liquid layer, causing c2 to remain 0 throughout the run.
-    if ((f[] > 0.5) && (cs[]==1) && (y >= -Ly*0.5*0.5))
-      c2[] = 1.0;    // Upper half of liquid
+  {
+    // Midpoint of the actual liquid column — fill-level-aware.
+    // y_fill = Ly*(2*fill-1), y_bot = -Ly → midpoint = Ly*(fill-1).
+    // The old hardcoded -Ly/4 was only correct for fill=0.5 and left
+    // fill<=0.3 with zero tracer coverage.
+    double y_liq_mid = Ly * (params.fill_level - 1.0);
+    foreach(){
+      // f[]>0.5 (majority-liquid) instead of f[]==1 (exact) so that near-interface
+      // cells are included — at coarse resolutions f never reaches exactly 1.0 in
+      // the top liquid layer, causing c2 to remain 0 throughout the run.
+      if ((f[] > 0.5) && (cs[]==1) && (y >= y_liq_mid))
+        c2[] = 1.0;    // Upper half of liquid
+    }
   }
   #endif
 
   // Vertical mixing-down side
   #if VERTICAL_MIXDOWN
-  foreach(){
-    if ((f[] == 1) && (cs[]==1) && (y <= -Ly*0.5*0.5))
-      c3[] = 1.0;    // Lower half of liquid
+  {
+    double y_liq_mid = Ly * (params.fill_level - 1.0);
+    foreach(){
+      if ((f[] == 1) && (cs[]==1) && (y <= y_liq_mid))
+        c3[] = 1.0;    // Lower half of liquid
+    }
   }
   #endif
 }
@@ -550,6 +560,11 @@ event oxygen (t=t_mix; i++){
     if ((f[] == 0) && (cs[]==1))
       oxy[] = 1.;     // Oxygen in gas regions only
   }
+  // Synchronise MPI ghost cells after direct foreach() write.
+  // Without this, ranks that border gas regions see stale oxy=0 in
+  // neighbour halos at the first tracer_diffusion call, producing a
+  // spurious large gradient that crashes h_relax under MPI FP trapping.
+  boundary ({oxy});
 #endif
 }
 #endif
