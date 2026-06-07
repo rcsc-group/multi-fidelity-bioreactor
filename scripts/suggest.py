@@ -51,8 +51,6 @@ def _sample_candidates(spec: dict, n: int, rng: np.random.Generator) -> np.ndarr
     lo = np.array([b[0] for b in bounds])
     hi = np.array([b[1] for b in bounds])
     X  = rng.uniform(lo, hi, size=(n, len(bounds)))
-    # Enforce phi_angular_0 == 0 (it has lo==hi==0 so already 0, but be explicit)
-    phi0_idx = _FEATURE_COLS.index("phi_angular_1") - 1  # phi_angular_0 index
     if "phi_angular_0" in _FEATURE_COLS:
         X[:, _FEATURE_COLS.index("phi_angular_0")] = 0.0
     return X

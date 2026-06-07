@@ -158,7 +158,7 @@ char buf1[100], buf2[100], buf3[100], buf4[100];
 FILE * fp_stats, * fp_norm, * fp_stats2, * fp_stats3;
 
 // Key physical and dimensionless parameters (computed in main)
-double U0, Ub, Re_w, Re_a, We_w, Fr, rhor, mur, Pe_tracer_1, Pe_tracer_2, Pe_oxy_1, Pe_oxy_2, Th, Th_d, Th_2d, U_bio, w_bio, w_bio_st, T_per_st, T_bio, Th_max2, D_in_non, U_in_non, t_change_st, t_mix_st;
+double U0, Re_w, Re_a, We_w, Fr, rhor, mur, Pe_tracer_1, Pe_tracer_2, Pe_oxy_1, Pe_oxy_2, Th, Th_d, Th_2d, U_bio, w_bio, w_bio_st, T_per_st, T_bio, t_change_st;
 BioreactorParams params;  // global so all events (acceleration, init) can access it
 // Restart / checkpoint support
 static double t_ramp_start      = 0.0;   // simulation time when the current ramp began
@@ -777,11 +777,11 @@ event normcal (t+=t_out; t<=t_end){
     c_liq_sum     = statsf2(c_liq).sum;
     c_liq_sum2    = statsf2(c_liq).sum2;
     ///*
-    c1_liq_sum    = statsf(c1_liq).sum;
+    c1_liq_sum    = statsf2(c1_liq).sum;
     c1_liq_sum2   = statsf2(c1_liq).sum2;
-    c2_liq_sum    = statsf(c2_liq).sum;
+    c2_liq_sum    = statsf2(c2_liq).sum;
     c2_liq_sum2   = statsf2(c2_liq).sum2;
-    c3_liq_sum    = statsf(c3_liq).sum;
+    c3_liq_sum    = statsf2(c3_liq).sum;
     c3_liq_sum2   = statsf2(c3_liq).sum2;
     //*/
 

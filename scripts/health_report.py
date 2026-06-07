@@ -17,12 +17,15 @@ from __future__ import annotations
 
 import argparse
 import json
-import math
 import re
 import sys
 from pathlib import Path
 
 import numpy as np
+
+_PROJECT_ROOT = Path(__file__).parents[1]
+sys.path.insert(0, str(_PROJECT_ROOT))
+import scripts.simulate as simulate
 
 
 # ── loaders (mirrors conftest.py) ────────────────────────────────────────────
@@ -47,17 +50,10 @@ def load_normf(run_dir: Path) -> np.ndarray:
 
 # ── non-dim ramp end time (mirrors test_quasi_steady_flow.py) ────────────────
 
+_N_RAMP_CYCLES = 3  # must match BioReactor.c: #define N_RAMP_CYCLES 3
+
 def _t_ramp_nd(params: dict) -> float:
-    omega_b = params["omega_b"]
-    L = params["geometry"]["a"]
-    H = params["geometry"]["b"]
-    th = math.radians(params["theta_max"][0])
-    T_per = 2 * math.pi / omega_b
-    V = L / 4 * (H + 0.5 * L * math.tan(th))
-    U = V / (H * 0.5) / T_per
-    T_bio = L / U
-    T_per_st = T_per / T_bio
-    return 3 * T_per_st  # N_RAMP_CYCLES = 3
+    return simulate._t_mix_nd({**params, "n_mix_cycles": _N_RAMP_CYCLES})
 
 
 # ── KPI computations ─────────────────────────────────────────────────────────
@@ -230,7 +226,7 @@ def report(run_dir: Path) -> None:
     print(f"  Run: {run_dir.name}   (fidelity={params.get('fidelity','?')}, "
           f"t_end={params.get('t_end','?')}, rows={rows_vf}, t_final={t_final:.1f})")
     print(f"{'='*60}")
-    print(f"  KPI 1 — VOF mass drift        : {drift:.4f}%       [{drift_status}]  (< 0.1%)")
+    print(f"  KPI 1 — VOF mass drift        : {drift:.4f}%       [{drift_status}]  (< 0.5%)")
     print(f"  KPI 2 — Interface area ratio  : {iface_rat:.3f}         [{iface_status}]  (< 3.0)")
     print(f"  KPI 3 — Velocity RMS ratio    : {vel_rat:.3f}         [{vel_status}]  ([0.7, 1.5])")
     print(f"  KPI 4 — CFL estimate          : {cfl_max:.3f}         [{cfl_status}]  (< 0.6)")

@@ -21,7 +21,6 @@ Results land in runs/<run_id>/results.json for each segment independently.
 """
 from __future__ import annotations
 
-import math
 import sys
 from pathlib import Path
 from uuid import uuid4
@@ -46,20 +45,8 @@ _VECTOR_PARAMS: dict[str, tuple[str, int]] = {
 
 
 def _t_period_nd(params: dict) -> float:
-    """Non-dimensional rocking period T_per / T_bio.
-
-    Mirrors the derivation in BioReactor.c / simulate._t_mix_nd.
-    """
-    omega_b = params.get("omega_b", 3.93)
-    L       = params.get("geometry", {}).get("a", 0.25)
-    H       = params.get("geometry", {}).get("b", 0.071)
-    th      = math.radians(params.get("theta_max", [7.0])[0])
-
-    T_per  = 2 * math.pi / omega_b
-    V      = L / 4 * (H + 0.5 * L * math.tan(th))
-    U      = V / (H * 0.5) / T_per
-    T_bio  = L / U
-    return T_per / T_bio
+    """Non-dimensional rocking period T_per / T_bio."""
+    return simulate._t_mix_nd({**params, "n_mix_cycles": 1})
 
 
 def _apply_sweep_param(params: dict, sweep_param: str, value: float) -> dict:
