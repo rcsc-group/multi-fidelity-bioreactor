@@ -27,6 +27,17 @@ _PROJECT_ROOT = Path(__file__).parents[1]
 sys.path.insert(0, str(_PROJECT_ROOT))
 import scripts.simulate as simulate
 
+# Column indices in output .dat files (0-indexed, matching postprocess.py)
+# vol_frac_interf.dat: i t f_liq_sum f_liq_interf posY_max posY_min
+_COL_F_LIQ_SUM   = 2
+_COL_F_LIQ_INTERF = 3
+# normf.dat: i t Omega_avg ... ux_avg ux_rms ux_vol ux_max uy_avg uy_rms uy_vol uy_max
+_COL_T           = 1
+_COL_UX_RMS      = 7
+_COL_UY_RMS      = 11
+_COL_UX_MAX      = 9
+_COL_UY_MAX      = 13
+
 
 # ── loaders (mirrors conftest.py) ────────────────────────────────────────────
 
@@ -60,7 +71,7 @@ def _t_ramp_nd(params: dict) -> float:
 
 def kpi_mass_drift(vf: np.ndarray) -> tuple[float, str]:
     """VOF mass drift: (max-min)/mean of f_liq_sum [%]."""
-    f = vf[:, 2]
+    f = vf[:, _COL_F_LIQ_SUM]
     drift_pct = (f.max() - f.min()) / f.mean() * 100
     status = "OK" if drift_pct < 0.5 else "FAIL"
     return drift_pct, status
@@ -68,7 +79,7 @@ def kpi_mass_drift(vf: np.ndarray) -> tuple[float, str]:
 
 def kpi_interface_stability(vf: np.ndarray) -> tuple[float, str]:
     """Interface area ratio: mean 2nd half / mean 1st half of f_liq_interf."""
-    iface = vf[:, 3]
+    iface = vf[:, _COL_F_LIQ_INTERF]
     # skip first row (t=0, interface not yet initialised)
     iface = iface[iface > 0]
     if len(iface) < 4:
@@ -81,8 +92,8 @@ def kpi_interface_stability(vf: np.ndarray) -> tuple[float, str]:
 
 def kpi_velocity_steady(normf: np.ndarray, t_ramp: float) -> tuple[float, str]:
     """Velocity RMS ratio: 2nd half / 1st half of post-ramp run. Threshold [0.7, 1.5]."""
-    t = normf[:, 1]
-    vel_rms = np.sqrt(normf[:, 7] ** 2 + normf[:, 11] ** 2)
+    t = normf[:, _COL_T]
+    vel_rms = np.sqrt(normf[:, _COL_UX_RMS] ** 2 + normf[:, _COL_UY_RMS] ** 2)
     post = vel_rms[t > t_ramp]
     if len(post) < 4:
         return float("nan"), "SKIP"
@@ -126,7 +137,7 @@ def kpi_cfl(
         if step_i not in dt_by_step:
             continue
         dt = dt_by_step[step_i]
-        u_max = max(abs(row[9]), abs(row[13]))
+        u_max = max(abs(row[_COL_UX_MAX]), abs(row[_COL_UY_MAX]))
         if u_max > 0:
             cfl_vals.append(dt * u_max / dx)
 
@@ -144,8 +155,8 @@ def kpi_kinetic_energy(normf: np.ndarray, t_ramp: float) -> tuple[float, str]:
     KE ∝ ux_rms² + uy_rms² (V_liq constant by mass conservation).
     Lower bound catches stagnant flow; upper bound catches blowup.
     """
-    t = normf[:, 1]
-    ke = 0.5 * (normf[:, 7] ** 2 + normf[:, 11] ** 2)
+    t = normf[:, _COL_T]
+    ke = 0.5 * (normf[:, _COL_UX_RMS] ** 2 + normf[:, _COL_UY_RMS] ** 2)
     post = ke[t > t_ramp]
     if len(post) < 4:
         return float("nan"), "SKIP"

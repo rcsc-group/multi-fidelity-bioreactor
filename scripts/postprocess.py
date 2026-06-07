@@ -133,6 +133,19 @@ import numpy as np
 
 MIN_WINDOW = 5   # minimum number of time points for a valid kLa estimate
 
+# Column indices in output .dat files (0-indexed, after skipping header)
+# tr_oxy.dat: i t oxy_liq_sum oxy_liq_sum2 c_liq_sum c_liq_sum2 c1_liq_sum c1_liq_sum2 c2_liq_sum c2_liq_sum2 c3_liq_sum c3_liq_sum2
+_COL_T          = 1
+_COL_OXY_LIQ    = 2
+_COL_C2_LIQ_SUM  = 8   # VERTICAL_MIXUP tracer — used for dtmix
+_COL_C2_LIQ_SUM2 = 9
+# vol_frac_interf.dat: i t f_liq_sum f_liq_interf posY_max posY_min
+_COL_F_LIQ      = 2
+# normf.dat: i t Omega_avg Omega_rms Omega_vol Omega_max ux_avg ux_rms ux_vol ux_max uy_avg uy_rms uy_vol uy_max
+_COL_OMEGA_AVG  = 2
+_COL_UX_RMS     = 7
+_COL_UY_RMS     = 11
+
 
 # ── time-scale helpers ────────────────────────────────────────────────────────
 
@@ -217,9 +230,9 @@ def _compute_c_star(run_dir: Path) -> tuple[np.ndarray, np.ndarray]:
     """
     tr_path = run_dir / "tr_oxy.dat"
     vf_path = run_dir / "vol_frac_interf.dat"
-    t           = _load_col(tr_path, 1)
-    oxy_liq_sum = _load_col(tr_path, 2)
-    f_liq_sum   = _load_col(vf_path, 2)
+    t           = _load_col(tr_path, _COL_T)
+    oxy_liq_sum = _load_col(tr_path, _COL_OXY_LIQ)
+    f_liq_sum   = _load_col(vf_path, _COL_F_LIQ)
     f_mean = f_liq_sum.mean()
     if f_mean <= 0:
         raise ValueError("f_liq_sum mean is zero — VOF field may be empty")
@@ -336,10 +349,10 @@ def _compute_mixing_metrics(run_dir: Path, params: dict) -> dict:
     if arr_tr.shape[0] < 5 or arr_tr.shape[1] < 10:
         return nan_result
 
-    t      = arr_tr[:, 1]
-    c_sum  = arr_tr[:, 8]   # c2_liq_sum  — VERTICAL_MIXUP tracer (top-half init)
-    c_sum2 = arr_tr[:, 9]   # c2_liq_sum2
-    f_mean = float(arr_vf[:, 2].mean())
+    t      = arr_tr[:, _COL_T]
+    c_sum  = arr_tr[:, _COL_C2_LIQ_SUM]   # VERTICAL_MIXUP tracer (top-half init)
+    c_sum2 = arr_tr[:, _COL_C2_LIQ_SUM2]
+    f_mean = float(arr_vf[:, _COL_F_LIQ].mean())
     if f_mean <= 0:
         return nan_result
 
@@ -419,8 +432,8 @@ def _compute_vor_mean(run_dir: Path, params: dict) -> float:
     if arr.shape[0] < 10 or arr.shape[1] < 3:
         return math.nan
 
-    t         = arr[:, 1]
-    omega_avg = np.abs(arr[:, 2])   # Omega_liq_avg (non-dimensional)
+    t         = arr[:, _COL_T]
+    omega_avg = np.abs(arr[:, _COL_OMEGA_AVG])   # Omega_liq_avg (non-dimensional)
 
     T_bio, T_per_nd = _t_scales(params)
     t_ramp = 3.0 * T_per_nd         # skip the soft-start ramp (3 rocking cycles)
@@ -461,8 +474,8 @@ def _compute_vel_rms_qss(run_dir: Path, params: dict) -> float:
     if arr.shape[0] < 10 or arr.shape[1] < 12:
         return math.nan
 
-    t    = arr[:, 1]
-    vel  = np.sqrt(arr[:, 7] ** 2 + arr[:, 11] ** 2)   # u_x,rms + u_y,rms
+    t    = arr[:, _COL_T]
+    vel  = np.sqrt(arr[:, _COL_UX_RMS] ** 2 + arr[:, _COL_UY_RMS] ** 2)   # u_x,rms + u_y,rms
 
     _, T_per_nd = _t_scales(params)
     t_ramp = 3.0 * T_per_nd
@@ -476,7 +489,7 @@ def _compute_vel_rms_qss(run_dir: Path, params: dict) -> float:
             vf_path = run_dir / "vol_frac_interf.dat"
             if vf_path.exists():
                 vf = _load_dat(vf_path)
-                f_mean = float(vf[:, 2].mean()) if vf.shape[0] > 0 else 1.0
+                f_mean = float(vf[:, _COL_F_LIQ].mean()) if vf.shape[0] > 0 else 1.0
                 c_star = oxy / max(f_mean, 1e-10)
                 inj = np.where(c_star > 1e-4)[0]
                 if len(inj):

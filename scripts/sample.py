@@ -25,8 +25,6 @@ import sys
 from pathlib import Path
 from uuid import uuid4
 
-import numpy as np
-import pandas as pd
 import yaml
 from f3dasm import ExperimentData, create_sampler
 
@@ -34,7 +32,7 @@ _PROJECT_ROOT = Path(__file__).parents[1]
 sys.path.insert(0, str(_PROJECT_ROOT))
 
 import scripts.simulate as simulate
-from scripts.loop import _build_domain, _compute_t_end
+from scripts.loop import _build_domain, _compute_t_end, _ed_to_params
 
 _STRATEGY_ALIASES = {
     "latin":  "latin_sampler",
@@ -42,34 +40,6 @@ _STRATEGY_ALIASES = {
     "grid":   "grid",
     "sobol":  "sobol_sampler",
 }
-
-
-def _row_to_params(row: pd.Series, fidelity: int, t_buffer: float,
-                   n_max: int) -> dict:
-    """Convert one ExperimentData input row to a nested params dict."""
-    def _vec(base: str) -> list:
-        return [float(row.get(f"{base}_{i}", 0.0)) for i in range(n_max)]
-
-    params = {
-        "run_id":       uuid4().hex[:8],
-        "fidelity":     fidelity,
-        "omega_b":      float(row["omega_b"]),
-        "n_harmonics":  max(1, int(round(float(row["n_harmonics"])))),
-        "theta_max":    _vec("theta_max"),
-        "phi_angular":  [0.0] + [float(row.get(f"phi_angular_{i}", 0.0))
-                                  for i in range(1, n_max)],
-        "phi_horizontal": _vec("phi_horizontal"),
-        "omega_h":      float(row["omega_h"]),
-        "amplitude_h":  _vec("amplitude_h"),
-        "geometry": {
-            "a": float(row["geometry_a"]),
-            "b": float(row["geometry_b"]),
-            "n": float(row["geometry_n"]),
-        },
-        "fill_level":   float(row["fill_level"]),
-    }
-    params["t_end"] = _compute_t_end(params, t_buffer)
-    return params
 
 
 def run_sampling(cfg: dict) -> None:
@@ -108,7 +78,8 @@ def run_sampling(cfg: dict) -> None:
     params_list: list[dict] = []
 
     for i, (_, row) in enumerate(inp_df.iterrows()):
-        params = _row_to_params(row, fidelity, t_buffer, n_max)
+        params = _ed_to_params(row, fidelity, t_end=None, n_max=n_max)
+        params["t_end"] = _compute_t_end(params, t_buffer)
         params_list.append(params)
 
         run_dir = _PROJECT_ROOT / "runs" / params["run_id"]

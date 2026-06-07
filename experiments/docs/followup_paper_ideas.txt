@@ -1,0 +1,56 @@
+Here are both perspectives, kept independent.
+
+---
+
+## My view (your grad student)
+
+The paper's most glaring omission isn't fill level or aspect ratio — it's that they only use **sinusoidal single-harmonic rocking**, and our code already has `n_harmonics > 1`. That's the single highest-leverage experiment: you can inject 3rd-harmonic content deliberately to hit the sloshing resonance *without* raising f_b or θ_max, potentially breaking the kLa–shear trade-off from a direction the original paper never looked at.
+
+My ranked list:
+
+**1. Multi-harmonic waveform engineering** — Fix total energy input (same RMS angular velocity). Vary harmonic content: pure fundamental (n=1, what the paper did), fundamental + 3rd harmonic at varying phase/amplitude, sawtooth, trapezoidal. Measure kLa and EDR. Since the resonance is a 3:1 superharmonic (3f_b ≈ f₁), a waveform enriched at 3× the rocking frequency should excite sloshing resonance even at safe f_b values. This is elegant, cheap (5–6 sims), and no one else has done it. **Our `n_harmonics` param makes this a one-line config change.**
+
+**2. Bayesian optimization over the full (f_b, θ_max, fill_level) space** — The paper did 16 OPAT points. We have BO infrastructure. A multi-objective sweep (maximize kLa, constrain EDR < threshold) with ~50 adaptive samples would produce the response surface the bioprocess community actually needs. This is our methodological contribution.
+
+**3. Fill level as a resonance tuning knob** — Varying fill shifts f₁ (shallow-water dispersion: f₁ ∝ √(tanh(k₁ h))). This moves the resonance point in frequency space. A 4×8 sweep (fill × frequency, coarse grid) maps the resonance locus — showing that you can tune into resonance at *any* frequency just by adjusting volume. That's a practical engineering result.
+
+**4. The steady streaming → kLa surrogate** — The paper shows ⟨|ξ_b|⟩ correlates with kLa across the laminar regime. If that correlation is robust, you can run hydrodynamics-only (no coupled transport, ~10× cheaper) and predict kLa. Test this: run 20 cases hydrodynamics-only, build ⟨|ξ_b|⟩ → kLa model, validate against 5 full-coupled runs. If it holds, it changes how we do optimization — use surrogate level 0 for exploration, full transport only for Pareto refinement.
+
+**5. The small-angle anomaly** — θ_max ≤ 3° counter-rotating vortices with paradoxically high late-oxygenation kLa. Mechanistically interesting but not a paper-centerpiece — likely a good closing section.
+
+---
+
+## Independent colleague's view (pal mcp clink)
+
+Ranked their top:
+
+**1. Pareto frontier via full (f_b, θ_max) factorial + Bayesian optimization** — OPAT is the central scientific limitation; the coupling between frequency and angle is unexplored. Scalarized BO (maximize kLa subject to EDR < threshold) seeded with existing OPAT data. If the Pareto curve is non-trivial (concave, with an off-OPAT sweet spot), you immediately improve on the predecessor's engineering recommendation.
+
+**2. Resonance mechanism — and fill level as a resonance tuning knob** — Why does resonance enhance kLa at C*=0.10 but not C*=0.25–0.50? Diagnostic: run the resonance case starting from several fixed initial concentrations, compare interfacial concentration gradient evolution and vortex structure. Then sweep fill level (3 values × 8 frequencies, coarse grid) to map how the resonance peak moves. Central narrative: *"resonance is your friend, and you can move it."*
+
+**3. Two-DOF and waveform engineering** — Non-sinusoidal waveforms with fixed RMS angular velocity. Inject harmonic content at 3f_b to hit sloshing resonance without raising mean frequency. "What waveform shape best couples kinetic energy into interfacial-renewal sloshing modes?"
+
+**4. Fill level as first-class parameter** — Qualitative physics changes at the extremes (shallow-water regime at low fill, area-limited regime at high fill). Multi-fidelity (coarse at extremes, full resolution at transitions). Fill is the most practically accessible lever in a real bioreactor.
+
+**5. Small-angle anomaly** — Fine-grained θ_max sweep from 1°–4° with vortex identification (Q-criterion or Okubo-Weiss) to track the birth/disappearance of counter-rotating structures.
+
+---
+
+## Synthesis — where we agree and disagree
+
+**Strong agreement:**
+- Pareto frontier in (f_b, θ_max) space via adaptive BO is the core deliverable
+- Fill level as a resonance-tuning knob is mechanistically elegant and practically important
+- Waveform/multi-harmonic engineering is the most *novel* experiment
+- Small-angle anomaly is real but secondary
+
+**Differences:**
+- I weight **multi-harmonic waveform** #1 because our `n_harmonics` param makes it trivial to run and no prior work has done it. My colleague weighted it #3 and reached it from a general "waveform optimization" framing without knowing our code has it natively.
+- My colleague invented a clever **concentration-dependent resonance diagnostic** (fix initial C*, compare evolution at resonance vs. non-resonance) that I didn't think of — that's a cheap, sharp mechanistic test.
+- I weight the **steady-streaming → kLa surrogate** more highly because it changes the computational strategy for all future optimization; my colleague didn't mention it as a separate item.
+
+**Proposed paper narrative:**
+
+> *"The original paper established that steady streaming drives laminar transport and identified two critical regimes (resonance, turbulent transition) via OPAT sweeps. We ask: what is the Pareto-optimal operating envelope, and can harmonic waveform engineering move the resonance without changing energy input? Using multi-objective Bayesian optimization over (f_b, θ_max, fill_level) and systematic harmonic injection, we show (i) the Pareto frontier has an off-diagonal sweet spot [or doesn't — either result is publishable], (ii) the resonance locus is tunable via fill level, and (iii) a 2-harmonic waveform achieves kLa equivalent to [X rpm, 7°] at EDR equivalent to [Y rpm, 7°] with a lower-shear profile."*
+
+The study is feasible: ~60 BO-guided simulations (some multi-fidelity) + ~6 waveform experiments + ~12 resonance diagnostics. Checkpoint-restart chains cut that cost by 70%.

@@ -31,6 +31,7 @@ _PROJECT_ROOT = Path(__file__).parents[1]
 sys.path.insert(0, str(_PROJECT_ROOT))
 
 import scripts.simulate as simulate
+from scripts.postprocess import validate_params
 
 _DEFAULT_TEMPLATE       = _PROJECT_ROOT / "config" / "slurm_template.sh"
 _DEFAULT_VIDEO_TEMPLATE = _PROJECT_ROOT / "config" / "slurm_video_template.sh"
@@ -199,6 +200,7 @@ def submit_chain(cfg: dict) -> list[str]:
             end="",
         )
 
+        validate_params(params)
         if submit:
             job_id = simulate.submit_slurm(
                 params,

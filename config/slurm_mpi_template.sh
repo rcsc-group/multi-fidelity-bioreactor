@@ -96,7 +96,8 @@ if [ -n "$NEXT_RUN" ] && [ -n "$CANON_RUN" ]; then
     if [ -f "$NEXT_PARAMS_CANON" ]; then
         NEXT_SCRATCH="/oscar/scratch/eaguerov/mpi_runs/$NEXT_RUN"
         mkdir -p "$NEXT_SCRATCH"
-        cp "$NEXT_CANON/checkpoint.dump" "$NEXT_SCRATCH/checkpoint.dump" 2>/dev/null || true
+        # checkpoint.dump is in the current seg's output dir (CANON_RUN), not next seg's dir
+        cp "$CANON_RUN/checkpoint.dump" "$NEXT_SCRATCH/checkpoint.dump" 2>/dev/null || true
         cp "$NEXT_PARAMS_CANON" "$NEXT_SCRATCH/params.json"
         WALLTIME=$(python3 -c "import json,sys; p=json.load(open(sys.argv[1])); print(p.get('_walltime','04:00:00'))" "$NEXT_PARAMS_CANON" 2>/dev/null)
         MEM=$(python3 -c "import json,sys; p=json.load(open(sys.argv[1])); print(p.get('_mem','4G'))" "$NEXT_PARAMS_CANON" 2>/dev/null)
@@ -105,13 +106,14 @@ if [ -n "$NEXT_RUN" ] && [ -n "$CANON_RUN" ]; then
         if [ -f "$NEXT_SCRATCH/checkpoint.dump" ]; then
             NEXT_DUMP_ARG="DUMP=$NEXT_SCRATCH/checkpoint.dump"
         fi
+        # runs/ is one level below project root, so ../config resolves correctly
         sbatch --no-requeue \
             --time="$WALLTIME" \
             --mem-per-cpu="$MEM" \
             --ntasks="$NTASKS" \
             --cpus-per-task=1 \
             --export="NONE,PARAMS=$NEXT_SCRATCH/params.json${NEXT_DUMP_ARG:+,$NEXT_DUMP_ARG}" \
-            "$(dirname "$CANON_RUN")/../../config/slurm_mpi_template.sh"
+            "$(dirname "$CANON_RUN")/../config/slurm_mpi_template.sh"
         echo "Submitted next segment: $NEXT_RUN"
     fi
 fi

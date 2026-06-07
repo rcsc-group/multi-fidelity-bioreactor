@@ -32,26 +32,16 @@
 
 // Flags to control the inclusion of features (set to 1 = enable, 0 = disable)
 #define EMBED            1   // Enable embedded boundary for solid geometry
-#define CONTACT          0   // Enable contact angle boundary condition
 #define OXYGEN           1   // Enable oxygen concentration simulation
-#define OXYGEN_CIRCLE    0   // Initial distribution (circle) of oxygen (if OXYGEN == 1)
 #define OXYGEN_AIR       1   // Initial distribution (air side) of oxygen (if OXYGEN == 1)
 
 // Mixing strategies for tracer release
 #define TRACER           1   // Enable passive tracer simulation
-#define HORIZONTAL_MIXL  0   // Initial distribution (left side) of tracer: Horizontal mixing (if TRACER == 1)
-#define HORIZONTAL_MIXR  0   // Initial distribution (right side) of tracer: Horizontal mixing (if TRACER == 1)
 #define VERTICAL_MIXUP   1   // Initial distribution (top side) of tracer: Vertical mixing (if TRACER == 1)
-#define VERTICAL_MIXDOWN 0   // Initial distribution (bottom side) of tracer: Vertical mixing (if TRACER == 1)
 
 // Other simulation options
 #define ACCELERATION     1   // Enable acceleration (rocking motion)
-#define AMR              0   // Enable adaptive mesh refinement
-#define REMOVE_DROP      0   // Enable automatic droplet removal
-#define CFL_COND         0   // Use custom CFL number
-#define DUMP             0   // Save dump output
 #define NORMCAL          1   // Calculate statistics (norms)
-#define FIGURES          0   // Figures: enable only for diagnostics; output dirs created by simulate.py
 #ifndef VIDEOS
 #define VIDEOS           0   // Videos: enable only for diagnostics; not needed in optimization loop
 #endif
@@ -60,8 +50,6 @@
 #endif
 
 // Output options
-#define OUT_FILES         0   // Full-field dumps: enable only for diagnostics; output dir created by simulate.py
-#define OUT_SPECIFIC_TIME 0   // Output data at specific time ranges
 #define OUT_INTERFACE     1   // Save interface geometry
 
 
@@ -77,20 +65,8 @@ const double nMix_cycle = 80;     // Number of cycles for tracer release (used t
 double t_end;                      // Final simulation time (simulation time unit); set from params.t_end in main()
 
 // Output time intervals (derived from experimental timing)
-const double dt_file = 0.1519*7;  // Interval for saving data to file
 const double dt_video= 0.6074/5;  // Interval for video frames
-const double dt_Fig  = 0.1519*7;  // Interval for figure output
-double t_spec_init, t_spec_end;   // Specific output window for focused data extraction
-const double dt_spec = 0.000530525;  // Very high frequency sampling for specific data
-
-const int    i_fig   = 5000;      // Output interval for figures
 const double t_out   = 0.1;       // Output interval for statistics [non-dim time]
-const double CFL_num = 0.01	;     // CFL number for time-step stability (used only if CFL_COND is enabled)
-const double N_output= 128;       // Resolution for output file if needed
-
-// Parameters for drop/bubble removal (if enabled)
-const double remove_minsize   = 20;      // the Minimum number of grids for removal
-const double remove_threshold = 1.0e-4;  // Threshold for identifying disconnected fluid elements
 
 
 // ================================================================== //
@@ -120,15 +96,6 @@ const double D_oxy_1 = 1.90e-9;    // Diffusivity of oxygen in water (m²/s)
 const double D_oxy_2 = 1.98e-5;    // Diffusivity of oxygen in air (m²/s)
 const double c_tracer_alpha = 1.0e30;    // Tracer solubility: c_water = c_tracer_alpha*c_air
 const double c_oxy_alpha    = 1./30;     // Oxygen solubility: oxy_water = c_oxy_alpha*oxy_air (=1/30 tpiycal for O2 in water)
-
-// Change contact angle
-#if CONTACT
-vector h[];
-
-// Apply static contact angle boundary conditions (in radians)
-h.t[left]  = contact_angle(th_cont*pi/180);  // Convert degrees to radians
-h.t[right] = contact_angle(th_cont*pi/180);
-#endif
 
 // ================================================================== //
 //                 SCALARS AND FIELD POINTERS                         //
@@ -193,16 +160,7 @@ int main(int argc, char * argv[]){
   DT = 1. [0];
   origin(-L0/2., -L0/2.);   // Set coordinate origin to domain center
 
-#if !AMR
-  init_grid(NN);            // Initialize uniform grid if AMR is disabled
-#endif
-
-#if AMR
-  MAXLEVEL = params.fidelity;
-  MINLEVEL = params.fidelity - 2;
-  double F_MAX = 1e-6;    // Refinement threshold for volume fraction
-  double U_MAX = 0;       // Refinement threshold for velocity refinement
-#endif
+  init_grid(NN);
 
   // Bag geometry from params (must precede anything that uses Ly or H_bio)
   Ly = params.geometry_b / L_bio;  // dimensionless half-height; overwrites hardcoded 0.286
@@ -227,8 +185,6 @@ int main(int argc, char * argv[]){
   t_change_st = N_RAMP_CYCLES * T_per_st;  // ramp over 3 cycles regardless of omega_b
   t_mix      = T_per_st*params.n_mix_cycles; // rocking cycles before tracer/oxygen start (wired from params.json)
   t_dump = t_mix;                   // Time to dump data (simulation time)
-  t_spec_init= t_mix;                       // Initial time to save data in the specific range
-  t_spec_end = T_per_st*(nMix_cycle+10);    // End time to save data in the specific range
 
   // ── Checkpoint restart ─────────────────────────────────────────────────────
   // Detected via params.t_checkpoint > 0 (set by chain.py for restart segments).
@@ -248,8 +204,6 @@ int main(int argc, char * argv[]){
     t_ramp_start     = params.t_checkpoint;
     t_mix            = params.t_checkpoint + T_per_st * params.n_mix_cycles;
     t_dump           = t_mix;
-    t_spec_init      = t_mix;
-    t_spec_end       = t_mix + T_per_st * 10;
     {
       double t_end_abs = params.t_checkpoint + params.t_end;
       int n_per        = (int)(t_end_abs / T_per_st) + 1;
@@ -281,11 +235,6 @@ int main(int argc, char * argv[]){
   mu2  = mur*mu1;         // Scaled viscosity of phase 2 (air)
   f.sigma = 1.0 / We_w;   // Dimensionless surface tension
   
-  // Contact angle setup (if enabled)
-  #if CONTACT
-    f.height = h;
-  #endif
-
   // Tracer field configuration
   #if TRACER  
   // Define diffusivities in each phase (1 = liquid, 0 = air)
@@ -338,12 +287,6 @@ int main(int argc, char * argv[]){
   u.n[embed] = dirichlet(0.); // Set no-slip velocity boundary conditions (zero velocity)
   u.t[embed] = dirichlet(0.);
 #endif
-
-// CFL control (if enabled)
-#if CFL_COND
-  CFL = CFL_num;
-#endif
-  
 
 // Output Files
   char name[200],name2[200],name3[200],name4[200];
@@ -495,24 +438,6 @@ event tracer(t = t_mix){
   // tracer released as a line (same area)
   // fraction(c, intersection( -(y-y_tr - 0.5*h_tr), -(-(y-y_tr + 0.5*h_tr)) ));
 
-  // Horizontal mixing-left side
-  #if HORIZONTAL_MIXL
-  fraction (c,0-x);  // Fill left half of domain
-  foreach(){
-    if ((cs[] == 0) || (f[] < 1))
-      c[] = 0;        // Don't place tracer in gas or outside solid
-  }
-  #endif
-
-  // Horizontal mixing-right side
-  #if HORIZONTAL_MIXR
-  fraction (c1,0+x);  // Fill right half of domain
-  foreach(){
-    if ((cs[] == 0) || (f[] < 1))
-      c1[] = 0;       // Don't place tracer in gas or outside solid
-  }
-  #endif
-
   // Vertical mixing-top side
   #if VERTICAL_MIXUP
   {
@@ -531,16 +456,6 @@ event tracer(t = t_mix){
   }
   #endif
 
-  // Vertical mixing-down side
-  #if VERTICAL_MIXDOWN
-  {
-    double y_liq_mid = Ly * (params.fill_level - 1.0);
-    foreach(){
-      if ((f[] == 1) && (cs[]==1) && (y <= y_liq_mid))
-        c3[] = 1.0;    // Lower half of liquid
-    }
-  }
-  #endif
 }
 #endif
 
@@ -550,10 +465,6 @@ event tracer(t = t_mix){
 // ================================================================== //
 #if OXYGEN
 event oxygen (t=t_mix; i++){
-
-#if OXYGEN_CIRCLE
-  fraction(oxy, -(sq(x-0) + sq(y-Ly*0.5*0.5) - sq(0.084*Ly)) );
-#endif
 
 #if OXYGEN_AIR
   foreach(){
@@ -646,48 +557,6 @@ event dump_checkpoint (t = t_dump_checkpoint) {
   p.nodump = pf.nodump = true;
 }
 
-// ================================================================== //
-//                           OTHER OPTIONS                            //
-// ================================================================== //
-
-// Droplet and bubble removal
-#if REMOVE_DROP
-event remove_drop(i++){
-  // Remove disconnected small fluid regions (droplets/bubbles)
-  remove_droplets(f,remove_minsize,remove_threshold,false);  // remove droplets
-  remove_droplets(f,remove_minsize,remove_threshold,true);   // remove bubbles
-}
-#endif
-
-// Cumstom CFL Condition
-#if CFL_COND
-event CFL_cond(i++){
-  CFL = CFL_num;   // Force custom CFL number (defined earlier)
-}
-#endif
-
-// Adaptive Mesh Refinement (AMR)
-#if AMR
-event adapt( t=0 ){  
-  // Refine inside the bioreactor domain only
-  refine(level<MAXLEVEL && (  (y > -0.7*Ly) && (y < 0.7*Ly) ));
-}
-#endif
-
-// Dump raw wata to files
-#if DUMP
-event dump(t=t_dump){
-  dump(file="dump");    // Save entire simulation state
-
-  snprintf(buf1, sizeof(buf1), "Dump_%d_%g_%d.txt",N,t,pid());
-  FILE * out_all = fopen(buf1,"w");
-  foreach(){
-    fprintf(out_all,"%g %g %g %g %g %g \n",x,y,u.x[],u.y[],f[],c[]);
-  }
-  fclose(out_all);
-}
-#endif
-
 //  Log performance and runtime
 event logstats (t+=0.1; t <= t_end) {
 
@@ -745,11 +614,9 @@ event normcal (t+=t_out; t<=t_end){
       // FIX: use f[] directly — statsf2(f).sum = true liquid volume via embed-aware dv().
       f_liq[]   = f[];
       c_liq[]   = c[]*f[];
-      ///*
       c1_liq[]  = c1[]*f[];
       c2_liq[]  = c2[]*f[];
       c3_liq[]  = c3[]*f[];
-      //*/
     }
 
     position (f, posY, {0,1,0});  // (0,1,0) indicates the unit vector in the y-direction
@@ -776,14 +643,12 @@ event normcal (t+=t_out; t<=t_end){
     oxy_liq_sum2  = statsf2(oxy_liq).sum2;
     c_liq_sum     = statsf2(c_liq).sum;
     c_liq_sum2    = statsf2(c_liq).sum2;
-    ///*
     c1_liq_sum    = statsf2(c1_liq).sum;
     c1_liq_sum2   = statsf2(c1_liq).sum2;
     c2_liq_sum    = statsf2(c2_liq).sum;
     c2_liq_sum2   = statsf2(c2_liq).sum2;
     c3_liq_sum    = statsf2(c3_liq).sum;
     c3_liq_sum2   = statsf2(c3_liq).sum2;
-    //*/
 
    // i, timestep, no of cells, real time elapsed, cpu time
    if (pid() == 0){
@@ -871,170 +736,3 @@ event movies_output(t = t_mix; t += dt_video; t <= t_end)
 }
 #endif
 
-#if FIGURES
-event Figures(t=t_mix; t<=t_end; t += dt_Fig)
-{
-  scalar omega[];
-  char timestring[100],figN1[100],figN2[100],figN3[100],figN4[100],figN5[100],figN6[100],figN7[100];
-  
-  vorticity (u,omega);
-  
-  snprintf(figN1, sizeof(figN1), "Fig_vor/vor_%d_%.12g.png",N,t);
-  snprintf(figN2, sizeof(figN2), "Fig_vol/vol_%d_%.12g.png",N,t);
-  snprintf(figN3, sizeof(figN3), "Fig_tr/tr_%d_%.12g.png",N,t);
-  snprintf(figN4, sizeof(figN4), "Fig_tr/tr1_%d_%.12g.png",N,t);
-  snprintf(figN5, sizeof(figN5), "Fig_tr/tr2_%d_%.12g.png",N,t);
-  snprintf(figN6, sizeof(figN6), "Fig_tr/tr3_%d_%.12g.png",N,t);
-  snprintf(figN7, sizeof(figN7), "Fig_oxy/oxy_%d_%.12g.png",N,t);
-
-  // vorticity
-  clear();
-  view(width=1200,height=1200,fov=24.0,ty=0.0);
-  draw_vof("f",lw=2);
-  squares("omega",map=cool_warm,min=-50.0,max=50.0);
-  draw_vof("cs","fs");
-  sprintf(timestring,"t=%2.03fs",t*T_bio);
-  draw_string(timestring,pos=4,lc={0,0,0},lw=2);
-  save(figN1);
-
-  // volume fraction
-  clear();
-  view(width=1200,height=1200,fov=24.0,ty=0.0);
-  draw_vof("f",lw=2);
-  squares("f",map=cool_warm,min=0.0,max=1.0);
-  draw_vof("cs","fs");
-  //cells();
-  sprintf(timestring,"t=%2.03fs",t*T_bio);
-  draw_string(timestring,pos=4,lc={0,0,0},lw=2);
-  save(figN2);
-
-  // tracer
-#if TRACER
-  #if HORIZONTAL_MIXL
-  clear();
-  view(width=1200,height=1200,fov=24.0,ty=0.0);
-  draw_vof("f",lw=2);
-  squares("c",map=cool_warm,min=0.0,max=1.0);
-  draw_vof("cs","fs");
-  sprintf(timestring,"t=%2.03fs",t*T_bio);
-  draw_string(timestring,pos=4,lc={0,0,0},lw=2);
-  save(figN3);
-  #endif
-
-  #if HORIZONTAL_MIXR
-  clear();
-  view(width=1200,height=1200,fov=24.0,ty=0.0);
-  draw_vof("f",lw=2);
-  squares("c1",map=cool_warm,min=0.0,max=1.0);
-  draw_vof("cs","fs");
-  sprintf(timestring,"t=%2.03fs",t*T_bio);
-  draw_string(timestring,pos=4,lc={0,0,0},lw=2);
-  save(figN4);
-  #endif
-
-  #if VERTICAL_MIXUP
-  clear();
-  view(width=1200,height=1200,fov=24.0,ty=0.0);
-  draw_vof("f",lw=2);
-  squares("c2",map=cool_warm,min=0.0,max=1.0);
-  draw_vof("cs","fs");
-  sprintf(timestring,"t=%2.03fs",t*T_bio);
-  draw_string(timestring,pos=4,lc={0,0,0},lw=2);
-  save(figN5);
-  #endif
-
-  #if VERTICAL_MIXDOWN
-  clear();
-  view(width=1200,height=1200,fov=24.0,ty=0.0);
-  draw_vof("f",lw=2);
-  squares("c3",map=cool_warm,min=0.0,max=1.0);
-  draw_vof("cs","fs");
-  sprintf(timestring,"t=%2.03fs",t*T_bio);
-  draw_string(timestring,pos=4,lc={0,0,0},lw=2);
-  save(figN6);
-  #endif
-#endif
-
-  // oxygen
-  #if OXYGEN
-  clear();
-  view(width=1200,height=1200,fov=24.0,ty=0.0);
-  draw_vof("f",lw=2);
-  squares("oxy",map=cool_warm,min=0.0,max=0.033);
-  draw_vof("cs","fs");
-  sprintf(timestring,"t=%2.03fs",t*T_bio);
-  draw_string(timestring,pos=4,lc={0,0,0},lw=2);
-  save(figN7);
-  #endif
-}
-#endif
-
-// Export field data
-#if OUT_FILES
-event out_files(t=t_mix; t<=t_end; t+=dt_file)
-{
-  scalar omega[];
-  vorticity(u,omega);
-
-  snprintf(buf1, sizeof(buf1), "Data_all/Data_all_%d_%.12g_%d.txt",N,t,pid());
-  FILE * out_all = fopen(buf1,"wb");  
-
-  fprintf(out_all,"x y ux uy vol_frac tracer solid oxygen vorticity tracer1-3 \n");
-  foreach()
-    fprintf(out_all,"%g %g %g %g %g %g %g %g %g %g %g %g\n",x,y,u.x[],u.y[],f[],c[],cs[],oxy[],omega[],c1[],c2[],c3[]);
-  fclose(out_all);
-
-  #if OUT_INTERFACE
-    snprintf(buf4, sizeof(buf4), "Data_all/Interf_%d_%.12g_%d.txt",N,t,pid());
-    FILE * out_interf = fopen(buf4,"wb");
-    output_facets(f,out_interf);   // Interface extraction
-    fclose(out_interf);
-  #endif
-}
-
-// Export field data until t_mix from t =0
-event out_files_initial(t=0; t<=t_mix; t+=dt_file)
-{
-  scalar omega[];
-  vorticity(u,omega);
-
-  snprintf(buf1, sizeof(buf1), "Data_all/Data_all_%d_%.12g_%d.txt",N,t,pid());
-  FILE * out_all = fopen(buf1,"wb");  
-
-  fprintf(out_all,"x y ux uy vol_frac tracer solid oxygen vorticity tracer1-3 \n");
-  foreach()
-    fprintf(out_all,"%g %g %g %g %g %g %g %g %g %g %g %g\n",x,y,u.x[],u.y[],f[],c[],cs[],oxy[],omega[],c1[],c2[],c3[]);
-  fclose(out_all);
-
-  #if OUT_INTERFACE
-    snprintf(buf4, sizeof(buf4), "Data_all/Interf_%d_%.12g_%d.txt",N,t,pid());
-    FILE * out_interf = fopen(buf4,"wb");
-    output_facets(f,out_interf);   // Interface extraction
-    fclose(out_interf);
-  #endif
-}
-#endif
-
-// Export field data during specific time ranges with higher sampling rates
-#if OUT_SPECIFIC_TIME
-event out_spec_time(t=t_spec_init; t<=t_spec_end; t+=dt_spec)
-{
-  scalar omega[];
-  vorticity(u,omega);
-
-  snprintf(buf2, sizeof(buf2), "Data_specific/Data_all_%d_%.12g_%d.txt",N,t,pid());
-  FILE * out_all_spec = fopen(buf2,"wb");  
-
-  fprintf(out_all_spec,"x y ux uy vol_frac tracer solid oxygen vorticity tracer1-3 \n");
-  foreach()
-  fprintf(out_all_spec,"%g %g %g %g %g %g %g %g %g %g %g %g \n",x,y,u.x[],u.y[],f[],c[],cs[],oxy[],omega[],c1[],c2[],c3[]);
-  fclose(out_all_spec);
-
-  #if OUT_INTERFACE
-    snprintf(buf3, sizeof(buf3), "Data_specific/Interf_%d_%.12g_%d.txt",N,t,pid());
-    FILE * out_interf_spec = fopen(buf3,"wb");
-    output_facets(f,out_interf_spec);   // Interface extraction
-    fclose(out_interf_spec);
-  #endif
-}
-#endif

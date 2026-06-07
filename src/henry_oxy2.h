@@ -118,7 +118,7 @@ static void h_relax (scalar * al, scalar * bl, int l, void * data)
       n -= c*sq(Delta);
       d += e*sq(Delta);
     }
-    if (!d)
+    if (d <= 0.)   // was: if (!d) — also catches d<0 from coarse-level beta terms
       c[] = b[] = 0.;
     else
 #endif // EMBED
@@ -239,6 +239,12 @@ event tracer_diffusion (i++)
     // mg_solve starts from a consistent state.  Without this, stale checkpoint
     // values at coarse levels cause the first V-cycle to diverge in restarts.
     restriction ({c});
+    // Also restrict r so that coarse non-leaf r[] cells carry meaningful values
+    // (averaged from leaf) before mg_solve.  halo_restriction (triggered by the
+    // stencil extension below) communicates coarse r[] to MPI neighbour ghost
+    // cells; without this, those ghost cells receive pool garbage → O(1e141)
+    // b[] in h_relax at coarse levels → FE_OVERFLOW SIGFPE on restart.
+    restriction ({r});
 
     /**
     The diffusion equation for $c$ is then solved using the multigrid
@@ -265,17 +271,22 @@ event tracer_diffusion (i++)
     q.D = D;
     q.beta = beta;
 
-    // Touch non-leaf cells of c, r, D via foreach_cell() to extend qcc's stencil
-    // analysis for these scalars to include non-leaf levels.  Without this, qcc
-    // only sees r (and c, D) accessed via the EMBED-filtered leaf foreach() above,
-    // giving an incomplete stencil.  tree_restriction → halo_restriction uses the
-    // stencil to compute coarse halos; with the incomplete stencil, it produces
-    // O(1e141) coarse residuals from O(0.07) leaf values, blowing up h_relax and
-    // producing NaN kLa on every checkpoint restart.  These foreach_cell() reads
-    // extend the stencil at qcc compile time — they are live (not dead code) but
-    // are no-ops at runtime since they write nothing.
+    // Extend qcc's compile-time stencil analysis for c, r, and ALL face components
+    // of D and beta to include non-leaf tree levels.  h_relax accesses D.x[],
+    // D.x[1], D.y[], D.y[1], beta.x[], beta.x[1], beta.y[], beta.y[1] at every
+    // multigrid level (via foreach_level_or_leaf + foreach_dimension).  Without
+    // explicit non-leaf reads here, qcc only sees these accessed through the
+    // EMBED-filtered leaf foreach() above — giving an incomplete stencil.
+    // tree_restriction → halo_restriction uses the stencil to decide which
+    // coarse ghost cells to communicate across MPI ranks; missing face offsets
+    // leave those ghost cells at stale scalar-pool values (up to ~1e141) which
+    // overflow in h_relax → SIGFPE on checkpoint restart under MPI.
+    // These reads are live (not dead code) but are no-ops at runtime.
     foreach_cell()
-      if (!is_leaf(cell)) (void)(c[] + r[] + D.x[]);
+      if (!is_leaf(cell))
+        (void)(c[] + r[]
+               + D.x[] + D.x[1] + D.y[] + D.y[1]
+               + beta.x[] + beta.x[1] + beta.y[] + beta.y[1]);
 
     // from mgstats poisson
     ///*
