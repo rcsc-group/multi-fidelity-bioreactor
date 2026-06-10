@@ -176,21 +176,47 @@ def submit_chain(cfg: dict) -> list[str]:
     walltime    = cfg.get("walltime", "02:00:00")
     submit      = bool(cfg.get("submit", True))
     videos      = bool(cfg.get("videos", False))
-    template    = _DEFAULT_VIDEO_TEMPLATE if videos else _DEFAULT_TEMPLATE
+    use_mpi     = bool(cfg.get("mpi", False))
+    _mpi_tmpl   = _PROJECT_ROOT / "config" / "slurm_mpi_template.sh"
+    template    = _mpi_tmpl if use_mpi else (_DEFAULT_VIDEO_TEMPLATE if videos else _DEFAULT_TEMPLATE)
+
+    import json as _json
 
     job_ids: list[str] = []
     prev_run_id: str | None = None
     initial_ck  = cfg.get("initial_checkpoint")
 
+    # For MPI self-submitting chains: write ALL segment params upfront, annotate
+    # each segment with next_run_id so the SLURM script can self-submit the next
+    # segment after completion (MPI compute nodes cannot read /oscar/data/, so the
+    # checkpoint must be staged at runtime, not at Python submission time).
+    if use_mpi and submit and len(chain) > 1:
+        for k, p in enumerate(chain):
+            run_dir = runs_root / p["run_id"]
+            run_dir.mkdir(parents=True, exist_ok=True)
+            p_annotated = dict(p)
+            if k + 1 < len(chain):
+                p_annotated["next_run_id"] = chain[k + 1]["run_id"]
+                p_annotated["_walltime"]   = walltime
+                p_annotated["_ntasks"]     = cfg.get("ntasks", 16)
+                p_annotated["_mem"]        = cfg.get("mem_per_cpu", "2G")
+            (run_dir / "params.json").write_text(_json.dumps(p_annotated, indent=2))
+        chain[0]["next_run_id"] = chain[1]["run_id"]
+        chain[0]["_walltime"]   = walltime
+        chain[0]["_ntasks"]     = cfg.get("ntasks", 16)
+        chain[0]["_mem"]        = cfg.get("mem_per_cpu", "2G")
+
     for k, params in enumerate(chain):
         if k == 0 and initial_ck:
             # First segment restarts from an externally supplied checkpoint.
             checkpoint = str(Path(initial_ck["checkpoint_path"]).resolve())
-        elif prev_run_id is not None:
+        elif prev_run_id is not None and not use_mpi:
+            # Non-MPI: checkpoint exists at submission time (prev job already done
+            # or submitted with SLURM dep).  MPI: self-submitting template handles it.
             checkpoint = str((runs_root / prev_run_id / "checkpoint.dump").resolve())
         else:
             checkpoint = None
-        dependency = f"afterok:{job_ids[k-1]}" if k > 0 else None
+        dependency = f"afterok:{job_ids[k-1]}" if k > 0 and not use_mpi else None
 
         print(
             f"  [seg {k}] run={params['run_id']}  "
@@ -199,6 +225,14 @@ def submit_chain(cfg: dict) -> list[str]:
             f"{'  [video]' if videos else ''}",
             end="",
         )
+
+        # For MPI chains with >1 segment: only submit segment 0 now; the SLURM
+        # template self-submits subsequent segments after each run completes.
+        if use_mpi and k > 0:
+            print(f"  → queued (self-submit after seg {k-1})")
+            job_ids.append(f"pending-{params['run_id']}")
+            prev_run_id = params["run_id"]
+            continue
 
         validate_params(params)
         if submit:
@@ -214,10 +248,9 @@ def submit_chain(cfg: dict) -> list[str]:
             job_ids.append(job_id)
             print(f"  → job {job_id}")
         else:
-            import json
             run_dir = runs_root / params["run_id"]
             run_dir.mkdir(parents=True, exist_ok=True)
-            (run_dir / "params.json").write_text(json.dumps(params, indent=2))
+            (run_dir / "params.json").write_text(_json.dumps(params, indent=2))
             if checkpoint:
                 (run_dir / "checkpoint_path.txt").write_text(checkpoint)
             print("  → params written (not submitted)")

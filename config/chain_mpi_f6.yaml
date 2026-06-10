@@ -1,0 +1,29 @@
+# Fidelity-6 MPI chain: 2 segments with checkpoint restart.
+# Validates EMBED+MPI+checkpoint at production fidelity.
+# Run: python scripts/chain.py config/chain_mpi_f6.yaml
+
+fidelity: 6
+geometry: {a: 0.25, b: 0.071, n: 2.0}
+fill_level: 0.7
+
+n_mix_cycles: 10
+n_transition_cycles: 5
+t_buffer: 80.0
+
+sweep:
+  parameter: omega_b
+  values: [6.28, 6.28]   # same omega_b: clean checkpoint-only test
+
+motion:
+  n_harmonics: 1
+  theta_max: [7.0, 0.0, 0.0]
+  phi_angular: [0.0, 0.0, 0.0]
+  omega_h: 0.0
+  amplitude_h: [0.0, 0.0, 0.0]
+  phi_horizontal: [0.0, 0.0, 0.0]
+  omega_b: 6.28
+
+mpi: true
+videos: false
+submit: true
+walltime: "02:00:00"
