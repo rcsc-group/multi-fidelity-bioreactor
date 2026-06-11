@@ -391,6 +391,36 @@ event init (t = 0)
     }
 #endif
 
+    // Re-apply centered.h's EMBED defaults (event defaults(i=0) is skipped on
+    // restart because i resumes from the checkpoint value).  Without these,
+    // p/pf/u/g use non-EMBED prolongation/restriction and uf uses
+    // refine_face_solenoidal instead of refine_face.  The pressure gradient at
+    // the embedded wall falls back to the generic gradient (no
+    // pressure_embed_gradient), so the Poisson solve near the solid accumulates
+    // small errors each timestep.  After ~300 steps (~1 T) the velocity
+    // diverges → SIGFPE in tracer_diffusion/h_residual.
+    // Confirmed experimentally: fresh run to t=15 is stable; restart crashes at
+    // t=t_checkpoint+1.14T with both 4 and 16 MPI ranks.
+#if TREE && EMBED
+    uf.x.refine = refine_face;
+    foreach_dimension()
+      uf.x.prolongation = refine_embed_face_x;
+    for (scalar s in {p, pf, u, g}) {
+      s.refine = refine_embed_linear;
+      set_prolongation (s, refine_embed_linear);
+      set_restriction (s, restriction_embed_linear);
+    }
+    for (scalar s in {p, pf})
+      s.embed_gradient = pressure_embed_gradient;
+#endif // TREE && EMBED
+    // Re-apply vof.h defaults: fraction_refine is set for f in vof.h's
+    // event defaults(i=0), skipped on restart.  Without it AMR uses bilinear
+    // prolongation for f, creating non-physical VOF fractions near the interface.
+#if TREE
+    f.refine = fraction_refine;
+    set_prolongation (f, fraction_refine);
+#endif // TREE
+
     // Reset ALL stracers to zero at EVERY multigrid level.  foreach() only
     // touches leaf cells; coarse-level cells retain stale checkpoint values.
     // When oxy is injected at t_mix, h_residual uses face_gradient_x(a,0)
