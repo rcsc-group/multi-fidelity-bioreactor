@@ -272,6 +272,11 @@ def submit_sweep(path: str | Path) -> list[str]:
     mem          = str(options.get("mem", "12G"))
     submit       = bool(options.get("submit", True))
     use_chain    = bool(options.get("chain", False))   # default: independent
+    use_mpi      = bool(options.get("mpi", False))
+    ntasks       = int(options.get("ntasks", 16)) if use_mpi else None
+    _mpi_template = _PROJECT_ROOT / "config" / "slurm_mpi_template.sh"
+    _ser_template = _DEFAULT_TEMPLATE
+    active_template = _mpi_template if use_mpi else _ser_template
 
     experiment_dir = _init_experiment_store(Path(path), options, params_list)
     job_ids: list[str] = []
@@ -284,8 +289,9 @@ def submit_sweep(path: str | Path) -> list[str]:
         n_mix = int(options.get("n_mix_cycles", 80))
         t_buf = float(options.get("t_buffer", 150.0))
 
+        mpi_label = f"MPI ntasks={ntasks}" if use_mpi else "serial"
         print(f"  Experiment store: {experiment_dir or '(f3dasm unavailable)'}")
-        print(f"  Mode: independent (chain=false) — {len(params_list)} runs\n")
+        print(f"  Mode: independent ({mpi_label}) — {len(params_list)} runs\n")
 
         for i, raw_p in enumerate(params_list):
             p = {k: (list(v) if isinstance(v, list) else v) for k, v in raw_p.items()}
@@ -295,6 +301,8 @@ def submit_sweep(path: str | Path) -> list[str]:
             p["t_end"]        = p["n_mix_cycles"] * T_per + t_buf
             p["_walltime"]    = walltime
             p["_mem"]         = mem
+            if ntasks is not None:
+                p["_ntasks"] = ntasks   # used by chain self-submission & provenance
             if experiment_dir:
                 p["_experiment_dir"] = experiment_dir
 
@@ -317,8 +325,10 @@ def submit_sweep(path: str | Path) -> list[str]:
                     project_root=_PROJECT_ROOT,
                     runs_root=runs_root,
                     walltime=walltime,
+                    template=active_template,
                     cpus=cpus,
                     mem=mem,
+                    ntasks=ntasks,
                 )
                 job_ids.append(job_id)
                 print(f"  → job {job_id}")

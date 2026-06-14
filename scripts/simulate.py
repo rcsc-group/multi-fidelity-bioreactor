@@ -126,6 +126,7 @@ def submit_slurm(
     template: Path | str | None = None,
     mem: str = "12G",
     cpus: int = 4,
+    ntasks: int | None = None,
     checkpoint: str | None = None,
     dependency: str | None = None,
     begin: str | None = None,
@@ -141,6 +142,7 @@ def submit_slurm(
     template     : path to SLURM script; defaults to config/slurm_template.sh
     mem          : memory request (e.g. "12G")
     cpus         : CPUs per task
+    ntasks       : MPI rank count; overrides #SBATCH --ntasks in template
     checkpoint   : absolute path to checkpoint.dump for restart runs; if set,
                    DUMP env var is exported so the binary receives it as argv[2]
     dependency   : SLURM dependency string, e.g. "afterok:12345"; passed as
@@ -203,6 +205,8 @@ def submit_slurm(
         f"--export={export_str}",
         str(template.resolve()),
     ]
+    if ntasks is not None:
+        cmd.insert(1, f"--ntasks={ntasks}")
     if dependency:
         cmd.insert(1, f"--dependency={dependency}")
     if begin:
