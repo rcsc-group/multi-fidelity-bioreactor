@@ -1,0 +1,32 @@
+# Diagnostic: same seg1 restart from f4 checkpoint but with n_transition_cycles=5
+# (t_mix = 12.16 + 5*0.608 = 15.2 instead of 13.376).
+# Hypothesis: if crash shifts from t≈13.3 to t≈15.2, the crash is tied to t_mix.
+# (i.e., tracer injection causes the NaN, not the flow trajectory alone.)
+# Run: python scripts/chain.py config/chain_mpi_smoke_f4_n5.yaml
+
+fidelity: 4
+geometry: {a: 0.25, b: 0.071, n: 2.0}
+fill_level: 0.7
+
+n_mix_cycles: 3
+n_transition_cycles: 5     # <-- changed from 2 to 5 → t_mix shifts from 13.38 to 15.2
+t_buffer: 10.0
+
+sweep:
+  parameter: omega_b
+  values: [6.28, 6.28]
+
+motion:
+  n_harmonics: 1
+  theta_max: [7.0, 0.0, 0.0]
+  phi_angular: [0.0, 0.0, 0.0]
+  omega_h: 0.0
+  amplitude_h: [0.0, 0.0, 0.0]
+  phi_horizontal: [0.0, 0.0, 0.0]
+  omega_b: 6.28
+
+mpi: true
+videos: false
+submit: true
+ntasks: 16
+walltime: "00:30:00"

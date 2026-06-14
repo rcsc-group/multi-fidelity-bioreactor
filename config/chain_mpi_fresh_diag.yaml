@@ -1,0 +1,25 @@
+# Fresh MPI run (no restart) running past the crash point t=13.3
+# Purpose: test if crash at t=13.3 is flow-intrinsic (not restart-specific)
+motion:
+  omega_b: 6.28
+  theta_max: [5.0, 0.0, 0.0]
+
+sweep:
+  parameter: omega_b
+  values: [6.28]
+
+fidelity: 3
+fill_level: 0.5
+geometry:
+  a: 0.25
+  b: 0.071
+  n: 8.0
+
+n_mix_cycles: 3
+n_transition_cycles: 2
+t_buffer: 12    # → t_end = 3*0.608 + 12 = 13.824, well past t=13.3
+
+mpi: true
+ntasks: 4       # 4 ranks × 1 cpu = 4 CPUs (under 64-CPU limit)
+walltime: "00:30:00"
+submit: true

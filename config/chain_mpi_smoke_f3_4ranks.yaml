@@ -1,0 +1,27 @@
+# Same smoke test but 4 MPI ranks (16 cells/rank) instead of 16 (4 cells/rank)
+# Hypothesis test: does lower MPI count (more cells/rank) fix the crash?
+fidelity: 3
+geometry: {a: 0.25, b: 0.071, n: 2.0}
+fill_level: 0.7
+
+n_mix_cycles: 3
+n_transition_cycles: 2
+t_buffer: 10.0
+
+sweep:
+  parameter: omega_b
+  values: [6.28, 6.28]
+
+motion:
+  n_harmonics: 1
+  theta_max: [7.0, 0.0, 0.0]
+  phi_angular: [0.0, 0.0, 0.0]
+  omega_h: 0.0
+  amplitude_h: [0.0, 0.0, 0.0]
+  phi_horizontal: [0.0, 0.0, 0.0]
+  omega_b: 6.28
+
+mpi: true
+ntasks: 4      # 4 ranks × 1 cpu = 4 CPUs
+submit: true
+walltime: "00:20:00"

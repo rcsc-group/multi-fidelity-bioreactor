@@ -1,0 +1,32 @@
+# Smoke test: 2-segment MPI chain at fidelity 4.
+# Validates EMBED+MPI+checkpoint restart at 16 cells/rank (vs 4 at f3).
+# Fidelity 3 smoke test was numerically unstable due to underresolved turbulence;
+# fidelity 4 gives 4× more cells per rank for a stable trajectory.
+# Run: python scripts/chain.py config/chain_mpi_smoke_f4.yaml
+
+fidelity: 4
+geometry: {a: 0.25, b: 0.071, n: 2.0}
+fill_level: 0.7
+
+n_mix_cycles: 3
+n_transition_cycles: 2
+t_buffer: 10.0
+
+sweep:
+  parameter: omega_b
+  values: [6.28, 6.28]   # same omega_b: only tests checkpoint I/O, not param change
+
+motion:
+  n_harmonics: 1
+  theta_max: [7.0, 0.0, 0.0]
+  phi_angular: [0.0, 0.0, 0.0]
+  omega_h: 0.0
+  amplitude_h: [0.0, 0.0, 0.0]
+  phi_horizontal: [0.0, 0.0, 0.0]
+  omega_b: 6.28
+
+mpi: true
+videos: false
+submit: true
+ntasks: 16
+walltime: "00:30:00"
