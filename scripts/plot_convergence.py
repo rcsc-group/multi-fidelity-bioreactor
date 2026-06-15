@@ -66,7 +66,7 @@ _V_F_LIQ = 2
 
 _C_SAT   = 1.0      # confirmed from longest runs (oxy tracer in [0,1] in gas)
 _LW_MIN, _LW_MAX = 0.6, 2.8
-_KLA_WINDOW_PERIODS = 5   # rolling window for kLa estimate, in rocking cycles
+_KLA_WINDOW_PERIODS = 2   # rolling window for kLa estimate, in rocking cycles
 
 
 # ── Raw file loading ──────────────────────────────────────────────────────────
@@ -435,7 +435,7 @@ def plot(
                    label=f"{lw_lbl}={v:.3g}")
             for v in lw_vals
         ]
-        ax_urms.legend(handles=lw_handles, fontsize=7, loc="upper right",
+        ax_urms.legend(handles=lw_handles, fontsize=7, loc="lower right",
                        title="Line width", title_fontsize=7)
 
     if out_path is None:

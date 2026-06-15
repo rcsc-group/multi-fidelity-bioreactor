@@ -76,10 +76,6 @@
     "b38edc3a",
     "b78b1e1d",
     "b7dc6588",
-    "bench_f5_mpi_a",
-    "bench_f5_mpi_b",
-    "bench_f5_serial_s0",
-    "bench_f5_serial_s1",
     "bf1b25bc",
     "c2b560ac",
     "c3c73b9f",
@@ -105,8 +101,7 @@
     "ff2f1f94",
     "ff566b02",
     "ff6c8630",
-    "ffd0ce6e",
-    "smoke_dtmix_fix_1780747951"
+    "ffd0ce6e"
   ],
   "sweep_options": {
     "note": "backfilled \u2014 pre-experiment-dir chain sweep"
