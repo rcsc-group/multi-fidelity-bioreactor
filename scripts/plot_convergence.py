@@ -1,34 +1,38 @@
-"""Convergence time-series plot for a parameter sweep.
+"""Convergence diagnostics plot for a parameter sweep.
 
-Produces a 3-panel figure (shared x-axis = non-dimensional time):
+Three panels, shared x-axis = time relative to oxygen injection (t - t_inject):
 
-  Panel 1 — vel_rms(t) = sqrt(u'x_rms² + u'y_rms²) [normf.dat]
-             Global flow convergence to quasi-steady state
-             (feeds into the vel_rms_qss KPI, Appendix A of Kim et al.)
+  Panel 1 — Cycle-averaged u_rms(t)   [normf.dat]
+             Rolling mean over one rocking period T = 2π/omega_b.
+             Removes per-cycle oscillations; plateau = QSS reached (global).
 
-  Panel 2 — C*(t) dissolved-oxygen saturation [tr_oxy.dat]
-             Local kLa convergence; slope at any crossing = kLa
-             (feeds into kLa_25, kla_fit_rmse_25)
+  Panel 2 — Rolling kLa(t)            [tr_oxy.dat + vol_frac_interf.dat]
+             Instantaneous kLa from slope of ln(1 - C*(t)) over a sliding
+             window of W rocking periods.  Plateau = KPI has converged (local).
 
-  Panel 3 — χ(t) mixing homogeneity [tr_oxy.dat]
-             1 − σ²(t)/σ²_max; rises from 0 to 1 after tracer injection
+  Panel 3 — Normalised C*(t) = C_liq(t) / C_sat   [tr_oxy.dat]
+             C_sat ≈ 1.0 (confirmed from longest runs).  Reference lines at
+             C*=0.10 and C*=0.25 (the kLa measurement windows).
 
-Line encoding (auto-detected from the actual sweep):
-  Color     — the swept parameter with the most unique values
-  Linewidth — the swept parameter with the second-most unique values
-              (if only one parameter varies, linewidth is fixed)
+Time axis: t - t_inject so all curves align at the injection event.
 
-Sweep detection: all numeric params in params.json are extracted; any param
-whose value differs across runs is considered swept.  The top-2 by number of
-distinct values get color and linewidth respectively.
+Line encoding (auto-detected from the actual sweep, or overridden with flags):
+  Color     — swept param with the most unique values
+  Linewidth — swept param with the second-most unique values
 
 Usage
 -----
-    python scripts/plot_convergence.py [--fidelity 5] [--out path.pdf]
-    python scripts/plot_convergence.py --fidelity 5 --color rpm --lw fill_level
+    # Load by experiment (preferred — exact run set from one submission):
+    python scripts/plot_convergence.py --experiment experiments/sweep_fb_theta_l7
 
-If multiple runs share the same parameter combination at the requested fidelity,
-the most-recently modified run is used (later segment of a chain wins).
+    # Load by fidelity (all matching runs in runs/):
+    python scripts/plot_convergence.py --fidelity 7
+
+    # Override encoding:
+    python scripts/plot_convergence.py --experiment ... --color rpm --lw theta_max_0
+
+Outputs: experiments/figures/convergence_<stem>.pdf  (experiment mode)
+      or experiments/figures/convergence_sweep_f<N>.pdf (fidelity mode)
 """
 from __future__ import annotations
 
@@ -47,20 +51,25 @@ _PROJECT_ROOT = Path(__file__).parents[1]
 _RUNS_ROOT    = _PROJECT_ROOT / "runs"
 _FIG_DIR      = _PROJECT_ROOT / "experiments" / "figures"
 
-# normf.dat: i t Omega_avg Omega_rms Omega_vol Omega_max ux_avg ux_rms ux_vol ux_max uy_avg uy_rms uy_vol uy_max
+# normf.dat columns
 _N_T      = 1
 _N_UX_RMS = 7
 _N_UY_RMS = 11
-# tr_oxy.dat: i t oxy_liq_sum oxy_liq_sum2 ... c2_liq_sum c2_liq_sum2 ...
+
+# tr_oxy.dat columns
 _T_T       = 1
 _T_OXY_SUM = 2
-_T_C2_SUM  = 8
-_T_C2_SUM2 = 9
-# vol_frac_interf.dat: i t f_liq_sum f_liq_interf posY_max posY_min
+
+# vol_frac_interf.dat columns
+_V_T     = 1
 _V_F_LIQ = 2
 
+_C_SAT   = 1.0      # confirmed from longest runs (oxy tracer in [0,1] in gas)
 _LW_MIN, _LW_MAX = 0.6, 2.8
+_KLA_WINDOW_PERIODS = 5   # rolling window for kLa estimate, in rocking cycles
 
+
+# ── Raw file loading ──────────────────────────────────────────────────────────
 
 def _load_dat(path: Path) -> np.ndarray | None:
     try:
@@ -76,151 +85,206 @@ def _load_dat(path: Path) -> np.ndarray | None:
 # ── Parameter extraction ──────────────────────────────────────────────────────
 
 def _flat_params(params: dict) -> dict[str, float]:
-    """Flatten params.json into named scalars for sweep detection."""
     def _get(d, key, default=float("nan")):
         return float(d.get(key, default)) if d.get(key) is not None else default
 
-    geom  = params.get("geometry") or {}
-    th    = params.get("theta_max")    or []
-    ph    = params.get("phi_angular")  or []
-    amp   = params.get("amplitude_h")  or []
-    phh   = params.get("phi_horizontal") or []
+    geom = params.get("geometry") or {}
+    th   = params.get("theta_max")   or []
+    ph   = params.get("phi_angular") or []
+    amp  = params.get("amplitude_h") or []
+    phh  = params.get("phi_horizontal") or []
 
     omega_b = _get(params, "omega_b")
-    flat = {
-        "rpm":          round(omega_b * 60.0 / (2 * math.pi), 2),
-        "omega_b":      omega_b,
-        "fill_level":   _get(params, "fill_level"),
-        "n_harmonics":  _get(params, "n_harmonics", 1),
-        "omega_h":      _get(params, "omega_h", 0.0),
-        "geometry_a":   float(geom.get("a", float("nan"))),
-        "geometry_b":   float(geom.get("b", float("nan"))),
-        "geometry_n":   float(geom.get("n", float("nan"))),
-        "theta_max_0":  float(th[0]) if len(th) > 0 else float("nan"),
-        "theta_max_1":  float(th[1]) if len(th) > 1 else 0.0,
-        "theta_max_2":  float(th[2]) if len(th) > 2 else 0.0,
-        "phi_angular_0": float(ph[0]) if len(ph) > 0 else 0.0,
-        "phi_angular_1": float(ph[1]) if len(ph) > 1 else 0.0,
-        "phi_angular_2": float(ph[2]) if len(ph) > 2 else 0.0,
-        "amplitude_h_0": float(amp[0]) if len(amp) > 0 else 0.0,
-        "amplitude_h_1": float(amp[1]) if len(amp) > 1 else 0.0,
-        "phi_horizontal_0": float(phh[0]) if len(phh) > 0 else 0.0,
-        "phi_horizontal_1": float(phh[1]) if len(phh) > 1 else 0.0,
+    return {
+        "rpm":             round(omega_b * 60.0 / (2 * math.pi), 2),
+        "omega_b":         omega_b,
+        "fill_level":      _get(params, "fill_level"),
+        "n_harmonics":     _get(params, "n_harmonics", 1),
+        "omega_h":         _get(params, "omega_h", 0.0),
+        "geometry_a":      float(geom.get("a", float("nan"))),
+        "geometry_b":      float(geom.get("b", float("nan"))),
+        "geometry_n":      float(geom.get("n", float("nan"))),
+        "theta_max_0":     float(th[0])  if len(th) > 0 else float("nan"),
+        "theta_max_1":     float(th[1])  if len(th) > 1 else 0.0,
+        "theta_max_2":     float(th[2])  if len(th) > 2 else 0.0,
+        "phi_angular_0":   float(ph[0])  if len(ph) > 0 else 0.0,
+        "phi_angular_1":   float(ph[1])  if len(ph) > 1 else 0.0,
+        "amplitude_h_0":   float(amp[0]) if len(amp) > 0 else 0.0,
+        "phi_horizontal_0":float(phh[0]) if len(phh) > 0 else 0.0,
     }
-    return flat
 
 
 def _detect_sweep_dims(records: list[dict]) -> list[str]:
-    """Return param names that vary across runs, sorted by n_unique desc.
-
-    'rpm' and 'omega_b' encode the same thing — keep only 'rpm' if both vary.
-    """
-    all_keys = [k for k in records[0]["flat"].keys()]
+    all_keys = list(records[0]["flat"].keys())
     n_unique = {}
     for k in all_keys:
         vals = {r["flat"][k] for r in records if not math.isnan(r["flat"][k])}
         if len(vals) > 1:
             n_unique[k] = len(vals)
-
-    # drop omega_b if rpm is already there (same physical quantity)
     if "rpm" in n_unique and "omega_b" in n_unique:
         del n_unique["omega_b"]
-
     return sorted(n_unique, key=lambda k: -n_unique[k])
 
 
 def _param_label(name: str) -> str:
     labels = {
-        "rpm":            "RPM",
-        "fill_level":     "Fill level",
-        "theta_max_0":    r"$\theta_{max,0}$ (deg)",
-        "theta_max_1":    r"$\theta_{max,1}$ (deg)",
-        "omega_h":        r"$\omega_h$ (nd)",
-        "amplitude_h_0":  r"$A_{h,0}$",
-        "geometry_a":     "Bag length $a$ (m)",
-        "geometry_b":     "Bag height $b$ (m)",
-        "geometry_n":     "Bag taper $n$",
-        "n_harmonics":    "N harmonics",
-        "phi_angular_1":  r"$\phi_{\angle,1}$ (rad)",
+        "rpm":           "RPM",
+        "fill_level":    "Fill level",
+        "theta_max_0":   r"$\theta_{max}$ (deg)",
+        "omega_h":       r"$\omega_h$ (nd)",
+        "amplitude_h_0": r"$A_{h,0}$",
+        "geometry_a":    "Bag length $a$ (m)",
+        "geometry_b":    "Bag height $b$ (m)",
     }
     return labels.get(name, name)
 
 
 # ── Run loading ───────────────────────────────────────────────────────────────
 
-def _load_runs(runs_root: Path, fidelity: int) -> list[dict]:
-    """Load all fidelity-N runs; deduplicate by full param fingerprint."""
-    best: dict[tuple, tuple[float, dict]] = {}
+def _load_runs(
+    runs_root: Path,
+    fidelity: int | None = None,
+    run_ids: set[str] | None = None,
+) -> list[dict]:
+    """Load runs, deduplicating by param fingerprint (keep most recently modified).
 
-    for results_path in runs_root.glob("*/results.json"):
-        run_dir     = results_path.parent
-        params_path = run_dir / "params.json"
-        if not params_path.exists():
+    If run_ids is given, only consider those run directories (experiment mode).
+    If fidelity is given as well, additionally filter by fidelity level.
+    """
+    candidates = (
+        [runs_root / rid for rid in run_ids if (runs_root / rid).is_dir()]
+        if run_ids is not None
+        else [d for d in runs_root.iterdir() if d.is_dir()]
+    )
+
+    best: dict[tuple, tuple[float, dict]] = {}
+    for run_dir in candidates:
+        params_path  = run_dir / "params.json"
+        results_path = run_dir / "results.json"
+        if not params_path.exists() or not results_path.exists():
             continue
         try:
             params  = json.loads(params_path.read_text())
             results = json.loads(results_path.read_text())
         except Exception:
             continue
-        if params.get("fidelity") != fidelity:
+        if fidelity is not None and params.get("fidelity") != fidelity:
             continue
 
         flat  = _flat_params(params)
-        # fingerprint = all numeric params rounded to 4 sig figs
         key   = tuple(round(v, 4) for v in flat.values())
         mtime = results_path.stat().st_mtime
         rec   = {"run_dir": run_dir, "params": params, "results": results, "flat": flat}
-
         if key not in best or mtime > best[key][0]:
             best[key] = (mtime, rec)
 
     return [v for _, v in best.values()]
 
 
-# ── Time-series loaders ───────────────────────────────────────────────────────
+# ── Time-series computation ───────────────────────────────────────────────────
 
-def _vel_rms_series(run_dir: Path) -> tuple[np.ndarray, np.ndarray] | None:
+def _t_rock(params: dict) -> float:
+    """Non-dimensional rocking period T = 2π / omega_b."""
+    return 2 * math.pi / params.get("omega_b", 3.14)
+
+
+def _cycle_avg_urms(run_dir: Path, T_rock: float) -> tuple[np.ndarray, np.ndarray] | None:
+    """Rolling mean of sqrt(ux_rms² + uy_rms²) over one rocking period.
+
+    Returns (t_rel, urms_smooth) where t_rel = t - t[0].
+    """
     arr = _load_dat(run_dir / "normf.dat")
     if arr is None or arr.shape[1] < 12:
         return None
-    return arr[:, _N_T], np.sqrt(arr[:, _N_UX_RMS] ** 2 + arr[:, _N_UY_RMS] ** 2)
+    t    = arr[:, _N_T]
+    urms = np.sqrt(arr[:, _N_UX_RMS] ** 2 + arr[:, _N_UY_RMS] ** 2)
+
+    dt_uniform = float(np.median(np.diff(t)))
+    if dt_uniform <= 0:
+        return None
+    half = max(1, int(round(0.5 * T_rock / dt_uniform)))
+    kernel = np.ones(2 * half + 1) / (2 * half + 1)
+    smooth = np.convolve(urms, kernel, mode="same")
+    return t - t[0], smooth
 
 
-def _c_star_series(run_dir: Path) -> tuple[np.ndarray, np.ndarray] | None:
+def _rolling_kla(
+    run_dir: Path, T_rock: float
+) -> tuple[np.ndarray, np.ndarray] | None:
+    """Instantaneous kLa from slope of ln(1 - C*(t)) over a rolling window.
+
+    Window = _KLA_WINDOW_PERIODS * T_rock.
+    Returns (t_rel, kla) where t_rel is time relative to injection.
+    Only covers t > t_inject; returns None if fewer than 2 window-widths of
+    post-injection data are available.
+    """
     tr = _load_dat(run_dir / "tr_oxy.dat")
     vf = _load_dat(run_dir / "vol_frac_interf.dat")
     if tr is None or vf is None or tr.shape[1] < 3 or vf.shape[1] < 3:
         return None
+
     f_mean = float(vf[:, _V_F_LIQ].mean())
     if f_mean <= 0:
         return None
-    return tr[:, _T_T], tr[:, _T_OXY_SUM] / f_mean
+
+    t   = tr[:, _T_T]
+    c   = tr[:, _T_OXY_SUM] / f_mean   # C_liq (≡ C* since C_sat=1)
+
+    inj = np.where(c > 1e-6)[0]
+    if len(inj) == 0:
+        return None
+    i0 = inj[0]
+    t_inj = t[i0]
+
+    t_post = t[i0:] - t_inj
+    c_post = np.clip(c[i0:] / _C_SAT, 0.0, 1.0 - 1e-6)
+    lnterm = -np.log(1.0 - c_post)     # = kLa * (t - t_inj)
+
+    dt_uniform = float(np.median(np.diff(t_post))) if len(t_post) > 1 else 1.0
+    if dt_uniform <= 0:
+        return None
+    W = max(2, int(round(_KLA_WINDOW_PERIODS * T_rock / dt_uniform)))
+    if len(t_post) < 2 * W:
+        return None
+
+    # Rolling OLS slope of lnterm vs t_post
+    kla = np.full(len(t_post), np.nan)
+    for k in range(W, len(t_post) - W):
+        sl = slice(k - W, k + W + 1)
+        x  = t_post[sl] - t_post[k]
+        y  = lnterm[sl] - lnterm[k]
+        sx2 = float(np.dot(x, x))
+        if sx2 > 0:
+            kla[k] = float(np.dot(x, y)) / sx2
+
+    valid = ~np.isnan(kla)
+    if valid.sum() < 5:
+        return None
+    return t_post[valid], kla[valid]
 
 
-def _chi_series(run_dir: Path) -> tuple[np.ndarray, np.ndarray] | None:
+def _c_star_series(
+    run_dir: Path,
+) -> tuple[np.ndarray, np.ndarray] | None:
+    """Normalised C*(t) = C_liq / C_sat, time relative to injection."""
     tr = _load_dat(run_dir / "tr_oxy.dat")
     vf = _load_dat(run_dir / "vol_frac_interf.dat")
-    if tr is None or vf is None or tr.shape[1] < 10 or vf.shape[1] < 3:
+    if tr is None or vf is None or tr.shape[1] < 3 or vf.shape[1] < 3:
         return None
+
     f_mean = float(vf[:, _V_F_LIQ].mean())
     if f_mean <= 0:
         return None
-    t, c_sum, c_sum2 = tr[:, _T_T], tr[:, _T_C2_SUM], tr[:, _T_C2_SUM2]
-    c_mean  = c_sum  / f_mean
-    sigma2  = c_sum2 / f_mean - c_mean ** 2
-    nonzero = np.where(c_sum > 1e-10 * f_mean)[0]
-    if not len(nonzero):
-        return None
-    t0 = int(nonzero[0])
-    s2max = float(sigma2[t0])
-    if s2max <= 0:
-        return None
-    chi = np.clip(1.0 - sigma2 / s2max, 0.0, 1.0)
-    chi[:t0] = 0.0
-    return t, chi
+
+    t = tr[:, _T_T]
+    c = tr[:, _T_OXY_SUM] / f_mean / _C_SAT
+
+    inj = np.where(c > 1e-6)[0]
+    t_inj = t[inj[0]] if len(inj) else 0.0
+    return t - t_inj, np.clip(c, 0.0, 1.0)
 
 
-# ── Visual encoding helpers ───────────────────────────────────────────────────
+# ── Visual encoding ───────────────────────────────────────────────────────────
 
 def _linear_map(val: float, vals: list[float], lo: float, hi: float) -> float:
     mn, mx = min(vals), max(vals)
@@ -231,18 +295,31 @@ def _linear_map(val: float, vals: list[float], lo: float, hi: float) -> float:
 
 # ── Main plot ─────────────────────────────────────────────────────────────────
 
-def plot(fidelity: int = 5,
-         color_param: str | None = None,
-         lw_param: str | None = None,
-         out_path: Path | None = None) -> Path:
+def plot(
+    fidelity: int | None = None,
+    experiment: Path | None = None,
+    color_param: str | None = None,
+    lw_param: str | None = None,
+    out_path: Path | None = None,
+) -> Path:
+    if experiment is None and fidelity is None:
+        raise ValueError("Provide --experiment or --fidelity")
 
-    records = _load_runs(_RUNS_ROOT, fidelity)
+    run_ids: set[str] | None = None
+    if experiment is not None:
+        meta_path = Path(experiment) / "_sweep_metadata.json"
+        if not meta_path.exists():
+            raise FileNotFoundError(f"No _sweep_metadata.json in {experiment}")
+        meta    = json.loads(meta_path.read_text())
+        run_ids = set(meta.get("run_ids", []))
+        if not run_ids:
+            raise RuntimeError(f"_sweep_metadata.json has no run_ids in {experiment}")
+
+    records = _load_runs(_RUNS_ROOT, fidelity=fidelity, run_ids=run_ids)
     if not records:
-        raise RuntimeError(f"No fidelity-{fidelity} runs found in {_RUNS_ROOT}")
+        raise RuntimeError("No matching runs found")
 
     sweep_dims = _detect_sweep_dims(records)
-
-    # Resolve color and lw params
     if color_param is None:
         color_param = sweep_dims[0] if sweep_dims else "rpm"
     if lw_param is None:
@@ -254,70 +331,70 @@ def plot(fidelity: int = 5,
                          if lw_param and not math.isnan(r["flat"].get(lw_param, float("nan")))}) \
                  if lw_param else []
 
-    cmap      = matplotlib.colormaps["plasma"]
+    cmap       = matplotlib.colormaps["plasma"]
     color_norm = mcolors.Normalize(vmin=min(color_vals), vmax=max(color_vals))
 
     fig, axes = plt.subplots(3, 1, figsize=(10, 9), sharex=True, constrained_layout=True)
-    ax_vel, ax_cstar, ax_chi = axes
+    ax_urms, ax_kla, ax_cstar = axes
 
+    fid_label = str(fidelity) if fidelity is not None else Path(experiment).name
     plotted = 0
     for rec in sorted(records, key=lambda r: r["flat"].get(color_param, 0)):
         run_dir = rec["run_dir"]
         flat    = rec["flat"]
+        params  = rec["params"]
 
         cv  = flat.get(color_param, float("nan"))
-        lwv = flat.get(lw_param, float("nan")) if lw_param else float("nan")
-
+        lwv = flat.get(lw_param,    float("nan")) if lw_param else float("nan")
         if math.isnan(cv):
             continue
 
         color = cmap(color_norm(cv))
         lw    = _linear_map(lwv, lw_vals, _LW_MIN, _LW_MAX) if lw_vals and not math.isnan(lwv) \
                 else (_LW_MIN + _LW_MAX) / 2
+        kw    = dict(color=color, linewidth=lw, alpha=0.7)
 
-        kw = dict(color=color, linewidth=lw, alpha=0.75)
+        T_rock = _t_rock(params)
 
-        vel_data   = _vel_rms_series(run_dir)
+        urms_data  = _cycle_avg_urms(run_dir, T_rock)
+        kla_data   = _rolling_kla(run_dir, T_rock)
         cstar_data = _c_star_series(run_dir)
-        chi_data   = _chi_series(run_dir)
 
-        if vel_data   is not None: ax_vel.plot(vel_data[0],   vel_data[1],   **kw)
+        if urms_data  is not None: ax_urms.plot( urms_data[0],  urms_data[1],  **kw)
+        if kla_data   is not None: ax_kla.plot(  kla_data[0],   kla_data[1],   **kw)
         if cstar_data is not None: ax_cstar.plot(cstar_data[0], cstar_data[1], **kw)
-        if chi_data   is not None: ax_chi.plot(chi_data[0],   chi_data[1],   **kw)
         plotted += 1
 
     color_lbl = _param_label(color_param)
     lw_lbl    = _param_label(lw_param) if lw_param else "fixed"
 
-    ax_vel.set_ylabel(r"$u'_{rms}(t)$ [nd]", fontsize=10)
-    ax_vel.set_title(
-        f"Convergence diagnostics — fidelity {fidelity}  "
-        f"({plotted} runs)   color={color_lbl}   lw={lw_lbl}",
+    ax_urms.set_ylabel(r"$\langle u_{rms} \rangle_T$ [nd]", fontsize=10)
+    ax_urms.set_title(
+        f"Convergence diagnostics — {fid_label}  ({plotted} runs)"
+        f"   color={color_lbl}   lw={lw_lbl}",
         fontsize=10,
     )
-    ax_vel.set_yscale("log")
-    ax_vel.grid(True, which="both", alpha=0.3)
+    ax_urms.set_yscale("log")
+    ax_urms.grid(True, which="both", alpha=0.3)
 
-    ax_cstar.set_ylabel(r"$C^*(t)$", fontsize=10)
+    ax_kla.set_ylabel(r"Rolling $kLa$ (nd)", fontsize=10)
+    ax_kla.set_ylim(bottom=0)
+    ax_kla.axhline(0, color="gray", lw=0.6, ls="--", alpha=0.4)
+    ax_kla.grid(True, alpha=0.3)
+
+    ax_cstar.set_ylabel(r"$C^*(t) = C_{liq}/C_{sat}$", fontsize=10)
+    ax_cstar.set_xlabel(r"$t - t_{inject}$ [nd]", fontsize=10)
     ax_cstar.set_ylim(-0.02, 1.05)
-    ax_cstar.axhline(0.25, color="gray", lw=0.8, ls="--", alpha=0.5, label="C*=0.25")
+    ax_cstar.axhline(0.10, color="gray", lw=0.8, ls="--", alpha=0.5, label=r"$C^*=0.10$")
+    ax_cstar.axhline(0.25, color="gray", lw=0.8, ls=":",  alpha=0.5, label=r"$C^*=0.25$")
     ax_cstar.grid(True, alpha=0.3)
     ax_cstar.legend(fontsize=8, loc="upper left")
 
-    ax_chi.set_ylabel(r"$\chi(t)$", fontsize=10)
-    ax_chi.set_xlabel("Non-dimensional time $t$ [-]", fontsize=10)
-    ax_chi.set_ylim(-0.02, 1.05)
-    ax_chi.axhline(0.95, color="gray", lw=0.8, ls="--", alpha=0.5, label=r"$\chi=0.95$")
-    ax_chi.grid(True, alpha=0.3)
-    ax_chi.legend(fontsize=8, loc="upper left")
-
-    # Colorbar
     sm = plt.cm.ScalarMappable(cmap=cmap, norm=color_norm)
     sm.set_array([])
     cbar = fig.colorbar(sm, ax=axes, fraction=0.02, pad=0.02)
     cbar.set_label(color_lbl, fontsize=10)
 
-    # Linewidth legend
     if lw_vals:
         from matplotlib.lines import Line2D
         lw_handles = [
@@ -326,12 +403,16 @@ def plot(fidelity: int = 5,
                    label=f"{lw_lbl}={v:.3g}")
             for v in lw_vals
         ]
-        ax_vel.legend(handles=lw_handles, fontsize=7, loc="upper right",
-                      title="Line width", title_fontsize=7)
+        ax_urms.legend(handles=lw_handles, fontsize=7, loc="upper right",
+                       title="Line width", title_fontsize=7)
 
     if out_path is None:
         _FIG_DIR.mkdir(parents=True, exist_ok=True)
-        out_path = _FIG_DIR / f"convergence_sweep_f{fidelity}.pdf"
+        if experiment is not None:
+            stem = Path(experiment).name
+        else:
+            stem = f"sweep_f{fidelity}"
+        out_path = _FIG_DIR / f"convergence_{stem}.pdf"
 
     fig.savefig(out_path, dpi=150, bbox_inches="tight")
     plt.close(fig)
@@ -340,15 +421,20 @@ def plot(fidelity: int = 5,
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--fidelity", type=int, default=5)
-    parser.add_argument("--color",  dest="color_param", default=None,
-                        help="Param name to encode as color (default: auto-detected)")
-    parser.add_argument("--lw",     dest="lw_param",    default=None,
-                        help="Param name to encode as linewidth (default: auto-detected)")
-    parser.add_argument("--out", type=Path, default=None)
+    grp = parser.add_mutually_exclusive_group(required=True)
+    grp.add_argument("--experiment", type=Path, default=None,
+                     help="Path to experiment dir (e.g. experiments/sweep_fb_theta_l7)")
+    grp.add_argument("--fidelity", type=int, default=None,
+                     help="Load all runs at this fidelity from runs/")
+    parser.add_argument("--color",  dest="color_param", default=None)
+    parser.add_argument("--lw",     dest="lw_param",    default=None)
+    parser.add_argument("--out",    type=Path,           default=None)
     args = parser.parse_args()
-    out = plot(fidelity=args.fidelity,
-               color_param=args.color_param,
-               lw_param=args.lw_param,
-               out_path=args.out)
+    out = plot(
+        fidelity=args.fidelity,
+        experiment=args.experiment,
+        color_param=args.color_param,
+        lw_param=args.lw_param,
+        out_path=args.out,
+    )
     print(f"Saved: {out}")

@@ -374,40 +374,40 @@ def parse_sweep_config(path: str | Path) -> tuple[list[dict], dict]:
 
 
 def _init_experiment_store(path: Path, options: dict,
-                            params_list: list[dict]) -> str | None:
-    """Create the ExperimentData store for this sweep and return its path.
+                            params_list: list[dict]) -> str:
+    """Create the experiment store for this sweep and return its path.
 
     The store lives at experiments/<config_stem>/ and is the canonical diary
     for all runs produced by this sweep config.  Each completed segment will
     append its inputs and all 10 KPIs via postprocess._register_to_experiment_store.
 
-    Returns the absolute path string to store in each segment's params.json
-    as _experiment_dir, or None if f3dasm is unavailable.
+    Always creates the directory and writes _sweep_metadata.json regardless of
+    whether f3dasm is available — run_ids are appended to that file after
+    submission so plot_convergence.py can load exactly the right runs.
     """
     import time as _time
-    try:
-        import pandas as pd
-        from f3dasm import ExperimentData
-    except ImportError:
-        return None
 
     exp_name = path.stem                  # e.g. "sweep_fb_theta_l7"
     exp_dir  = _PROJECT_ROOT / "experiments" / exp_name
     exp_dir.mkdir(parents=True, exist_ok=True)
 
-    # Write sweep provenance metadata alongside the ED store
     meta = {
-        "config_file":   str(path.resolve()),
-        "created_at":    _time.strftime("%Y-%m-%dT%H:%M:%SZ", _time.gmtime()),
+        "config_file":    str(path.resolve()),
+        "created_at":     _time.strftime("%Y-%m-%dT%H:%M:%SZ", _time.gmtime()),
         "n_runs_planned": len(params_list),
-        "sweep_options": {k: v for k, v in options.items()
-                          if not k.startswith("_")},
+        "run_ids":        [],          # populated by submit_sweep after submission
+        "sweep_options":  {k: v for k, v in options.items()
+                           if not k.startswith("_")},
     }
-    (exp_dir / "_sweep_metadata.json").write_text(
-        json.dumps(meta, indent=2)
-    )
+    (exp_dir / "_sweep_metadata.json").write_text(json.dumps(meta, indent=2))
 
-    print(f"  Experiment store: {exp_dir}")
+    # f3dasm ExperimentData store (optional — only if f3dasm is installed)
+    try:
+        import pandas as pd   # noqa: F401
+        from f3dasm import ExperimentData  # noqa: F401
+    except ImportError:
+        pass
+
     return str(exp_dir)
 
 
@@ -461,6 +461,7 @@ def submit_sweep(path: str | Path) -> list[str]:
         if auto_walltime:
             print("  Walltime: auto (fitted from empirical logstats + 20% headroom)\n")
 
+        _submitted_run_ids: list[str] = []
         for i, raw_p in enumerate(params_list):
             p = {k: (list(v) if isinstance(v, list) else v) for k, v in raw_p.items()}
             p["run_id"]       = uuid4().hex[:8]
@@ -499,6 +500,7 @@ def submit_sweep(path: str | Path) -> list[str]:
                 end="",
             )
 
+            _submitted_run_ids.append(p["run_id"])
             if submit:
                 validate_params(p)
                 job_id = simulate.submit_slurm(
@@ -516,6 +518,13 @@ def submit_sweep(path: str | Path) -> list[str]:
             else:
                 job_ids.append(f"dry-{i}")
                 print(f"  → dry run")
+
+        # Record the submitted run IDs in the experiment metadata so that
+        # plot_convergence.py --experiment can load exactly these runs.
+        meta_path = Path(experiment_dir) / "_sweep_metadata.json"
+        meta = json.loads(meta_path.read_text())
+        meta["run_ids"] = _submitted_run_ids
+        meta_path.write_text(json.dumps(meta, indent=2))
 
         print(f"\nDone. {len(job_ids)} independent run(s) submitted: {job_ids}")
         return job_ids
