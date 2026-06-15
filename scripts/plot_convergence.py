@@ -223,7 +223,11 @@ def _cycle_avg_urms(
     kernel = np.ones(2 * half + 1) / (2 * half + 1)
     smooth = np.convolve(urms, kernel, mode="same")
 
-    t_rel = t - t_inj
+    # Trim the half-kernel edge region where zero-padding corrupts the average
+    smooth = smooth[half:-half] if half < len(smooth) // 2 else smooth
+    t_trim = t[half:-half] if half < len(t) // 2 else t
+
+    t_rel = t_trim - t_inj
     mask  = t_rel >= 0
     return t_rel[mask], smooth[mask]
 
@@ -397,8 +401,10 @@ def plot(
     color_lbl = _param_label(color_param)
     lw_lbl    = _param_label(lw_param) if lw_param else "fixed"
 
+    # Set left margin to -5% of whatever xmax matplotlib chose from the data
+    _, x_right = ax_urms.get_xlim()
     for ax in axes:
-        ax.set_xlim(left=0)
+        ax.set_xlim(left=-0.05 * x_right)
 
     ax_urms.set_ylabel(r"$\langle u_{rms} \rangle_T$ [nd]", fontsize=10)
     ax_urms.set_title(
