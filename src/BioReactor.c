@@ -483,6 +483,13 @@ event tracer(t = t_mix){
       if ((f[] > 0.5) && (cs[]==1) && (y >= y_liq_mid))
         c2[] = 1.0;    // Upper half of liquid
     }
+    // Synchronise MPI ghost cells after direct foreach() write.
+    // Without this, ranks that border the upper liquid region see stale c2
+    // values in neighbour halos at the next tracer_diffusion call, producing
+    // a spurious large gradient (c_tracer_alpha=1e30 amplifies beta enormously)
+    // that crashes h_relax under MPI FP trapping.  Same fix as boundary({oxy})
+    // in the oxygen event.
+    boundary ({c2});
   }
   #endif
 

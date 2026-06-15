@@ -44,12 +44,176 @@ from __future__ import annotations
 import itertools
 import json
 import math
+import re
 import sys
 from pathlib import Path
 from uuid import uuid4
 
 _PROJECT_ROOT = Path(__file__).parents[1]
 sys.path.insert(0, str(_PROJECT_ROOT))
+
+
+# ── walltime estimation ───────────────────────────────────────────────────────
+
+_LOGSTATS_PAT = re.compile(
+    r"t:\s*([\d.]+).*Wall clock time \(s\):\s*([\d.]+)"
+)
+
+def _collect_timing_data(runs_root: Path) -> list[tuple[int, int, float]]:
+    """Return [(fidelity, ntasks, wall_s_per_t_nd), ...] from all logstats.dat.
+
+    Includes both completed and timed-out runs — the last recorded row gives
+    the instantaneous rate, which is valid regardless of whether the run
+    finished.  Deduplicates by resolved logstats path so scratch-mirrored
+    files are not double-counted.
+    """
+    scratch = Path("/oscar/scratch/eaguerov/mpi_runs")
+    search_dirs = [runs_root, scratch] if scratch.exists() else [runs_root]
+
+    seen: set[str] = set()
+    data: list[tuple[int, int, float]] = []
+
+    for root in search_dirs:
+        for d in root.iterdir():
+            if not d.is_dir():
+                continue
+            lf = d / "logstats.dat"
+            pf = d / "params.json"
+            key = str(lf.resolve())
+            if key in seen or not lf.exists() or not pf.exists():
+                continue
+            seen.add(key)
+            try:
+                p = json.loads(pf.read_text())
+                fid    = p.get("fidelity")
+                ntasks = p.get("_ntasks", 1)
+                if not fid:
+                    continue
+                rows = _LOGSTATS_PAT.findall(lf.read_text())
+                if len(rows) < 10:
+                    continue
+                t_sim  = float(rows[-1][0])
+                wall_s = float(rows[-1][1])
+                if t_sim <= 0 or wall_s <= 0:
+                    continue
+                data.append((int(fid), int(ntasks), wall_s / t_sim))
+            except Exception:
+                pass
+    return data
+
+
+def _fit_timing_model(
+    data: list[tuple[int, int, float]],
+) -> tuple[float, float, float] | None:
+    """OLS fit of log(rate) = alpha*fidelity + beta*log(ntasks) + gamma.
+
+    Returns (alpha, beta, gamma) or None if fewer than 3 distinct points.
+    Uses a simple numpy-free normal-equations solve to avoid adding a hard dep.
+    """
+    # deduplicate to one median per (fid, ntasks) bucket so large sweeps
+    # don't dominate the fit
+    import statistics
+    from collections import defaultdict
+    buckets: dict[tuple, list] = defaultdict(list)
+    for fid, ntasks, rate in data:
+        buckets[(fid, ntasks)].append(rate)
+    if len(buckets) < 3:
+        return None
+
+    rows = []
+    for (fid, ntasks), rates in buckets.items():
+        # use 75th-percentile (conservative — faster jobs are the tail risk)
+        s = sorted(rates)
+        p75 = s[int(0.75 * len(s))]
+        rows.append((fid, math.log(max(ntasks, 1)), math.log(p75)))
+
+    # design matrix X (n×3): [fid, log(ntasks), 1]
+    n = len(rows)
+    Xt = [[r[0] for r in rows], [r[1] for r in rows], [1.0] * n]
+    y  = [r[2] for r in rows]
+
+    # normal equations: (X^T X) b = X^T y  — 3×3 system, solve by Cramer
+    def dot(a, b):
+        return sum(x * y for x, y in zip(a, b))
+
+    XtX = [[dot(Xt[i], Xt[j]) for j in range(3)] for i in range(3)]
+    Xty = [dot(Xt[i], y) for i in range(3)]
+
+    # Gaussian elimination with partial pivoting on 3×3
+    A = [row[:] + [Xty[i]] for i, row in enumerate(XtX)]
+    for col in range(3):
+        pivot = max(range(col, 3), key=lambda r: abs(A[r][col]))
+        A[col], A[pivot] = A[pivot], A[col]
+        if abs(A[col][col]) < 1e-12:
+            return None
+        for row in range(col + 1, 3):
+            f = A[row][col] / A[col][col]
+            A[row] = [A[row][k] - f * A[col][k] for k in range(4)]
+    coeffs = [0.0] * 3
+    for i in range(2, -1, -1):
+        coeffs[i] = (A[i][3] - sum(A[i][j] * coeffs[j] for j in range(i + 1, 3))) / A[i][i]
+    return float(coeffs[0]), float(coeffs[1]), float(coeffs[2])
+
+
+def estimate_walltime(
+    fidelity: int,
+    t_end: float,
+    ntasks: int = 1,
+    runs_root: Path | None = None,
+    headroom: float = 1.20,
+) -> str:
+    """Predict SLURM walltime for a run, fitted from empirical logstats data.
+
+    Strategy:
+      1. If the requested (fidelity, ntasks) bucket has direct observations,
+         use the 75th-percentile of those rates — avoids poor model extrapolation.
+      2. Otherwise fall back to an OLS model:
+           log(rate) = alpha*fidelity + beta*log(ntasks) + gamma
+         fit on 75th-percentile rates per bucket.
+      3. If fewer than 3 buckets exist, return "24:00:00" (conservative default).
+
+    Output: HH:MM:SS rounded UP to the nearest 30 minutes after applying headroom.
+    """
+    if runs_root is None:
+        runs_root = _PROJECT_ROOT / "runs"
+
+    data = _collect_timing_data(runs_root)
+    if not data:
+        return "24:00:00"
+
+    # Build per-bucket 75th-percentile rates
+    from collections import defaultdict
+    buckets: dict[tuple, list] = defaultdict(list)
+    for fid, n, rate in data:
+        buckets[(fid, n)].append(rate)
+
+    def _p75(rates: list) -> float:
+        s = sorted(rates)
+        return s[int(0.75 * len(s))]
+
+    # ── Direct observation ───────────────────────────────────────────────────
+    key = (fidelity, ntasks)
+    if key in buckets:
+        rate_s_per_tnd = _p75(buckets[key])
+    else:
+        # ── Model fallback ───────────────────────────────────────────────────
+        model_data = [(fid, n, _p75(r)) for (fid, n), r in buckets.items()]
+        coeffs = _fit_timing_model(model_data)
+        if coeffs is None:
+            return "24:00:00"
+        alpha, beta, gamma = coeffs
+        rate_s_per_tnd = math.exp(
+            alpha * fidelity + beta * math.log(max(ntasks, 1)) + gamma
+        )
+
+    predicted_s = rate_s_per_tnd * t_end * headroom
+
+    # Round UP to nearest 30 minutes
+    half_hours = math.ceil(predicted_s / 1800)
+    total_s    = half_hours * 1800
+    h, rem     = divmod(int(total_s), 3600)
+    m          = rem // 60
+    return f"{h:02d}:{m:02d}:00"
 
 import scripts.simulate as simulate
 from scripts.chain import _t_period_nd
@@ -267,7 +431,7 @@ def submit_sweep(path: str | Path) -> list[str]:
     params_list, options = parse_sweep_config(path)
 
     runs_root    = _PROJECT_ROOT / "runs"
-    walltime     = options.get("walltime", "04:00:00")
+    walltime_cfg = options.get("walltime", "04:00:00")   # may be "auto"
     cpus         = int(options.get("cpus", 4))
     mem          = str(options.get("mem", "12G"))
     submit       = bool(options.get("submit", True))
@@ -293,12 +457,28 @@ def submit_sweep(path: str | Path) -> list[str]:
         print(f"  Experiment store: {experiment_dir or '(f3dasm unavailable)'}")
         print(f"  Mode: independent ({mpi_label}) — {len(params_list)} runs\n")
 
+        auto_walltime = walltime_cfg == "auto"
+        if auto_walltime:
+            print("  Walltime: auto (fitted from empirical logstats + 20% headroom)\n")
+
         for i, raw_p in enumerate(params_list):
             p = {k: (list(v) if isinstance(v, list) else v) for k, v in raw_p.items()}
             p["run_id"]       = uuid4().hex[:8]
             p["n_mix_cycles"] = p.get("n_mix_cycles", n_mix)
             T_per             = _t_period_nd(p)
             p["t_end"]        = p["n_mix_cycles"] * T_per + t_buf
+
+            walltime = (
+                estimate_walltime(
+                    fidelity=int(p["fidelity"]),
+                    t_end=float(p["t_end"]),
+                    ntasks=ntasks or 1,
+                    runs_root=runs_root,
+                )
+                if auto_walltime
+                else walltime_cfg
+            )
+
             p["_walltime"]    = walltime
             p["_mem"]         = mem
             if ntasks is not None:
@@ -314,7 +494,8 @@ def submit_sweep(path: str | Path) -> list[str]:
                 f"  [{i:3d}] run={p['run_id']}"
                 f"  omega_b={p.get('omega_b', '?'):.4g}"
                 f"  n_mix={p['n_mix_cycles']}"
-                f"  t_end≈{p['t_end']:.1f}",
+                f"  t_end≈{p['t_end']:.1f}"
+                f"  walltime={walltime}",
                 end="",
             )
 

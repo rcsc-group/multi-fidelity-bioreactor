@@ -244,6 +244,7 @@ def submit_chain(cfg: dict) -> list[str]:
                 template=template,
                 checkpoint=checkpoint,
                 dependency=dependency,
+                cpus=1 if use_mpi else 4,
             )
             job_ids.append(job_id)
             print(f"  → job {job_id}")
