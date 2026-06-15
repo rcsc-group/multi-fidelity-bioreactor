@@ -66,12 +66,39 @@ _V_F_LIQ = 2
 
 _C_SAT   = 1.0      # confirmed from longest runs (oxy tracer in [0,1] in gas)
 _LW_MIN, _LW_MAX = 0.6, 2.8
-_KLA_WINDOW_PERIODS = 2   # rolling window for kLa estimate, in rocking cycles
+
+# Rolling window width for the kLa estimate, measured in rocking periods.
+#
+# Each OLS slope is computed over a window of W = _KLA_WINDOW_PERIODS * T_rock
+# centred on each time point (both the u_rms rolling mean and the kLa window
+# use the same unit).  One rocking period is the smallest physically meaningful
+# averaging interval: it exactly cancels the cyclic oscillation imposed by the
+# rocking motion, giving a quasi-steady value.
+#
+# Why 1 and not more?
+#   The kLa signal is available only while C* ∈ [0.05, 0.80].  For low-RPM runs
+#   (T_rock ≈ 4 nd), a 2-period window consumes 8 nd of that window just as
+#   edge-trim, and for cases with high non-dim kLa the C*=0.80 ceiling can be
+#   reached at t_rel ≈ 13 nd — leaving only ~5 nd of valid signal (~10 % of the
+#   x-axis).  One period halves the edge cost and restores ~18 % coverage without
+#   sacrificing cancellation of the cyclic oscillation.  For high-RPM runs
+#   (T_rock ≈ 1.6 nd) the single-period window is 1.6 nd, still wide enough for
+#   a well-conditioned OLS slope.
+_KLA_WINDOW_PERIODS = 1   # rolling window for kLa estimate, in rocking cycles
 
 
 # ── Raw file loading ──────────────────────────────────────────────────────────
 
 def _load_dat(path: Path) -> np.ndarray | None:
+    """Parse a Basilisk .dat file into a 2-D float array.
+
+    Basilisk output files use space-delimited columns with an optional header
+    line starting with 'i' (iteration index).  Lines that are blank or start
+    with 'i' are skipped; everything else is cast to float.
+
+    Returns None on any I/O or parse error so callers can skip incomplete runs
+    without crashing the whole figure.
+    """
     try:
         lines = [l for l in path.read_text().splitlines()
                  if l.strip() and not l.strip().startswith("i")]
@@ -85,6 +112,17 @@ def _load_dat(path: Path) -> np.ndarray | None:
 # ── Parameter extraction ──────────────────────────────────────────────────────
 
 def _flat_params(params: dict) -> dict[str, float]:
+    """Flatten a nested params.json dict into a scalar-valued dict for comparisons.
+
+    BioReactor params store some quantities as lists (e.g. theta_max is a
+    3-harmonic vector [theta1, theta2, theta3]).  This function extracts just
+    the components needed for sweep detection and visual encoding, all as plain
+    floats.  Missing or None values are replaced with NaN so they are ignored
+    during unique-value counting in _detect_sweep_dims.
+
+    The 'rpm' key is derived from omega_b (rad/s → rev/min) because RPM is the
+    unit scientists actually reason about; 'omega_b' is also kept for completeness.
+    """
     def _get(d, key, default=float("nan")):
         return float(d.get(key, default)) if d.get(key) is not None else default
 
@@ -115,6 +153,16 @@ def _flat_params(params: dict) -> dict[str, float]:
 
 
 def _detect_sweep_dims(records: list[dict]) -> list[str]:
+    """Infer which parameters were swept by counting unique values across runs.
+
+    Returns parameter names sorted by descending unique-value count.  The first
+    entry is mapped to colour (continuous colormap) and the second to line width,
+    so the two most-varied dimensions dominate the visual encoding automatically
+    regardless of which parameters were actually swept.
+
+    omega_b is excluded when rpm is present — they carry identical information
+    and showing both would double-count the same swept dimension.
+    """
     all_keys = list(records[0]["flat"].keys())
     n_unique = {}
     for k in all_keys:
@@ -146,10 +194,21 @@ def _load_runs(
     fidelity: int | None = None,
     run_ids: set[str] | None = None,
 ) -> list[dict]:
-    """Load runs, deduplicating by param fingerprint (keep most recently modified).
+    """Load completed runs and deduplicate by parameter fingerprint.
 
-    If run_ids is given, only consider those run directories (experiment mode).
-    If fidelity is given as well, additionally filter by fidelity level.
+    Deduplication rule: when two run directories share an identical parameter
+    fingerprint (all flat_params values rounded to 4 d.p.), keep the one whose
+    results.json has the most recent modification time.  This handles the common
+    case where a sweep was resubmitted after a walltime extension — the newer run
+    directory supersedes the older one, and only one trace appears in the figure.
+
+    run_ids (experiment mode): restrict to a specific set of run directory names
+    (8-char hex UUIDs).  This ties the figure to a single experiment submission
+    and prevents contamination from benchmark runs or later sweeps that happen to
+    share the same parameters.
+
+    fidelity filter: applied on top of run_ids; useful if an experiment manifest
+    contains runs from multiple fidelity levels.
     """
     candidates = (
         [runs_root / rid for rid in run_ids if (runs_root / rid).is_dir()]
@@ -184,12 +243,26 @@ def _load_runs(
 # ── Time-series computation ───────────────────────────────────────────────────
 
 def _t_rock(params: dict) -> float:
-    """Non-dimensional rocking period T = 2π / omega_b."""
+    """Non-dimensional rocking period T = 2π / omega_b.
+
+    omega_b is already non-dimensionalised by T_bio = L/U in the solver, so
+    T_rock returned here is directly comparable to all time axes in the plots.
+    """
     return 2 * math.pi / params.get("omega_b", 3.14)
 
 
 def _t_inject(run_dir: Path) -> float | None:
-    """Return absolute injection time from tr_oxy.dat, or None if not found."""
+    """Return absolute (non-dim) oxygen injection time from tr_oxy.dat.
+
+    Injection is detected as the first time step where the volume-averaged liquid
+    oxygen concentration C_liq = oxy_liq_sum / f_liq rises above 1e-6.
+    f_liq is taken as the time-mean liquid volume fraction from vol_frac_interf.dat;
+    using the mean rather than the instantaneous value avoids false triggers from
+    momentary interface deformation.
+
+    Returns None if tr_oxy.dat or vol_frac_interf.dat is missing or empty (run
+    did not reach injection).
+    """
     tr = _load_dat(run_dir / "tr_oxy.dat")
     vf = _load_dat(run_dir / "vol_frac_interf.dat")
     if tr is None or vf is None or tr.shape[1] < 3 or vf.shape[1] < 3:
@@ -205,10 +278,21 @@ def _t_inject(run_dir: Path) -> float | None:
 def _cycle_avg_urms(
     run_dir: Path, T_rock: float, t_inj: float
 ) -> tuple[np.ndarray, np.ndarray] | None:
-    """Rolling mean of sqrt(ux_rms² + uy_rms²) over one rocking period.
+    """Rolling mean of u_rms = sqrt(ux_rms² + uy_rms²) over one rocking period.
 
-    Returns (t_rel, urms_smooth) where t_rel = t - t_inj, clipped to t_rel >= 0.
-    Aligns with the C* and kLa panels so all three share the same time origin.
+    u_rms is the global volume-averaged velocity magnitude.  It oscillates once
+    per rocking cycle because the bag accelerates and decelerates.  Averaging
+    over exactly one period T_rock cancels this cyclic signal and leaves the
+    slowly-varying envelope, whose plateau indicates that the flow has reached
+    quasi-steady state (QSS) before oxygen injection.
+
+    Implementation: box-kernel convolution of width (2*half+1) samples ≈ T_rock,
+    trimmed at both ends by `half` samples.  np.convolve with mode="same" zero-
+    pads the signal edges, which makes the first and last `half` values artificially
+    small.  Trimming them avoids a spurious three-fold dip at the end of the trace.
+
+    Returns (t_rel, urms_smooth) where t_rel = t - t_inj ≥ 0, aligned with the
+    kLa and C* panels.
     """
     arr = _load_dat(run_dir / "normf.dat")
     if arr is None or arr.shape[1] < 12:
@@ -232,19 +316,43 @@ def _cycle_avg_urms(
     return t_rel[mask], smooth[mask]
 
 
-_C_STAR_LO = 0.05   # below this C* the kLa signal is too noisy (early)
-_C_STAR_HI = 0.80   # above this C* → 1 makes ln(1-C*) blow up (late)
+# Valid C* range for kLa slope estimation.
+#
+# The kLa model assumes log-gassing kinetics: C*(t) = 1 − exp(−kLa · t_rel),
+# which linearises to ln(1 − C*) = −kLa · t_rel.
+#
+# _C_STAR_LO = 0.05: below this the signal is within the numerical noise floor —
+#   the first few time steps after injection have very few dissolved oxygen
+#   molecules and the slope is not yet meaningful.
+#
+# _C_STAR_HI = 0.80: above this ln(1 − C*) diverges rapidly as C* → 1, and
+#   small numerical errors in C* produce large errors in the slope.  0.80
+#   corresponds to ln(1 − 0.80) = ln(0.20) ≈ −1.6, a comfortable margin from
+#   the singularity at C*=1.
+_C_STAR_LO = 0.05
+_C_STAR_HI = 0.80
 
 
 def _rolling_kla(
     run_dir: Path, T_rock: float
 ) -> tuple[np.ndarray, np.ndarray] | None:
-    """Instantaneous kLa from slope of ln(1 - C*(t)) over a rolling window.
+    """Instantaneous kLa from the local OLS slope of ln(1 − C*(t)).
 
-    Window = _KLA_WINDOW_PERIODS * T_rock.
-    Returns (t_rel, kla) where t_rel is time relative to injection.
-    Only covers t > t_inject; returns None if fewer than 2 window-widths of
-    post-injection data are available.
+    Model: C*(t) = 1 − exp(−kLa · t_rel)  ⟹  ln(1 − C*) = −kLa · t_rel.
+    The slope of ln(1 − C*) vs t is therefore −kLa.
+
+    At each time step k, OLS is fit over the window [k−W, k+W] where
+    W = _KLA_WINDOW_PERIODS × T_rock / dt.  This is equivalent to computing the
+    instantaneous transfer coefficient averaged over _KLA_WINDOW_PERIODS rocking
+    cycles.  A plateau in this trace means kLa has converged and can be trusted
+    as the run's KPI.
+
+    Valid range restriction (C* ∈ [_C_STAR_LO, _C_STAR_HI]):
+      - below _C_STAR_LO the dissolved oxygen is below the noise floor
+      - above _C_STAR_HI the log term diverges toward infinity
+
+    Returns (t_rel, kla) relative to injection, or None if fewer than 5 valid
+    points remain after masking (e.g. very short post-injection windows).
     """
     tr = _load_dat(run_dir / "tr_oxy.dat")
     vf = _load_dat(run_dir / "vol_frac_interf.dat")
@@ -296,7 +404,18 @@ def _rolling_kla(
 def _c_star_series(
     run_dir: Path,
 ) -> tuple[np.ndarray, np.ndarray] | None:
-    """Normalised C*(t) = C_liq / C_sat, time relative to injection."""
+    """Return normalised C*(t) = C_liq(t) / C_sat, time relative to injection.
+
+    C_liq = oxy_liq_sum / f_liq is the domain-averaged dissolved oxygen
+    concentration in the liquid phase.  Dividing by _C_SAT=1.0 normalises it to
+    [0, 1].  C_SAT=1.0 is confirmed from the longest runs (> 80 mixing cycles):
+    the asymptotic value of C_liq converges to ≈ 0.99, consistent with a Henry
+    coefficient of 1 in the tracer model.
+
+    The time axis is shifted so t=0 coincides with oxygen injection, matching
+    Panels 1 and 2.  Returned values are clipped to [0, 1] to avoid minor
+    numerical overshoots appearing above the saturation line.
+    """
     tr = _load_dat(run_dir / "tr_oxy.dat")
     vf = _load_dat(run_dir / "vol_frac_interf.dat")
     if tr is None or vf is None or tr.shape[1] < 3 or vf.shape[1] < 3:
@@ -312,6 +431,43 @@ def _c_star_series(
     inj = np.where(c > 1e-6)[0]
     t_inj = t[inj[0]] if len(inj) else 0.0
     return t - t_inj, np.clip(c, 0.0, 1.0)
+
+
+def _tau98_series(
+    run_dir: Path,
+    t_inj: float,
+    params: dict,
+) -> tuple[np.ndarray, np.ndarray] | None:
+    """Return (t_rel, tau_98_Pa) from shear_stress.dat, time relative to injection.
+
+    shear_stress.dat column layout: i t tau_98 tau_mean tau_max (all non-dim).
+    Non-dimensional tau is converted to Pa using τ_Pa = τ_nd × μ_w / T_bio,
+    where T_bio = L / U_bio is the characteristic time scale matching postprocess.py.
+
+    t_rel = t − t_inject so the trace aligns with the kLa and C* panels;
+    negative t_rel is the pre-injection QSS period where shear should plateau.
+    """
+    arr = _load_dat(run_dir / "shear_stress.dat")
+    if arr is None or arr.shape[1] < 3:
+        return None
+
+    t      = arr[:, 1]
+    tau_nd = arr[:, 2]
+
+    # Dimensional conversion: τ_Pa = τ_nd × μ_w / T_bio
+    omega_b = params.get("omega_b", 3.14)
+    geom    = params.get("geometry") or {}
+    L       = float(geom.get("a", 0.25))
+    H       = float(geom.get("b", 0.071))
+    th      = math.radians((params.get("theta_max") or [7.0])[0])
+    T_per   = 2 * math.pi / omega_b
+    V       = L / 4 * (H + 0.5 * L * math.tan(th))
+    U       = V / (H * 0.5) / T_per
+    T_bio   = L / U
+    tau_pa  = tau_nd * 1.0e-3 / T_bio  # μ_w = 1e-3 Pa·s
+
+    t_rel = t - t_inj
+    return t_rel, tau_pa
 
 
 # ── Visual encoding ───────────────────────────────────────────────────────────
@@ -331,6 +487,7 @@ def plot(
     color_param: str | None = None,
     lw_param: str | None = None,
     out_path: Path | None = None,
+    tau_limit: float | None = None,
 ) -> Path:
     if experiment is None and fidelity is None:
         raise ValueError("Provide --experiment or --fidelity")
@@ -364,8 +521,8 @@ def plot(
     cmap       = matplotlib.colormaps["plasma"]
     color_norm = mcolors.Normalize(vmin=min(color_vals), vmax=max(color_vals))
 
-    fig, axes = plt.subplots(3, 1, figsize=(10, 9), sharex=True, constrained_layout=True)
-    ax_urms, ax_kla, ax_cstar = axes
+    fig, axes = plt.subplots(4, 1, figsize=(10, 12), sharex=True, constrained_layout=True)
+    ax_urms, ax_kla, ax_cstar, ax_tau = axes
 
     fid_label = str(fidelity) if fidelity is not None else Path(experiment).name
     plotted = 0
@@ -392,10 +549,12 @@ def plot(
         urms_data  = _cycle_avg_urms(run_dir, T_rock, t_inj)
         kla_data   = _rolling_kla(run_dir, T_rock)
         cstar_data = _c_star_series(run_dir)
+        tau_data   = _tau98_series(run_dir, t_inj, params)
 
         if urms_data  is not None: ax_urms.plot( urms_data[0],  urms_data[1],  **kw)
         if kla_data   is not None: ax_kla.plot(  kla_data[0],   kla_data[1],   **kw)
         if cstar_data is not None: ax_cstar.plot(cstar_data[0], cstar_data[1], **kw)
+        if tau_data   is not None: ax_tau.plot(  tau_data[0],   tau_data[1],   **kw)
         plotted += 1
 
     color_lbl = _param_label(color_param)
@@ -421,12 +580,20 @@ def plot(
     ax_kla.grid(True, alpha=0.3)
 
     ax_cstar.set_ylabel(r"$C^*(t) = C_{liq}/C_{sat}$", fontsize=10)
-    ax_cstar.set_xlabel(r"$t - t_{inject}$ [nd]", fontsize=10)
     ax_cstar.set_ylim(-0.02, 1.05)
     ax_cstar.axhline(0.10, color="gray", lw=0.8, ls="--", alpha=0.5, label=r"$C^*=0.10$")
     ax_cstar.axhline(0.25, color="gray", lw=0.8, ls=":",  alpha=0.5, label=r"$C^*=0.25$")
     ax_cstar.grid(True, alpha=0.3)
     ax_cstar.legend(fontsize=8, loc="upper left")
+
+    ax_tau.set_ylabel(r"$\tau_{98}$ [Pa]", fontsize=10)
+    ax_tau.set_xlabel(r"$t - t_{inject}$ [nd]", fontsize=10)
+    ax_tau.set_ylim(bottom=0)
+    ax_tau.grid(True, alpha=0.3)
+    if tau_limit is not None:
+        ax_tau.axhline(tau_limit, color="crimson", lw=1.2, ls="--", alpha=0.8,
+                       label=fr"$\tau_{{limit}}={tau_limit}$ Pa")
+        ax_tau.legend(fontsize=8, loc="upper right")
 
     sm = plt.cm.ScalarMappable(cmap=cmap, norm=color_norm)
     sm.set_array([])
@@ -464,9 +631,11 @@ if __name__ == "__main__":
                      help="Path to experiment dir (e.g. experiments/sweep_fb_theta_l7)")
     grp.add_argument("--fidelity", type=int, default=None,
                      help="Load all runs at this fidelity from runs/")
-    parser.add_argument("--color",  dest="color_param", default=None)
-    parser.add_argument("--lw",     dest="lw_param",    default=None)
-    parser.add_argument("--out",    type=Path,           default=None)
+    parser.add_argument("--color",     dest="color_param", default=None)
+    parser.add_argument("--lw",        dest="lw_param",    default=None)
+    parser.add_argument("--out",       type=Path,           default=None)
+    parser.add_argument("--tau-limit", type=float,          default=None,
+                        help="Draw a dashed red constraint line at this shear stress [Pa]")
     args = parser.parse_args()
     out = plot(
         fidelity=args.fidelity,
@@ -474,5 +643,6 @@ if __name__ == "__main__":
         color_param=args.color_param,
         lw_param=args.lw_param,
         out_path=args.out,
+        tau_limit=args.tau_limit,
     )
     print(f"Saved: {out}")

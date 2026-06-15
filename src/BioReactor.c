@@ -122,7 +122,7 @@ double (* gradient) (double, double, double) = minmod2;   // Custom slope limite
 
 // Buffers for file naming and output file pointers for statistics
 char buf1[100], buf2[100], buf3[100], buf4[100];
-FILE * fp_stats, * fp_norm, * fp_stats2, * fp_stats3;
+FILE * fp_stats, * fp_norm, * fp_stats2, * fp_stats3, * fp_tau;
 
 // Key physical and dimensionless parameters (computed in main)
 double U0, Re_w, Re_a, We_w, Fr, rhor, mur, Pe_tracer_1, Pe_tracer_2, Pe_oxy_1, Pe_oxy_2, Th, Th_d, Th_2d, U_bio, w_bio, w_bio_st, T_per_st, T_bio, t_change_st;
@@ -289,20 +289,23 @@ int main(int argc, char * argv[]){
 #endif
 
 // Output Files
-  char name[200],name2[200],name3[200],name4[200];
+  char name[200],name2[200],name3[200],name4[200],name5[200];
 
-  sprintf(name, "logstats.dat");        // Performance & time log
-  sprintf(name2,"normf.dat");           // Norms and statistics of fields
-  sprintf(name3,"vol_frac_interf.dat"); // Volume fraction & interface stats
-  sprintf(name4,"tr_oxy.dat");          // Tracer and oxygen stats
-  fp_stats = fopen(name, "w");   
+  sprintf(name, "logstats.dat");          // Performance & time log
+  sprintf(name2,"normf.dat");             // Norms and statistics of fields
+  sprintf(name3,"vol_frac_interf.dat");   // Volume fraction & interface stats
+  sprintf(name4,"tr_oxy.dat");            // Tracer and oxygen stats
+  sprintf(name5,"shear_stress.dat");      // 98th-percentile absolute shear stress
+  fp_stats = fopen(name, "w");
   fp_norm  = fopen(name2,"w");
   fp_stats2= fopen(name3,"w");
   fp_stats3= fopen(name4,"w");
+  fp_tau   = fopen(name5,"w");
 
   fprintf(fp_norm, "i t Omega_liq_avg Omega_liq_rms Omega_liq_vol Omega_liq_max ux_liq_avg ux_liq_rms ux_liq_vol ux_liq_max uy_liq_avg uy_liq_rms uy_liq_vol uy_liq_max \n");
   fprintf(fp_stats2, "i t f_liq_sum f_liq_interf posY_max posY_min \n");
   fprintf(fp_stats3, "i t oxy_liq_sum oxy_liq_sum2 c_liq_sum c_liq_sum2 c1_liq_sum c1_liq_sum2 c2_liq_sum c2_liq_sum2 c3_liq_sum c3_liq_sum2 \n");
+  fprintf(fp_tau,   "i t tau_98 tau_mean tau_max \n");
 
   NITERMAX = 1000;     // Max iterations per timestep
   TOLERANCE = 5.0e-4;  // // Solver tolerance (convergence criterion)
@@ -311,7 +314,7 @@ int main(int argc, char * argv[]){
   run();
   
   // Close all output files
-  fclose(fp_stats); fclose(fp_norm); fclose(fp_stats2); fclose(fp_stats3);
+  fclose(fp_stats); fclose(fp_norm); fclose(fp_stats2); fclose(fp_stats3); fclose(fp_tau);
 }
 
 
@@ -687,9 +690,71 @@ event normcal (t+=t_out; t<=t_end){
     c3_liq_sum    = statsf2(c3_liq).sum;
     c3_liq_sum2   = statsf2(c3_liq).sum2;
 
+    // ── 98th-percentile shear stress τ₉₈(t) ──────────────────────────────────
+    // tau = |μ(∂u/∂y + ∂v/∂x)| in the liquid domain (f[] > 0.5).
+    // Masked to bulk liquid to exclude interface artefacts.
+    //
+    // Implementation: two-pass 200-bin histogram — no dynamic memory, MPI-safe.
+    //   Pass 1: global tau_max via statsf2 (Basilisk internally does MPI_Allreduce).
+    //   Pass 2: local bin counts → MPI_Allreduce(SUM) → global percentile walk.
+    //
+    // Stencil mirrors vorticity() in basilisk/src/utils.h: uses face-centred
+    // velocity values u.x[0,±1] and u.y[±1] for 2nd-order centred differences.
+    scalar tau_liq[];
+    foreach() {
+      if (f[] > 0.5) {
+        // ∂u_x/∂y and ∂u_y/∂x at cell centre using face values (Basilisk MAC grid)
+        double du_dy = (u.x[0,1] - u.x[0,-1]) / (2.*Delta);
+        double dv_dx = (u.y[1]   - u.y[-1])   / (2.*Delta);
+        double mu_loc = mu(f[]);  // harmonic-mean viscosity (non-dimensional)
+        tau_liq[] = mu_loc * fabs(du_dy + dv_dx);
+      } else {
+        tau_liq[] = 0.;
+      }
+    }
+
+    // Pass 1: global statistics (MPI-collective inside Basilisk)
+    stats2 tau_s       = statsf2(tau_liq);
+    double tau_max_val  = tau_s.max;
+    double tau_mean_val = (tau_s.volume > 0.) ? tau_s.sum / tau_s.volume : 0.;
+    if (tau_max_val < 1e-14) tau_max_val = 1e-14;  // guard /0
+
+    // Pass 2: 200-bin histogram — collective across MPI ranks
+    #define TAU_BINS 200
+    long bins[TAU_BINS];
+    for (int k = 0; k < TAU_BINS; k++) bins[k] = 0;
+    foreach() {
+      if (f[] > 0.5) {
+        int b = (int)(tau_liq[] / tau_max_val * (TAU_BINS - 1));
+        if (b < 0)         b = 0;
+        if (b >= TAU_BINS) b = TAU_BINS - 1;
+        bins[b]++;
+      }
+    }
+    #if _MPI
+    {
+      long gbins[TAU_BINS];
+      MPI_Allreduce(bins, gbins, TAU_BINS, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+      for (int k = 0; k < TAU_BINS; k++) bins[k] = gbins[k];
+    }
+    #endif
+
+    // Walk bins to find 98th percentile
+    long total = 0, cumul = 0;
+    for (int k = 0; k < TAU_BINS; k++) total += bins[k];
+    double tau_98_val = tau_max_val;
+    for (int k = 0; k < TAU_BINS; k++) {
+      cumul += bins[k];
+      if (cumul >= (long)(0.98 * (double)total)) {
+        tau_98_val = tau_max_val * (k + 1.0) / TAU_BINS;
+        break;
+      }
+    }
+    #undef TAU_BINS
+
    // i, timestep, no of cells, real time elapsed, cpu time
    if (pid() == 0){
-      
+
       fprintf(fp_norm, "%i %g %g %g %g %g %g %g %g %g %g %g %g %g \n",i,t,omega_liq_avg,omega_liq_rms,omega_liq_vol,omega_liq_max,ux_liq_avg,ux_liq_rms,ux_liq_vol,ux_liq_max,uy_liq_avg,uy_liq_rms,uy_liq_vol,uy_liq_max);
       fflush(fp_norm);
 
@@ -699,6 +764,9 @@ event normcal (t+=t_out; t<=t_end){
       fprintf(fp_stats3, "%i %g %g %g %g %g %g %g %g %g %g %g \n",i,t,oxy_liq_sum,oxy_liq_sum2,c_liq_sum,c_liq_sum2,c1_liq_sum,c1_liq_sum2,c2_liq_sum,c2_liq_sum2,c3_liq_sum,c3_liq_sum2);
       //fprintf(fp_stats3, "%i %g %g %g %g %g \n",i,t,oxy_liq_sum,oxy_liq_sum2,c_liq_sum,c_liq_sum2);
       fflush(fp_stats3);
+
+      fprintf(fp_tau, "%i %g %g %g %g \n", i, t, tau_98_val, tau_mean_val, tau_max_val);
+      fflush(fp_tau);
    }
 }
 #endif
