@@ -188,10 +188,27 @@ def _t_rock(params: dict) -> float:
     return 2 * math.pi / params.get("omega_b", 3.14)
 
 
-def _cycle_avg_urms(run_dir: Path, T_rock: float) -> tuple[np.ndarray, np.ndarray] | None:
+def _t_inject(run_dir: Path) -> float | None:
+    """Return absolute injection time from tr_oxy.dat, or None if not found."""
+    tr = _load_dat(run_dir / "tr_oxy.dat")
+    vf = _load_dat(run_dir / "vol_frac_interf.dat")
+    if tr is None or vf is None or tr.shape[1] < 3 or vf.shape[1] < 3:
+        return None
+    f_mean = float(vf[:, _V_F_LIQ].mean())
+    if f_mean <= 0:
+        return None
+    c = tr[:, _T_OXY_SUM] / f_mean
+    inj = np.where(c > 1e-6)[0]
+    return float(tr[inj[0], _T_T]) if len(inj) else None
+
+
+def _cycle_avg_urms(
+    run_dir: Path, T_rock: float, t_inj: float
+) -> tuple[np.ndarray, np.ndarray] | None:
     """Rolling mean of sqrt(ux_rms² + uy_rms²) over one rocking period.
 
-    Returns (t_rel, urms_smooth) where t_rel = t - t[0].
+    Returns (t_rel, urms_smooth) where t_rel = t - t_inj, clipped to t_rel >= 0.
+    Aligns with the C* and kLa panels so all three share the same time origin.
     """
     arr = _load_dat(run_dir / "normf.dat")
     if arr is None or arr.shape[1] < 12:
@@ -205,7 +222,14 @@ def _cycle_avg_urms(run_dir: Path, T_rock: float) -> tuple[np.ndarray, np.ndarra
     half = max(1, int(round(0.5 * T_rock / dt_uniform)))
     kernel = np.ones(2 * half + 1) / (2 * half + 1)
     smooth = np.convolve(urms, kernel, mode="same")
-    return t - t[0], smooth
+
+    t_rel = t - t_inj
+    mask  = t_rel >= 0
+    return t_rel[mask], smooth[mask]
+
+
+_C_STAR_LO = 0.05   # below this C* the kLa signal is too noisy (early)
+_C_STAR_HI = 0.80   # above this C* → 1 makes ln(1-C*) blow up (late)
 
 
 def _rolling_kla(
@@ -257,7 +281,9 @@ def _rolling_kla(
         if sx2 > 0:
             kla[k] = float(np.dot(x, y)) / sx2
 
-    valid = ~np.isnan(kla)
+    # Mask unreliable C* range
+    in_range = (c_post >= _C_STAR_LO) & (c_post <= _C_STAR_HI)
+    valid = ~np.isnan(kla) & in_range
     if valid.sum() < 5:
         return None
     return t_post[valid], kla[valid]
@@ -354,9 +380,12 @@ def plot(
                 else (_LW_MIN + _LW_MAX) / 2
         kw    = dict(color=color, linewidth=lw, alpha=0.7)
 
-        T_rock = _t_rock(params)
+        T_rock  = _t_rock(params)
+        t_inj   = _t_inject(run_dir)
+        if t_inj is None:
+            continue
 
-        urms_data  = _cycle_avg_urms(run_dir, T_rock)
+        urms_data  = _cycle_avg_urms(run_dir, T_rock, t_inj)
         kla_data   = _rolling_kla(run_dir, T_rock)
         cstar_data = _c_star_series(run_dir)
 
@@ -367,6 +396,9 @@ def plot(
 
     color_lbl = _param_label(color_param)
     lw_lbl    = _param_label(lw_param) if lw_param else "fixed"
+
+    for ax in axes:
+        ax.set_xlim(left=0)
 
     ax_urms.set_ylabel(r"$\langle u_{rms} \rangle_T$ [nd]", fontsize=10)
     ax_urms.set_title(
