@@ -69,12 +69,12 @@
   ],
   "_sweep": {
     "n_mix_cycles": 80,
-    "n_transition_cycles": 10,
     "t_buffer": 50.0,
-    "walltime": "02:00:00",
+    "walltime": "auto",
     "cpus": 1,
     "mem": "4G",
     "submit": true,
+    "mpi": true,
     "ntasks": 16
   }
 }
