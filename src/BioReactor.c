@@ -700,32 +700,33 @@ event normcal (t+=t_out; t<=t_end){
     //
     // Stencil mirrors vorticity() in basilisk/src/utils.h: uses face-centred
     // velocity values u.x[0,±1] and u.y[±1] for 2nd-order centred differences.
-    scalar tau_liq[];
-    foreach() {
+    // Pass 1: global max and mean via inline reduction (no scalar allocation).
+    // Declaring scalar tau_liq[] inside an event leaks a Basilisk scalar on every
+    // call and corrupts the global scalar list, causing segfaults at fidelity ≥7.
+    double tau_max_val = 0., tau_sum = 0., tau_vol = 0.;
+    foreach(reduction(max:tau_max_val) reduction(+:tau_sum) reduction(+:tau_vol)) {
       if (f[] > 0.5) {
-        // ∂u_x/∂y and ∂u_y/∂x at cell centre using face values (Basilisk MAC grid)
         double du_dy = (u.x[0,1] - u.x[0,-1]) / (2.*Delta);
         double dv_dx = (u.y[1]   - u.y[-1])   / (2.*Delta);
-        double mu_loc = mu(f[]);  // harmonic-mean viscosity (non-dimensional)
-        tau_liq[] = mu_loc * fabs(du_dy + dv_dx);
-      } else {
-        tau_liq[] = 0.;
+        double tau   = mu(f[]) * fabs(du_dy + dv_dx);
+        if (tau > tau_max_val) tau_max_val = tau;
+        tau_sum += tau * (Delta*Delta);
+        tau_vol += Delta*Delta;
       }
     }
-
-    // Pass 1: global statistics (MPI-collective inside Basilisk)
-    stats2 tau_s       = statsf2(tau_liq);
-    double tau_max_val  = tau_s.max;
-    double tau_mean_val = (tau_s.volume > 0.) ? tau_s.sum / tau_s.volume : 0.;
+    double tau_mean_val = (tau_vol > 0.) ? tau_sum / tau_vol : 0.;
     if (tau_max_val < 1e-14) tau_max_val = 1e-14;  // guard /0
 
-    // Pass 2: 200-bin histogram — collective across MPI ranks
+    // Pass 2: 200-bin histogram — recomputes tau inline, no scalar needed
     #define TAU_BINS 200
     long bins[TAU_BINS];
     for (int k = 0; k < TAU_BINS; k++) bins[k] = 0;
     foreach() {
       if (f[] > 0.5) {
-        int b = (int)(tau_liq[] / tau_max_val * (TAU_BINS - 1));
+        double du_dy = (u.x[0,1] - u.x[0,-1]) / (2.*Delta);
+        double dv_dx = (u.y[1]   - u.y[-1])   / (2.*Delta);
+        double tau   = mu(f[]) * fabs(du_dy + dv_dx);
+        int b = (int)(tau / tau_max_val * (TAU_BINS - 1));
         if (b < 0)         b = 0;
         if (b >= TAU_BINS) b = TAU_BINS - 1;
         bins[b]++;
