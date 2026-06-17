@@ -565,7 +565,10 @@ def plot(
     for ax in axes:
         ax.set_xlim(left=-0.05 * x_right)
 
-    ax_urms.set_ylabel(r"$\langle u_{rms} \rangle_T$ [nd]", fontsize=10)
+    ax_urms.set_ylabel(
+        r"$\langle u_\mathrm{rms}\rangle_T \;/\; [\,\omega_b L(H + \frac{L}{2}\tan\theta) / 4\pi H\,]$",
+        fontsize=9,
+    )
     ax_urms.set_title(
         f"Convergence diagnostics — {fid_label}  ({plotted} runs)"
         f"   color={color_lbl}   lw={lw_lbl}",
@@ -574,7 +577,10 @@ def plot(
     ax_urms.set_yscale("log")
     ax_urms.grid(True, which="both", alpha=0.3)
 
-    ax_kla.set_ylabel(r"Rolling $kLa$ (nd)", fontsize=10)
+    ax_kla.set_ylabel(
+        r"$kLa \;\times\; 4\pi H \;/\; [\,\omega_b(H + \frac{L}{2}\tan\theta)\,]$",
+        fontsize=9,
+    )
     ax_kla.set_ylim(bottom=0)
     ax_kla.axhline(0, color="gray", lw=0.6, ls="--", alpha=0.4)
     ax_kla.grid(True, alpha=0.3)
@@ -587,7 +593,10 @@ def plot(
     ax_cstar.legend(fontsize=8, loc="upper left")
 
     ax_tau.set_ylabel(r"$\tau_{98}$ [Pa]", fontsize=10)
-    ax_tau.set_xlabel(r"$t - t_{inject}$ [nd]", fontsize=10)
+    ax_tau.set_xlabel(
+        r"$(t - t_\mathrm{inject}) \;\times\; \omega_b(H + \frac{L}{2}\tan\theta) / 4\pi H$",
+        fontsize=9,
+    )
     ax_tau.set_ylim(bottom=0)
     ax_tau.grid(True, alpha=0.3)
     if tau_limit is not None:
