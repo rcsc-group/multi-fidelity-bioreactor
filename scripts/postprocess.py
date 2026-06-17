@@ -544,75 +544,45 @@ def _compute_kla_fit_rmse_25(t: np.ndarray, c_star: np.ndarray) -> float:
 # ── shear stress KPI ─────────────────────────────────────────────────────────
 
 def _compute_tau98_kpis(run_dir: Path, params: dict) -> dict:
-    """Extract 98th-percentile shear stress KPIs from shear_stress.dat.
+    """Extract shear stress percentile KPIs from shear_stress.dat.
 
-    shear_stress.dat is written by BioReactor.c's normcal event and contains
-    one row per output step with the following non-dimensional quantities:
+    shear_stress.dat columns (non-dimensional):
 
-        i  t  tau_98  tau_mean  tau_max
+        i  t  tau_95  tau_98  tau_100  tau_mean
 
-    where tau = |μ(∂u/∂y + ∂v/∂x)| is the absolute viscous shear stress
-    magnitude in the liquid phase, and tau_98 is its 98th percentile over all
-    liquid-domain cells.  The 98th percentile is used rather than the maximum
-    to avoid numerical spikes at the gas-liquid interface.
+    where tau = |μ(∂u/∂y + ∂v/∂x)| over liquid cells (f[]>0.5), and tau_100
+    is the per-timestep maximum (100th percentile = max).
 
-    **Physical interpretation for constrained optimisation**
-
-    In cell culture, shear stress above a damage threshold (typically 0.1–10 Pa
-    depending on cell line) causes apoptosis.  The optimisation objective is to
-    maximise kLa (oxygen transfer) while keeping tau_98_qss below the threshold.
-    tau_98_qss is the median tau_98 over the quasi-steady pre-injection window,
-    representative of the long-term shear environment experienced by cells.
-
-    **QSS window**: t_ramp (= 3 rocking periods) < t < t_inject.  The ramp
-    period is excluded because the soft-start ramp temporarily produces
-    artificially large velocity gradients that are not representative of the
-    steady operating regime.
-
-    **Non-dimensional → Pa conversion**
-
-    tau_nd is in units of [μ₁ × U_bio / L] where μ₁ = 1/Re_w is the
-    non-dimensional water viscosity defined in BioReactor.c.  Converting:
-
-        tau_Pa = tau_nd × mu_w × U_bio / L = tau_nd × mu_w / T_bio
-
-    since U_bio / L = 1 / T_bio by definition of the bio time scale.
-
-    Parameters
-    ----------
-    run_dir : Path
-        Run directory containing shear_stress.dat (and params.json for scaling).
-    params : dict
-        Simulation parameters; used for T_bio dimensional conversion and the
-        QSS window computation.  If shear_stress.dat is absent, all keys are NaN.
+    QSS window: t_ramp (3 rocking periods) < t < t_inject.
+    Physical conversion: tau_Pa = tau_nd × mu_w / T_bio.
 
     Returns
     -------
-    dict with keys:
-        ``tau_98_qss``      — median tau_98 over QSS window, in Pa
-        ``tau_98_mean_qss`` — mean tau_98 over QSS window, in Pa
-        ``tau_98_max``      — global run maximum of tau_98, in Pa
+    dict with keys (all in Pa):
+        tau_95_qss, tau_98_qss, tau_100_qss  — median of each percentile over QSS window
+        tau_95_max, tau_98_max, tau_100_max  — global run maximum of each percentile
     """
     nan_result = {
-        "tau_98_qss":      math.nan,
-        "tau_98_mean_qss": math.nan,
-        "tau_98_max":      math.nan,
+        "tau_95_qss":  math.nan, "tau_98_qss":  math.nan, "tau_100_qss":  math.nan,
+        "tau_95_max":  math.nan, "tau_98_max":  math.nan, "tau_100_max":  math.nan,
     }
     tau_path = run_dir / "shear_stress.dat"
     if not tau_path.exists():
         return nan_result
 
     arr = _load_dat(tau_path)
-    if arr is None or arr.shape[0] < 3 or arr.shape[1] < 3:
+    if arr is None or arr.shape[0] < 3 or arr.shape[1] < 5:
         return nan_result
 
-    t      = arr[:, 1]       # non-dimensional time
-    tau_98 = arr[:, 2]       # 98th-percentile shear stress (non-dimensional)
+    t        = arr[:, 1]   # non-dimensional time
+    tau_95   = arr[:, 2]   # 95th percentile (non-dimensional)
+    tau_98   = arr[:, 3]   # 98th percentile
+    tau_100  = arr[:, 4]   # 100th percentile (per-timestep max)
 
     T_bio, T_per_nd = _t_scales(params)
     t_ramp = 3.0 * T_per_nd
 
-    # Determine t_inject from tr_oxy.dat to form the upper bound of the QSS window
+    # Determine t_inject from tr_oxy.dat
     t_inject: float | None = None
     tr_path = run_dir / "tr_oxy.dat"
     vf_path = run_dir / "vol_frac_interf.dat"
@@ -637,16 +607,22 @@ def _compute_tau98_kpis(run_dir: Path, params: dict) -> dict:
     if qss_mask.sum() < 3:
         return nan_result
 
-    # Physical conversion: tau_Pa = tau_nd × mu_w / T_bio
-    # mu_w = 1.0e-3 Pa·s (water at 20°C, matching BioReactor.c)
-    mu_w      = 1.0e-3
-    tau_scale = mu_w / T_bio   # Pa
+    mu_w      = 1.0e-3       # Pa·s (water at 20°C, matching BioReactor.c)
+    tau_scale = mu_w / T_bio  # Pa
 
-    tau_qss = tau_98[qss_mask]
+    def _qss_median(col):
+        return float(np.median(col[qss_mask]) * tau_scale)
+
+    def _global_max(col):
+        return float(col.max() * tau_scale)
+
     return {
-        "tau_98_qss":      float(np.median(tau_qss) * tau_scale),
-        "tau_98_mean_qss": float(np.mean(tau_qss)   * tau_scale),
-        "tau_98_max":      float(tau_98.max()        * tau_scale),
+        "tau_95_qss":  _qss_median(tau_95),
+        "tau_98_qss":  _qss_median(tau_98),
+        "tau_100_qss": _qss_median(tau_100),
+        "tau_95_max":  _global_max(tau_95),
+        "tau_98_max":  _global_max(tau_98),
+        "tau_100_max": _global_max(tau_100),
     }
 
 
@@ -706,7 +682,8 @@ def main(run_dir: str, params: dict | None = None) -> dict:
         "dtmix_0.50": math.nan, "dtmix_0.75": math.nan, "dtmix_0.95": math.nan,
         "vor_mean": math.nan,
         "vel_rms_qss": math.nan, "kla_fit_rmse_25": math.nan,
-        "tau_98_qss": math.nan, "tau_98_mean_qss": math.nan, "tau_98_max": math.nan,
+        "tau_95_qss": math.nan, "tau_98_qss": math.nan, "tau_100_qss": math.nan,
+        "tau_95_max": math.nan, "tau_98_max": math.nan, "tau_100_max": math.nan,
     }
 
     try:

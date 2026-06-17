@@ -305,7 +305,7 @@ int main(int argc, char * argv[]){
   fprintf(fp_norm, "i t Omega_liq_avg Omega_liq_rms Omega_liq_vol Omega_liq_max ux_liq_avg ux_liq_rms ux_liq_vol ux_liq_max uy_liq_avg uy_liq_rms uy_liq_vol uy_liq_max \n");
   fprintf(fp_stats2, "i t f_liq_sum f_liq_interf posY_max posY_min \n");
   fprintf(fp_stats3, "i t oxy_liq_sum oxy_liq_sum2 c_liq_sum c_liq_sum2 c1_liq_sum c1_liq_sum2 c2_liq_sum c2_liq_sum2 c3_liq_sum c3_liq_sum2 \n");
-  fprintf(fp_tau,   "i t tau_98 tau_mean tau_max \n");
+  fprintf(fp_tau,   "i t tau_95 tau_98 tau_100 tau_mean \n");
 
   NITERMAX = 1000;     // Max iterations per timestep
   TOLERANCE = 5.0e-4;  // // Solver tolerance (convergence criterion)
@@ -739,12 +739,18 @@ event normcal (t+=t_out; t<=t_end){
     }
     #endif
 
-    // Walk bins to find 98th percentile
+    // Walk bins once to find 95th and 98th percentiles; 100th == tau_max_val
     long total = 0, cumul = 0;
     for (int k = 0; k < TAU_BINS; k++) total += bins[k];
+    double tau_95_val = tau_max_val;
     double tau_98_val = tau_max_val;
+    int    found_95   = 0;
     for (int k = 0; k < TAU_BINS; k++) {
       cumul += bins[k];
+      if (!found_95 && cumul >= (long)(0.95 * (double)total)) {
+        tau_95_val = tau_max_val * (k + 1.0) / TAU_BINS;
+        found_95   = 1;
+      }
       if (cumul >= (long)(0.98 * (double)total)) {
         tau_98_val = tau_max_val * (k + 1.0) / TAU_BINS;
         break;
@@ -765,7 +771,7 @@ event normcal (t+=t_out; t<=t_end){
       //fprintf(fp_stats3, "%i %g %g %g %g %g \n",i,t,oxy_liq_sum,oxy_liq_sum2,c_liq_sum,c_liq_sum2);
       fflush(fp_stats3);
 
-      fprintf(fp_tau, "%i %g %g %g %g \n", i, t, tau_98_val, tau_mean_val, tau_max_val);
+      fprintf(fp_tau, "%i %g %g %g %g %g \n", i, t, tau_95_val, tau_98_val, tau_max_val, tau_mean_val);
       fflush(fp_tau);
    }
 }
