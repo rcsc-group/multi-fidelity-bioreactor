@@ -1,0 +1,72 @@
+[
+  {
+    "thread": "l7-crash-t4.25",
+    "hypothesis": "scalar tau_liq[] declared inside NORMCAL leaks one global scalar per invocation, causing pool overflow and eventual SIGSEGV",
+    "prediction": "removing the scalar allocation will let l7 jobs advance past t=4.25",
+    "commit": "fc2f1c8",
+    "job_id": "3298888",
+    "observation": "job 3298888 used the 9ddd52c henry_oxy2.h baseline (pre-e895f4e), not the fc2f1c8 fix \u2014 it reached t=74.2 with no crash; a second wave of jobs with fc2f1c8 still crashed at t=4.25. tau_liq scalar was not the root cause.",
+    "status": "falsified",
+    "date": "2026-06-17"
+  },
+  {
+    "thread": "l7-crash-t4.25",
+    "hypothesis": "commit e895f4e introduced the SIGSEGV \u2014 a binary built from the pre-e895f4e henry_oxy2.h (9ddd52c) with the current BioReactor.c runs cleanly past t=4.25",
+    "prediction": "job built from 9ddd52c henry_oxy2.h + current BioReactor.c will advance past t=4.25 without crashing",
+    "commit": "9ddd52c",
+    "job_id": "3298888",
+    "observation": "job reached t=74.2 with no crash, confirming e895f4e as the introduction point",
+    "status": "confirmed",
+    "date": "2026-06-17"
+  },
+  {
+    "thread": "l7-crash-t4.25",
+    "hypothesis": "the PRERELAX3/FINE_RES_BLOW/REGION_ALL diagnostic loops added in e895f4e caused the crash: they access D.x[1]/D.y[0,1] inside spatially-conditioned branches in foreach_cell()/foreach_level_or_leaf(), which qcc stencil analysis does not follow, leaving MPI ghost face buffers unexpanded at rank boundaries",
+    "prediction": "full e895f4e henry_oxy2.h with those three diagnostic loops removed will pass t=4.25 indefinitely on 16-rank MPI",
+    "commit": "e895f4e",
+    "job_id": "3298986",
+    "observation": "job reached t=250.5 with no crash, confirming the diagnostic loops as the sole cause",
+    "status": "confirmed",
+    "date": "2026-06-17"
+  },
+  {
+    "thread": "l7-crash-t4.25",
+    "hypothesis": "removing all diagnostic instrumentation from henry_oxy2.h on main (commit 9508817) produces a binary that completes l7 fresh runs end-to-end without crash",
+    "prediction": "first resubmitted jobs in sweep_fb_theta_l7 reach t_end with finite kLa_25",
+    "commit": "9508817",
+    "job_id": "3321334",
+    "observation": "run aaf7208a completed to t_end, kLa_25=0.132, all KPIs finite, no crash",
+    "status": "confirmed",
+    "date": "2026-06-18"
+  },
+  {
+    "thread": "mpi-checkpoint-restart",
+    "hypothesis": "all code-level fixes on mpi-checkpoint (fedisableexcept, stencil hint, boundary() sync, harmonic restriction, foreach_cell res[]=0) are sufficient to make MPI same-omega checkpoint restart work",
+    "prediction": "interactive 2-rank restart from smoke_l5_seg0 checkpoint passes t_mix=100.334 and reaches t_end=110.3 with finite kLa_25",
+    "commit": "dc2c5da",
+    "job_id": "interactive-PID-2970096",
+    "observation": "simulation reached t=100.3 without crash (no SIGSEGV/SIGFPE thanks to fedisableexcept), but multigrid diverged at level=2 starting at t=100.3. Both oxy and c2 blow up. First H_RELAX_BLOW shows b=-1.42e+20 at level=2 with near-zero neighbors, meaning the restricted residual at the coarsest level is non-zero despite oxy=0. 20M blow-up lines emitted before kill.",
+    "status": "falsified",
+    "date": "2026-06-18"
+  },
+  {
+    "thread": "mpi-checkpoint-restart",
+    "hypothesis": "coarse-level ghost cells of stracers retain non-zero checkpoint values after reset(stracers,0.)+boundary(stracers) because boundary() does not communicate coarse MPI ghost cells; these propagate into the restricted residual as non-zero b[] at level=2, causing gradual multigrid amplification over 5 rocking periods",
+    "prediction": "adding restriction(stracers) after reset()+boundary() will zero coarse ghost cells via halo_restriction and prevent the level=2 blow-up",
+    "commit": "dc2c5da",
+    "job_id": "pending",
+    "observation": "Blow-up IDENTICAL: x=-0.375,y=0.375, level=2, b=-1.42e+20. 1-rank test: ZERO H_RELAX_BLOW (NS convergence failure instead), confirming blow-up is MPI-specific. restriction(stracers) fixes stracers pool but not the temporary res scalar in mg_cycle.",
+    "status": "falsified",
+    "date": "2026-06-18"
+  },
+  {
+    "thread": "mpi-checkpoint-restart",
+    "hypothesis": "foreach_cell() res[] = 0 in h_residual misses coarse ghost cells at MPI rank boundaries absent from local active tree; those retain pool garbage from the NS pressure Poisson (~-1.42e+20 at level-2 embedded-wall cell); adding restriction({res}) after foreach_cell() init propagates zeros to all coarse ghost cells via halo_restriction",
+    "prediction": "2-rank restart passes t_mix=100.334, reaches t_end=110.334, zero H_RELAX_BLOW, finite kLa_25",
+    "commit": "bc1b92e",
+    "job_id": "interactive-bc1b92e",
+    "observation": "pending",
+    "status": "inconclusive",
+    "date": "2026-06-18"
+  }
+]
