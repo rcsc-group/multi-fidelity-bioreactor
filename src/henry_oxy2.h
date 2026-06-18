@@ -78,7 +78,6 @@ event vof (i++)
 struct HDiffusion {
   face vector D;     // alpha
   face vector beta;  // newly added for the second term of diffusion
-  const char * tracer_name; // name of the tracer being solved (for diagnostics)
 #if EMBED
   double (* embed_flux) (Point, scalar, vector, double *);
 #endif
@@ -150,40 +149,8 @@ static void h_relax (scalar * al, scalar * bl, int l, void * data)
   struct HDiffusion * p = (struct HDiffusion *) data;
   face vector D = p->D, beta = p->beta;
 
-  // On MPI checkpoint restart, Basilisk allocates fresh pool memory for local
-  // face vectors D and beta (which are not dumped to the checkpoint).  Pool
-  // slots for ghost cells at coarse non-leaf levels that are not covered by
-  // masked_boundary_restriction retain the pool initialiser — signaling NaN
-  // (0x7ff0000000000001) after set_fpe() enables FE_INVALID trapping.
-  //
-  // The crash manifests only at t_mix (when tracer c2 first becomes non-zero
-  // and the multigrid actually iterates at coarse levels for the first time).
-  //
-  // Fix: disable FP exception trapping for the duration of h_relax.  Ghost
-  // cells at coarse levels may produce quiet NaN from pool-NaN arithmetic, but
-  // (a) boundary_level() overwrites ghost da values before bilinear uses them,
-  // and (b) the foreach() apply step in mg_cycle touches only leaf cells.
-  // The NaN is therefore transient and does not affect the converged answer.
-  // feclearexcept before re-enabling prevents a stale status bit from firing.
-  int _fpe_prev = fedisableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
-  feclearexcept(FE_ALL_EXCEPT);
-
   scalar c = a;
   foreach_level_or_leaf (l) {
-    // PRERELAX3: dump b[] (restricted residual AFTER restriction) and da[] for
-    // blow-up region at level 3, before relaxation modifies da.  If b[] is huge
-    // here, restriction produced it.  If b[]=0, the blow-up comes from n having
-    // huge a[neighbor] contributions (from a previous V-cycle's prolongated da).
-    if (l == 3 && t > 4.25 && t < 4.26 &&
-        x > -0.55 && x < -0.25 && y > -0.4 && y < -0.2) {
-      fprintf(ferr, "PRERELAX3 t=%.4g tracer=%s x=%.4g y=%.4g leaf=%d "
-              "b=%.3g da=%.3g cm=%.3g Dx1=%.3g Dx0=%.3g Dy1=%.3g Dy0=%.3g "
-              "ax1=%.3g ax0=%.3g ay1=%.3g ay0=%.3g\n",
-              t, p->tracer_name ? p->tracer_name : a.name, x, y, is_leaf(cell),
-              b[], a[], cm[], D.x[1], D.x[], D.y[0,1], D.y[],
-              a[1], a[-1], a[0,1], a[0,-1]);
-      fflush(ferr);
-    }
     // -lambda[] = cm[]/dt
     double n = - sq(Delta)*b[], d = cm[]/dt*sq(Delta);
     foreach_dimension() {
@@ -223,36 +190,10 @@ static void h_relax (scalar * al, scalar * bl, int l, void * data)
       // returns false, so !false = true → clamp.  Plain (d < d_floor) leaves NaN
       // unchanged because NaN comparisons always return false.
       if (!(d >= d_floor)) d = d_floor;
-      // If coarse-level D.x[1] or a[1] pool-SNaN propagated into n via
-      // fedisableexcept-suppressed arithmetic, guard here so we never write
-      // NaN to c[].  NaN in c[] propagates through boundary_level() to
-      // neighbouring ghost cells and triggers FE_INVALID in h_residual.
       if (!isfinite(n)) n = 0.;
       c[] = n/d;
-      // H_RELAX_BLOW: log cells exceeding threshold — captures seed before cascade.
-      // Threshold 1e10: seed value is ~1e31, first cascade step ~1e53. Catches both.
-      // foreach_level_or_leaf is serial; p->tracer_name is read-only (no write to p).
-      if (fabs(c[]) > 1e10) {
-        // Recover b[] from n (valid when D=0 on all faces, which is the blow-up case).
-        double _b = -n / sq(Delta);
-        fprintf(ferr, "H_RELAX_BLOW t=%.4g tracer=%s level=%d x=%.4g y=%.4g "
-                "c=%.3g b=%.3g cm=%.3g n=%.3g d=%.3g "
-                "Dx1=%.3g Dx0=%.3g Dy1=%.3g Dy0=%.3g "
-                "ax1=%.3g ax0=%.3g ay1=%.3g ay0=%.3g\n",
-                t, p->tracer_name ? p->tracer_name : a.name, l, x, y,
-                c[], _b, cm[], n, d,
-                D.x[1], D.x[], D.y[0,1], D.y[],
-                a[1], a[-1], a[0,1], a[0,-1]);
-        fflush(ferr);
-      }
     }
   }
-  // Restore FP exception trapping; clear any status bits set during the
-  // coarse-level smoother so the re-enable doesn't immediately fire.
-  feclearexcept(FE_ALL_EXCEPT);
-  if (_fpe_prev & FE_DIVBYZERO) feenableexcept(FE_DIVBYZERO);
-  if (_fpe_prev & FE_INVALID)   feenableexcept(FE_INVALID);
-  if (_fpe_prev & FE_OVERFLOW)  feenableexcept(FE_OVERFLOW);
 }
 //*/
 
@@ -316,32 +257,6 @@ static double h_residual (scalar * al, scalar * bl, scalar * resl, void * data)
 
     if (fabs (res[]) > maxres)
       maxres = fabs (res[]);
-  }
-  // FINE_RES_BLOW: any owned leaf residual > 1e10 on any rank → log it.
-  foreach() {
-    if (fabs(res[]) > 1e10) {
-      fprintf(ferr, "FINE_RES_BLOW t=%.4g tracer=%s x=%.4g y=%.4g "
-              "res=%.3g b=%.3g cm=%.3g a=%.3g Dx1=%.3g Dx0=%.3g Dy1=%.3g Dy0=%.3g\n",
-              t, p->tracer_name ? p->tracer_name : a.name, x, y,
-              res[], b[], cm[], a[], D.x[1], D.x[], D.y[0,1], D.y[]);
-      fflush(ferr);
-    }
-  }
-  // REGION_ALL: foreach_cell dumps ALL cells (leaf + non-leaf, owned + ghost) in
-  // blow-up region around t=4.257.  shows res[] AFTER the zeroing pass and the
-  // leaf foreach — so non-leaf should be 0, leaf should have computed residuals,
-  // ghost leaf should also be 0 (zeroed by foreach_cell above, not yet updated
-  // by mpi_boundary_restriction).  Gated to first blow-up window to limit output.
-  if (t > 4.25 && t < 4.26) {
-    foreach_cell() {
-      if (x > -0.55 && x < -0.25 && y > -0.4 && y < -0.2) {
-        fprintf(ferr, "REGION_ALL t=%.4g tracer=%s x=%.4g y=%.4g level=%d leaf=%d "
-                "res=%.3g rhs=%.3g cm=%.3g a=%.3g Dx1=%.3g Dx0=%.3g Dy1=%.3g Dy0=%.3g\n",
-                t, p->tracer_name ? p->tracer_name : a.name, x, y, level, is_leaf(cell),
-                res[], b[], cm[], a[], D.x[1], D.x[], D.y[0,1], D.y[]);
-        fflush(ferr);
-      }
-    }
   }
 #else // !TREE
   // "naive" discretisation (only 1st order on trees) //
@@ -443,7 +358,6 @@ event tracer_diffusion (i++)
     struct HDiffusion q;
     q.D = D;
     q.beta = beta;
-    q.tracer_name = c.name;
 
     // Extend qcc's stencil analysis to non-leaf levels for ALL fields that
     // h_relax accesses at coarse ghost cells via foreach_dimension().
@@ -469,103 +383,13 @@ event tracer_diffusion (i++)
       if (!is_leaf(cell))
         (void)(c[] + r[] + D.x[] + D.y[] + beta.x[] + beta.y[]);
 
-    // from mgstats poisson
-    ///*
     scalar aa = c;
 #if EMBED
     if (!q.embed_flux && aa.boundary[embed] != symmetry)
       q.embed_flux = embed_flux;
 #endif //EMBED
-    //*/
-
-    // Pre-solve diagnostic: scan c, r, D, beta for NaN/Inf or huge values.
-    // Fires only when something is wrong; output tells us which tracer and field.
-    {
-      double maxc = 0., maxr = 0., maxD = 0., maxbeta = 0.;
-      foreach (reduction(max:maxc) reduction(max:maxr)) {
-        double ac = fabs(c[]), ar = fabs(r[]);
-        if (!isfinite(ac)) ac = 1e300;
-        if (!isfinite(ar)) ar = 1e300;
-        if (ac > maxc) maxc = ac;
-        if (ar > maxr) maxr = ar;
-      }
-      foreach_face (reduction(max:maxD) reduction(max:maxbeta)) {
-        double aD = fabs(D.x[]), ab = fabs(beta.x[]);
-        if (!isfinite(aD)) aD = 1e300;
-        if (!isfinite(ab)) ab = 1e300;
-        if (aD > maxD)    maxD    = aD;
-        if (ab > maxbeta) maxbeta = ab;
-      }
-      if (maxc > 1e10 || maxr > 1e10 || maxD > 1e10 || maxbeta > 1e10) {
-        fprintf(ferr,
-          "DIAG t=%.6g tracer=%s maxc=%.3g maxr=%.3g maxD=%.3g maxbeta=%.3g\n",
-          t, c.name, maxc, maxr, maxD, maxbeta);
-        fflush(ferr);
-      }
-    }
-
-    // GHOST-VALUE DIAGNOSTIC: count non-finite ghost-cell/face values at rank
-    // boundaries before h_residual first reads them.  Accesses D.x[1],
-    // beta.x[1], c[1] — the exact [1]-offset reads in h_residual's foreach().
-    // FP traps disabled so a pool-SNaN load doesn't crash the diagnostic itself.
-    {
-      int _fpe_diag = fedisableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
-      feclearexcept(FE_ALL_EXCEPT);
-      double nd = 0., nbeta = 0., nc = 0., nr = 0.;
-      foreach(reduction(+:nd) reduction(+:nbeta) reduction(+:nc) reduction(+:nr)) {
-        foreach_dimension() {
-          if (!isfinite(D.x[1]))    nd    += 1.;
-          if (!isfinite(beta.x[1])) nbeta += 1.;
-          if (!isfinite(c[1]))      nc    += 1.;
-        }
-        if (!isfinite(r[]))         nr    += 1.;
-      }
-      feclearexcept(FE_ALL_EXCEPT);
-      if (_fpe_diag & FE_DIVBYZERO) feenableexcept(FE_DIVBYZERO);
-      if (_fpe_diag & FE_INVALID)   feenableexcept(FE_INVALID);
-      if (_fpe_diag & FE_OVERFLOW)  feenableexcept(FE_OVERFLOW);
-      fprintf(ferr,
-        "GHOST_DIAG t=%.4g tracer=%s nd=%.0f nbeta=%.0f nc=%.0f nr=%.0f\n",
-        t, c.name, nd, nbeta, nc, nr);
-      fflush(ferr);
-    }
 
     mg_solve ({c}, {r}, h_residual, h_relax, &q);
-
-    // POST-MG diagnostic: scan solution for NaN/Inf AFTER mg_solve returns.
-    // Answers: does mg_solve produce NaN in c[], or is the crash downstream?
-    {
-      int _fpe_post = fedisableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
-      feclearexcept(FE_ALL_EXCEPT);
-      double post_nan = 0., post_max = 0.;
-      foreach(reduction(+:post_nan) reduction(max:post_max)) {
-        double v = fabs(c[]);
-        if (!isfinite(v)) { post_nan += 1.; v = 0.; }
-        if (v > post_max) post_max = v;
-      }
-      feclearexcept(FE_ALL_EXCEPT);
-      if (_fpe_post & FE_DIVBYZERO) feenableexcept(FE_DIVBYZERO);
-      if (_fpe_post & FE_INVALID)   feenableexcept(FE_INVALID);
-      if (_fpe_post & FE_OVERFLOW)  feenableexcept(FE_OVERFLOW);
-      if (post_nan > 0. || post_max > 1e10) {
-        fprintf(ferr,
-          "POST_MG t=%.4g tracer=%s nan=%.0f max=%.3g\n",
-          t, c.name, post_nan, post_max);
-        // Locate blow-up cells: separate serial foreach, threshold 10% of max.
-        // Cannot write to external coords inside parallel foreach.
-        fflush(ferr);
-        double _loc_thresh = post_max * 0.1;
-        foreach() {
-          double v = fabs(c[]);
-          if (v > _loc_thresh && v > 1e10)
-            fprintf(ferr, "POST_MG_LOC t=%.4g tracer=%s x=%.4g y=%.4g cm=%.3g c=%.3g level=%d\n",
-                    t, c.name, x, y, cm[], c[], level);
-        }
-        fflush(ferr);
-      }
-    }
-
-    //*/
   }
 }
 
