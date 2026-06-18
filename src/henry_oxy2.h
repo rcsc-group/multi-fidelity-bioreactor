@@ -281,6 +281,16 @@ static double h_residual (scalar * al, scalar * bl, scalar * resl, void * data)
   // computed values.  Non-zero pool values in any cell are thus eliminated.
   foreach_cell()
     res[] = 0.;
+  // foreach_cell() zeros cells in the LOCAL active tree, but coarse ghost cells
+  // at MPI rank boundaries that have no fine-level descendants on this rank may
+  // be absent from the active tree and escape the loop.  Those cells retain pool
+  // garbage from a prior mg_solve (pressure Poisson) and survive into
+  // restriction_level({res}) → b[] in h_relax at level 2.  Explicitly restricting
+  // from the all-zero leaf state propagates zeros to ALL coarse ghost cells via
+  // halo_restriction, eliminating the pool contamination before leaf residuals
+  // are computed below.  mg_cycle's own restriction_level passes then overwrite
+  // coarse cells with the actual restricted residuals — no double-counting.
+  restriction ({res});
   // Compute residual inline using D/beta directly (no local face vector g[]).
   // The original g[] TREE version stored face fluxes in a local face vector and
   // then read g.x[1] in foreach().  On MPI restart, foreach_face() only writes
