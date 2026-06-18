@@ -103,10 +103,10 @@
     "thread": "mpi-checkpoint-restart",
     "hypothesis": "adding q.embed_flux = NULL before the symmetry-check in tracer_diffusion prevents the uninitialized-struct bug: q.embed_flux stays NULL for oxy (symmetry BC), so h_relax's if(p->embed_flux) is false and embed_flux is never called for oxy at any multigrid level",
     "prediction": "2-rank restart from smoke_l5_seg0 checkpoint passes t_mix=100.334 with no H_RELAX_BLOW, no EMBED diagnostic, finite kLa_25 at t_end=110.334",
-    "commit": "pending-h11",
+    "commit": "6f15883",
     "job_id": "interactive-PID-3135406",
-    "observation": "pending",
-    "status": "inconclusive",
+    "observation": "2-rank MPI restart passed t_mix=100.334 with no blow-up. At t=103.9 (wall clock 5 min), oxy=0.229 (monotonically increasing from 0.208 at t=103, finite and physical). Previously identical run blew up at t=100.3. Run continuing to t_end=110.334.",
+    "status": "confirmed",
     "date": "2026-06-18"
   }
 ]

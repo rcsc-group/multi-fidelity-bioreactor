@@ -22,9 +22,9 @@ Checkpoint grouping (opt-in via "chain": true in _sweep)
 -------------------
 Checkpoint restart requires identical Basilisk grid structure (same fidelity
 and geometry).  Simulations are clustered by (fidelity, a, b, n); each cluster
-is submitted as an independent chain.  NOTE: MPI checkpoint restart is broken
-in the current Basilisk version (stale coarse MPI ghost cells → SIGFPE on first
-multigrid solve after injection).  Serial checkpoint restart works.
+is submitted as an independent chain.  MPI checkpoint restart is supported;
+the fix for the Basilisk coarse-ghost / uninitialized embed_flux bug is in
+commit 6f15883 (henry_oxy2.h: q.embed_flux = NULL).
 
 Sweep control options (in "_sweep" key of the JSON):
   chain:               false (default) → each combination is an independent
@@ -422,8 +422,7 @@ def submit_sweep(path: str | Path) -> list[str]:
     structure (fidelity + geometry) are grouped into checkpoint-restart chains.
     Only seg-0 of each chain is submitted; the SLURM script self-submits
     subsequent segments on completion.  Returns one job ID per chain.
-    NOTE: MPI checkpoint restart is currently broken (Basilisk coarse-ghost
-    bug); chain mode should only be used with the serial template.
+    MPI checkpoint restart is supported; see commit 6f15883 for the fix.
 
     An ExperimentData store is created at experiments/<config_stem>/ in both
     modes and is the canonical provenance record for all runs in this sweep.
