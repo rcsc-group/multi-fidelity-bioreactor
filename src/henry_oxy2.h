@@ -170,70 +170,10 @@ static void h_relax (scalar * al, scalar * bl, int l, void * data)
 
   scalar c = a;
   foreach_level_or_leaf (l) {
-    // PRERELAX3: dump b[] (restricted residual AFTER restriction) and da[] for
-    // blow-up region at level 3, before relaxation modifies da.  If b[] is huge
-    // here, restriction produced it.  If b[]=0, the blow-up comes from n having
-    // huge a[neighbor] contributions (from a previous V-cycle's prolongated da).
-    if (l == 3 && t > 4.25 && t < 4.26 &&
-        x > -0.55 && x < -0.25 && y > -0.4 && y < -0.2) {
-      // SAFETY: D.x[1]/D.y[0,1] removed — foreach_level_or_leaf with spatial+temporal
-      // condition bypasses qcc stencil analysis → ghost face buffers unexpanded → SIGSEGV.
-      fprintf(ferr, "PRERELAX3 t=%.4g tracer=%s x=%.4g y=%.4g leaf=%d "
-              "b=%.3g da=%.3g cm=%.3g "
-              "ax1=%.3g ax0=%.3g ay1=%.3g ay0=%.3g\n",
-              t, p->tracer_name ? p->tracer_name : a.name, x, y, is_leaf(cell),
-              b[], a[], cm[],
-              a[1], a[-1], a[0,1], a[0,-1]);
-      fflush(ferr);
-    }
-    // BLOWUP_PROBE: log b[] at the blow-up cell (level=2, x≈-0.375, y≈0.375) every
-    // V-cycle call once t>99.9, to determine whether b[] jumps suddenly or grows
-    // gradually (distinguishes single-event injection from per-cycle accumulation).
-    if (l == 2 && t > 99.9 && fabs(x - (-0.375)) < 0.01 && fabs(y - 0.375) < 0.01) {
-      fprintf(ferr, "BLOWUP_PROBE t=%.6g tracer=%s b=%.3g da=%.3g\n",
-              t, p->tracer_name ? p->tracer_name : a.name, b[], a[]);
-      fflush(ferr);
-    }
-    // HUGE_B: flag any level-2 cell (including MPI ghost cells) whose b[] exceeds
-    // a threshold — distinguishes physical residuals (~0.01) from pool garbage (~1e20).
-    // Only offset-0 b[] is accessed so no qcc stencil blind-spot risk.
-    if (l == 2 && t > 99.9 && t < 100.5 && fabs(b[]) > 100.) {
-      fprintf(ferr, "HUGE_B t=%.6g tracer=%s x=%.4g y=%.4g b=%.3g a=%.3g cm=%.3g\n",
-              t, p->tracer_name ? p->tracer_name : a.name, x, y, b[], a[], cm[]);
-      fflush(ferr);
-    }
-    // -lambda[] = cm[]/dt
-    //
-    // Root cause of MPI checkpoint restart blow-up: foreach_level_or_leaf visits
-    // coarse ghost cells.  Pool scalar `res` (Basilisk's mg_cycle residual) has
-    // no static stencil hint → halo_restriction is a no-op for it → coarse ghost
-    // cells retain stale residuals from the previous tracer's mg_solve.  Within a
-    // single Gauss-Seidel sweep, h_relax updates a ghost cell with the garbage
-    // b[], and an owned cell processed LATER in the same sweep reads the resulting
-    // huge c[ghost] as a neighbour.  boundary_level() after each sweep would fix
-    // the ghost but it runs AFTER the sweep, too late.
-    //
-    // Fix: for coarse ghost cells use b_eff=0.  Their c[] is overwritten by
-    // boundary_level() after the sweep regardless, so the correction is exact.
-    // Log the first clamp per cell so the hypothesis can be falsified.
-#if _MPI
     double b_eff = b[];
-    if (l < depth() && !is_local(cell) && b[] != 0.) {
-      if (fabs(b[]) > 1e-4) {
-        fprintf(ferr, "GHOST_B_CLAMP t=%.6g tracer=%s l=%d x=%.4g y=%.4g b=%.3g\n",
-                t, p->tracer_name ? p->tracer_name : a.name, l, x, y, b[]);
-        fflush(ferr);
-      }
-      b_eff = 0.;
-    }
-#else
-    double b_eff = b[];
-#endif
     // Pre-extract all stencil accesses UNCONDITIONALLY so qcc's static
     // analysis sees them and expands MPI halo buffers for every field and
-    // offset used below.  The conditional in H_RELAX_BLOW would otherwise
-    // create a qcc stencil blind-spot, printing values from un-expanded
-    // buffers.  Extracting here and printing the locals avoids that.
+    // offset used below.
     double _Dx  = D.x[],   _Dx1  = D.x[1];
     double _Dy  = D.y[],   _Dy01 = D.y[0,1];
     double _bx  = beta.x[], _bx1  = beta.x[1];
@@ -260,10 +200,10 @@ static void h_relax (scalar * al, scalar * bl, int l, void * data)
     ///*
 #if EMBED
     if (p->embed_flux){
-      double c;
-      double e = embed_flux (point, a, D, &c);
-      n -= c*sq(Delta);
-      d += e*sq(Delta);
+      double c_embed = 0., e_embed = 0.;
+      e_embed = embed_flux (point, a, D, &c_embed);
+      n -= c_embed*sq(Delta);
+      d += e_embed*sq(Delta);
     }
     if (d <= 0.)   // was: if (!d) — also catches d<0 from coarse-level beta terms
       c[] = b[] = 0.;
@@ -285,24 +225,6 @@ static void h_relax (scalar * al, scalar * bl, int l, void * data)
       // neighbouring ghost cells and triggers FE_INVALID in h_residual.
       if (!isfinite(n)) n = 0.;
       c[] = n/d;
-      // H_RELAX_BLOW: log cells exceeding threshold — captures seed before cascade.
-      // Threshold 1e10: seed value is ~1e31, first cascade step ~1e53. Catches both.
-      // foreach_level_or_leaf is serial; p->tracer_name is read-only (no write to p).
-      if (fabs(c[]) > 1e10) {
-        // Print the pre-extracted locals (NOT a[1]/D.x[1] directly — those would
-        // be inside a conditional and fall into the qcc stencil blind-spot).
-        fprintf(ferr, "H_RELAX_BLOW t=%.4g tracer=%s level=%d x=%.4g y=%.4g "
-                "c=%.3g b=%.3g cm=%.3g n=%.3g d=%.3g "
-                "a1=%.3g a_1=%.3g a01=%.3g a0_1=%.3g "
-                "Dx=%.3g Dx1=%.3g Dy=%.3g Dy01=%.3g "
-                "nx=%.3g ny=%.3g nb=%.3g is_local=%d\n",
-                t, p->tracer_name ? p->tracer_name : a.name, l, x, y,
-                c[], b[], cm[], n, d,
-                _a1, _a_1, _a01, _a0_1,
-                _Dx, _Dx1, _Dy, _Dy01,
-                _nx, _ny, -sq(Delta)*b_eff, is_local(cell));
-        fflush(ferr);
-      }
     }
   }
   // Restore FP exception trapping; clear any status bits set during the
@@ -384,31 +306,6 @@ static double h_residual (scalar * al, scalar * bl, scalar * resl, void * data)
 
     if (fabs (res[]) > maxres)
       maxres = fabs (res[]);
-  }
-  // FINE_RES_BLOW: any owned leaf residual > 1e10 on any rank → log it.
-  foreach() {
-    if (fabs(res[]) > 1e10) {
-      fprintf(ferr, "FINE_RES_BLOW t=%.4g tracer=%s x=%.4g y=%.4g "
-              "res=%.3g b=%.3g cm=%.3g a=%.3g Dx1=%.3g Dx0=%.3g Dy1=%.3g Dy0=%.3g\n",
-              t, p->tracer_name ? p->tracer_name : a.name, x, y,
-              res[], b[], cm[], a[], D.x[1], D.x[], D.y[0,1], D.y[]);
-      fflush(ferr);
-    }
-  }
-  // REGION_ALL: dump ALL cells (leaf + non-leaf, owned + ghost) in blow-up region.
-  // SAFETY: D.x[1]/D.y[0,1] removed — foreach_cell() with spatial conditions bypasses
-  // qcc stencil analysis, leaving ghost face buffers unexpanded → SIGSEGV on MPI rank
-  // boundaries.  Use only scalars (res, b, cm, a) which are safe at all tree levels.
-  if (t > 4.25 && t < 4.26) {
-    foreach_cell() {
-      if (x > -0.55 && x < -0.25 && y > -0.4 && y < -0.2) {
-        fprintf(ferr, "REGION_ALL t=%.4g tracer=%s x=%.4g y=%.4g level=%d leaf=%d "
-                "res=%.3g rhs=%.3g cm=%.3g a=%.3g\n",
-                t, p->tracer_name ? p->tracer_name : a.name, x, y, level, is_leaf(cell),
-                res[], b[], cm[], a[]);
-        fflush(ferr);
-      }
-    }
   }
 #else // !TREE
   // "naive" discretisation (only 1st order on trees) //
@@ -508,6 +405,7 @@ event tracer_diffusion (i++)
     D.y.restriction = restriction_face_harmonic;
     restriction ({D, beta, cm});
     struct HDiffusion q;
+    q.embed_flux = NULL; // must initialize; uninitialized garbage skips the symmetry check below
     q.D = D;
     q.beta = beta;
     q.tracer_name = c.name;
@@ -545,94 +443,7 @@ event tracer_diffusion (i++)
 #endif //EMBED
     //*/
 
-    // Pre-solve diagnostic: scan c, r, D, beta for NaN/Inf or huge values.
-    // Fires only when something is wrong; output tells us which tracer and field.
-    {
-      double maxc = 0., maxr = 0., maxD = 0., maxbeta = 0.;
-      foreach (reduction(max:maxc) reduction(max:maxr)) {
-        double ac = fabs(c[]), ar = fabs(r[]);
-        if (!isfinite(ac)) ac = 1e300;
-        if (!isfinite(ar)) ar = 1e300;
-        if (ac > maxc) maxc = ac;
-        if (ar > maxr) maxr = ar;
-      }
-      foreach_face (reduction(max:maxD) reduction(max:maxbeta)) {
-        double aD = fabs(D.x[]), ab = fabs(beta.x[]);
-        if (!isfinite(aD)) aD = 1e300;
-        if (!isfinite(ab)) ab = 1e300;
-        if (aD > maxD)    maxD    = aD;
-        if (ab > maxbeta) maxbeta = ab;
-      }
-      if (maxc > 1e10 || maxr > 1e10 || maxD > 1e10 || maxbeta > 1e10) {
-        fprintf(ferr,
-          "DIAG t=%.6g tracer=%s maxc=%.3g maxr=%.3g maxD=%.3g maxbeta=%.3g\n",
-          t, c.name, maxc, maxr, maxD, maxbeta);
-        fflush(ferr);
-      }
-    }
-
-    // GHOST-VALUE DIAGNOSTIC: count non-finite ghost-cell/face values at rank
-    // boundaries before h_residual first reads them.  Accesses D.x[1],
-    // beta.x[1], c[1] — the exact [1]-offset reads in h_residual's foreach().
-    // FP traps disabled so a pool-SNaN load doesn't crash the diagnostic itself.
-    {
-      int _fpe_diag = fedisableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
-      feclearexcept(FE_ALL_EXCEPT);
-      double nd = 0., nbeta = 0., nc = 0., nr = 0.;
-      foreach(reduction(+:nd) reduction(+:nbeta) reduction(+:nc) reduction(+:nr)) {
-        foreach_dimension() {
-          if (!isfinite(D.x[1]))    nd    += 1.;
-          if (!isfinite(beta.x[1])) nbeta += 1.;
-          if (!isfinite(c[1]))      nc    += 1.;
-        }
-        if (!isfinite(r[]))         nr    += 1.;
-      }
-      feclearexcept(FE_ALL_EXCEPT);
-      if (_fpe_diag & FE_DIVBYZERO) feenableexcept(FE_DIVBYZERO);
-      if (_fpe_diag & FE_INVALID)   feenableexcept(FE_INVALID);
-      if (_fpe_diag & FE_OVERFLOW)  feenableexcept(FE_OVERFLOW);
-      if (nd > 0. || nbeta > 0. || nc > 0. || nr > 0.) {
-        fprintf(ferr,
-          "GHOST_DIAG t=%.4g tracer=%s nd=%.0f nbeta=%.0f nc=%.0f nr=%.0f\n",
-          t, c.name, nd, nbeta, nc, nr);
-        fflush(ferr);
-      }
-    }
-
     mg_solve ({c}, {r}, h_residual, h_relax, &q);
-
-    // POST-MG diagnostic: scan solution for NaN/Inf AFTER mg_solve returns.
-    // Answers: does mg_solve produce NaN in c[], or is the crash downstream?
-    {
-      int _fpe_post = fedisableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
-      feclearexcept(FE_ALL_EXCEPT);
-      double post_nan = 0., post_max = 0.;
-      foreach(reduction(+:post_nan) reduction(max:post_max)) {
-        double v = fabs(c[]);
-        if (!isfinite(v)) { post_nan += 1.; v = 0.; }
-        if (v > post_max) post_max = v;
-      }
-      feclearexcept(FE_ALL_EXCEPT);
-      if (_fpe_post & FE_DIVBYZERO) feenableexcept(FE_DIVBYZERO);
-      if (_fpe_post & FE_INVALID)   feenableexcept(FE_INVALID);
-      if (_fpe_post & FE_OVERFLOW)  feenableexcept(FE_OVERFLOW);
-      if (post_nan > 0. || post_max > 1e10) {
-        fprintf(ferr,
-          "POST_MG t=%.4g tracer=%s nan=%.0f max=%.3g\n",
-          t, c.name, post_nan, post_max);
-        // Locate blow-up cells: separate serial foreach, threshold 10% of max.
-        // Cannot write to external coords inside parallel foreach.
-        fflush(ferr);
-        double _loc_thresh = post_max * 0.1;
-        foreach() {
-          double v = fabs(c[]);
-          if (v > _loc_thresh && v > 1e10)
-            fprintf(ferr, "POST_MG_LOC t=%.4g tracer=%s x=%.4g y=%.4g cm=%.3g c=%.3g level=%d\n",
-                    t, c.name, x, y, cm[], c[], level);
-        }
-        fflush(ferr);
-      }
-    }
 
     //*/
   }

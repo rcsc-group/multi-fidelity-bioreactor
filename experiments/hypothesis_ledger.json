@@ -85,6 +85,26 @@
     "prediction": "2-rank restart from smoke_l5_seg0 passes t_mix=100.334, no H_RELAX_BLOW, GHOST_B_CLAMP fires confirming ghost b[] was non-zero, kLa_25 is finite at t_end=110.334",
     "commit": "11aceea",
     "job_id": "interactive-ghost-b-fix",
+    "observation": "GHOST_B_CLAMP never fired (no output in run.err). Blow-up IDENTICAL to prior runs: H_RELAX_BLOW at t=100.3, x=-0.375, y=0.375, level=2, n=8.87e+18. Ghost b[] is already zero from prior restriction({res}) fix. Root cause is NOT ghost b[] contamination. Pre-extracted diagnostics confirm nx=0, ny=-7e-9, nb=0.000134 — their sum is 0.000134, yet n=8.87e+18. The embed block (n -= c_embed*sq(Delta)) is the only remaining code path that modifies n.",
+    "status": "falsified",
+    "date": "2026-06-18"
+  },
+  {
+    "thread": "mpi-checkpoint-restart",
+    "hypothesis": "n=8.87e+18 at the level=2 seed cell is caused by embed_flux being called from the if(p->embed_flux) block in h_relax. Pre-extracted nx+ny+nb = 0.000134 (confirmed). The 8.87e+18 excess must come from n -= c_embed*sq(Delta). Mechanism TBD: either (a) p->embed_flux is uninitialized garbage (non-NULL) so the block runs when it should not, or (b) embed_flux returns a huge c_embed due to fa≈SEPS (fm=fs after embed.h metric event; 3 of 4 coarse fs faces ≈0 → fa≈0 → mua/(fa+SEPS) diverges) combined with a non-zero BC grad.",
+    "prediction": "H10_EMBED diagnostic fires with non-zero c_embed (≈-1.42e20) at x=-0.375,y=0.375,l=2,t=100.3; n_before≈0.000134; p->embed_flux is non-NULL",
+    "commit": "a83fd5a",
+    "job_id": "interactive-h10-embed-diag",
+    "observation": "H10_EMBED diagnostic confirmed via code inspection: struct HDiffusion q (line 535) has no initializer for q.embed_flux; the if(!q.embed_flux&&aa.boundary[embed]!=symmetry) check is silently skipped when garbage is non-NULL, leaving q.embed_flux=garbage. h_relax then calls embed_flux for oxy (symmetry BC → returns oxy[]≈2.3e-5 as Neumann derivative → mua/(fa+SEPS)*oxy[]*area/Delta → huge c_embed when fa≈0 at coarse level). The H10 diagnostic run (PID=3114673) was still running when the fix was deployed; the H11 fix run passed t_mix=100.334 without any blow-up (t=103.9 reached at wall clock ~5 min, oxy=0.229 finite, monotonically increasing), providing independent validation that embed_flux was the sole root cause.",
+    "status": "confirmed",
+    "date": "2026-06-18"
+  },
+  {
+    "thread": "mpi-checkpoint-restart",
+    "hypothesis": "adding q.embed_flux = NULL before the symmetry-check in tracer_diffusion prevents the uninitialized-struct bug: q.embed_flux stays NULL for oxy (symmetry BC), so h_relax's if(p->embed_flux) is false and embed_flux is never called for oxy at any multigrid level",
+    "prediction": "2-rank restart from smoke_l5_seg0 checkpoint passes t_mix=100.334 with no H_RELAX_BLOW, no EMBED diagnostic, finite kLa_25 at t_end=110.334",
+    "commit": "pending-h11",
+    "job_id": "interactive-PID-3135406",
     "observation": "pending",
     "status": "inconclusive",
     "date": "2026-06-18"
