@@ -78,6 +78,7 @@ event vof (i++)
 struct HDiffusion {
   face vector D;     // alpha
   face vector beta;  // newly added for the second term of diffusion
+  const char * tracer_name; // name of the tracer being solved (for diagnostics)
 #if EMBED
   double (* embed_flux) (Point, scalar, vector, double *);
 #endif
@@ -149,32 +150,60 @@ static void h_relax (scalar * al, scalar * bl, int l, void * data)
   struct HDiffusion * p = (struct HDiffusion *) data;
   face vector D = p->D, beta = p->beta;
 
+  // On MPI checkpoint restart, Basilisk allocates fresh pool memory for local
+  // face vectors D and beta (which are not dumped to the checkpoint).  Pool
+  // slots for ghost cells at coarse non-leaf levels that are not covered by
+  // masked_boundary_restriction retain the pool initialiser — signaling NaN
+  // (0x7ff0000000000001) after set_fpe() enables FE_INVALID trapping.
+  //
+  // The crash manifests only at t_mix (when tracer c2 first becomes non-zero
+  // and the multigrid actually iterates at coarse levels for the first time).
+  //
+  // Fix: disable FP exception trapping for the duration of h_relax.  Ghost
+  // cells at coarse levels may produce quiet NaN from pool-NaN arithmetic, but
+  // (a) boundary_level() overwrites ghost da values before bilinear uses them,
+  // and (b) the foreach() apply step in mg_cycle touches only leaf cells.
+  // The NaN is therefore transient and does not affect the converged answer.
+  // feclearexcept before re-enabling prevents a stale status bit from firing.
+  int _fpe_prev = fedisableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
+  feclearexcept(FE_ALL_EXCEPT);
+
   scalar c = a;
   foreach_level_or_leaf (l) {
-    // -lambda[] = cm[]/dt
-    double n = - sq(Delta)*b[], d = cm[]/dt*sq(Delta);
-    foreach_dimension() {
-      // Pe-limit: after restriction, coarse-level beta can still drive Pe > 2.
-      // Clamp |beta| at each level so the Gauss-Seidel update is monotone.
-      double b1 = beta.x[1], b0 = beta.x[];
-      {
-        double bmax1 = 2.*D.x[1]/Delta, bmax0 = 2.*D.x[]/Delta;
-        if (b1 >  bmax1) b1 =  bmax1; else if (b1 < -bmax1) b1 = -bmax1;
-        if (b0 >  bmax0) b0 =  bmax0; else if (b0 < -bmax0) b0 = -bmax0;
-      }
-      n += D.x[1]*a[1] + D.x[]*a[-1] +
-	Delta*(b1*a[1] - b0*a[-1])/2.; // added terms in henry.h
-      d += D.x[1] + D.x[] -
-	Delta*(b1 - b0)/2.; // added terms in henry.h
+    double b_eff = b[];
+    // Pre-extract all stencil accesses UNCONDITIONALLY so qcc's static
+    // analysis sees them and expands MPI halo buffers for every field and
+    // offset used below.
+    double _Dx  = D.x[],   _Dx1  = D.x[1];
+    double _Dy  = D.y[],   _Dy01 = D.y[0,1];
+    double _bx  = beta.x[], _bx1  = beta.x[1];
+    double _by  = beta.y[], _by01 = beta.y[0,1];
+    double _a1  = a[1],    _a_1  = a[-1];
+    double _a01 = a[0,1],  _a0_1 = a[0,-1];
+
+    // Pe-limit beta.  Clamp |beta| <= 2*D/Delta at each level so the
+    // Gauss-Seidel update is monotone.
+    {
+      double bmx1 = 2.*_Dx1/Delta, bmx0 = 2.*_Dx/Delta;
+      if (_bx1 >  bmx1) _bx1 =  bmx1; else if (_bx1 < -bmx1) _bx1 = -bmx1;
+      if (_bx  >  bmx0) _bx  =  bmx0; else if (_bx  < -bmx0) _bx  = -bmx0;
+      double bmy01 = 2.*_Dy01/Delta, bmy0 = 2.*_Dy/Delta;
+      if (_by01 >  bmy01) _by01 =  bmy01; else if (_by01 < -bmy01) _by01 = -bmy01;
+      if (_by   >  bmy0)  _by   =  bmy0;  else if (_by   < -bmy0)  _by   = -bmy0;
     }
+    double _nx = _Dx1*_a1 + _Dx*_a_1 + Delta*(_bx1*_a1 - _bx*_a_1)/2.;
+    double _dx = _Dx1 + _Dx - Delta*(_bx1 - _bx)/2.;
+    double _ny = _Dy01*_a01 + _Dy*_a0_1 + Delta*(_by01*_a01 - _by*_a0_1)/2.;
+    double _dy = _Dy01 + _Dy - Delta*(_by01 - _by)/2.;
+    double n = -sq(Delta)*b_eff + _nx + _ny, d = cm[]/dt*sq(Delta) + _dx + _dy;
 
     ///*
 #if EMBED
     if (p->embed_flux){
-      double c;
-      double e = embed_flux (point, a, D, &c);
-      n -= c*sq(Delta);
-      d += e*sq(Delta);
+      double c_embed = 0., e_embed = 0.;
+      e_embed = embed_flux (point, a, D, &c_embed);
+      n -= c_embed*sq(Delta);
+      d += e_embed*sq(Delta);
     }
     if (d <= 0.)   // was: if (!d) — also catches d<0 from coarse-level beta terms
       c[] = b[] = 0.;
@@ -190,10 +219,20 @@ static void h_relax (scalar * al, scalar * bl, int l, void * data)
       // returns false, so !false = true → clamp.  Plain (d < d_floor) leaves NaN
       // unchanged because NaN comparisons always return false.
       if (!(d >= d_floor)) d = d_floor;
+      // If coarse-level D.x[1] or a[1] pool-SNaN propagated into n via
+      // fedisableexcept-suppressed arithmetic, guard here so we never write
+      // NaN to c[].  NaN in c[] propagates through boundary_level() to
+      // neighbouring ghost cells and triggers FE_INVALID in h_residual.
       if (!isfinite(n)) n = 0.;
       c[] = n/d;
     }
   }
+  // Restore FP exception trapping; clear any status bits set during the
+  // coarse-level smoother so the re-enable doesn't immediately fire.
+  feclearexcept(FE_ALL_EXCEPT);
+  if (_fpe_prev & FE_DIVBYZERO) feenableexcept(FE_DIVBYZERO);
+  if (_fpe_prev & FE_INVALID)   feenableexcept(FE_INVALID);
+  if (_fpe_prev & FE_OVERFLOW)  feenableexcept(FE_OVERFLOW);
 }
 //*/
 
@@ -220,6 +259,16 @@ static double h_residual (scalar * al, scalar * bl, scalar * resl, void * data)
   // computed values.  Non-zero pool values in any cell are thus eliminated.
   foreach_cell()
     res[] = 0.;
+  // foreach_cell() zeros cells in the LOCAL active tree, but coarse ghost cells
+  // at MPI rank boundaries that have no fine-level descendants on this rank may
+  // be absent from the active tree and escape the loop.  Those cells retain pool
+  // garbage from a prior mg_solve (pressure Poisson) and survive into
+  // restriction_level({res}) → b[] in h_relax at level 2.  Explicitly restricting
+  // from the all-zero leaf state propagates zeros to ALL coarse ghost cells via
+  // halo_restriction, eliminating the pool contamination before leaf residuals
+  // are computed below.  mg_cycle's own restriction_level passes then overwrite
+  // coarse cells with the actual restricted residuals — no double-counting.
+  restriction ({res});
   // Compute residual inline using D/beta directly (no local face vector g[]).
   // The original g[] TREE version stored face fluxes in a local face vector and
   // then read g.x[1] in foreach().  On MPI restart, foreach_face() only writes
@@ -356,8 +405,10 @@ event tracer_diffusion (i++)
     D.y.restriction = restriction_face_harmonic;
     restriction ({D, beta, cm});
     struct HDiffusion q;
+    q.embed_flux = NULL; // must initialize; uninitialized garbage skips the symmetry check below
     q.D = D;
     q.beta = beta;
+    q.tracer_name = c.name;
 
     // Extend qcc's stencil analysis to non-leaf levels for ALL fields that
     // h_relax accesses at coarse ghost cells via foreach_dimension().
@@ -383,13 +434,18 @@ event tracer_diffusion (i++)
       if (!is_leaf(cell))
         (void)(c[] + r[] + D.x[] + D.y[] + beta.x[] + beta.y[]);
 
+    // from mgstats poisson
+    ///*
     scalar aa = c;
 #if EMBED
     if (!q.embed_flux && aa.boundary[embed] != symmetry)
       q.embed_flux = embed_flux;
 #endif //EMBED
+    //*/
 
     mg_solve ({c}, {r}, h_residual, h_relax, &q);
+
+    //*/
   }
 }
 

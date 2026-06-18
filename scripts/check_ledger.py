@@ -43,10 +43,12 @@ def check(entries: list[dict]) -> int:
               f"{len(confirmed)} confirmed, {len(falsified)} falsified, "
               f"{len(inconclusive)} inconclusive)")
 
-        # Flag inconclusives that have a later resolution
-        later_statuses = {e["status"] for e in group}
-        for e in inconclusive:
-            if "confirmed" in later_statuses or "falsified" in later_statuses:
+        # Flag inconclusives that have a LATER resolution in the same thread
+        for idx, e in enumerate(group):
+            if e["status"] != "inconclusive":
+                continue
+            later = {g["status"] for g in group[idx + 1:]}
+            if "confirmed" in later or "falsified" in later:
                 print(f"  RESOLVABLE inconclusive (job {e['job_id']}): "
                       f"later entries in this thread have a definitive status. "
                       f"Update this entry.")
