@@ -424,15 +424,19 @@ event init (t = 0)
     set_prolongation (f, fraction_refine);
 #endif // TREE
 
-    // Reset ALL stracers to zero at EVERY multigrid level.  foreach() only
-    // touches leaf cells; coarse-level cells retain stale checkpoint values.
-    // When oxy is injected at t_mix, h_residual uses face_gradient_x(a,0)
-    // which reads coarse neighbors — if those are stale (nonzero from the
-    // prior segment's kLa phase), restriction(res) propagates a large/NaN
-    // initial residual into h_relax, corrupting the correction field.
-    // reset() iterates over every cell at every tree level and sets s[]=0.
+    // Reset ALL stracers to zero at EVERY multigrid level.  reset() zeroes
+    // owned cells; boundary() communicates zeroed leaf ghost values.  But
+    // coarse-level ghost cells (owned by a neighbouring MPI rank) are NOT
+    // updated by boundary() — they retain stale checkpoint values.  When
+    // h_relax runs at a coarse V-cycle level it reads a[1] which can be a
+    // coarse ghost cell, producing a spurious non-zero restricted residual
+    // (b[] >> 1) and driving a gradual multigrid divergence over ~5 periods.
+    // restriction() propagates leaf=0 to coarse own cells and then runs
+    // halo_restriction which communicates those zeroed coarse values to
+    // neighbouring ranks' ghost slots, closing the ghost-cell gap.
     reset (stracers, 0.);
     boundary (stracers);
+    restriction (stracers);
   } else {
     // ── Fresh start ────────────────────────────────────────────────────────
     // Parametric bag geometry (dimensionless semi-axes)
