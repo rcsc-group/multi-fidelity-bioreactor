@@ -51,6 +51,8 @@ except:
 
 # Binary must be in /oscar/scratch (accessible from compute nodes)
 BINARY="/oscar/scratch/eaguerov/BioReactor-mpi-video"
+_BINARY_OVERRIDE=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('_binary',''))" "$PARAMS" 2>/dev/null)
+[ -n "$_BINARY_OVERRIDE" ] && BINARY="$_BINARY_OVERRIDE"
 if [ ! -f "$BINARY" ]; then
     echo "ERROR: $BINARY not found. Run: cp build/BioReactor-mpi-video $BINARY" >&2
     exit 1

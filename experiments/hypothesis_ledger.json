@@ -1,0 +1,42 @@
+[
+  {
+    "thread": "l7-crash-t4.25",
+    "hypothesis": "scalar tau_liq[] declared inside NORMCAL leaks one global scalar per invocation, causing pool overflow and eventual SIGSEGV",
+    "prediction": "removing the scalar allocation will let l7 jobs advance past t=4.25",
+    "commit": "fc2f1c8",
+    "job_id": "3298888",
+    "observation": "job 3298888 used the 9ddd52c henry_oxy2.h baseline (pre-e895f4e), not the fc2f1c8 fix — it reached t=74.2 with no crash; a second wave of jobs with fc2f1c8 still crashed at t=4.25. tau_liq scalar was not the root cause.",
+    "status": "falsified",
+    "date": "2026-06-17"
+  },
+  {
+    "thread": "l7-crash-t4.25",
+    "hypothesis": "commit e895f4e introduced the SIGSEGV — a binary built from the pre-e895f4e henry_oxy2.h (9ddd52c) with the current BioReactor.c runs cleanly past t=4.25",
+    "prediction": "job built from 9ddd52c henry_oxy2.h + current BioReactor.c will advance past t=4.25 without crashing",
+    "commit": "9ddd52c",
+    "job_id": "3298888",
+    "observation": "job reached t=74.2 with no crash, confirming e895f4e as the introduction point",
+    "status": "confirmed",
+    "date": "2026-06-17"
+  },
+  {
+    "thread": "l7-crash-t4.25",
+    "hypothesis": "the PRERELAX3/FINE_RES_BLOW/REGION_ALL diagnostic loops added in e895f4e caused the crash: they access D.x[1]/D.y[0,1] inside spatially-conditioned branches in foreach_cell()/foreach_level_or_leaf(), which qcc stencil analysis does not follow, leaving MPI ghost face buffers unexpanded at rank boundaries",
+    "prediction": "full e895f4e henry_oxy2.h with those three diagnostic loops removed will pass t=4.25 indefinitely on 16-rank MPI",
+    "commit": "e895f4e",
+    "job_id": "3298986",
+    "observation": "job reached t=250.5 with no crash, confirming the diagnostic loops as the sole cause",
+    "status": "confirmed",
+    "date": "2026-06-17"
+  },
+  {
+    "thread": "l7-crash-t4.25",
+    "hypothesis": "removing all diagnostic instrumentation from henry_oxy2.h on main (commit 9508817) produces a binary that completes l7 fresh runs end-to-end without crash",
+    "prediction": "first resubmitted jobs in sweep_fb_theta_l7 reach t_end with finite kLa_25",
+    "commit": "9508817",
+    "job_id": "3321334",
+    "observation": "run aaf7208a completed to t_end, kLa_25=0.132, all KPIs finite, no crash",
+    "status": "confirmed",
+    "date": "2026-06-18"
+  }
+]
