@@ -327,18 +327,17 @@ static double h_residual (scalar * al, scalar * bl, scalar * resl, void * data)
       fflush(ferr);
     }
   }
-  // REGION_ALL: foreach_cell dumps ALL cells (leaf + non-leaf, owned + ghost) in
-  // blow-up region around t=4.257.  shows res[] AFTER the zeroing pass and the
-  // leaf foreach — so non-leaf should be 0, leaf should have computed residuals,
-  // ghost leaf should also be 0 (zeroed by foreach_cell above, not yet updated
-  // by mpi_boundary_restriction).  Gated to first blow-up window to limit output.
+  // REGION_ALL: dump ALL cells (leaf + non-leaf, owned + ghost) in blow-up region.
+  // SAFETY: D.x[1]/D.y[0,1] removed — foreach_cell() with spatial conditions bypasses
+  // qcc stencil analysis, leaving ghost face buffers unexpanded → SIGSEGV on MPI rank
+  // boundaries.  Use only scalars (res, b, cm, a) which are safe at all tree levels.
   if (t > 4.25 && t < 4.26) {
     foreach_cell() {
       if (x > -0.55 && x < -0.25 && y > -0.4 && y < -0.2) {
         fprintf(ferr, "REGION_ALL t=%.4g tracer=%s x=%.4g y=%.4g level=%d leaf=%d "
-                "res=%.3g rhs=%.3g cm=%.3g a=%.3g Dx1=%.3g Dx0=%.3g Dy1=%.3g Dy0=%.3g\n",
+                "res=%.3g rhs=%.3g cm=%.3g a=%.3g\n",
                 t, p->tracer_name ? p->tracer_name : a.name, x, y, level, is_leaf(cell),
-                res[], b[], cm[], a[], D.x[1], D.x[], D.y[0,1], D.y[]);
+                res[], b[], cm[], a[]);
         fflush(ferr);
       }
     }
@@ -524,10 +523,12 @@ event tracer_diffusion (i++)
       if (_fpe_diag & FE_DIVBYZERO) feenableexcept(FE_DIVBYZERO);
       if (_fpe_diag & FE_INVALID)   feenableexcept(FE_INVALID);
       if (_fpe_diag & FE_OVERFLOW)  feenableexcept(FE_OVERFLOW);
-      fprintf(ferr,
-        "GHOST_DIAG t=%.4g tracer=%s nd=%.0f nbeta=%.0f nc=%.0f nr=%.0f\n",
-        t, c.name, nd, nbeta, nc, nr);
-      fflush(ferr);
+      if (nd > 0. || nbeta > 0. || nc > 0. || nr > 0.) {
+        fprintf(ferr,
+          "GHOST_DIAG t=%.4g tracer=%s nd=%.0f nbeta=%.0f nc=%.0f nr=%.0f\n",
+          t, c.name, nd, nbeta, nc, nr);
+        fflush(ferr);
+      }
     }
 
     mg_solve ({c}, {r}, h_residual, h_relax, &q);
