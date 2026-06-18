@@ -1,0 +1,2 @@
+run_id,slurm_job_id,date,binary,commit,fidelity,n_ranks,omega_b,g_angle,c_angle,sigma,restart_from,t_checkpoint,t_end_actual,wall_clock_s,kLa_25,kLa_50,kLa_98,status,notes
+H11-2rank-l5-sameomega,interactive-PID-3135406,2026-06-18,BioReactor-mpi-fix11,6f15883,5,2,6.28318,20,110,0.5,smoke_l5_seg0/checkpoint.dump,97.294,207.9,3986,NA,NA,NA,pass,oxy_liq_sum=0.283 at t=207.9; no blow-up; results.json absent (no run_dir in params)

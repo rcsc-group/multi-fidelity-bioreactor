@@ -95,7 +95,7 @@
     "prediction": "H10_EMBED diagnostic fires with non-zero c_embed (≈-1.42e20) at x=-0.375,y=0.375,l=2,t=100.3; n_before≈0.000134; p->embed_flux is non-NULL",
     "commit": "a83fd5a",
     "job_id": "interactive-h10-embed-diag",
-    "observation": "H10_EMBED diagnostic confirmed via code inspection: struct HDiffusion q (line 535) has no initializer for q.embed_flux; the if(!q.embed_flux&&aa.boundary[embed]!=symmetry) check is silently skipped when garbage is non-NULL, leaving q.embed_flux=garbage. h_relax then calls embed_flux for oxy (symmetry BC → returns oxy[]≈2.3e-5 as Neumann derivative → mua/(fa+SEPS)*oxy[]*area/Delta → huge c_embed when fa≈0 at coarse level). The H10 diagnostic run (PID=3114673) was still running when the fix was deployed; the H11 fix run passed t_mix=100.334 without any blow-up (t=103.9 reached at wall clock ~5 min, oxy=0.229 finite, monotonically increasing), providing independent validation that embed_flux was the sole root cause.",
+    "observation": "EMPIRICALLY CONFIRMED (monitor bih6d9p2g, PID=3114673): pef=0x2300000022 for ALL 6 tracers (c, oxy, c1, c2, c3, c4) at l=2 x=-0.375 y=0.375 — non-NULL garbage value from uninitialized struct HDiffusion q. c_embed=0 at t=100.001–100.041 because oxy[]=0 before t_mix (tracers just reset from checkpoint, injection not yet fired). embed_flux(oxy) returns 0 when oxy[]=0 (symmetry → grad=0 → early return). Blow-up fires at t=100.334 when oxy[] first becomes non-zero from the tracer injection event; then embed_flux returns c_embed≈-1.42e20 → n+=8.87e18 → diverge. All 6 tracers share pef=0x2300000022 (same stack garbage layout per call). H11 fix run (q.embed_flux=NULL, PID=3135406) passed t_mix=100.334 with no blow-up, confirming uninitialized embed_flux was the sole root cause.",
     "status": "confirmed",
     "date": "2026-06-18"
   },
@@ -105,8 +105,68 @@
     "prediction": "2-rank restart from smoke_l5_seg0 checkpoint passes t_mix=100.334 with no H_RELAX_BLOW, no EMBED diagnostic, finite kLa_25 at t_end=110.334",
     "commit": "6f15883",
     "job_id": "interactive-PID-3135406",
-    "observation": "2-rank MPI restart passed t_mix=100.334 with no blow-up. At t=103.9 (wall clock 5 min), oxy=0.229 (monotonically increasing from 0.208 at t=103, finite and physical). Previously identical run blew up at t=100.3. Run continuing to t_end=110.334.",
+    "observation": "CONFIRMED COMPLETE: 2-rank MPI restart passed t_mix=100.334, ran to t=207.9 (PID clean exit, no SIGFPE/crash), oxy_liq_sum=0.283 finite and physical at t=207.9 (tr_oxy.dat). Previously identical run blew up at t=100.3. No results.json because interactive test params.json lacks run_dir — health confirmed via logstats+tr_oxy; kLa_25 not captured from this run.",
     "status": "confirmed",
+    "date": "2026-06-18"
+  },
+  {
+    "thread": "mpi-checkpoint-restart",
+    "hypothesis": "H12: the fix (q.embed_flux=NULL, commit 15f9f03) generalises to a 2-rank level-5 same-omega restart with proper run_dir and results.json capture",
+    "prediction": "grid_H12 passes t_mix=100.334, results.json written with finite kLa_25",
+    "commit": "15f9f03",
+    "job_id": "3336237",
+    "observation": "",
+    "status": "pending",
+    "date": "2026-06-18"
+  },
+  {
+    "thread": "mpi-checkpoint-restart",
+    "hypothesis": "H13: 2-rank level-5 restart with 2× omega change (omega_b_prev=1.5708 → omega_b=3.1416, velocity rescaled by su=0.5) also survives t_mix with finite oxy",
+    "prediction": "grid_H13 passes t_mix=100.334 despite velocity rescaling; oxy_liq_sum finite in tr_oxy.dat",
+    "commit": "15f9f03",
+    "job_id": "3336238",
+    "observation": "",
+    "status": "pending",
+    "date": "2026-06-18"
+  },
+  {
+    "thread": "mpi-checkpoint-restart",
+    "hypothesis": "H14: 16-rank level-5 same-omega restart works — the q.embed_flux=NULL fix covers all MPI rank counts, not just 2",
+    "prediction": "grid_H14 passes t_mix=100.334 with 16 ranks; results.json written with finite kLa_25",
+    "commit": "15f9f03",
+    "job_id": "3336239",
+    "observation": "",
+    "status": "pending",
+    "date": "2026-06-18"
+  },
+  {
+    "thread": "mpi-checkpoint-restart",
+    "hypothesis": "H15: 16-rank level-5 diff-omega restart (2× omega change) works — most stress: maximum MPI ghost footprint plus velocity rescaling",
+    "prediction": "grid_H15 passes t_mix=100.334 with 16 ranks and omega rescaling; finite oxy",
+    "commit": "15f9f03",
+    "job_id": "3336240",
+    "observation": "",
+    "status": "pending",
+    "date": "2026-06-18"
+  },
+  {
+    "thread": "mpi-checkpoint-restart",
+    "hypothesis": "H16: 2-rank level-6 same-omega restart works — higher fidelity (more cells, smaller dt) does not introduce new restart failure modes",
+    "prediction": "grid_H16 passes t_mix=150.740 from bench_f6_mpi_a checkpoint; finite oxy_liq_sum",
+    "commit": "15f9f03",
+    "job_id": "3336241",
+    "observation": "",
+    "status": "pending",
+    "date": "2026-06-18"
+  },
+  {
+    "thread": "mpi-checkpoint-restart",
+    "hypothesis": "H17: 16-rank level-6 same-omega restart works — full production scale (highest fidelity + maximum MPI decomposition)",
+    "prediction": "grid_H17 passes t_mix=150.740 from bench_f6_mpi_a checkpoint; finite oxy_liq_sum; results.json written",
+    "commit": "15f9f03",
+    "job_id": "3336242",
+    "observation": "",
+    "status": "pending",
     "date": "2026-06-18"
   }
 ]

@@ -78,69 +78,10 @@ event vof (i++)
 struct HDiffusion {
   face vector D;     // alpha
   face vector beta;  // newly added for the second term of diffusion
-  const char * tracer_name; // name of the tracer being solved (for diagnostics)
 #if EMBED
   double (* embed_flux) (Point, scalar, vector, double *);
 #endif
 };
-
-// Harmonic restriction for face diffusivity D.
-//
-// Default restriction_face uses arithmetic averaging: D_coarse = (D_a + D_b)/2.
-// For high-contrast D (D_gas/D_liquid ~ 6e4 here), arithmetic restriction
-// produces D_coarse ~ D_gas at every coarse level, making the Gauss-Seidel
-// smoother in h_relax overshoot by ~D_gas/D_liquid per level → catastrophic
-// multi-level runaway.
-//
-// Harmonic mean 2ab/(a+b) ≈ 2*min(a,b) for a >> b.  This weights the slow
-// (liquid) phase as the transport bottleneck, giving D_coarse ~ 2*D_liquid
-// instead of ~D_gas/2, and stabilises the V-cycle for any contrast ratio.
-//
-// NOTE: harmonic restriction is physically correct in the NORMAL direction
-// (series resistance across the interface) but slightly under-estimates the
-// TANGENTIAL conductance (parallel paths of D_liq and D_gas).  The multigrid
-// coarse solver is less accurate but numerically stable; fine-level accuracy
-// is preserved because the finest-level D.x[] is computed from the harmonic
-// VOF-weighted formula in tracer_diffusion and is never changed.
-static inline void face_harmonic (Point point, vector v)
-{
-  foreach_dimension()
-    foreach_blockf (v.x) {
-#if dimension == 1
-      v.x[] = fine(v.x,0);
-      v.x[1] = fine(v.x,2);
-#elif dimension == 2
-      {
-        double a = fine(v.x,0,0), b = fine(v.x,0,1);
-        v.x[] = (a + b > 1e-300) ? 2.*a*b/(a + b) : 0.;
-      }
-      {
-        double a = fine(v.x,2,0), b = fine(v.x,2,1);
-        v.x[1] = (a + b > 1e-300) ? 2.*a*b/(a + b) : 0.;
-      }
-#else // dimension == 3
-      {
-        double a = fine(v.x,0,0,0), b = fine(v.x,0,1,0),
-               c = fine(v.x,0,0,1), d = fine(v.x,0,1,1);
-        double denom = (a > 0 ? 1./a : 0.) + (b > 0 ? 1./b : 0.) +
-                       (c > 0 ? 1./c : 0.) + (d > 0 ? 1./d : 0.);
-        v.x[] = (denom > 1e-300) ? 4./denom : 0.;
-      }
-      {
-        double a = fine(v.x,2,0,0), b = fine(v.x,2,1,0),
-               c = fine(v.x,2,0,1), d = fine(v.x,2,1,1);
-        double denom = (a > 0 ? 1./a : 0.) + (b > 0 ? 1./b : 0.) +
-                       (c > 0 ? 1./c : 0.) + (d > 0 ? 1./d : 0.);
-        v.x[1] = (denom > 1e-300) ? 4./denom : 0.;
-      }
-#endif
-    }
-}
-
-static inline void restriction_face_harmonic (Point point, scalar s)
-{
-  face_harmonic (point, s.v);
-}
 
 static void h_relax (scalar * al, scalar * bl, int l, void * data)
 {
@@ -219,11 +160,6 @@ static void h_relax (scalar * al, scalar * bl, int l, void * data)
       // returns false, so !false = true → clamp.  Plain (d < d_floor) leaves NaN
       // unchanged because NaN comparisons always return false.
       if (!(d >= d_floor)) d = d_floor;
-      // If coarse-level D.x[1] or a[1] pool-SNaN propagated into n via
-      // fedisableexcept-suppressed arithmetic, guard here so we never write
-      // NaN to c[].  NaN in c[] propagates through boundary_level() to
-      // neighbouring ghost cells and triggers FE_INVALID in h_residual.
-      if (!isfinite(n)) n = 0.;
       c[] = n/d;
     }
   }
@@ -395,20 +331,11 @@ event tracer_diffusion (i++)
     // faces are NaN, FE_INVALID fires. boundary() here overwrites the pool NaN
     // with the correct neighbour-rank values before restriction proceeds.
     boundary ({D, beta});
-    // Use harmonic restriction for D at all coarse levels.
-    // Arithmetic restriction (the default restriction_face) gives
-    // D_coarse ≈ D_gas at coarse levels for D_gas/D_liquid ~ 6e4, causing
-    // multigrid Gauss-Seidel overcorrection by ~10^4 per level → runaway.
-    // Harmonic restriction gives D_coarse ≈ 2*D_liquid, stabilising the
-    // V-cycle without affecting fine-level physics (D is recomputed each step).
-    D.x.restriction = restriction_face_harmonic;
-    D.y.restriction = restriction_face_harmonic;
     restriction ({D, beta, cm});
     struct HDiffusion q;
     q.embed_flux = NULL; // must initialize; uninitialized garbage skips the symmetry check below
     q.D = D;
     q.beta = beta;
-    q.tracer_name = c.name;
 
     // Extend qcc's stencil analysis to non-leaf levels for ALL fields that
     // h_relax accesses at coarse ghost cells via foreach_dimension().
