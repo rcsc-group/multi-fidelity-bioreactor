@@ -176,11 +176,13 @@ static void h_relax (scalar * al, scalar * bl, int l, void * data)
     // huge a[neighbor] contributions (from a previous V-cycle's prolongated da).
     if (l == 3 && t > 4.25 && t < 4.26 &&
         x > -0.55 && x < -0.25 && y > -0.4 && y < -0.2) {
+      // SAFETY: D.x[1]/D.y[0,1] removed — foreach_level_or_leaf with spatial+temporal
+      // condition bypasses qcc stencil analysis → ghost face buffers unexpanded → SIGSEGV.
       fprintf(ferr, "PRERELAX3 t=%.4g tracer=%s x=%.4g y=%.4g leaf=%d "
-              "b=%.3g da=%.3g cm=%.3g Dx1=%.3g Dx0=%.3g Dy1=%.3g Dy0=%.3g "
+              "b=%.3g da=%.3g cm=%.3g "
               "ax1=%.3g ax0=%.3g ay1=%.3g ay0=%.3g\n",
               t, p->tracer_name ? p->tracer_name : a.name, x, y, is_leaf(cell),
-              b[], a[], cm[], D.x[1], D.x[], D.y[0,1], D.y[],
+              b[], a[], cm[],
               a[1], a[-1], a[0,1], a[0,-1]);
       fflush(ferr);
     }
@@ -235,13 +237,13 @@ static void h_relax (scalar * al, scalar * bl, int l, void * data)
       if (fabs(c[]) > 1e10) {
         // Recover b[] from n (valid when D=0 on all faces, which is the blow-up case).
         double _b = -n / sq(Delta);
+        // SAFETY: D.x[1]/D.y[0,1] removed — same qcc blind-spot as PRERELAX3.
+        // n and d already encode all D/beta contributions; keep those instead.
         fprintf(ferr, "H_RELAX_BLOW t=%.4g tracer=%s level=%d x=%.4g y=%.4g "
                 "c=%.3g b=%.3g cm=%.3g n=%.3g d=%.3g "
-                "Dx1=%.3g Dx0=%.3g Dy1=%.3g Dy0=%.3g "
                 "ax1=%.3g ax0=%.3g ay1=%.3g ay0=%.3g\n",
                 t, p->tracer_name ? p->tracer_name : a.name, l, x, y,
                 c[], _b, cm[], n, d,
-                D.x[1], D.x[], D.y[0,1], D.y[],
                 a[1], a[-1], a[0,1], a[0,-1]);
         fflush(ferr);
       }
