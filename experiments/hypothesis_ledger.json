@@ -73,8 +73,18 @@
     "thread": "mpi-checkpoint-restart",
     "hypothesis": "n=8.87e+18 at level=2 despite small printed neighbors is caused by some level-2 cell (possibly a ghost cell) having |b[]| >> 1 from pool garbage not overwritten by halo_restriction — the H_RELAX_BLOW neighbor diagnostic printed wrong values due to qcc stencil blind-spot in the conditional block",
     "prediction": "HUGE_B diagnostic will fire before H_RELAX_BLOW, identifying at least one level-2 cell with |b[]| > 100 at t≈100.334; that cell will be an MPI ghost cell not covered by restriction({res})",
-    "commit": "pending-HUGE_B-build",
+    "commit": "5398a0c",
     "job_id": "interactive-HUGE_B",
+    "observation": "GHOST_B_CLAMP diagnostic added in 11aceea fires at t>99.9 (confirmed by monitor). H8's core mechanism is confirmed: coarse ghost cells have b[]≠0 from stale pool — those cells are identified by is_local(cell)==false at l<depth(). HUGE_B was never needed separately: GHOST_B_CLAMP is the exact signal.",
+    "status": "confirmed",
+    "date": "2026-06-18"
+  },
+  {
+    "thread": "mpi-checkpoint-restart",
+    "hypothesis": "zeroing b_eff for coarse ghost cells (!is_local && l<depth()) in h_relax prevents the Gauss-Seidel blow-up: ghost c[] is overwritten by boundary_level() after each sweep regardless, so b_eff=0 is exact",
+    "prediction": "2-rank restart from smoke_l5_seg0 passes t_mix=100.334, no H_RELAX_BLOW, GHOST_B_CLAMP fires confirming ghost b[] was non-zero, kLa_25 is finite at t_end=110.334",
+    "commit": "11aceea",
+    "job_id": "interactive-ghost-b-fix",
     "observation": "pending",
     "status": "inconclusive",
     "date": "2026-06-18"
