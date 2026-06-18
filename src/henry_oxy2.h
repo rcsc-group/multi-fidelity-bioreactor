@@ -186,6 +186,22 @@ static void h_relax (scalar * al, scalar * bl, int l, void * data)
               a[1], a[-1], a[0,1], a[0,-1]);
       fflush(ferr);
     }
+    // BLOWUP_PROBE: log b[] at the blow-up cell (level=2, x≈-0.375, y≈0.375) every
+    // V-cycle call once t>99.9, to determine whether b[] jumps suddenly or grows
+    // gradually (distinguishes single-event injection from per-cycle accumulation).
+    if (l == 2 && t > 99.9 && fabs(x - (-0.375)) < 0.01 && fabs(y - 0.375) < 0.01) {
+      fprintf(ferr, "BLOWUP_PROBE t=%.6g tracer=%s b=%.3g da=%.3g\n",
+              t, p->tracer_name ? p->tracer_name : a.name, b[], a[]);
+      fflush(ferr);
+    }
+    // HUGE_B: flag any level-2 cell (including MPI ghost cells) whose b[] exceeds
+    // a threshold — distinguishes physical residuals (~0.01) from pool garbage (~1e20).
+    // Only offset-0 b[] is accessed so no qcc stencil blind-spot risk.
+    if (l == 2 && t > 99.9 && t < 100.5 && fabs(b[]) > 100.) {
+      fprintf(ferr, "HUGE_B t=%.6g tracer=%s x=%.4g y=%.4g b=%.3g a=%.3g cm=%.3g\n",
+              t, p->tracer_name ? p->tracer_name : a.name, x, y, b[], a[], cm[]);
+      fflush(ferr);
+    }
     // -lambda[] = cm[]/dt
     double n = - sq(Delta)*b[], d = cm[]/dt*sq(Delta);
     foreach_dimension() {

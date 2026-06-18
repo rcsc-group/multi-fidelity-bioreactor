@@ -65,6 +65,16 @@
     "prediction": "2-rank restart passes t_mix=100.334, reaches t_end=110.334, zero H_RELAX_BLOW, finite kLa_25",
     "commit": "bc1b92e",
     "job_id": "interactive-bc1b92e",
+    "observation": "BLOWUP_PROBE shows b=0 at t=99.9014 for ALL tracers (restriction+boundary zeroed everything before t_mix). At t=100.334 (t_mix), b=-0.00214 for oxy (small, physical). But n=8.87e+18 at level=2 despite all printed neighbors being ~1e-08. H_RELAX_BLOW diagnostics for neighbors (ax1,ax0,ay1,ay0) were printed inside a conditional branch — same qcc stencil blind-spot as PRERELAX3. The actual n used in h_relax may be correct (from halo-expanded buffer) while the diagnostic prints the wrong (unexpanded) buffer value. restriction({res}) did not prevent blow-up: 8.4M H_RELAX_BLOW lines at t=100.3.",
+    "status": "falsified",
+    "date": "2026-06-18"
+  },
+  {
+    "thread": "mpi-checkpoint-restart",
+    "hypothesis": "n=8.87e+18 at level=2 despite small printed neighbors is caused by some level-2 cell (possibly a ghost cell) having |b[]| >> 1 from pool garbage not overwritten by halo_restriction — the H_RELAX_BLOW neighbor diagnostic printed wrong values due to qcc stencil blind-spot in the conditional block",
+    "prediction": "HUGE_B diagnostic will fire before H_RELAX_BLOW, identifying at least one level-2 cell with |b[]| > 100 at t≈100.334; that cell will be an MPI ghost cell not covered by restriction({res})",
+    "commit": "pending-HUGE_B-build",
+    "job_id": "interactive-HUGE_B",
     "observation": "pending",
     "status": "inconclusive",
     "date": "2026-06-18"
