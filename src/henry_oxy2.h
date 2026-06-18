@@ -203,7 +203,33 @@ static void h_relax (scalar * al, scalar * bl, int l, void * data)
       fflush(ferr);
     }
     // -lambda[] = cm[]/dt
-    double n = - sq(Delta)*b[], d = cm[]/dt*sq(Delta);
+    //
+    // Root cause of MPI checkpoint restart blow-up: foreach_level_or_leaf visits
+    // coarse ghost cells.  Pool scalar `res` (Basilisk's mg_cycle residual) has
+    // no static stencil hint → halo_restriction is a no-op for it → coarse ghost
+    // cells retain stale residuals from the previous tracer's mg_solve.  Within a
+    // single Gauss-Seidel sweep, h_relax updates a ghost cell with the garbage
+    // b[], and an owned cell processed LATER in the same sweep reads the resulting
+    // huge c[ghost] as a neighbour.  boundary_level() after each sweep would fix
+    // the ghost but it runs AFTER the sweep, too late.
+    //
+    // Fix: for coarse ghost cells use b_eff=0.  Their c[] is overwritten by
+    // boundary_level() after the sweep regardless, so the correction is exact.
+    // Log the first clamp per cell so the hypothesis can be falsified.
+#if _MPI
+    double b_eff = b[];
+    if (l < depth() && !is_local(cell) && b[] != 0.) {
+      if (fabs(b[]) > 1e-4) {
+        fprintf(ferr, "GHOST_B_CLAMP t=%.6g tracer=%s l=%d x=%.4g y=%.4g b=%.3g\n",
+                t, p->tracer_name ? p->tracer_name : a.name, l, x, y, b[]);
+        fflush(ferr);
+      }
+      b_eff = 0.;
+    }
+#else
+    double b_eff = b[];
+#endif
+    double n = - sq(Delta)*b_eff, d = cm[]/dt*sq(Delta);
     foreach_dimension() {
       // Pe-limit: after restriction, coarse-level beta can still drive Pe > 2.
       // Clamp |beta| at each level so the Gauss-Seidel update is monotone.
