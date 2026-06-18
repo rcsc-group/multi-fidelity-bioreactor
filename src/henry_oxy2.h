@@ -229,21 +229,33 @@ static void h_relax (scalar * al, scalar * bl, int l, void * data)
 #else
     double b_eff = b[];
 #endif
-    double n = - sq(Delta)*b_eff, d = cm[]/dt*sq(Delta);
-    foreach_dimension() {
-      // Pe-limit: after restriction, coarse-level beta can still drive Pe > 2.
-      // Clamp |beta| at each level so the Gauss-Seidel update is monotone.
-      double b1 = beta.x[1], b0 = beta.x[];
-      {
-        double bmax1 = 2.*D.x[1]/Delta, bmax0 = 2.*D.x[]/Delta;
-        if (b1 >  bmax1) b1 =  bmax1; else if (b1 < -bmax1) b1 = -bmax1;
-        if (b0 >  bmax0) b0 =  bmax0; else if (b0 < -bmax0) b0 = -bmax0;
-      }
-      n += D.x[1]*a[1] + D.x[]*a[-1] +
-	Delta*(b1*a[1] - b0*a[-1])/2.; // added terms in henry.h
-      d += D.x[1] + D.x[] -
-	Delta*(b1 - b0)/2.; // added terms in henry.h
+    // Pre-extract all stencil accesses UNCONDITIONALLY so qcc's static
+    // analysis sees them and expands MPI halo buffers for every field and
+    // offset used below.  The conditional in H_RELAX_BLOW would otherwise
+    // create a qcc stencil blind-spot, printing values from un-expanded
+    // buffers.  Extracting here and printing the locals avoids that.
+    double _Dx  = D.x[],   _Dx1  = D.x[1];
+    double _Dy  = D.y[],   _Dy01 = D.y[0,1];
+    double _bx  = beta.x[], _bx1  = beta.x[1];
+    double _by  = beta.y[], _by01 = beta.y[0,1];
+    double _a1  = a[1],    _a_1  = a[-1];
+    double _a01 = a[0,1],  _a0_1 = a[0,-1];
+
+    // Pe-limit beta.  Clamp |beta| <= 2*D/Delta at each level so the
+    // Gauss-Seidel update is monotone.
+    {
+      double bmx1 = 2.*_Dx1/Delta, bmx0 = 2.*_Dx/Delta;
+      if (_bx1 >  bmx1) _bx1 =  bmx1; else if (_bx1 < -bmx1) _bx1 = -bmx1;
+      if (_bx  >  bmx0) _bx  =  bmx0; else if (_bx  < -bmx0) _bx  = -bmx0;
+      double bmy01 = 2.*_Dy01/Delta, bmy0 = 2.*_Dy/Delta;
+      if (_by01 >  bmy01) _by01 =  bmy01; else if (_by01 < -bmy01) _by01 = -bmy01;
+      if (_by   >  bmy0)  _by   =  bmy0;  else if (_by   < -bmy0)  _by   = -bmy0;
     }
+    double _nx = _Dx1*_a1 + _Dx*_a_1 + Delta*(_bx1*_a1 - _bx*_a_1)/2.;
+    double _dx = _Dx1 + _Dx - Delta*(_bx1 - _bx)/2.;
+    double _ny = _Dy01*_a01 + _Dy*_a0_1 + Delta*(_by01*_a01 - _by*_a0_1)/2.;
+    double _dy = _Dy01 + _Dy - Delta*(_by01 - _by)/2.;
+    double n = -sq(Delta)*b_eff + _nx + _ny, d = cm[]/dt*sq(Delta) + _dx + _dy;
 
     ///*
 #if EMBED
@@ -277,16 +289,18 @@ static void h_relax (scalar * al, scalar * bl, int l, void * data)
       // Threshold 1e10: seed value is ~1e31, first cascade step ~1e53. Catches both.
       // foreach_level_or_leaf is serial; p->tracer_name is read-only (no write to p).
       if (fabs(c[]) > 1e10) {
-        // Recover b[] from n (valid when D=0 on all faces, which is the blow-up case).
-        double _b = -n / sq(Delta);
-        // SAFETY: D.x[1]/D.y[0,1] removed — same qcc blind-spot as PRERELAX3.
-        // n and d already encode all D/beta contributions; keep those instead.
+        // Print the pre-extracted locals (NOT a[1]/D.x[1] directly — those would
+        // be inside a conditional and fall into the qcc stencil blind-spot).
         fprintf(ferr, "H_RELAX_BLOW t=%.4g tracer=%s level=%d x=%.4g y=%.4g "
                 "c=%.3g b=%.3g cm=%.3g n=%.3g d=%.3g "
-                "ax1=%.3g ax0=%.3g ay1=%.3g ay0=%.3g\n",
+                "a1=%.3g a_1=%.3g a01=%.3g a0_1=%.3g "
+                "Dx=%.3g Dx1=%.3g Dy=%.3g Dy01=%.3g "
+                "nx=%.3g ny=%.3g nb=%.3g is_local=%d\n",
                 t, p->tracer_name ? p->tracer_name : a.name, l, x, y,
-                c[], _b, cm[], n, d,
-                a[1], a[-1], a[0,1], a[0,-1]);
+                c[], b[], cm[], n, d,
+                _a1, _a_1, _a01, _a0_1,
+                _Dx, _Dx1, _Dy, _Dy01,
+                _nx, _ny, -sq(Delta)*b_eff, is_local(cell));
         fflush(ferr);
       }
     }
