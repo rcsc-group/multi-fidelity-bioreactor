@@ -115,8 +115,8 @@
     "prediction": "grid_H12 passes t_mix=100.334, results.json written with finite kLa_25",
     "commit": "15f9f03",
     "job_id": "3336237",
-    "observation": "",
-    "status": "pending",
+    "observation": "CONFIRMED: results.json written, kLa_25=0.453, kLa_50=0.451, oxy_liq_sum=0.277 at t=109.4; zero crash signals in SLURM err log.",
+    "status": "confirmed",
     "date": "2026-06-18"
   },
   {
@@ -125,8 +125,8 @@
     "prediction": "grid_H13 passes t_mix=100.334 despite velocity rescaling; oxy_liq_sum finite in tr_oxy.dat",
     "commit": "15f9f03",
     "job_id": "3336238",
-    "observation": "",
-    "status": "pending",
+    "observation": "CONFIRMED: results.json written, kLa_25=0.216, oxy_liq_sum=0.254 at t=109.4; vel_rms_qss=0.406 (≈su=0.5× H12 value of 0.710, consistent with velocity rescaling); zero crashes.",
+    "status": "confirmed",
     "date": "2026-06-18"
   },
   {
@@ -135,8 +135,8 @@
     "prediction": "grid_H14 passes t_mix=100.334 with 16 ranks; results.json written with finite kLa_25",
     "commit": "15f9f03",
     "job_id": "3336239",
-    "observation": "",
-    "status": "pending",
+    "observation": "CONFIRMED: results.json written, kLa_25=0.524, oxy_liq_sum=0.275 at t=109.4; consistent with H12 (same-omega, same checkpoint, different rank count); zero crashes.",
+    "status": "confirmed",
     "date": "2026-06-18"
   },
   {
@@ -145,8 +145,8 @@
     "prediction": "grid_H15 passes t_mix=100.334 with 16 ranks and omega rescaling; finite oxy",
     "commit": "15f9f03",
     "job_id": "3336240",
-    "observation": "",
-    "status": "pending",
+    "observation": "CONFIRMED: results.json written, kLa_25=0.244, oxy_liq_sum=0.254 at t=109.4; vel_rms_qss=0.406 (matches H13); zero crashes. Highest-stress l5 test passes.",
+    "status": "confirmed",
     "date": "2026-06-18"
   },
   {
@@ -155,8 +155,8 @@
     "prediction": "grid_H16 passes t_mix=150.740 from bench_f6_mpi_a checkpoint; finite oxy_liq_sum",
     "commit": "15f9f03",
     "job_id": "3336241",
-    "observation": "",
-    "status": "pending",
+    "observation": "CONFIRMED: results.json written, kLa_25=0.166, oxy_liq_sum=0.242 at t=159.9; zero crashes. Level-6 restart passes with 2 ranks.",
+    "status": "confirmed",
     "date": "2026-06-18"
   },
   {
@@ -165,8 +165,8 @@
     "prediction": "grid_H17 passes t_mix=150.740 from bench_f6_mpi_a checkpoint; finite oxy_liq_sum; results.json written",
     "commit": "15f9f03",
     "job_id": "3336242",
-    "observation": "",
-    "status": "pending",
+    "observation": "CONFIRMED: results.json written, kLa_25=0.159, oxy_liq_sum=0.237 at t=159.9; zero crashes. Full production-scale l6+16rank restart passes.",
+    "status": "confirmed",
     "date": "2026-06-18"
   }
 ]

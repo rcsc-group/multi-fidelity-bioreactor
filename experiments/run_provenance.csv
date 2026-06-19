@@ -1,2 +1,8 @@
 run_id,slurm_job_id,date,binary,commit,fidelity,n_ranks,omega_b,g_angle,c_angle,sigma,restart_from,t_checkpoint,t_end_actual,wall_clock_s,kLa_25,kLa_50,kLa_98,status,notes
 H11-2rank-l5-sameomega,interactive-PID-3135406,2026-06-18,BioReactor-mpi-fix11,6f15883,5,2,6.28318,20,110,0.5,smoke_l5_seg0/checkpoint.dump,97.294,207.9,3986,NA,NA,NA,pass,oxy_liq_sum=0.283 at t=207.9; no blow-up; results.json absent (no run_dir in params)
+grid_H12,3336237,2026-06-18,BioReactor-mpi-stripped,15f9f03,5,2,1.5708,20,110,0.5,smoke_l5_seg0/checkpoint.dump,97.294,109.4,NA,0.4530,0.4508,NA,pass,omega_prev=0.0000; compat-grid
+grid_H13,3336238,2026-06-18,BioReactor-mpi-stripped,15f9f03,5,2,3.1416,20,110,0.5,smoke_l5_seg0/checkpoint.dump,97.294,109.4,NA,0.2160,0.2960,NA,pass,omega_prev=1.5708; compat-grid
+grid_H14,3336239,2026-06-18,BioReactor-mpi-stripped,15f9f03,5,16,1.5708,20,110,0.5,smoke_l5_seg0/checkpoint.dump,97.294,109.4,NA,0.5236,0.4039,NA,pass,omega_prev=0.0000; compat-grid
+grid_H15,3336240,2026-06-18,BioReactor-mpi-stripped,15f9f03,5,16,3.1416,20,110,0.5,smoke_l5_seg0/checkpoint.dump,97.294,109.4,NA,0.2436,0.2989,NA,pass,omega_prev=1.5708; compat-grid
+grid_H16,3336241,2026-06-18,BioReactor-mpi-stripped,15f9f03,6,2,1.5708,20,110,0.5,bench_f6_mpi_a/checkpoint.dump,147.7,159.9,NA,0.1659,0.1913,NA,pass,omega_prev=0.0000; compat-grid
+grid_H17,3336242,2026-06-18,BioReactor-mpi-stripped,15f9f03,6,16,1.5708,20,110,0.5,bench_f6_mpi_a/checkpoint.dump,147.7,159.9,NA,0.1591,0.1689,NA,pass,omega_prev=0.0000; compat-grid
