@@ -6,3 +6,8 @@ grid_H14,3336239,2026-06-18,BioReactor-mpi-stripped,15f9f03,5,16,1.5708,20,110,0
 grid_H15,3336240,2026-06-18,BioReactor-mpi-stripped,15f9f03,5,16,3.1416,20,110,0.5,smoke_l5_seg0/checkpoint.dump,97.294,109.4,NA,0.2436,0.2989,NA,pass,omega_prev=1.5708; compat-grid
 grid_H16,3336241,2026-06-18,BioReactor-mpi-stripped,15f9f03,6,2,1.5708,20,110,0.5,bench_f6_mpi_a/checkpoint.dump,147.7,159.9,NA,0.1659,0.1913,NA,pass,omega_prev=0.0000; compat-grid
 grid_H17,3336242,2026-06-18,BioReactor-mpi-stripped,15f9f03,6,16,1.5708,20,110,0.5,bench_f6_mpi_a/checkpoint.dump,147.7,159.9,NA,0.1591,0.1689,NA,pass,omega_prev=0.0000; compat-grid
+grid_H20,see-ledger,2026-06-18,BioReactor-mpi-stripped,15f9f03,7,16,2.618,7,110,0.5,08832477/checkpoint.dump,198.8,211,NA,0.0402,NA,NA,pass,geom_n=8.0 fill=0.7 omega_prev=0.0000
+grid_H22,see-ledger,2026-06-18,BioReactor-mpi-stripped,15f9f03,7,16,3.1416,5,110,0.5,3c940365/checkpoint.dump,96.3,108.4,NA,0.0419,NA,NA,pass,geom_n=8.0 fill=0.5 omega_prev=0.0000
+grid_H19,see-ledger,2026-06-18,BioReactor-mpi-stripped,15f9f03,7,16,1.5708,7,110,0.5,6439dcba/checkpoint.dump,99.1,111.2,NA,0.1486,0.1650,NA,pass,geom_n=8.0 fill=0.3 omega_prev=0.0000
+grid_H21,see-ledger,2026-06-18,BioReactor-mpi-stripped,15f9f03,7,16,1.5708,7,110,0.5,3438372e/checkpoint.dump,99.1,111.2,NA,0.0597,NA,NA,pass,geom_n=8.0 fill=0.6 omega_prev=0.0000
+grid_H18,see-ledger,2026-06-18,BioReactor-mpi-stripped,15f9f03,4,2,6.28,7,110,0.5,001e47bf/checkpoint.dump,13.3,23.7,NA,0.1821,0.1742,NA,pass,geom_n=2.0 fill=0.7 omega_prev=0.0000

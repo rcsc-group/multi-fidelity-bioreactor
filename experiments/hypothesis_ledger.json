@@ -175,8 +175,8 @@
     "prediction": "grid_H18 (fid=4, n=2, fill=0.7, omega=6.28) passes t_mix=16.3 from 001e47bf checkpoint at t=13.3; finite oxy_liq_sum in tr_oxy.dat; zero crashes",
     "commit": "15f9f03",
     "job_id": "3336706",
-    "observation": "",
-    "status": "pending",
+    "observation": "CONFIRMED: kLa_25=0.1821, oxy_liq_sum=0.295187 at t=23.7; zero crashes.",
+    "status": "confirmed",
     "date": "2026-06-18"
   },
   {
@@ -185,8 +185,8 @@
     "prediction": "grid_H19 (fid=7, fill=0.3, omega=1.5708) passes t_mix; finite kLa_25",
     "commit": "15f9f03",
     "job_id": "3336707",
-    "observation": "",
-    "status": "pending",
+    "observation": "CONFIRMED: kLa_25=0.1486, oxy_liq_sum=0.127085 at t=111.2; zero crashes.",
+    "status": "confirmed",
     "date": "2026-06-18"
   },
   {
@@ -195,8 +195,8 @@
     "prediction": "grid_H20 (fid=7, fill=0.7, omega=2.618) passes t_mix; finite kLa_25",
     "commit": "15f9f03",
     "job_id": "3336708",
-    "observation": "",
-    "status": "pending",
+    "observation": "CONFIRMED: kLa_25=0.0402, oxy_liq_sum=0.123113 at t=211; zero crashes.",
+    "status": "confirmed",
     "date": "2026-06-18"
   },
   {
@@ -205,8 +205,8 @@
     "prediction": "grid_H21 (fid=7, fill=0.6, omega=1.5708) passes t_mix; finite kLa_25",
     "commit": "15f9f03",
     "job_id": "3336709",
-    "observation": "",
-    "status": "pending",
+    "observation": "CONFIRMED: kLa_25=0.0597, oxy_liq_sum=0.153831 at t=111.2; zero crashes.",
+    "status": "confirmed",
     "date": "2026-06-18"
   },
   {
@@ -215,8 +215,8 @@
     "prediction": "grid_H22 (fid=7, theta=5, omega=3.1416) passes t_mix; finite kLa_25",
     "commit": "15f9f03",
     "job_id": "3336710",
-    "observation": "",
-    "status": "pending",
+    "observation": "CONFIRMED: kLa_25=0.0419, oxy_liq_sum=0.0891715 at t=108.4; zero crashes.",
+    "status": "confirmed",
     "date": "2026-06-18"
   },
   {
