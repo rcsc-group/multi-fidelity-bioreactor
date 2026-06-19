@@ -483,6 +483,9 @@ def submit_sweep(path: str | Path) -> list[str]:
             p["_mem"]         = mem
             if ntasks is not None:
                 p["_ntasks"] = ntasks   # used by chain self-submission & provenance
+            binary_override = options.get("binary") or options.get("_binary")
+            if binary_override:
+                p["_binary"] = binary_override
             if experiment_dir:
                 p["_experiment_dir"] = experiment_dir
 
@@ -531,6 +534,7 @@ def submit_sweep(path: str | Path) -> list[str]:
     # ── Chain mode (opt-in, chain=true) ─────────────────────────────────────
     # Preserved for serial+checkpoint sweeps.  Groups by grid structure and
     # submits seg-0 only; the SLURM script self-submits subsequent segments.
+    walltime   = walltime_cfg   # chain mode: single walltime for all segments
     groups     = group_by_checkpoint_key(params_list)
     swept_keys = frozenset(detect_sweep_params(
         json.loads(Path(path).read_text())
@@ -555,6 +559,9 @@ def submit_sweep(path: str | Path) -> list[str]:
             params["next_run_id"] = next_run_id
             params["_walltime"]   = walltime
             params["_mem"]        = mem
+            binary_override = options.get("binary") or options.get("_binary")
+            if binary_override:
+                params["_binary"] = binary_override
             if experiment_dir:
                 params["_experiment_dir"] = experiment_dir
 
