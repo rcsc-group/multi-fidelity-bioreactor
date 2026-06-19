@@ -11,3 +11,6 @@ grid_H22,see-ledger,2026-06-18,BioReactor-mpi-stripped,15f9f03,7,16,3.1416,5,110
 grid_H19,see-ledger,2026-06-18,BioReactor-mpi-stripped,15f9f03,7,16,1.5708,7,110,0.5,6439dcba/checkpoint.dump,99.1,111.2,NA,0.1486,0.1650,NA,pass,geom_n=8.0 fill=0.3 omega_prev=0.0000
 grid_H21,see-ledger,2026-06-18,BioReactor-mpi-stripped,15f9f03,7,16,1.5708,7,110,0.5,3438372e/checkpoint.dump,99.1,111.2,NA,0.0597,NA,NA,pass,geom_n=8.0 fill=0.6 omega_prev=0.0000
 grid_H18,see-ledger,2026-06-18,BioReactor-mpi-stripped,15f9f03,4,2,6.28,7,110,0.5,001e47bf/checkpoint.dump,13.3,23.7,NA,0.1821,0.1742,NA,pass,geom_n=2.0 fill=0.7 omega_prev=0.0000
+grid_H25,see-ledger,2026-06-18,BioReactor-mpi-stripped,15f9f03,7,16,1.8326,7,110,0.5,1f8c7d4b/checkpoint.dump,198.8,299.1,NA,0.1409,0.1640,NA,pass,geom_n=8.0 fill=0.3 omega_prev=0.0000
+grid_H24,see-ledger,2026-06-18,BioReactor-mpi-stripped,15f9f03,8,16,1.5708,7,110,0.5,63062937/checkpoint.dump,99.1,111.2,NA,0.0346,NA,NA,pass,geom_n=8.0 fill=0.5 omega_prev=0.0000
+grid_H23,see-ledger,2026-06-18,BioReactor-mpi-stripped,15f9f03,8,16,1.5708,4,110,0.5,29dc4215/checkpoint.dump,95.4,107.8,NA,0.0330,NA,NA,pass,geom_n=8.0 fill=0.5 omega_prev=0.0000
