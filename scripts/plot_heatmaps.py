@@ -34,6 +34,12 @@ _KPIS = [
     ("dtmix_0.75",  r"$\Delta t_{mix}$ at $\chi=0.75$ (s)", "Blues_r"),
     ("dtmix_0.95",  r"$\Delta t_{mix}$ at $\chi=0.95$ (s)", "Blues_r"),
     ("vor_mean",    r"$\langle|\xi|\rangle$ (1/s)",          "Purples"),
+    ("tau_95_qss",  r"$\tau_{95}$ QSS (Pa)",                 "RdPu"),
+    ("tau_98_qss",  r"$\tau_{98}$ QSS (Pa)",                 "RdPu"),
+    ("tau_100_qss", r"$\tau_{100}$ QSS (Pa)",                "RdPu"),
+    ("tau_95_max",  r"$\tau_{95}$ max (Pa)",                 "Reds"),
+    ("tau_98_max",  r"$\tau_{98}$ max (Pa)",                 "Reds"),
+    ("tau_100_max", r"$\tau_{100}$ max (Pa)",                "Reds"),
 ]
 
 
