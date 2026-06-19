@@ -6,10 +6,11 @@ Reads all completed results from runs/ and produces:
 
 Usage
 -----
-    python scripts/plot_heatmaps.py
+    python scripts/plot_heatmaps.py [--fidelity 7] [--exp-suffix mpi_ckpt]
 """
 from __future__ import annotations
 
+import argparse
 import json
 import math
 from pathlib import Path
@@ -36,15 +37,21 @@ _KPIS = [
 ]
 
 
-def _load_results() -> list[dict]:
-    """Load all fidelity-5 results with vor_mean (new postprocess format)."""
+def _load_results(fidelity: int = 7, exp_suffix: str | None = None) -> list[dict]:
+    """Load results matching fidelity and optional experiment-dir suffix."""
     records = {}
     for f in sorted(_RUNS_ROOT.glob("*/results.json"), key=lambda p: p.stat().st_mtime):
         try:
             r = json.loads(f.read_text())
             p = json.loads((f.parent / "params.json").read_text())
-            if "vor_mean" not in r or p.get("fidelity") != 5:
+            if "vor_mean" not in r:
                 continue
+            if p.get("fidelity") != fidelity:
+                continue
+            if exp_suffix:
+                exp_dir = p.get("_experiment_dir", "")
+                if exp_suffix not in exp_dir:
+                    continue
             th = round(float(p.get("theta_max", [0])[0]), 1)
             fl = round(float(p.get("fill_level", 0.5)), 2)
             ob = round(float(p.get("omega_b", 0)) * 60 / (2 * math.pi), 2)
@@ -113,32 +120,49 @@ def _make_figure(records: list[dict], row_key: str, col_key: str,
 
 
 def main() -> None:
-    records = _load_results()
-    print(f"Loaded {len(records)} unique (theta, fill, omega_b) data points")
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--fidelity", type=int, default=7)
+    ap.add_argument("--exp-suffix", default="mpi_ckpt",
+                    help="Only include runs whose _experiment_dir contains this string")
+    ap.add_argument("--theta-fill", type=float, default=0.5)
+    ap.add_argument("--fill-theta", type=float, default=7.0)
+    args = ap.parse_args()
 
-    # Theta sweep: theta_max vs rpm, fill=0.5
-    theta_recs = [r for r in records if r["fill"] == 0.5]
-    _make_figure(
-        theta_recs,
-        row_key="theta",
-        col_key="rpm",
-        row_label=r"$\theta_{max}$ (deg)",
-        col_label="$f_b$ (rpm)",
-        title="Theta sweep — KPI heatmaps (fill level = 0.5)",
-        out_path=_FIG_DIR / "heatmap_theta_sweep.pdf",
-    )
+    records = _load_results(fidelity=args.fidelity, exp_suffix=args.exp_suffix)
+    print(f"Loaded {len(records)} unique (theta, fill, omega_b) data points "
+          f"[fidelity={args.fidelity}, exp_suffix={args.exp_suffix!r}]")
 
-    # Fill sweep: fill_level vs rpm, theta=7
-    fill_recs = [r for r in records if r["theta"] == 7.0]
-    _make_figure(
-        fill_recs,
-        row_key="fill",
-        col_key="rpm",
-        row_label="Fill level",
-        col_label="$f_b$ (rpm)",
-        title="Fill sweep — KPI heatmaps ($\\theta_{max}$ = 7°)",
-        out_path=_FIG_DIR / "heatmap_fill_sweep.pdf",
-    )
+    tag = f"l{args.fidelity}"
+
+    # Theta sweep: theta_max vs rpm, at the specified fill level
+    theta_recs = [r for r in records if r["fill"] == args.theta_fill]
+    if theta_recs:
+        _make_figure(
+            theta_recs,
+            row_key="theta",
+            col_key="rpm",
+            row_label=r"$\theta_{max}$ (deg)",
+            col_label="$f_b$ (rpm)",
+            title=f"Theta sweep — KPI heatmaps ({tag}, fill={args.theta_fill})",
+            out_path=_FIG_DIR / f"heatmap_theta_sweep_{tag}.pdf",
+        )
+    else:
+        print(f"No theta-sweep records at fill={args.theta_fill}")
+
+    # Fill sweep: fill_level vs rpm, at the specified theta
+    fill_recs = [r for r in records if r["theta"] == args.fill_theta]
+    if fill_recs:
+        _make_figure(
+            fill_recs,
+            row_key="fill",
+            col_key="rpm",
+            row_label="Fill level",
+            col_label="$f_b$ (rpm)",
+            title=f"Fill sweep — KPI heatmaps ({tag}, $\\theta_{{max}}$={args.fill_theta}°)",
+            out_path=_FIG_DIR / f"heatmap_fill_sweep_{tag}.pdf",
+        )
+    else:
+        print(f"No fill-sweep records at theta={args.fill_theta}")
 
 
 if __name__ == "__main__":
