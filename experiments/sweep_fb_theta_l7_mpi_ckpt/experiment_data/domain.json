@@ -1,0 +1,251 @@
+{
+    "input_space": {
+        "amplitude_h_0": {
+            "type": "object",
+            "to_disk": false,
+            "store_function": null,
+            "load_function": null,
+            "load_kwargs": null
+        },
+        "amplitude_h_1": {
+            "type": "object",
+            "to_disk": false,
+            "store_function": null,
+            "load_function": null,
+            "load_kwargs": null
+        },
+        "amplitude_h_2": {
+            "type": "object",
+            "to_disk": false,
+            "store_function": null,
+            "load_function": null,
+            "load_kwargs": null
+        },
+        "completed_at": {
+            "type": "object",
+            "to_disk": false,
+            "store_function": null,
+            "load_function": null,
+            "load_kwargs": null
+        },
+        "fidelity": {
+            "type": "object",
+            "to_disk": false,
+            "store_function": null,
+            "load_function": null,
+            "load_kwargs": null
+        },
+        "fill_level": {
+            "type": "object",
+            "to_disk": false,
+            "store_function": null,
+            "load_function": null,
+            "load_kwargs": null
+        },
+        "geometry_a": {
+            "type": "object",
+            "to_disk": false,
+            "store_function": null,
+            "load_function": null,
+            "load_kwargs": null
+        },
+        "geometry_b": {
+            "type": "object",
+            "to_disk": false,
+            "store_function": null,
+            "load_function": null,
+            "load_kwargs": null
+        },
+        "geometry_n": {
+            "type": "object",
+            "to_disk": false,
+            "store_function": null,
+            "load_function": null,
+            "load_kwargs": null
+        },
+        "n_harmonics": {
+            "type": "object",
+            "to_disk": false,
+            "store_function": null,
+            "load_function": null,
+            "load_kwargs": null
+        },
+        "omega_b": {
+            "type": "object",
+            "to_disk": false,
+            "store_function": null,
+            "load_function": null,
+            "load_kwargs": null
+        },
+        "omega_h": {
+            "type": "object",
+            "to_disk": false,
+            "store_function": null,
+            "load_function": null,
+            "load_kwargs": null
+        },
+        "phi_angular_0": {
+            "type": "object",
+            "to_disk": false,
+            "store_function": null,
+            "load_function": null,
+            "load_kwargs": null
+        },
+        "phi_angular_1": {
+            "type": "object",
+            "to_disk": false,
+            "store_function": null,
+            "load_function": null,
+            "load_kwargs": null
+        },
+        "phi_angular_2": {
+            "type": "object",
+            "to_disk": false,
+            "store_function": null,
+            "load_function": null,
+            "load_kwargs": null
+        },
+        "phi_horizontal_0": {
+            "type": "object",
+            "to_disk": false,
+            "store_function": null,
+            "load_function": null,
+            "load_kwargs": null
+        },
+        "phi_horizontal_1": {
+            "type": "object",
+            "to_disk": false,
+            "store_function": null,
+            "load_function": null,
+            "load_kwargs": null
+        },
+        "phi_horizontal_2": {
+            "type": "object",
+            "to_disk": false,
+            "store_function": null,
+            "load_function": null,
+            "load_kwargs": null
+        },
+        "run_id": {
+            "type": "object",
+            "to_disk": false,
+            "store_function": null,
+            "load_function": null,
+            "load_kwargs": null
+        },
+        "t_checkpoint": {
+            "type": "object",
+            "to_disk": false,
+            "store_function": null,
+            "load_function": null,
+            "load_kwargs": null
+        },
+        "theta_max_0": {
+            "type": "object",
+            "to_disk": false,
+            "store_function": null,
+            "load_function": null,
+            "load_kwargs": null
+        },
+        "theta_max_1": {
+            "type": "object",
+            "to_disk": false,
+            "store_function": null,
+            "load_function": null,
+            "load_kwargs": null
+        },
+        "theta_max_2": {
+            "type": "object",
+            "to_disk": false,
+            "store_function": null,
+            "load_function": null,
+            "load_kwargs": null
+        }
+    },
+    "output_space": {
+        "dtmix_0.50": {
+            "type": "object",
+            "to_disk": false,
+            "store_function": null,
+            "load_function": null,
+            "load_kwargs": null
+        },
+        "dtmix_0.75": {
+            "type": "object",
+            "to_disk": false,
+            "store_function": null,
+            "load_function": null,
+            "load_kwargs": null
+        },
+        "dtmix_0.95": {
+            "type": "object",
+            "to_disk": false,
+            "store_function": null,
+            "load_function": null,
+            "load_kwargs": null
+        },
+        "kLa_10": {
+            "type": "object",
+            "to_disk": false,
+            "store_function": null,
+            "load_function": null,
+            "load_kwargs": null
+        },
+        "kLa_25": {
+            "type": "object",
+            "to_disk": false,
+            "store_function": null,
+            "load_function": null,
+            "load_kwargs": null
+        },
+        "kLa_50": {
+            "type": "object",
+            "to_disk": false,
+            "store_function": null,
+            "load_function": null,
+            "load_kwargs": null
+        },
+        "kLa_inst_10": {
+            "type": "object",
+            "to_disk": false,
+            "store_function": null,
+            "load_function": null,
+            "load_kwargs": null
+        },
+        "kLa_inst_25": {
+            "type": "object",
+            "to_disk": false,
+            "store_function": null,
+            "load_function": null,
+            "load_kwargs": null
+        },
+        "kLa_inst_50": {
+            "type": "object",
+            "to_disk": false,
+            "store_function": null,
+            "load_function": null,
+            "load_kwargs": null
+        },
+        "kla_fit_rmse_25": {
+            "type": "object",
+            "to_disk": false,
+            "store_function": null,
+            "load_function": null,
+            "load_kwargs": null
+        },
+        "vel_rms_qss": {
+            "type": "object",
+            "to_disk": false,
+            "store_function": null,
+            "load_function": null,
+            "load_kwargs": null
+        },
+        "vor_mean": {
+            "type": "object",
+            "to_disk": false,
+            "store_function": null,
+            "load_function": null,
+            "load_kwargs": null
+        }
+    }
+}
