@@ -92,14 +92,25 @@ except:
     print('')
 " "$PARAMS" 2>/dev/null)
 
-if [ -n "$NEXT_RUN" ] && [ -n "$CANON_RUN" ]; then
-    NEXT_CANON="$(dirname "$CANON_RUN")/$NEXT_RUN"
+if [ -n "$NEXT_RUN" ]; then
+    # Derive canon runs/ dir from _experiment_dir in params (fallback: dirname of CANON_RUN)
+    RUNS_ROOT=$(python3 -c "
+import json, sys, os
+p = json.load(open(sys.argv[1]))
+exp = p.get('_experiment_dir', '')
+if exp:
+    print(os.path.join(os.path.dirname(exp), 'runs'))
+" "$PARAMS" 2>/dev/null)
+    [ -z "$RUNS_ROOT" ] && [ -n "$CANON_RUN" ] && RUNS_ROOT="$(dirname "$CANON_RUN")"
+    NEXT_CANON="$RUNS_ROOT/$NEXT_RUN"
     NEXT_PARAMS_CANON="$NEXT_CANON/params.json"
     if [ -f "$NEXT_PARAMS_CANON" ]; then
         NEXT_SCRATCH="/oscar/scratch/eaguerov/mpi_runs/$NEXT_RUN"
         mkdir -p "$NEXT_SCRATCH"
-        # checkpoint.dump is in the current seg's output dir (CANON_RUN), not next seg's dir
-        cp "$CANON_RUN/checkpoint.dump" "$NEXT_SCRATCH/checkpoint.dump" 2>/dev/null || true
+        # checkpoint.dump is in the current seg's output dir; fall back to scratch
+        CURR_CKPT="${CANON_RUN:+$CANON_RUN/checkpoint.dump}"
+        [ -z "$CURR_CKPT" ] && CURR_CKPT="$SCRATCH_RUN/checkpoint.dump"
+        cp "$CURR_CKPT" "$NEXT_SCRATCH/checkpoint.dump" 2>/dev/null || true
         cp "$NEXT_PARAMS_CANON" "$NEXT_SCRATCH/params.json"
         WALLTIME=$(python3 -c "import json,sys; p=json.load(open(sys.argv[1])); print(p.get('_walltime','04:00:00'))" "$NEXT_PARAMS_CANON" 2>/dev/null)
         MEM=$(python3 -c "import json,sys; p=json.load(open(sys.argv[1])); print(p.get('_mem','4G'))" "$NEXT_PARAMS_CANON" 2>/dev/null)
@@ -108,14 +119,16 @@ if [ -n "$NEXT_RUN" ] && [ -n "$CANON_RUN" ]; then
         if [ -f "$NEXT_SCRATCH/checkpoint.dump" ]; then
             NEXT_DUMP_ARG="DUMP=$NEXT_SCRATCH/checkpoint.dump"
         fi
-        # runs/ is one level below project root, so ../config resolves correctly
+        # Resolve project root from RUNS_ROOT (runs/ is one level below project root)
+        TEMPLATE="$RUNS_ROOT/../config/slurm_mpi_template.sh"
+        [ ! -f "$TEMPLATE" ] && [ -n "$CANON_RUN" ] && TEMPLATE="$(dirname "$CANON_RUN")/../config/slurm_mpi_template.sh"
         sbatch --no-requeue \
             --time="$WALLTIME" \
             --mem-per-cpu="$MEM" \
             --ntasks="$NTASKS" \
             --cpus-per-task=1 \
             --export="NONE,PARAMS=$NEXT_SCRATCH/params.json${NEXT_DUMP_ARG:+,$NEXT_DUMP_ARG}" \
-            "$(dirname "$CANON_RUN")/../config/slurm_mpi_template.sh"
+            "$TEMPLATE"
         echo "Submitted next segment: $NEXT_RUN"
     fi
 fi
