@@ -49,6 +49,15 @@ except:
     print('')
 " "$PARAMS" 2>/dev/null)
 
+# Derive CANON_RUN from _experiment_dir when not set (chain-submitted jobs lack _canonical_run_dir)
+if [ -z "$CANON_RUN" ]; then
+    _EXP_DIR=$(python3 -c "import json,sys; p=json.load(open(sys.argv[1])); print(p.get('_experiment_dir',''))" "$PARAMS" 2>/dev/null)
+    if [ -n "$_EXP_DIR" ]; then
+        _RUN_ID=$(basename "$SCRATCH_RUN")
+        CANON_RUN="$(dirname "$(dirname "$_EXP_DIR")")/runs/$_RUN_ID"
+    fi
+fi
+
 # Binary must be in /oscar/scratch (accessible from compute nodes)
 BINARY="/oscar/scratch/eaguerov/BioReactor-mpi-video"
 _BINARY_OVERRIDE=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('_binary',''))" "$PARAMS" 2>/dev/null)
