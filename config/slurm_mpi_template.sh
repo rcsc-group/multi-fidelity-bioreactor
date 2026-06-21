@@ -108,7 +108,7 @@ import json, sys, os
 p = json.load(open(sys.argv[1]))
 exp = p.get('_experiment_dir', '')
 if exp:
-    print(os.path.join(os.path.dirname(exp), 'runs'))
+    print(os.path.join(os.path.dirname(os.path.dirname(exp)), 'runs'))
 " "$PARAMS" 2>/dev/null)
     [ -z "$RUNS_ROOT" ] && [ -n "$CANON_RUN" ] && RUNS_ROOT="$(dirname "$CANON_RUN")"
     NEXT_CANON="$RUNS_ROOT/$NEXT_RUN"
