@@ -123,7 +123,13 @@ def _generate_figure_and_commit(n_done: int) -> None:
     sp.run(["uv", "run", "python", "scripts/plot_checkpoint_validation.py"],
            cwd=str(ROOT), check=False)
 
-    repo = ROOT.parents[2]  # BioReactor3D/
+    repo = ROOT.parents[2]  # BioReactor3D/ (git root)
+    # Verify we're at the actual git root
+    import subprocess as _sp
+    git_root = _sp.run(["git", "rev-parse", "--show-toplevel"],
+                       cwd=str(ROOT), capture_output=True, text=True).stdout.strip()
+    if git_root:
+        repo = Path(git_root)
     sp.run(["git", "add",
             "dev/rocking-bioreactor-2d/experiments/figures/heatmap_theta_sweep_l7.pdf",
             "dev/rocking-bioreactor-2d/experiments/figures/checkpoint_validation.pdf",
