@@ -92,8 +92,37 @@ So for any seg-1 or later run, `CANON_RUN=""`, `dirname ""` evaluates to `.`,
 
 **Fix (`db4e12f`):** derive `RUNS_ROOT` (the parent of all canonical run dirs)
 from `_experiment_dir` in `params.json`, which *is* propagated through every
-segment.  `dirname(dirname(_experiment_dir))` is the project root; `runs/` sits
-one level below it.
+segment.  See also Bug 4 — the initial version of this fix had an off-by-one
+dirname that was corrected in a follow-up commit.
+
+---
+
+### Bug 4 — RUNS_ROOT resolved to `experiments/runs/` instead of `runs/`
+
+**Symptom:** Chains stopped at seg-3.  `squeue` showed the job was submitted
+and completed, but no seg-3 result appeared and no seg-4 was queued.  The
+SLURM log showed no error — the template silently skipped the `sbatch` call.
+
+**Root cause:** The Bug 2 fix computed `RUNS_ROOT` as:
+
+```python
+os.path.join(os.path.dirname(exp), 'runs')
+```
+
+`_experiment_dir` is a path like
+`…/rocking-bioreactor-2d/experiments/sweep_fb_theta_l7_mpi_ckpt/`.
+`os.path.dirname(exp)` therefore resolves to `…/experiments/`, not the
+project root.  So `RUNS_ROOT` became `…/experiments/runs/`, which does not
+exist.  The guard
+
+```bash
+if [ -f "$NEXT_PARAMS_CANON" ]; then
+```
+
+silently evaluated to false and the `sbatch` was never reached.
+
+**Fix (`0a6a66f`):** add one extra `dirname` call so the path climbs to the
+project root (parent of `experiments/`):
 
 ```bash
 RUNS_ROOT=$(python3 -c "
@@ -101,11 +130,14 @@ import json, sys, os
 p = json.load(open(sys.argv[1]))
 exp = p.get('_experiment_dir', '')
 if exp:
-    print(os.path.join(os.path.dirname(exp), 'runs'))
+    print(os.path.join(os.path.dirname(os.path.dirname(exp)), 'runs'))
 " "$PARAMS" 2>/dev/null)
 [ -z "$RUNS_ROOT" ] && [ -n "$CANON_RUN" ] && RUNS_ROOT="$(dirname "$CANON_RUN")"
 NEXT_CANON="$RUNS_ROOT/$NEXT_RUN"
 ```
+
+`dirname(dirname(_experiment_dir))` = `…/rocking-bioreactor-2d/` →
+`RUNS_ROOT = …/rocking-bioreactor-2d/runs/` (correct).
 
 ---
 
@@ -172,14 +204,14 @@ pre-existing single-job baselines:
 | Sweep | Conditions | Max |Δ kLa₂₅| / baseline | Mean |Δ kLa₂₅| / baseline |
 |---|---|---|---|
 | Fill sweep (5 fill × 10 ω) | 50 | 0.08 % | 0.02 % |
-| Theta sweep (6 θ × 10 ω) | 12 | 0.00 % | 0.00 % |
-| **Combined** | **62** | **0.08 %** | **0.02 %** |
+| Theta sweep (6 θ × 10 ω) | 60 | 0.00 % | 0.00 % |
+| **Combined** | **110** | **0.08 %** | **0.01 %** |
 
 Deviations are consistent with floating-point non-determinism across MPI rank
 layouts between the fresh and restarted runs.  No condition exceeded 0.1 %.
 
 Figure: `experiments/figures/checkpoint_validation.pdf` — identity scatter and
-residual strip across all 62 conditions.
+residual strip across all 110 conditions.
 
 ---
 
