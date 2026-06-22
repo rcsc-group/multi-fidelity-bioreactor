@@ -39,31 +39,30 @@ def _has_result(run_dir: Path) -> bool:
     except Exception:
         return False
 
-def _queued_run_ids() -> set[str]:
-    """Return set of scratch-dir basenames currently in SLURM (R or PD)."""
+def _active_job_ids() -> set[str]:
+    """Return SLURM job IDs currently RUNNING or PENDING for this user."""
     try:
         out = subprocess.run(
-            ["squeue", "-u", "eaguerov",
-             "--format=%.10i %.8T %100j", "--noheader"],
+            ["squeue", "-u", "eaguerov", "--format=%.10i %.8T", "--noheader"],
             capture_output=True, text=True, timeout=15
         ).stdout
     except Exception:
         return set()
-    ids: set[str] = set()
+    active: set[str] = set()
     for line in out.splitlines():
         parts = line.split()
-        if len(parts) < 2:
-            continue
-        state = parts[1]
-        if state not in ("RUNNING", "PENDING"):
-            continue
-        # job name is just "bioreactor-mpi"; we can't get run_id from name.
-        # Instead we check scratch dirs that have a params.json recently staged.
-    # Fallback: list every scratch dir created after the last result
-    # (any dir with params.json but no results.json is inflight or staged)
-    for d in SCRATCH.glob("*/params.json"):
-        rid = d.parent.name
-        if not (RUNS / rid / "results.json").exists():
+        if len(parts) >= 2 and parts[1] in ("RUNNING", "PENDING"):
+            active.add(parts[0].strip())
+    return active
+
+
+def _queued_run_ids(active_jids: set[str]) -> set[str]:
+    """Return run IDs with an active SLURM job, using .slurm_jid marker files."""
+    ids: set[str] = set()
+    for jid_file in SCRATCH.glob("*/.slurm_jid"):
+        rid = jid_file.parent.name
+        jid = jid_file.read_text().strip()
+        if jid in active_jids:
             ids.add(rid)
     return ids
 
@@ -105,6 +104,8 @@ def _sbatch(run_id: str, from_run_id: str) -> str | None:
         print(f"  [ERROR] sbatch failed for {run_id}: {result.stderr.strip()}")
         return None
     jid = result.stdout.strip().split()[-1]
+    # Write marker so _queued_run_ids() can detect this run without %Z
+    (next_scratch / ".slurm_jid").write_text(jid)
     return jid
 
 
@@ -158,8 +159,9 @@ def main() -> None:
     n_done = sum(1 for v in runs_info.values() if v["done"])
     print(f"STATUS: {n_done}/{TOTAL} conditions complete")
 
-    # 2. Get inflight run IDs (scratch dirs with params but no results)
-    inflight = _queued_run_ids()
+    # 2. Get inflight run IDs via .slurm_jid marker files + live SLURM query
+    active_jids = _active_job_ids()
+    inflight = _queued_run_ids(active_jids)
 
     # 3. Find broken chains: done run whose next seg has no result and isn't inflight
     submitted: list[tuple[str, str, float, float]] = []

@@ -131,13 +131,14 @@ if exp:
         # Resolve project root from RUNS_ROOT (runs/ is one level below project root)
         TEMPLATE="$RUNS_ROOT/../config/slurm_mpi_template.sh"
         [ ! -f "$TEMPLATE" ] && [ -n "$CANON_RUN" ] && TEMPLATE="$(dirname "$CANON_RUN")/../config/slurm_mpi_template.sh"
-        sbatch --no-requeue \
+        NEXT_JID=$(sbatch --no-requeue \
             --time="$WALLTIME" \
             --mem-per-cpu="$MEM" \
             --ntasks="$NTASKS" \
             --cpus-per-task=1 \
             --export="NONE,PARAMS=$NEXT_SCRATCH/params.json${NEXT_DUMP_ARG:+,$NEXT_DUMP_ARG}" \
-            "$TEMPLATE"
-        echo "Submitted next segment: $NEXT_RUN"
+            "$TEMPLATE" | awk '{print $NF}')
+        echo "$NEXT_JID" > "$NEXT_SCRATCH/.slurm_jid"
+        echo "Submitted next segment: $NEXT_RUN (job $NEXT_JID)"
     fi
 fi
