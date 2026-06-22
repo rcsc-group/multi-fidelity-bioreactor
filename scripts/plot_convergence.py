@@ -621,12 +621,14 @@ def plot(
                        title="Line width", title_fontsize=7)
 
     if out_path is None:
-        _FIG_DIR.mkdir(parents=True, exist_ok=True)
         if experiment is not None:
-            stem = Path(experiment).name
+            stem    = Path(experiment).name
+            out_dir = Path(experiment).resolve() / "figures"
         else:
-            stem = f"sweep_f{fidelity}"
-        out_path = _FIG_DIR / f"convergence_{stem}.pdf"
+            stem    = f"sweep_f{fidelity}"
+            out_dir = _FIG_DIR
+        out_dir.mkdir(parents=True, exist_ok=True)
+        out_path = out_dir / f"convergence_{stem}.pdf"
 
     fig.savefig(out_path, dpi=150, bbox_inches="tight")
     plt.close(fig)

@@ -1,12 +1,16 @@
 """Generate heatmap figures for both sweep configurations.
 
 Reads all completed results from runs/ and produces:
-  experiments/figures/heatmap_theta_sweep.pdf   — theta x omega_b
-  experiments/figures/heatmap_fill_sweep.pdf    — fill_level x omega_b
+  experiments/<exp_dir>/figures/heatmap_theta_sweep_l<N>.pdf
+  experiments/<exp_dir>/figures/heatmap_fill_sweep_l<N>.pdf
+
+The output directory is derived from --exp-suffix: the script searches
+experiments/ for a unique subdirectory whose name contains the suffix and
+writes figures there.  Falls back to experiments/figures/ if no unique match.
 
 Usage
 -----
-    python scripts/plot_heatmaps.py [--fidelity 7] [--exp-suffix mpi_ckpt]
+    python scripts/plot_heatmaps.py [--fidelity 7] [--exp-suffix theta_l7_mpi_ckpt]
 """
 from __future__ import annotations
 
@@ -19,9 +23,26 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 import numpy as np
 
-_PROJECT_ROOT = Path(__file__).parents[1]
-_RUNS_ROOT    = _PROJECT_ROOT / "runs"
-_FIG_DIR      = _PROJECT_ROOT / "experiments" / "figures"
+_PROJECT_ROOT  = Path(__file__).parents[1]
+_RUNS_ROOT     = _PROJECT_ROOT / "runs"
+_EXPERIMENTS   = _PROJECT_ROOT / "experiments"
+_FIG_DIR       = _EXPERIMENTS / "figures"   # fallback for cross-experiment figures
+
+
+def _fig_dir_for_suffix(exp_suffix: str | None) -> Path:
+    """Return the figures/ dir inside the matching experiment folder.
+
+    Searches experiments/ for a unique subdirectory whose name contains
+    exp_suffix.  Falls back to the shared experiments/figures/ if zero or
+    multiple matches are found.
+    """
+    if not exp_suffix:
+        return _FIG_DIR
+    matches = [p for p in _EXPERIMENTS.iterdir()
+               if p.is_dir() and exp_suffix in p.name]
+    if len(matches) == 1:
+        return matches[0] / "figures"
+    return _FIG_DIR
 
 _KPIS = [
     ("kLa_10",      r"$k_La$ at $C^*=0.10$ (5pt fit)",      "YlOrRd"),
@@ -138,7 +159,8 @@ def main() -> None:
     print(f"Loaded {len(records)} unique (theta, fill, omega_b) data points "
           f"[fidelity={args.fidelity}, exp_suffix={args.exp_suffix!r}]")
 
-    tag = f"l{args.fidelity}"
+    tag     = f"l{args.fidelity}"
+    fig_dir = _fig_dir_for_suffix(args.exp_suffix)
 
     # Theta sweep: theta_max vs rpm, at the specified fill level
     theta_recs = [r for r in records if r["fill"] == args.theta_fill]
@@ -150,7 +172,7 @@ def main() -> None:
             row_label=r"$\theta_{max}$ (deg)",
             col_label="$f_b$ (rpm)",
             title=f"Theta sweep — KPI heatmaps ({tag}, fill={args.theta_fill})",
-            out_path=_FIG_DIR / f"heatmap_theta_sweep_{tag}.pdf",
+            out_path=fig_dir / f"heatmap_theta_sweep_{tag}.pdf",
         )
     else:
         print(f"No theta-sweep records at fill={args.theta_fill}")
@@ -165,7 +187,7 @@ def main() -> None:
             row_label="Fill level",
             col_label="$f_b$ (rpm)",
             title=f"Fill sweep — KPI heatmaps ({tag}, $\\theta_{{max}}$={args.fill_theta}°)",
-            out_path=_FIG_DIR / f"heatmap_fill_sweep_{tag}.pdf",
+            out_path=fig_dir / f"heatmap_fill_sweep_{tag}.pdf",
         )
     else:
         print(f"No fill-sweep records at theta={args.fill_theta}")
