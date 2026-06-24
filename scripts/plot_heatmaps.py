@@ -44,20 +44,27 @@ def _fig_dir_for_suffix(exp_suffix: str | None) -> Path:
         return matches[0] / "figures"
     return _FIG_DIR
 
+# 15 KPIs arranged in 5 rows x 3 columns — each row is one semantic group.
+# dtmix_0.95 omitted: it is ~95% NaN at fidelity 8 (80-cycle budget does not
+# reach 95% uniformity for most conditions) and produces blank columns there.
 _KPIS = [
+    # row 1 — 5-pt fit kLa
     ("kLa_10",      r"$k_La$ at $C^*=0.10$ (5pt fit)",      "YlOrRd"),
     ("kLa_25",      r"$k_La$ at $C^*=0.25$ (5pt fit)",      "YlOrRd"),
     ("kLa_50",      r"$k_La$ at $C^*=0.50$ (5pt fit)",      "YlOrRd"),
+    # row 2 — instantaneous kLa
     ("kLa_inst_10", r"$k_La$ at $C^*=0.10$ (inst)",         "YlOrBr"),
     ("kLa_inst_25", r"$k_La$ at $C^*=0.25$ (inst)",         "YlOrBr"),
     ("kLa_inst_50", r"$k_La$ at $C^*=0.50$ (inst)",         "YlOrBr"),
+    # row 3 — mixing timescale + bulk flow
     ("dtmix_0.50",  r"$\Delta t_{mix}$ at $\chi=0.50$ (s)", "Blues_r"),
     ("dtmix_0.75",  r"$\Delta t_{mix}$ at $\chi=0.75$ (s)", "Blues_r"),
-    ("dtmix_0.95",  r"$\Delta t_{mix}$ at $\chi=0.95$ (s)", "Blues_r"),
     ("vor_mean",    r"$\langle|\xi|\rangle$ (1/s)",          "Purples"),
+    # row 4 — QSS shear stress percentiles
     ("tau_95_qss",  r"$\tau_{95}$ QSS (Pa)",                 "RdPu"),
     ("tau_98_qss",  r"$\tau_{98}$ QSS (Pa)",                 "RdPu"),
     ("tau_100_qss", r"$\tau_{100}$ QSS (Pa)",                "RdPu"),
+    # row 5 — peak shear stress percentiles
     ("tau_95_max",  r"$\tau_{95}$ max (Pa)",                 "Reds"),
     ("tau_98_max",  r"$\tau_{98}$ max (Pa)",                 "Reds"),
     ("tau_100_max", r"$\tau_{100}$ max (Pa)",                "Reds"),
@@ -107,7 +114,7 @@ def _make_figure(records: list[dict], row_key: str, col_key: str,
     row_vals = sorted({r[row_key] for r in records})
     col_vals = sorted({r[col_key] for r in records})
 
-    ncols = 5
+    ncols = 3
     nrows = math.ceil(len(_KPIS) / ncols)
     fig, axes = plt.subplots(nrows, ncols,
                              figsize=(ncols * 3.2, nrows * 2.6),
