@@ -20,7 +20,7 @@ The ten KPIs (Key Performance Indicators)
 ------------------------------------------
 All KPIs live in ``results.json`` next to the simulation outputs.
 
-**Oxygen transfer rate — kLa  (units: 1/non-dim-time)**
+**Oxygen transfer rate — kLa  (units: h⁻¹)**
 
 kLa (pronounced "kay-el-ay") measures how fast dissolved oxygen accumulates in
 the liquid.  A higher kLa means the bioreactor is better at supplying oxygen to
@@ -554,7 +554,7 @@ def _compute_tau98_kpis(run_dir: Path, params: dict) -> dict:
     is the per-timestep maximum (100th percentile = max).
 
     QSS window: t_ramp (3 rocking periods) < t < t_inject.
-    Physical conversion: tau_Pa = tau_nd × mu_w / T_bio.
+    Physical conversion: tau_Pa = tau_nd × rho_w × U_bio²  (BioReactor.c sets mu1=1/Re_w, rho1=1).
 
     Returns
     -------
@@ -607,8 +607,10 @@ def _compute_tau98_kpis(run_dir: Path, params: dict) -> dict:
     if qss_mask.sum() < 3:
         return nan_result
 
-    mu_w      = 1.0e-3       # Pa·s (water at 20°C, matching BioReactor.c)
-    tau_scale = mu_w / T_bio  # Pa
+    rho_w     = 1.0e3        # kg/m³
+    L         = params.get("geometry", {}).get("a", 0.25)
+    U_bio     = L / T_bio
+    tau_scale = rho_w * U_bio**2  # Pa  (BioReactor.c: rho1=1, mu1=1/Re → τ_nd = τ_dim/ρU²)
 
     def _qss_median(col):
         return float(np.median(col[qss_mask]) * tau_scale)
@@ -656,12 +658,12 @@ def main(run_dir: str, params: dict | None = None) -> dict:
         ============== =============================== ============
         Key            Description                     Unit
         ============== =============================== ============
-        kLa_10         O2 transfer rate at C*=10%      1/t_nd
-        kLa_25         O2 transfer rate at C*=25%      1/t_nd
-        kLa_50         O2 transfer rate at C*=50%      1/t_nd
-        kLa_inst_10    Instantaneous kLa at C*=10%     1/t_nd
-        kLa_inst_25    Instantaneous kLa at C*=25%     1/t_nd
-        kLa_inst_50    Instantaneous kLa at C*=50%     1/t_nd
+        kLa_10         O2 transfer rate at C*=10%      h⁻¹
+        kLa_25         O2 transfer rate at C*=25%      h⁻¹
+        kLa_50         O2 transfer rate at C*=50%      h⁻¹
+        kLa_inst_10    Instantaneous kLa at C*=10%     h⁻¹
+        kLa_inst_25    Instantaneous kLa at C*=25%     h⁻¹
+        kLa_inst_50    Instantaneous kLa at C*=50%     h⁻¹
         dtmix_0.50     Time to 50% mixing              seconds
         dtmix_0.75     Time to 75% mixing              seconds
         dtmix_0.95     Time to 95% mixing              seconds
@@ -692,13 +694,16 @@ def main(run_dir: str, params: dict | None = None) -> dict:
         (path / "results.json").write_text(json.dumps(nan_base, indent=2))
         return nan_base
 
+    T_bio, _ = _t_scales(params)
+    kla_to_h = 3600.0 / T_bio   # 1/t_nd → h⁻¹  (t_nd = t_dim/T_bio, so kLa_nd/T_bio = kLa_s)
+
     results = {
-        "kLa_10":      _kla_5pt_at_threshold(t, c_star, 0.10),
-        "kLa_25":      _kla_5pt_at_threshold(t, c_star, 0.25),
-        "kLa_50":      _kla_5pt_at_threshold(t, c_star, 0.50),
-        "kLa_inst_10": _kla_inst_at_threshold(t, c_star, 0.10),
-        "kLa_inst_25": _kla_inst_at_threshold(t, c_star, 0.25),
-        "kLa_inst_50": _kla_inst_at_threshold(t, c_star, 0.50),
+        "kLa_10":      _kla_5pt_at_threshold(t, c_star, 0.10)  * kla_to_h,
+        "kLa_25":      _kla_5pt_at_threshold(t, c_star, 0.25)  * kla_to_h,
+        "kLa_50":      _kla_5pt_at_threshold(t, c_star, 0.50)  * kla_to_h,
+        "kLa_inst_10": _kla_inst_at_threshold(t, c_star, 0.10) * kla_to_h,
+        "kLa_inst_25": _kla_inst_at_threshold(t, c_star, 0.25) * kla_to_h,
+        "kLa_inst_50": _kla_inst_at_threshold(t, c_star, 0.50) * kla_to_h,
     }
     results.update(_compute_mixing_metrics(path, params))
     results["vor_mean"]          = _compute_vor_mean(path, params)
@@ -772,6 +777,8 @@ def _register_to_experiment_store(run_dir: Path, params: dict,
         "dtmix_0.50", "dtmix_0.75", "dtmix_0.95",
         "vor_mean",
         "vel_rms_qss", "kla_fit_rmse_25",
+        "tau_95_qss", "tau_98_qss", "tau_100_qss",
+        "tau_95_max", "tau_98_max", "tau_100_max",
     )}
 
     new_ed = ExperimentData(
