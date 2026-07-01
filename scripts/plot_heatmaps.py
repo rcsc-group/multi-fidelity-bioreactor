@@ -160,6 +160,8 @@ def main() -> None:
                     help="Only include runs whose _experiment_dir contains this string")
     ap.add_argument("--theta-fill", type=float, default=0.5)
     ap.add_argument("--fill-theta", type=float, default=7.0)
+    ap.add_argument("--sweep-type", choices=["theta", "fill", "both"], default="both",
+                    help="Which heatmap to generate: theta-vs-rpm, fill-vs-rpm, or both")
     args = ap.parse_args()
 
     records = _load_results(fidelity=args.fidelity, exp_suffix=args.exp_suffix)
@@ -170,34 +172,36 @@ def main() -> None:
     fig_dir = _fig_dir_for_suffix(args.exp_suffix)
 
     # Theta sweep: theta_max vs rpm, at the specified fill level
-    theta_recs = [r for r in records if r["fill"] == args.theta_fill]
-    if theta_recs:
-        _make_figure(
-            theta_recs,
-            row_key="theta",
-            col_key="rpm",
-            row_label=r"$\theta_{max}$ (deg)",
-            col_label="$f_b$ (rpm)",
-            title=f"Theta sweep — KPI heatmaps ({tag}, fill={args.theta_fill})",
-            out_path=fig_dir / f"heatmap_theta_sweep_{tag}.pdf",
-        )
-    else:
-        print(f"No theta-sweep records at fill={args.theta_fill}")
+    if args.sweep_type in ("theta", "both"):
+        theta_recs = [r for r in records if r["fill"] == args.theta_fill]
+        if theta_recs:
+            _make_figure(
+                theta_recs,
+                row_key="theta",
+                col_key="rpm",
+                row_label=r"$\theta_{max}$ (deg)",
+                col_label="$f_b$ (rpm)",
+                title=f"Theta sweep — KPI heatmaps ({tag}, fill={args.theta_fill})",
+                out_path=fig_dir / f"heatmap_theta_sweep_{tag}.pdf",
+            )
+        else:
+            print(f"No theta-sweep records at fill={args.theta_fill}")
 
     # Fill sweep: fill_level vs rpm, at the specified theta
-    fill_recs = [r for r in records if r["theta"] == args.fill_theta]
-    if fill_recs:
-        _make_figure(
-            fill_recs,
-            row_key="fill",
-            col_key="rpm",
-            row_label="Fill level",
-            col_label="$f_b$ (rpm)",
-            title=f"Fill sweep — KPI heatmaps ({tag}, $\\theta_{{max}}$={args.fill_theta}°)",
-            out_path=fig_dir / f"heatmap_fill_sweep_{tag}.pdf",
-        )
-    else:
-        print(f"No fill-sweep records at theta={args.fill_theta}")
+    if args.sweep_type in ("fill", "both"):
+        fill_recs = [r for r in records if r["theta"] == args.fill_theta]
+        if fill_recs:
+            _make_figure(
+                fill_recs,
+                row_key="fill",
+                col_key="rpm",
+                row_label="Fill level",
+                col_label="$f_b$ (rpm)",
+                title=f"Fill sweep — KPI heatmaps ({tag}, $\\theta_{{max}}$={args.fill_theta}°)",
+                out_path=fig_dir / f"heatmap_fill_sweep_{tag}.pdf",
+            )
+        else:
+            print(f"No fill-sweep records at theta={args.fill_theta}")
 
 
 if __name__ == "__main__":

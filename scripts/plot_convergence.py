@@ -260,7 +260,7 @@ def _t_bio(params: dict) -> float:
     T_per   = 2 * math.pi / omega_b
     theta   = float(params.get("theta_max", [7.0])[0]) * math.pi / 180
     fill    = float(params.get("fill_level", 0.5))
-    L       = float(params.get("geometry", {}).get("a", 1.0))
+    L       = float(params.get("geometry", {}).get("a", 0.25))
     H       = 2 * fill
     V       = L / 4 * (H + 0.5 * L * math.tan(theta))
     return (H / 2) * T_per / V

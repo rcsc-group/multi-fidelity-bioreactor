@@ -187,3 +187,87 @@ clean:
 
 deepclean: clean
 	rm -rf logs runs/*/Data_all runs/*/*.dat
+
+
+# ==========================================================
+#  Figure targets  (cheap postprocessing — no simulation)
+#
+#  Usage:
+#    make figures                    — regenerate everything
+#    make heatmaps                   — all 4 sweep heatmaps
+#    make convergence                — all 4 convergence PDFs
+#    make overlay                    — Kim Fig 13(a) tau overlay
+#
+#    make heatmap-theta-l8           — one sweep at a time
+#    make convergence-fill-l7
+#
+#  Notes:
+#    Each heatmap target passes --sweep-type so the theta sweep
+#    only writes the theta heatmap and the fill sweep only writes
+#    the fill heatmap (avoids near-empty figures with white stripes).
+#
+#    Convergence plots read run_ids from _sweep_metadata.json.
+#    The L7-theta metadata was backfilled from input.csv (Jun 2026).
+#
+#    All figures read results.json files from runs/ — re-run
+#    postprocessing first if KPI values change.
+# ==========================================================
+
+UV     = uv run python
+SC     = scripts
+EXP    = experiments
+
+THETA_FILL ?= 0.5
+FILL_THETA ?= 7.0
+
+.PHONY: figures heatmaps convergence overlay \
+        heatmap-theta-l8 heatmap-fill-l8 heatmap-theta-l7 heatmap-fill-l7 \
+        convergence-theta-l8 convergence-fill-l8 convergence-theta-l7 convergence-fill-l7
+
+figures: heatmaps convergence overlay
+
+# ── heatmaps ──────────────────────────────────────────────────────────────────
+heatmaps: heatmap-theta-l8 heatmap-fill-l8 heatmap-theta-l7 heatmap-fill-l7
+
+heatmap-theta-l8:
+	$(UV) $(SC)/plot_heatmaps.py --fidelity 8 --exp-suffix theta_l8_mpi_ckpt \
+	    --sweep-type theta --theta-fill $(THETA_FILL) --fill-theta $(FILL_THETA)
+
+heatmap-fill-l8:
+	$(UV) $(SC)/plot_heatmaps.py --fidelity 8 --exp-suffix fill_l8_mpi_ckpt \
+	    --sweep-type fill --theta-fill $(THETA_FILL) --fill-theta $(FILL_THETA)
+
+heatmap-theta-l7:
+	$(UV) $(SC)/plot_heatmaps.py --fidelity 7 --exp-suffix theta_l7_mpi_ckpt \
+	    --sweep-type theta --theta-fill $(THETA_FILL) --fill-theta $(FILL_THETA)
+
+heatmap-fill-l7:
+	$(UV) $(SC)/plot_heatmaps.py --fidelity 7 --exp-suffix fill_l7_mpi_ckpt \
+	    --sweep-type fill --theta-fill $(THETA_FILL) --fill-theta $(FILL_THETA)
+
+# ── convergence ───────────────────────────────────────────────────────────────
+convergence: convergence-theta-l8 convergence-fill-l8 convergence-theta-l7 convergence-fill-l7
+
+convergence-theta-l8:
+	$(UV) $(SC)/plot_convergence.py \
+	    --experiment $(EXP)/sweep_fb_theta_l8_mpi_ckpt \
+	    --out $(EXP)/sweep_fb_theta_l8_mpi_ckpt/figures/convergence_sweep_fb_theta_l8_mpi_ckpt.pdf
+
+convergence-fill-l8:
+	$(UV) $(SC)/plot_convergence.py \
+	    --experiment $(EXP)/sweep_fb_fill_l8_mpi_ckpt \
+	    --out $(EXP)/sweep_fb_fill_l8_mpi_ckpt/figures/convergence_sweep_fb_fill_l8_mpi_ckpt.pdf
+
+convergence-theta-l7:
+	$(UV) $(SC)/plot_convergence.py \
+	    --experiment $(EXP)/sweep_fb_theta_l7_mpi_ckpt \
+	    --out $(EXP)/sweep_fb_theta_l7_mpi_ckpt/figures/convergence_sweep_fb_theta_l7_mpi_ckpt.pdf
+
+convergence-fill-l7:
+	$(UV) $(SC)/plot_convergence.py \
+	    --experiment $(EXP)/sweep_fb_fill_l7_mpi_ckpt \
+	    --out $(EXP)/sweep_fb_fill_l7_mpi_ckpt/figures/convergence_sweep_fb_fill_l7_mpi_ckpt.pdf
+
+# ── overlay ───────────────────────────────────────────────────────────────────
+overlay:
+	$(UV) $(SC)/plot_kim_overlay_tau.py
