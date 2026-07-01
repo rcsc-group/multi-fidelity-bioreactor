@@ -17,21 +17,21 @@
     37.5
   ],
   "run_ids": [
-    "c7b31cbb",
-    "a67477a9",
-    "6dea4a1f",
-    "08cd5854",
-    "967f530c",
-    "c028a135",
-    "e135095c",
-    "6a22c9dd",
-    "bb2e5f98"
+    "44133566",
+    "0183ca21",
+    "8994c04a",
+    "b1b72f63",
+    "32c996c6",
+    "488db14b",
+    "30fb2321",
+    "77e91d1b",
+    "44b0f74d"
   ],
   "sweep_options": {
     "mpi": true,
     "ntasks": 16,
     "binary": "/oscar/scratch/eaguerov/BioReactor-mpi-video",
     "mem": "4G",
-    "walltime": "0 (infinite)"
+    "walltime": "8:00:00"
   }
 }
