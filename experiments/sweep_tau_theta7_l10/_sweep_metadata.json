@@ -1,0 +1,37 @@
+{
+  "created_at": "2026-07-01",
+  "fidelity": 10,
+  "theta_deg": 7.0,
+  "fill_level": 0.5,
+  "n_mix_cycles": 500,
+  "n_cycles": 30,
+  "rpms": [
+    17.5,
+    20.0,
+    22.5,
+    25.0,
+    27.5,
+    30.0,
+    32.5,
+    35.0,
+    37.5
+  ],
+  "run_ids": [
+    "de183925",
+    "a635e5b3",
+    "fd413a19",
+    "6755b1f5",
+    "20abfd87",
+    "a3e7ec36",
+    "6ea01570",
+    "5d88f939",
+    "805aee35"
+  ],
+  "sweep_options": {
+    "mpi": true,
+    "ntasks": 16,
+    "binary": "/oscar/scratch/eaguerov/BioReactor-mpi-video",
+    "mem": "4G",
+    "walltime": "0 (infinite)"
+  }
+}
