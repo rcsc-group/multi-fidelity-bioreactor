@@ -49,13 +49,13 @@ def _fig_dir_for_suffix(exp_suffix: str | None) -> Path:
 # reach 95% uniformity for most conditions) and produces blank columns there.
 _KPIS = [
     # row 1 — 5-pt fit kLa
-    ("kLa_10",      r"$k_La$ at $C^*=0.10$ (5pt fit)",      "YlOrRd"),
-    ("kLa_25",      r"$k_La$ at $C^*=0.25$ (5pt fit)",      "YlOrRd"),
-    ("kLa_50",      r"$k_La$ at $C^*=0.50$ (5pt fit)",      "YlOrRd"),
+    ("kLa_10",      r"$k_La$ at $C^*=0.10$ (h$^{-1}$, 5pt)",      "YlOrRd"),
+    ("kLa_25",      r"$k_La$ at $C^*=0.25$ (h$^{-1}$, 5pt)",      "YlOrRd"),
+    ("kLa_50",      r"$k_La$ at $C^*=0.50$ (h$^{-1}$, 5pt)",      "YlOrRd"),
     # row 2 — instantaneous kLa
-    ("kLa_inst_10", r"$k_La$ at $C^*=0.10$ (inst)",         "YlOrBr"),
-    ("kLa_inst_25", r"$k_La$ at $C^*=0.25$ (inst)",         "YlOrBr"),
-    ("kLa_inst_50", r"$k_La$ at $C^*=0.50$ (inst)",         "YlOrBr"),
+    ("kLa_inst_10", r"$k_La$ at $C^*=0.10$ (h$^{-1}$, inst)",         "YlOrBr"),
+    ("kLa_inst_25", r"$k_La$ at $C^*=0.25$ (h$^{-1}$, inst)",         "YlOrBr"),
+    ("kLa_inst_50", r"$k_La$ at $C^*=0.50$ (h$^{-1}$, inst)",         "YlOrBr"),
     # row 3 — mixing timescale + bulk flow
     ("dtmix_0.50",  r"$\Delta t_{mix}$ at $\chi=0.50$ (s)", "Blues_r"),
     ("dtmix_0.75",  r"$\Delta t_{mix}$ at $\chi=0.75$ (s)", "Blues_r"),

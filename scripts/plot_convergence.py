@@ -251,6 +251,21 @@ def _t_rock(params: dict) -> float:
     return 2 * math.pi / params.get("omega_b", 3.14)
 
 
+def _t_bio(params: dict) -> float:
+    """Physical time scale T_bio [s/t_nd] matching postprocess.py.
+
+    kLa_nd [1/t_nd] * 3600 / T_bio → kLa [h⁻¹]
+    """
+    omega_b = float(params.get("omega_b", 3.14))
+    T_per   = 2 * math.pi / omega_b
+    theta   = float(params.get("theta_max", [7.0])[0]) * math.pi / 180
+    fill    = float(params.get("fill_level", 0.5))
+    L       = float(params.get("geometry", {}).get("a", 1.0))
+    H       = 2 * fill
+    V       = L / 4 * (H + 0.5 * L * math.tan(theta))
+    return (H / 2) * T_per / V
+
+
 def _t_inject(run_dir: Path) -> float | None:
     """Return absolute (non-dim) oxygen injection time from tr_oxy.dat.
 
@@ -552,7 +567,9 @@ def plot(
         tau_data   = _tau98_series(run_dir, t_inj, params)
 
         if urms_data  is not None: ax_urms.plot( urms_data[0],  urms_data[1],  **kw)
-        if kla_data   is not None: ax_kla.plot(  kla_data[0],   kla_data[1],   **kw)
+        if kla_data   is not None:
+            kla_h = kla_data[1] * 3600.0 / _t_bio(params)
+            ax_kla.plot(kla_data[0], kla_h, **kw)
         if cstar_data is not None: ax_cstar.plot(cstar_data[0], cstar_data[1], **kw)
         if tau_data   is not None: ax_tau.plot(  tau_data[0],   tau_data[1],   **kw)
         plotted += 1
@@ -577,10 +594,7 @@ def plot(
     ax_urms.set_yscale("log")
     ax_urms.grid(True, which="both", alpha=0.3)
 
-    ax_kla.set_ylabel(
-        r"$kLa \;\times\; 4\pi H \;/\; [\,\omega_b(H + \frac{L}{2}\tan\theta)\,]$",
-        fontsize=9,
-    )
+    ax_kla.set_ylabel(r"$k_La$ (h$^{-1}$)", fontsize=10)
     ax_kla.set_ylim(bottom=0)
     ax_kla.axhline(0, color="gray", lw=0.6, ls="--", alpha=0.4)
     ax_kla.grid(True, alpha=0.3)
