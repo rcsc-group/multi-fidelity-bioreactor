@@ -51,8 +51,14 @@ ours = pd.DataFrame({
 
 THETAS = sorted(ours["theta"].unique())   # [2, 3, 4, 5, 6, 7]
 
-# Marker sizes: linear mapping theta → area (s parameter in scatter)
-S_MIN, S_MAX = 18, 280
+# Red colormap: darker shade for larger theta
+_cmap = plt.colormaps["Reds"]
+_n    = len(THETAS)
+# sample 0.40-0.90 so the lightest shade is still visible
+c_map = {th: _cmap(0.40 + 0.50 * i / (_n - 1)) for i, th in enumerate(THETAS)}
+
+# Marker sizes: linear in theta area
+S_MIN, S_MAX = 30, 200
 s_map = {th: S_MIN + (S_MAX - S_MIN) * (th - THETAS[0]) / (THETAS[-1] - THETAS[0])
          for th in THETAS}
 
@@ -70,13 +76,11 @@ ax.plot(kim["RPM"], kim["tau_liq_mean"],
         markerfacecolor="white", markeredgecolor="royalblue",
         label=r"Kim $\langle\tau\rangle_\mathrm{max}$ (2024)", zorder=3)
 
-# Ours — triangles, size = theta_max
-OURS_COLOR = "#d62728"   # red
-
+# Ours — triangles: color = red scale by theta, size proportional to theta
 for _, row in ours.iterrows():
     ax.scatter(row["rpm"], row["tau_max"],
                marker="^", s=s_map[row["theta"]],
-               color=OURS_COLOR, alpha=0.80,
+               color=c_map[row["theta"]], alpha=0.70,
                edgecolors="none", zorder=4)
 
 # ── legend: Kim series + size guide for theta ─────────────────────────────────
@@ -90,9 +94,9 @@ kim_mean_handle = mlines.Line2D([], [], color="royalblue", marker="o",
                                 label=r"Kim $\langle\tau\rangle_\mathrm{max}$")
 
 theta_handles = [
-    mlines.Line2D([], [], color=OURS_COLOR, marker="^", lw=0,
+    mlines.Line2D([], [], color=c_map[th], marker="^", lw=0,
                   ms=math.sqrt(s_map[th]),
-                  label=rf"$\theta={int(th)}°$ (this work)")
+                  label=rf"$\theta={int(th)}°$")
     for th in THETAS
 ]
 
