@@ -566,12 +566,12 @@ def plot(
         cstar_data = _c_star_series(run_dir)
         tau_data   = _tau98_series(run_dir, t_inj, params)
 
-        if urms_data  is not None: ax_urms.plot( urms_data[0],  urms_data[1],  **kw)
+        if urms_data  is not None: ax_urms.plot( urms_data[0]  / T_rock, urms_data[1],  **kw)
         if kla_data   is not None:
             kla_h = kla_data[1] * 3600.0 / _t_bio(params)
-            ax_kla.plot(kla_data[0], kla_h, **kw)
-        if cstar_data is not None: ax_cstar.plot(cstar_data[0], cstar_data[1], **kw)
-        if tau_data   is not None: ax_tau.plot(  tau_data[0],   tau_data[1],   **kw)
+            ax_kla.plot(kla_data[0] / T_rock, kla_h, **kw)
+        if cstar_data is not None: ax_cstar.plot(cstar_data[0] / T_rock, cstar_data[1], **kw)
+        if tau_data   is not None: ax_tau.plot(  tau_data[0]   / T_rock, tau_data[1],   **kw)
         plotted += 1
 
     color_lbl = _param_label(color_param)
@@ -607,10 +607,7 @@ def plot(
     ax_cstar.legend(fontsize=8, loc="upper left")
 
     ax_tau.set_ylabel(r"$\tau_{98}$ [Pa]", fontsize=10)
-    ax_tau.set_xlabel(
-        r"$(t - t_\mathrm{inject}) \;\times\; \omega_b(H + \frac{L}{2}\tan\theta) / 4\pi H$",
-        fontsize=9,
-    )
+    ax_tau.set_xlabel(r"Rocking cycles since O$_2$ injection $(t - t_\mathrm{inj})/T_\mathrm{rock}$", fontsize=10)
     ax_tau.set_ylim(bottom=0)
     ax_tau.grid(True, alpha=0.3)
     if tau_limit is not None:
