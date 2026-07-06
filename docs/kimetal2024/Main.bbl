@@ -1,0 +1,464 @@
+\begin{thebibliography}{90}
+\expandafter\ifx\csname natexlab\endcsname\relax\def\natexlab#1{#1}\fi
+\providecommand{\url}[1]{\texttt{#1}}
+\providecommand{\href}[2]{#2}
+\providecommand{\path}[1]{#1}
+\providecommand{\DOIprefix}{doi:}
+\providecommand{\ArXivprefix}{arXiv:}
+\providecommand{\URLprefix}{URL: }
+\providecommand{\Pubmedprefix}{pmid:}
+\providecommand{\doi}[1]{\href{http://dx.doi.org/#1}{\path{#1}}}
+\providecommand{\Pubmed}[1]{\href{pmid:#1}{\path{#1}}}
+\providecommand{\bibinfo}[2]{#2}
+\ifx\xfnm\relax \def\xfnm[#1]{\unskip,\space#1}\fi
+%Type = Article
+\bibitem[{AL-Mashhadani et~al.(2015)AL-Mashhadani, Wilkinson and Zimmerman}]{Mashhadani2015}
+\bibinfo{author}{AL-Mashhadani, M.K.}, \bibinfo{author}{Wilkinson, S.J.}, \bibinfo{author}{Zimmerman, W.B.}, \bibinfo{year}{2015}.
+\newblock \bibinfo{title}{Airlift bioreactor for biological applications with microbubble mediated transport processes}.
+\newblock \bibinfo{journal}{Chem. Eng. Sci.} \bibinfo{volume}{137}, \bibinfo{pages}{243--253}.
+%Type = Article
+\bibitem[{Alarc{\'o}n et~al.(2020)Alarc{\'o}n, Herrera-Mu{\~n}oz, P{\'e}rinet, Mujica, Guti{\'e}rrez and Gordillo}]{Alarcon2020}
+\bibinfo{author}{Alarc{\'o}n, H.}, \bibinfo{author}{Herrera-Mu{\~n}oz, M.}, \bibinfo{author}{P{\'e}rinet, N.}, \bibinfo{author}{Mujica, N.}, \bibinfo{author}{Guti{\'e}rrez, P.}, \bibinfo{author}{Gordillo, L.}, \bibinfo{year}{2020}.
+\newblock \bibinfo{title}{Faraday-wave contact-line shear gradient induces streaming and tracer self-organization: From vortical to hedgehoglike patterns}.
+\newblock \bibinfo{journal}{Phys. Rev. Lett.} \bibinfo{volume}{125}, \bibinfo{pages}{254505}.
+%Type = Article
+\bibitem[{Alventosa et~al.(2023)Alventosa, Cimpeanu and Harris}]{Alventosa2023}
+\bibinfo{author}{Alventosa, L.F.}, \bibinfo{author}{Cimpeanu, R.}, \bibinfo{author}{Harris, D.M.}, \bibinfo{year}{2023}.
+\newblock \bibinfo{title}{Inertio-capillary rebound of a droplet impacting a fluid bath}.
+\newblock \bibinfo{journal}{J. Fluid Mech.} \bibinfo{volume}{958}, \bibinfo{pages}{A24}.
+%Type = Article
+\bibitem[{Atanasova et~al.(2023)Atanasova, Micheletti and Ducci}]{Atanasova2023}
+\bibinfo{author}{Atanasova, G.}, \bibinfo{author}{Micheletti, M.}, \bibinfo{author}{Ducci, A.}, \bibinfo{year}{2023}.
+\newblock \bibinfo{title}{Fluid flow and mixing in a novel intermittently rotating bioreactor for {CAR}-{T} cell therapy manufacturing}.
+\newblock \bibinfo{journal}{Chem. Eng. Sci.} \bibinfo{volume}{281}, \bibinfo{pages}{119175}.
+%Type = Article
+\bibitem[{Bach et~al.(2017)Bach, Yang, Larsson, Stocks, Gernaey, Albaek and Kr{\"u}hne}]{Bach2017}
+\bibinfo{author}{Bach, C.}, \bibinfo{author}{Yang, J.}, \bibinfo{author}{Larsson, H.}, \bibinfo{author}{Stocks, S.M.}, \bibinfo{author}{Gernaey, K.V.}, \bibinfo{author}{Albaek, M.O.}, \bibinfo{author}{Kr{\"u}hne, U.}, \bibinfo{year}{2017}.
+\newblock \bibinfo{title}{Evaluation of mixing and mass transfer in a stirred pilot scale bioreactor utilizing {CFD}}.
+\newblock \bibinfo{journal}{Chem. Eng. Sci.} \bibinfo{volume}{171}, \bibinfo{pages}{19--26}.
+%Type = Article
+\bibitem[{Bai et~al.(2019a)Bai, Moo-Young and Anderson}]{Bai2019a}
+\bibinfo{author}{Bai, Y.}, \bibinfo{author}{Moo-Young, M.}, \bibinfo{author}{Anderson, W.A.}, \bibinfo{year}{2019}a.
+\newblock \bibinfo{title}{Characterization of power input and its impact on mass transfer in a rocking disposable bioreactor}.
+\newblock \bibinfo{journal}{Chem. Eng. Sci.} \bibinfo{volume}{209}, \bibinfo{pages}{115183}.
+%Type = Article
+\bibitem[{Bai et~al.(2019b)Bai, Moo-Young and Anderson}]{Bai2019b}
+\bibinfo{author}{Bai, Y.}, \bibinfo{author}{Moo-Young, M.}, \bibinfo{author}{Anderson, W.A.}, \bibinfo{year}{2019}b.
+\newblock \bibinfo{title}{A mechanistic model for gas--liquid mass transfer prediction in a rocking disposable bioreactor}.
+\newblock \bibinfo{journal}{Biotechnol. Bioeng.} \bibinfo{volume}{116}, \bibinfo{pages}{1986--1998}.
+%Type = Article
+\bibitem[{Bartczak et~al.(2022)Bartczak, Wierzchowski and Pilarek}]{Bartczak2022}
+\bibinfo{author}{Bartczak, M.}, \bibinfo{author}{Wierzchowski, K.}, \bibinfo{author}{Pilarek, M.}, \bibinfo{year}{2022}.
+\newblock \bibinfo{title}{Mixing performance in a litre-scale rocking disposable bioreactor: {D}o{E}-based investigation of mixing time dependence on operational parameters}.
+\newblock \bibinfo{journal}{Chem. Eng. J.} \bibinfo{volume}{431}, \bibinfo{pages}{133288}.
+%Type = Article
+\bibitem[{Bongarzone and Gallaire(2024)}]{Bongarzone2024}
+\bibinfo{author}{Bongarzone, A.}, \bibinfo{author}{Gallaire, F.}, \bibinfo{year}{2024}.
+\newblock \bibinfo{title}{Lagrangian versus {E}ulerian view on the mean drift and streaming flows in orbital sloshing}.
+\newblock \bibinfo{journal}{Phys. Rev. Fluids} \bibinfo{volume}{9}, \bibinfo{pages}{124803}.
+%Type = Article
+\bibitem[{Bouvard et~al.(2017)Bouvard, Herreman and Moisy}]{Bouvard2017}
+\bibinfo{author}{Bouvard, J.}, \bibinfo{author}{Herreman, W.}, \bibinfo{author}{Moisy, F.}, \bibinfo{year}{2017}.
+\newblock \bibinfo{title}{Mean mass transport in an orbitally shaken cylindrical container}.
+\newblock \bibinfo{journal}{Phys. Rev. Fluids} \bibinfo{volume}{2}, \bibinfo{pages}{084801}.
+%Type = Article
+\bibitem[{Brindley et~al.(2011)Brindley, Moorthy, Lee, Mason, Kim and Wall}]{Brindley2011}
+\bibinfo{author}{Brindley, D.}, \bibinfo{author}{Moorthy, K.}, \bibinfo{author}{Lee, J.H.}, \bibinfo{author}{Mason, C.}, \bibinfo{author}{Kim, H.W.}, \bibinfo{author}{Wall, I.}, \bibinfo{year}{2011}.
+\newblock \bibinfo{title}{Bioprocess forces and their impact on cell behavior: implications for bone regeneration therapy}.
+\newblock \bibinfo{journal}{J. Tissue Eng.} \bibinfo{volume}{2011}.
+%Type = Article
+\bibitem[{Cantarero-Rivera et~al.(2024)Cantarero-Rivera, Camphuijsen, Potter, Clark, Chen, Kahan and Aguilar}]{Cantarero2024}
+\bibinfo{author}{Cantarero-Rivera, F.}, \bibinfo{author}{Camphuijsen, J.}, \bibinfo{author}{Potter, G.}, \bibinfo{author}{Clark, C.}, \bibinfo{author}{Chen, J.}, \bibinfo{author}{Kahan, S.}, \bibinfo{author}{Aguilar, B.}, \bibinfo{year}{2024}.
+\newblock \bibinfo{title}{Modeling the biomechanics of cells on microcarriers in a stirred-tank bioreactor: an {ABM}-{CFD} coupling approach}.
+\newblock \bibinfo{journal}{Front. Food. Sci. Technol.} \bibinfo{volume}{3}, \bibinfo{pages}{1295245}.
+%Type = Article
+\bibitem[{Chao and Das(2015)}]{Chao2015}
+\bibinfo{author}{Chao, T.C.}, \bibinfo{author}{Das, D.B.}, \bibinfo{year}{2015}.
+\newblock \bibinfo{title}{Numerical simulation of coupled cell motion and nutrient transport in {NASA}’s rotating bioreactor}.
+\newblock \bibinfo{journal}{Chem. Eng. J.} \bibinfo{volume}{259}, \bibinfo{pages}{961--971}.
+%Type = Article
+\bibitem[{Cimpeanu et~al.(2023)Cimpeanu, Castrejon-Pita, Lim, Vatish and Georgiou}]{Radu2023}
+\bibinfo{author}{Cimpeanu, R.}, \bibinfo{author}{Castrejon-Pita, A.A.}, \bibinfo{author}{Lim, L.N.}, \bibinfo{author}{Vatish, M.}, \bibinfo{author}{Georgiou, E.X.}, \bibinfo{year}{2023}.
+\newblock \bibinfo{title}{A new flow-based design for double-lumen needles}.
+\newblock \bibinfo{journal}{J. Biomech.} \bibinfo{volume}{160}, \bibinfo{pages}{111832}.
+%Type = Article
+\bibitem[{Cinbiz et~al.(2010)Cinbiz, T{\i}{\u{g}}l{\i}, Be{\c{s}}karde{\c{s}}, G{\"u}m{\"u}{\c{s}}derelio{\u{g}}lu and {\c{C}}olak}]{Cinbiz2010}
+\bibinfo{author}{Cinbiz, M.N.}, \bibinfo{author}{T{\i}{\u{g}}l{\i}, R.S.}, \bibinfo{author}{Be{\c{s}}karde{\c{s}}, I.G.}, \bibinfo{author}{G{\"u}m{\"u}{\c{s}}derelio{\u{g}}lu, M.}, \bibinfo{author}{{\c{C}}olak, {\"U}.}, \bibinfo{year}{2010}.
+\newblock \bibinfo{title}{Computational fluid dynamics modeling of momentum transport in rotating wall perfused bioreactor for cartilage tissue engineering}.
+\newblock \bibinfo{journal}{J. Biotech.} \bibinfo{volume}{150}, \bibinfo{pages}{389--395}.
+%Type = Article
+\bibitem[{Combrinck et~al.(2017)Combrinck, Dala and Lipatov}]{Combrinck2017}
+\bibinfo{author}{Combrinck, M.}, \bibinfo{author}{Dala, L.}, \bibinfo{author}{Lipatov, I.}, \bibinfo{year}{2017}.
+\newblock \bibinfo{title}{Eulerian derivation of non-inertial {N}avier--{S}tokes and boundary layer equations for incompressible flow in constant pure rotation}.
+\newblock \bibinfo{journal}{Eur. J. Mech. B Fluids} \bibinfo{volume}{65}, \bibinfo{pages}{10--30}.
+%Type = Incollection
+\bibitem[{Duan and Shi(2014)}]{Duan2014}
+\bibinfo{author}{Duan, Y.}, \bibinfo{author}{Shi, F.}, \bibinfo{year}{2014}.
+\newblock \bibinfo{title}{Bioreactor design for algal growth as a sustainable energy source}, in: \bibinfo{booktitle}{Reactor and process design in sustainable energy technology}. \bibinfo{publisher}{Elsevier}, pp. \bibinfo{pages}{27--60}.
+%Type = Misc
+\bibitem[{Eibl et~al.(2003)Eibl, Eibl, Pechmann, Ducommun, Lisica, Lisica, Blum, Sch{\"a}r, Wolfram, Rhiel et~al.}]{Eibl2003}
+\bibinfo{author}{Eibl, R.}, \bibinfo{author}{Eibl, D.}, \bibinfo{author}{Pechmann, G.}, \bibinfo{author}{Ducommun, C.}, \bibinfo{author}{Lisica, L.}, \bibinfo{author}{Lisica, S.}, \bibinfo{author}{Blum, P.}, \bibinfo{author}{Sch{\"a}r, M.}, \bibinfo{author}{Wolfram, L.}, \bibinfo{author}{Rhiel, M.}, et~al., \bibinfo{year}{2003}.
+\newblock \bibinfo{title}{Produktion pharmazeutischer wirkstoffe in disposable systemen bis zum 100 l massstab, teil 1}.
+%Type = Article
+\bibitem[{Eibl et~al.(2010)Eibl, Kaiser, Lombriser and Eibl}]{Eibl2010}
+\bibinfo{author}{Eibl, R.}, \bibinfo{author}{Kaiser, S.}, \bibinfo{author}{Lombriser, R.}, \bibinfo{author}{Eibl, D.}, \bibinfo{year}{2010}.
+\newblock \bibinfo{title}{Disposable bioreactors: the current state-of-the-art and recommended applications in biotechnology}.
+\newblock \bibinfo{journal}{Appl. Microbiol. Biotechnol.} \bibinfo{volume}{86}, \bibinfo{pages}{41--49}.
+%Type = Article
+\bibitem[{Eibl et~al.(2009)Eibl, Werner and Eibl}]{Eibl2009}
+\bibinfo{author}{Eibl, R.}, \bibinfo{author}{Werner, S.}, \bibinfo{author}{Eibl, D.}, \bibinfo{year}{2009}.
+\newblock \bibinfo{title}{Bag bioreactor based on wave-induced motion: characteristics and applications}.
+\newblock \bibinfo{journal}{Adv. Biochem. Engin. Biotechnol.} , \bibinfo{pages}{55--87}.
+%Type = Article
+\bibitem[{Farazmand(2017)}]{Farazmand2017}
+\bibinfo{author}{Farazmand, M.}, \bibinfo{year}{2017}.
+\newblock \bibinfo{title}{Optimal initial condition of passive tracers for their maximal mixing in finite time}.
+\newblock \bibinfo{journal}{Phys. Rev. Fluids} \bibinfo{volume}{2}, \bibinfo{pages}{054601}.
+%Type = Article
+\bibitem[{Farsoiya et~al.(2023)Farsoiya, Magdelaine, Antkowiak, Popinet and Deike}]{Farsoiya2023}
+\bibinfo{author}{Farsoiya, P.K.}, \bibinfo{author}{Magdelaine, Q.}, \bibinfo{author}{Antkowiak, A.}, \bibinfo{author}{Popinet, S.}, \bibinfo{author}{Deike, L.}, \bibinfo{year}{2023}.
+\newblock \bibinfo{title}{Direct numerical simulations of bubble-mediated gas transfer and dissolution in quiescent and turbulent flows}.
+\newblock \bibinfo{journal}{J. Fluid Mech.} \bibinfo{volume}{954}, \bibinfo{pages}{A29}.
+%Type = Article
+\bibitem[{Farsoiya et~al.(2021)Farsoiya, Popinet and Deike}]{Farsoiya2021}
+\bibinfo{author}{Farsoiya, P.K.}, \bibinfo{author}{Popinet, S.}, \bibinfo{author}{Deike, L.}, \bibinfo{year}{2021}.
+\newblock \bibinfo{title}{Bubble-mediated transfer of dilute gas in turbulence}.
+\newblock \bibinfo{journal}{J. Fluid Mech.} \bibinfo{volume}{920}, \bibinfo{pages}{A34}.
+%Type = Unpublished
+\bibitem[{Food and Administration(2023)}]{FDA2023}
+\bibinfo{author}{Food, U.S.}, \bibinfo{author}{Administration, D.}, \bibinfo{year}{2023}.
+\newblock \bibinfo{title}{Human food made with cultured animal cells inventory}.
+\newblock \bibinfo{note}{\href{https://www.cfsanappsexternal.fda.gov/scripts/fdcc/?set=AnimalCellCultureFoods}{Link}}.
+%Type = Article
+\bibitem[{Fudge et~al.(2023)Fudge, Cimpeanu, Antkowiak, Castrej{\'o}n-Pita and Castrej{\'o}n-Pita}]{Fudge2023}
+\bibinfo{author}{Fudge, B.D.}, \bibinfo{author}{Cimpeanu, R.}, \bibinfo{author}{Antkowiak, A.}, \bibinfo{author}{Castrej{\'o}n-Pita, J.R.}, \bibinfo{author}{Castrej{\'o}n-Pita, A.A.}, \bibinfo{year}{2023}.
+\newblock \bibinfo{title}{Drop splashing after impact onto immiscible pools of different viscosities}.
+\newblock \bibinfo{journal}{J. Colloid Sci.} \bibinfo{volume}{641}, \bibinfo{pages}{585--594}.
+%Type = Article
+\bibitem[{Gill et~al.(2008)Gill, Appleton, Baganz and Lye}]{Gill2008}
+\bibinfo{author}{Gill, N.}, \bibinfo{author}{Appleton, M.}, \bibinfo{author}{Baganz, F.}, \bibinfo{author}{Lye, G.}, \bibinfo{year}{2008}.
+\newblock \bibinfo{title}{Design and characterisation of a miniature stirred bioreactor system for parallel microbial fermentations}.
+\newblock \bibinfo{journal}{Biochem. Eng. J.} \bibinfo{volume}{39}, \bibinfo{pages}{164--176}.
+%Type = Article
+\bibitem[{Gledhill et~al.(2016)Gledhill, Roohani, Forsberg, Eliasson, Skews and Nordstr{\"o}m}]{Gledhill2016}
+\bibinfo{author}{Gledhill, I.M.}, \bibinfo{author}{Roohani, H.}, \bibinfo{author}{Forsberg, K.}, \bibinfo{author}{Eliasson, P.}, \bibinfo{author}{Skews, B.W.}, \bibinfo{author}{Nordstr{\"o}m, J.}, \bibinfo{year}{2016}.
+\newblock \bibinfo{title}{Theoretical treatment of fluid flow for accelerating bodies}.
+\newblock \bibinfo{journal}{Theor. Comput. Fluid Dyn.} \bibinfo{volume}{30}, \bibinfo{pages}{449--467}.
+%Type = Article
+\bibitem[{Gleeson(2005)}]{Gleeson2005}
+\bibinfo{author}{Gleeson, J.P.}, \bibinfo{year}{2005}.
+\newblock \bibinfo{title}{Transient micromixing: examples of laminar and chaotic stirring}.
+\newblock \bibinfo{journal}{Phys. Fluids} \bibinfo{volume}{17}.
+%Type = Book
+\bibitem[{Gubanov and Cortelezzi(2009)}]{Gubanov2009}
+\bibinfo{author}{Gubanov, O.}, \bibinfo{author}{Cortelezzi, L.}, \bibinfo{year}{2009}.
+\newblock \bibinfo{title}{Sensitivity of mixing optimization to the geometry of the initial scalar field}.
+\newblock \bibinfo{publisher}{Springer}.
+%Type = Article
+\bibitem[{Haroon et~al.(2022)Haroon, Bloks, Deldicque, Koppo, Seddiqi, Bakker, Klein-Nulend and Jaspers}]{Haroon2022}
+\bibinfo{author}{Haroon, M.}, \bibinfo{author}{Bloks, N.G.}, \bibinfo{author}{Deldicque, L.}, \bibinfo{author}{Koppo, K.}, \bibinfo{author}{Seddiqi, H.}, \bibinfo{author}{Bakker, A.D.}, \bibinfo{author}{Klein-Nulend, J.}, \bibinfo{author}{Jaspers, R.T.}, \bibinfo{year}{2022}.
+\newblock \bibinfo{title}{Fluid shear stress-induced mechanotransduction in myoblasts: Does it depend on the glycocalyx?}
+\newblock \bibinfo{journal}{Exp. Cell Res.} \bibinfo{volume}{417}, \bibinfo{pages}{113204}.
+%Type = Article
+\bibitem[{Haroun et~al.(2010)Haroun, Legendre and Raynal}]{Haroun2010}
+\bibinfo{author}{Haroun, Y.}, \bibinfo{author}{Legendre, D.}, \bibinfo{author}{Raynal, L.}, \bibinfo{year}{2010}.
+\newblock \bibinfo{title}{Volume of fluid method for interfacial reactive mass transfer: Application to stable liquid film}.
+\newblock \bibinfo{journal}{Chem. Eng. Sci.} \bibinfo{volume}{65}, \bibinfo{pages}{2896--2909}.
+%Type = Article
+\bibitem[{Hidman et~al.(2022)Hidman, Stroem, Sasic and Sardina}]{Hidman2022}
+\bibinfo{author}{Hidman, N.}, \bibinfo{author}{Stroem, H.}, \bibinfo{author}{Sasic, S.}, \bibinfo{author}{Sardina, G.}, \bibinfo{year}{2022}.
+\newblock \bibinfo{title}{A multiscale methodology for small-scale bubble dynamics in turbulence}.
+\newblock \bibinfo{journal}{Int. J. Multiph. Flow} \bibinfo{volume}{150}, \bibinfo{pages}{103976}.
+%Type = Article
+\bibitem[{Higbie(1935)}]{Higbie1935}
+\bibinfo{author}{Higbie, R.}, \bibinfo{year}{1935}.
+\newblock \bibinfo{title}{The rate of absorption of pure gas into a still liquid during short periods of exposure}.
+\newblock \bibinfo{journal}{Trans. Am. Inst. Chem. Engrs.} \bibinfo{volume}{31}, \bibinfo{pages}{365--389}.
+%Type = Article
+\bibitem[{Hobbs and Muzzio(1997)}]{Hobbs1997}
+\bibinfo{author}{Hobbs, D.}, \bibinfo{author}{Muzzio, F.}, \bibinfo{year}{1997}.
+\newblock \bibinfo{title}{Effects of injection location, flow ratio and geometry on {K}enics mixer performance}.
+\newblock \bibinfo{journal}{AIChE J.} \bibinfo{volume}{43}, \bibinfo{pages}{3121--3132}.
+%Type = Article
+\bibitem[{Hu et~al.(2011)Hu, Berdugo and Chalmers}]{Hu2011}
+\bibinfo{author}{Hu, W.}, \bibinfo{author}{Berdugo, C.}, \bibinfo{author}{Chalmers, J.J.}, \bibinfo{year}{2011}.
+\newblock \bibinfo{title}{The potential of hydrodynamic damage to animal cells of industrial relevance: current understanding}.
+\newblock \bibinfo{journal}{Cytotechnology} \bibinfo{volume}{63}, \bibinfo{pages}{445--460}.
+%Type = Article
+\bibitem[{Humbird(2021)}]{Humbird2021}
+\bibinfo{author}{Humbird, D.}, \bibinfo{year}{2021}.
+\newblock \bibinfo{title}{Scale-up economics for cultured meat}.
+\newblock \bibinfo{journal}{Biotechnol. Bioeng.} \bibinfo{volume}{118}, \bibinfo{pages}{3239--3250}.
+%Type = Book
+\bibitem[{Ibrahim(2005)}]{Ibrahim2005}
+\bibinfo{author}{Ibrahim, R.A.}, \bibinfo{year}{2005}.
+\newblock \bibinfo{title}{Liquid sloshing dynamics: theory and applications}.
+\newblock \bibinfo{publisher}{Cambridge University Press}.
+%Type = Article
+\bibitem[{Jha et~al.(2011)Jha, Cueto-Felgueroso and Juanes}]{Jha2011}
+\bibinfo{author}{Jha, B.}, \bibinfo{author}{Cueto-Felgueroso, L.}, \bibinfo{author}{Juanes, R.}, \bibinfo{year}{2011}.
+\newblock \bibinfo{title}{Fluid mixing from viscous fingering}.
+\newblock \bibinfo{journal}{Phys. Rev. Lett.} \bibinfo{volume}{106}, \bibinfo{pages}{194502}.
+%Type = Article
+\bibitem[{Jung et~al.(2015)Jung, Yoon and Lee}]{Jung2015}
+\bibinfo{author}{Jung, J.H.}, \bibinfo{author}{Yoon, H.S.}, \bibinfo{author}{Lee, C.Y.}, \bibinfo{year}{2015}.
+\newblock \bibinfo{title}{Effect of natural frequency modes on sloshing phenomenon in a rectangular tank}.
+\newblock \bibinfo{journal}{Int. J. Nav. Archit. Ocean Eng.} \bibinfo{volume}{7}, \bibinfo{pages}{580--594}.
+%Type = Article
+\bibitem[{Junne et~al.(2013)Junne, Solymosi, Oosterhuis and Neubauer}]{Junne2013}
+\bibinfo{author}{Junne, S.}, \bibinfo{author}{Solymosi, T.}, \bibinfo{author}{Oosterhuis, N.}, \bibinfo{author}{Neubauer, P.}, \bibinfo{year}{2013}.
+\newblock \bibinfo{title}{Cultivation of cells and microorganisms in wave-mixed disposable bag bioreactors at different scales}.
+\newblock \bibinfo{journal}{Chem. Ing. Tech.} \bibinfo{volume}{85}, \bibinfo{pages}{57--66}.
+%Type = Article
+\bibitem[{Kahouadji et~al.(2022)Kahouadji, Liang, Valdes, Shin, Chergui, Juric, Craster and Matar}]{Kahouadji2022}
+\bibinfo{author}{Kahouadji, L.}, \bibinfo{author}{Liang, F.}, \bibinfo{author}{Valdes, J.P.}, \bibinfo{author}{Shin, S.}, \bibinfo{author}{Chergui, J.}, \bibinfo{author}{Juric, D.}, \bibinfo{author}{Craster, R.V.}, \bibinfo{author}{Matar, O.K.}, \bibinfo{year}{2022}.
+\newblock \bibinfo{title}{The transition to aeration in turbulent two-phase mixing in stirred vessels}.
+\newblock \bibinfo{journal}{Flow} \bibinfo{volume}{2}, \bibinfo{pages}{E30}.
+%Type = Article
+\bibitem[{Kalmbach et~al.(2011)Kalmbach, Bord{\'a}s, {\"O}nc{\"u}l, Th{\'e}venin, Genzel and Reichl}]{Kalmbach2011}
+\bibinfo{author}{Kalmbach, A.}, \bibinfo{author}{Bord{\'a}s, R.}, \bibinfo{author}{{\"O}nc{\"u}l, A.A.}, \bibinfo{author}{Th{\'e}venin, D.}, \bibinfo{author}{Genzel, Y.}, \bibinfo{author}{Reichl, U.}, \bibinfo{year}{2011}.
+\newblock \bibinfo{title}{Experimental characterization of flow conditions in 2-and 20-{L} bioreactors with wave-induced motion}.
+\newblock \bibinfo{journal}{Biotechnol. Prog.} \bibinfo{volume}{27}, \bibinfo{pages}{402--409}.
+%Type = Article
+\bibitem[{King and Miller(2007)}]{King2007}
+\bibinfo{author}{King, J.A.}, \bibinfo{author}{Miller, W.M.}, \bibinfo{year}{2007}.
+\newblock \bibinfo{title}{Bioreactor development for stem cell expansion and controlled differentiation}.
+\newblock \bibinfo{journal}{Curr. Opin. Biotechnol.} \bibinfo{volume}{11}, \bibinfo{pages}{394--398}.
+%Type = Book
+\bibitem[{Kundu et~al.(2015)Kundu, Cohen and Dowling}]{Kundu2015}
+\bibinfo{author}{Kundu, P.K.}, \bibinfo{author}{Cohen, I.M.}, \bibinfo{author}{Dowling, D.R.}, \bibinfo{year}{2015}.
+\newblock \bibinfo{title}{Fluid mechanics}.
+\newblock \bibinfo{publisher}{Academic press}.
+%Type = Article
+\bibitem[{La~Rocca et~al.(2000)La~Rocca, Sciortino and Boniforti}]{Rocca2000}
+\bibinfo{author}{La~Rocca, M.}, \bibinfo{author}{Sciortino, G.}, \bibinfo{author}{Boniforti, M.A.}, \bibinfo{year}{2000}.
+\newblock \bibinfo{title}{A fully nonlinear model for sloshing in a rotating container}.
+\newblock \bibinfo{journal}{Fluid Dyn. Res.} \bibinfo{volume}{27}, \bibinfo{pages}{23}.
+%Type = Article
+\bibitem[{Li et~al.(2021)Li, Saade, van~der Meer and Lohse}]{Li2021}
+\bibinfo{author}{Li, S.}, \bibinfo{author}{Saade, Y.}, \bibinfo{author}{van~der Meer, D.}, \bibinfo{author}{Lohse, D.}, \bibinfo{year}{2021}.
+\newblock \bibinfo{title}{Comparison of boundary integral and volume-of-fluid methods for compressible bubble dynamics}.
+\newblock \bibinfo{journal}{Int. J. Multiph. Flow} \bibinfo{volume}{145}, \bibinfo{pages}{103834}.
+%Type = Article
+\bibitem[{Liu(2012)}]{Liu2012}
+\bibinfo{author}{Liu, M.}, \bibinfo{year}{2012}.
+\newblock \bibinfo{title}{Age distribution and the degree of mixing in continuous flow stirred tank reactors}.
+\newblock \bibinfo{journal}{Chem. Eng. Sci.} \bibinfo{volume}{69}, \bibinfo{pages}{382--393}.
+%Type = Article
+\bibitem[{Machovina et~al.(2015)Machovina, Feeley and Ripple}]{Machovina2015}
+\bibinfo{author}{Machovina, B.}, \bibinfo{author}{Feeley, K.J.}, \bibinfo{author}{Ripple, W.J.}, \bibinfo{year}{2015}.
+\newblock \bibinfo{title}{Biodiversity conservation: The key is reducing meat consumption}.
+\newblock \bibinfo{journal}{Sci. Total Environ.} \bibinfo{volume}{536}, \bibinfo{pages}{419--431}.
+%Type = Article
+\bibitem[{Mardikar and Niranjan(2000)}]{Mardikar2000}
+\bibinfo{author}{Mardikar, S.H.}, \bibinfo{author}{Niranjan, K.}, \bibinfo{year}{2000}.
+\newblock \bibinfo{title}{Observations on the shear damage to different animal cells in a concentric cylinder viscometer}.
+\newblock \bibinfo{journal}{Biotechnol. Bioeng.} \bibinfo{volume}{68}, \bibinfo{pages}{697--704}.
+%Type = Article
+\bibitem[{Marsh et~al.(2017)Marsh, Lye, Micheletti, Odeleye, Ducci and Osborne}]{Marsh2017}
+\bibinfo{author}{Marsh, D.T.}, \bibinfo{author}{Lye, G.J.}, \bibinfo{author}{Micheletti, M.}, \bibinfo{author}{Odeleye, A.O.}, \bibinfo{author}{Ducci, A.}, \bibinfo{author}{Osborne, M.D.}, \bibinfo{year}{2017}.
+\newblock \bibinfo{title}{Fluid dynamic characterization of a laboratory scale rocked bag bioreactor}.
+\newblock \bibinfo{journal}{AIChE J.} \bibinfo{volume}{63}, \bibinfo{pages}{4177--4187}.
+%Type = Article
+\bibitem[{McRae et~al.(2024)McRae, Walls, Natarajan, Antoniou and Bird}]{Mcrae2024}
+\bibinfo{author}{McRae, O.}, \bibinfo{author}{Walls, P.L.}, \bibinfo{author}{Natarajan, V.}, \bibinfo{author}{Antoniou, C.}, \bibinfo{author}{Bird, J.C.}, \bibinfo{year}{2024}.
+\newblock \bibinfo{title}{Elucidating the effects of microbubble pinch-off dynamics on mammalian cell viability}.
+\newblock \bibinfo{journal}{Biotechnol. Bioeng.} \bibinfo{volume}{121}, \bibinfo{pages}{524--534}.
+%Type = Article
+\bibitem[{Mikola et~al.(2007)Mikola, Seto and Amanullah}]{Mikola2007}
+\bibinfo{author}{Mikola, M.}, \bibinfo{author}{Seto, J.}, \bibinfo{author}{Amanullah, A.}, \bibinfo{year}{2007}.
+\newblock \bibinfo{title}{Evaluation of a novel wave bioreactor{\textregistered} cellbag for aerobic yeast cultivation}.
+\newblock \bibinfo{journal}{Bioprocess Biosyst. Eng.} \bibinfo{volume}{30}, \bibinfo{pages}{231--241}.
+%Type = Article
+\bibitem[{Mohebbi-Kalhori et~al.(2012)Mohebbi-Kalhori, Behzadmehr, Doillon and Hadjizadeh}]{Mohebbi2012}
+\bibinfo{author}{Mohebbi-Kalhori, D.}, \bibinfo{author}{Behzadmehr, A.}, \bibinfo{author}{Doillon, C.J.}, \bibinfo{author}{Hadjizadeh, A.}, \bibinfo{year}{2012}.
+\newblock \bibinfo{title}{Computational modeling of adherent cell growth in a hollow-fiber membrane bioreactor for large-scale 3-{D} bone tissue engineering}.
+\newblock \bibinfo{journal}{J. Artif. Organs} \bibinfo{volume}{15}, \bibinfo{pages}{250--265}.
+%Type = Article
+\bibitem[{Musehane et~al.(2021)Musehane, Combrinck and Dala}]{Musehane2021}
+\bibinfo{author}{Musehane, N.M.}, \bibinfo{author}{Combrinck, M.L.}, \bibinfo{author}{Dala, L.N.}, \bibinfo{year}{2021}.
+\newblock \bibinfo{title}{Eulerian derivation of the conservation equation for energy in a non-inertial frame of reference in arbitrary motion}.
+\newblock \bibinfo{journal}{Appl. Math. Comput.} \bibinfo{volume}{399}, \bibinfo{pages}{126002}.
+%Type = Article
+\bibitem[{Mutaf and Oncel(2023)}]{Mutaf2023}
+\bibinfo{author}{Mutaf, T.}, \bibinfo{author}{Oncel, S.S.}, \bibinfo{year}{2023}.
+\newblock \bibinfo{title}{Bubble column and airlift bioreactor systems for animal cell culture applications}.
+\newblock \bibinfo{journal}{Asia-Pac. J. Chem. Eng.} \bibinfo{volume}{18}, \bibinfo{pages}{e2872}.
+%Type = Article
+\bibitem[{Nguyen and Papavassiliou(2018)}]{Nguyen2018}
+\bibinfo{author}{Nguyen, Q.}, \bibinfo{author}{Papavassiliou, D.V.}, \bibinfo{year}{2018}.
+\newblock \bibinfo{title}{Quality measures of mixing in turbulent flow and effects of molecular diffusivity}.
+\newblock \bibinfo{journal}{Fluids} \bibinfo{volume}{3}, \bibinfo{pages}{53}.
+%Type = Article
+\bibitem[{Niu et~al.(2022)Niu, Zhou, Xiao, Wang, Khan, Chen, Li and Yamaguchi}]{Niu2022}
+\bibinfo{author}{Niu, X.D.}, \bibinfo{author}{Zhou, J.X.}, \bibinfo{author}{Xiao, H.W.}, \bibinfo{author}{Wang, Y.P.}, \bibinfo{author}{Khan, A.}, \bibinfo{author}{Chen, M.F.}, \bibinfo{author}{Li, D.C.}, \bibinfo{author}{Yamaguchi, H.}, \bibinfo{year}{2022}.
+\newblock \bibinfo{title}{A simple diffuse interface immersed-boundary scheme for multiphase flows with curved boundaries}.
+\newblock \bibinfo{journal}{Int. J. Multiph. Flow} , \bibinfo{pages}{104266}.
+%Type = Article
+\bibitem[{Ojiako et~al.(2020)Ojiako, Cimpeanu, Bandulasena, Smith and Tseluiko}]{Ojiako2020}
+\bibinfo{author}{Ojiako, C.J.}, \bibinfo{author}{Cimpeanu, R.}, \bibinfo{author}{Bandulasena, H.H.}, \bibinfo{author}{Smith, R.}, \bibinfo{author}{Tseluiko, D.}, \bibinfo{year}{2020}.
+\newblock \bibinfo{title}{Deformation and dewetting of liquid films under gas jets}.
+\newblock \bibinfo{journal}{J. Fluid Mech.} \bibinfo{volume}{905}, \bibinfo{pages}{A18}.
+%Type = Article
+\bibitem[{{\"O}nc{\"u}l et~al.(2010){\"O}nc{\"u}l, Kalmbach, Genzel, Reichl and Th{\'e}venin}]{Oncul2010}
+\bibinfo{author}{{\"O}nc{\"u}l, A.A.}, \bibinfo{author}{Kalmbach, A.}, \bibinfo{author}{Genzel, Y.}, \bibinfo{author}{Reichl, U.}, \bibinfo{author}{Th{\'e}venin, D.}, \bibinfo{year}{2010}.
+\newblock \bibinfo{title}{Characterization of flow conditions in 2 {L} and 20 {L} wave bioreactors{\textregistered} using computational fluid dynamics}.
+\newblock \bibinfo{journal}{Biotechnol. Prog.} \bibinfo{volume}{26}, \bibinfo{pages}{101--110}.
+%Type = Article
+\bibitem[{Patel et~al.(2017)Patel, Das, Kuipers, Padding and Peters}]{Patel2017}
+\bibinfo{author}{Patel, H.}, \bibinfo{author}{Das, S.}, \bibinfo{author}{Kuipers, J.}, \bibinfo{author}{Padding, J.}, \bibinfo{author}{Peters, E.}, \bibinfo{year}{2017}.
+\newblock \bibinfo{title}{A coupled volume of fluid and immersed boundary method for simulating 3{D} multiphase flows with contact line dynamics in complex geometries}.
+\newblock \bibinfo{journal}{Chem. Eng. Sci.} \bibinfo{volume}{166}, \bibinfo{pages}{28--41}.
+%Type = Article
+\bibitem[{Patel and Natarajan(2018)}]{Patel2018}
+\bibinfo{author}{Patel, J.K.}, \bibinfo{author}{Natarajan, G.}, \bibinfo{year}{2018}.
+\newblock \bibinfo{title}{Diffuse interface immersed boundary method for multi-fluid flows with arbitrarily moving rigid bodies}.
+\newblock \bibinfo{journal}{J. Comput. Phys.} \bibinfo{volume}{360}, \bibinfo{pages}{202--228}.
+%Type = Article
+\bibitem[{P{\'e}rinet et~al.(2017)P{\'e}rinet, Guti{\'e}rrez, Urra, Mujica and Gordillo}]{Perinet2017}
+\bibinfo{author}{P{\'e}rinet, N.}, \bibinfo{author}{Guti{\'e}rrez, P.}, \bibinfo{author}{Urra, H.}, \bibinfo{author}{Mujica, N.}, \bibinfo{author}{Gordillo, L.}, \bibinfo{year}{2017}.
+\newblock \bibinfo{title}{Streaming patterns in faraday waves}.
+\newblock \bibinfo{journal}{J. Fluid Mech.} \bibinfo{volume}{819}, \bibinfo{pages}{285--310}.
+%Type = Article
+\bibitem[{Peskin(1972)}]{Peskin1972}
+\bibinfo{author}{Peskin, C.S.}, \bibinfo{year}{1972}.
+\newblock \bibinfo{title}{Flow patterns around heart valves: a numerical method}.
+\newblock \bibinfo{journal}{J. Comput. Phys.} \bibinfo{volume}{10}, \bibinfo{pages}{252--271}.
+%Type = Article
+\bibitem[{Poore and Nemecek(2018)}]{Poore2018}
+\bibinfo{author}{Poore, J.}, \bibinfo{author}{Nemecek, T.}, \bibinfo{year}{2018}.
+\newblock \bibinfo{title}{Reducing food’s environmental impacts through producers and consumers}.
+\newblock \bibinfo{journal}{Science} \bibinfo{volume}{360}, \bibinfo{pages}{987--992}.
+%Type = Article
+\bibitem[{Popinet(2003)}]{Popinet2003}
+\bibinfo{author}{Popinet, S.}, \bibinfo{year}{2003}.
+\newblock \bibinfo{title}{Gerris: a tree-based adaptive solver for the incompressible {E}uler equations in complex geometries}.
+\newblock \bibinfo{journal}{J. Comput. Phys.} \bibinfo{volume}{190}, \bibinfo{pages}{572--600}.
+%Type = Article
+\bibitem[{Popinet(2009)}]{Popinet2009}
+\bibinfo{author}{Popinet, S.}, \bibinfo{year}{2009}.
+\newblock \bibinfo{title}{An accurate adaptive solver for surface-tension-driven interfacial flows}.
+\newblock \bibinfo{journal}{J. Comput. Phys.} \bibinfo{volume}{228}, \bibinfo{pages}{5838--5866}.
+%Type = Article
+\bibitem[{Popinet(2015)}]{Popinet2015}
+\bibinfo{author}{Popinet, S.}, \bibinfo{year}{2015}.
+\newblock \bibinfo{title}{A quadtree-adaptive multigrid solver for the serre--green--naghdi equations}.
+\newblock \bibinfo{journal}{J. Comput. Phys.} \bibinfo{volume}{302}, \bibinfo{pages}{336--358}.
+%Type = Article
+\bibitem[{Rallabandi et~al.(2017)Rallabandi, Wang and Hilgenfeldt}]{Rallabandi2017}
+\bibinfo{author}{Rallabandi, B.}, \bibinfo{author}{Wang, C.}, \bibinfo{author}{Hilgenfeldt, S.}, \bibinfo{year}{2017}.
+\newblock \bibinfo{title}{Analysis of optimal mixing in open-flow mixers with time-modulated vortex arrays}.
+\newblock \bibinfo{journal}{Phys. Rev. Fluids} \bibinfo{volume}{2}, \bibinfo{pages}{064501}.
+%Type = Article
+\bibitem[{Rivera and Chen(2022)}]{Rivera2022}
+\bibinfo{author}{Rivera, F.J.C.}, \bibinfo{author}{Chen, J.}, \bibinfo{year}{2022}.
+\newblock \bibinfo{title}{Computational fluid dynamics modeling of cell cultures in bioreactors and its potential for cultivated meat production—a mini-review}.
+\newblock \bibinfo{journal}{Future Foods} \bibinfo{volume}{6}, \bibinfo{pages}{100195}.
+%Type = Article
+\bibitem[{Rodriguez et~al.(2018)Rodriguez, Micheletti and Ducci}]{Rodriguez2018}
+\bibinfo{author}{Rodriguez, G.}, \bibinfo{author}{Micheletti, M.}, \bibinfo{author}{Ducci, A.}, \bibinfo{year}{2018}.
+\newblock \bibinfo{title}{Macro-and micro-scale mixing in a shaken bioreactor for fluids of high viscosity}.
+\newblock \bibinfo{journal}{Chem. Eng. Res. Des.} \bibinfo{volume}{132}, \bibinfo{pages}{890--901}.
+%Type = Article
+\bibitem[{Sanjeevi et~al.(2018)Sanjeevi, Zarghami and Padding}]{Sanjeevi2018}
+\bibinfo{author}{Sanjeevi, S.K.}, \bibinfo{author}{Zarghami, A.}, \bibinfo{author}{Padding, J.T.}, \bibinfo{year}{2018}.
+\newblock \bibinfo{title}{Choice of no-slip curved boundary condition for lattice boltzmann simulations of high-reynolds-number flows}.
+\newblock \bibinfo{journal}{Phys. Rev. E} \bibinfo{volume}{97}, \bibinfo{pages}{043305}.
+%Type = Article
+\bibitem[{Santo et~al.(2020)Santo, Kim, Goldman, Dutkiewicz, Biehl, Bloem, Neff and Nachman}]{Santo2020}
+\bibinfo{author}{Santo, R.E.}, \bibinfo{author}{Kim, B.F.}, \bibinfo{author}{Goldman, S.E.}, \bibinfo{author}{Dutkiewicz, J.}, \bibinfo{author}{Biehl, E.}, \bibinfo{author}{Bloem, M.W.}, \bibinfo{author}{Neff, R.A.}, \bibinfo{author}{Nachman, K.E.}, \bibinfo{year}{2020}.
+\newblock \bibinfo{title}{Considering plant-based meat substitutes and cell-based meats: a public health and food systems perspective}.
+\newblock \bibinfo{journal}{Front. Sustain. Food Syst.} \bibinfo{volume}{4}, \bibinfo{pages}{134}.
+%Type = Article
+\bibitem[{Seidel et~al.(2022)Seidel, Maschke, Kraume, Eibl and Eibl}]{Seidel2022}
+\bibinfo{author}{Seidel, S.}, \bibinfo{author}{Maschke, R.W.}, \bibinfo{author}{Kraume, M.}, \bibinfo{author}{Eibl, R.}, \bibinfo{author}{Eibl, D.}, \bibinfo{year}{2022}.
+\newblock \bibinfo{title}{{CFD} modelling of a wave-mixed bioreactor with complex geometry and two degrees of freedom motion}.
+\newblock \bibinfo{journal}{Front. Chem. Eng.} \bibinfo{volume}{4}, \bibinfo{pages}{1021416}.
+%Type = Article
+\bibitem[{Shi et~al.(2024)Shi, Golestanian and Vilfan}]{Shi2024}
+\bibinfo{author}{Shi, Y.}, \bibinfo{author}{Golestanian, R.}, \bibinfo{author}{Vilfan, A.}, \bibinfo{year}{2024}.
+\newblock \bibinfo{title}{Mutual information as a measure of mixing efficiency in viscous fluids}.
+\newblock \bibinfo{journal}{Phys. Rev. Res.} \bibinfo{volume}{6}, \bibinfo{pages}{L022050}.
+%Type = Article
+\bibitem[{Siiri{\"a} and Yliruusi(2009)}]{Siiria2009}
+\bibinfo{author}{Siiri{\"a}, S.}, \bibinfo{author}{Yliruusi, J.}, \bibinfo{year}{2009}.
+\newblock \bibinfo{title}{Determining a value for mixing: Mixing degree}.
+\newblock \bibinfo{journal}{Powder Technol.} \bibinfo{volume}{196}, \bibinfo{pages}{309--317}.
+%Type = Article
+\bibitem[{Singh et~al.(2023)Singh, Germaine, Mydlarski and Cortelezzi}]{Singh2023}
+\bibinfo{author}{Singh, M.}, \bibinfo{author}{Germaine, E.}, \bibinfo{author}{Mydlarski, L.}, \bibinfo{author}{Cortelezzi, L.}, \bibinfo{year}{2023}.
+\newblock \bibinfo{title}{Dependence of scalar mixing on initial conditions in turbulent channel flow}.
+\newblock \bibinfo{journal}{Phys. Rev. Fluids} \bibinfo{volume}{8}, \bibinfo{pages}{124605}.
+%Type = Article
+\bibitem[{Singh(1999)}]{Singh1999}
+\bibinfo{author}{Singh, V.}, \bibinfo{year}{1999}.
+\newblock \bibinfo{title}{Disposable bioreactor for cell culture using wave-induced agitation}.
+\newblock \bibinfo{journal}{Cytotechnology} \bibinfo{volume}{30}, \bibinfo{pages}{149--158}.
+%Type = Article
+\bibitem[{Svay et~al.(2020)Svay, Urrea, Shamlou and Zhang}]{Svay2020}
+\bibinfo{author}{Svay, K.}, \bibinfo{author}{Urrea, C.}, \bibinfo{author}{Shamlou, P.A.}, \bibinfo{author}{Zhang, H.}, \bibinfo{year}{2020}.
+\newblock \bibinfo{title}{Computational fluid dynamics analysis of mixing and gas--liquid mass transfer in wave bag bioreactor}.
+\newblock \bibinfo{journal}{Biotechnol. Prog.} \bibinfo{volume}{36}, \bibinfo{pages}{e3049}.
+%Type = Article
+\bibitem[{{United Nations Environment Programme}(2023)}]{UN2023}
+\bibinfo{author}{{United Nations Environment Programme}}, \bibinfo{year}{2023}.
+\newblock \bibinfo{title}{What’s cooking? an assessment of the potential impacts of selected novel alternatives to conventional animal products}.
+\newblock \bibinfo{journal}{Frontiers 2023} .
+%Type = Article
+\bibitem[{Watanabe and Goto(2022)}]{Watanabe2022}
+\bibinfo{author}{Watanabe, D.}, \bibinfo{author}{Goto, S.}, \bibinfo{year}{2022}.
+\newblock \bibinfo{title}{Simple bladeless mixer with liquid--gas interface}.
+\newblock \bibinfo{journal}{Flow} \bibinfo{volume}{2}, \bibinfo{pages}{E28}.
+%Type = Article
+\bibitem[{Wodo{\l}a{\.z}ski(2020)}]{Wodolazski2020}
+\bibinfo{author}{Wodo{\l}a{\.z}ski, A.}, \bibinfo{year}{2020}.
+\newblock \bibinfo{title}{Co-simulation of cfd-multiphase population balance coupled model aeration of sludge flocs in stirrer tank bioreactor}.
+\newblock \bibinfo{journal}{Int. J. Multiph. Flow} \bibinfo{volume}{123}, \bibinfo{pages}{103162}.
+%Type = Article
+\bibitem[{Wyma et~al.(2018)Wyma, Martin-Alarcon, Walsh, Schmidt, Gates and Kallos}]{Wyma2018}
+\bibinfo{author}{Wyma, A.}, \bibinfo{author}{Martin-Alarcon, L.}, \bibinfo{author}{Walsh, T.}, \bibinfo{author}{Schmidt, T.A.}, \bibinfo{author}{Gates, I.D.}, \bibinfo{author}{Kallos, M.S.}, \bibinfo{year}{2018}.
+\newblock \bibinfo{title}{Non-newtonian rheology in suspension cell cultures significantly impacts bioreactor shear stress quantification}.
+\newblock \bibinfo{journal}{Biotechnol. Bioeng.} \bibinfo{volume}{115}, \bibinfo{pages}{2101--2113}.
+%Type = Article
+\bibitem[{Xiao et~al.(2022)Xiao, Zhang, Luo, Mao and Fan}]{Xiao2022}
+\bibinfo{author}{Xiao, W.}, \bibinfo{author}{Zhang, H.}, \bibinfo{author}{Luo, K.}, \bibinfo{author}{Mao, C.}, \bibinfo{author}{Fan, J.}, \bibinfo{year}{2022}.
+\newblock \bibinfo{title}{Immersed boundary method for multiphase transport phenomena}.
+\newblock \bibinfo{journal}{Rev. Chem. Eng.} \bibinfo{volume}{38}, \bibinfo{pages}{363--405}.
+%Type = Article
+\bibitem[{Xu et~al.(2025)Xu, Zhu, Xia and Deng}]{Xu2025}
+\bibinfo{author}{Xu, C.}, \bibinfo{author}{Zhu, W.}, \bibinfo{author}{Xia, H.}, \bibinfo{author}{Deng, W.}, \bibinfo{year}{2025}.
+\newblock \bibinfo{title}{Double bursting jets from a suspended water drop under one cycle of oscillation}.
+\newblock \bibinfo{journal}{Int. J. Multiph. Flow} , \bibinfo{pages}{105151}.
+%Type = Article
+\bibitem[{Xu et~al.(2021)Xu, Sharma, Shu, Lin, Ciais, Tubiello, Smith, Campbell and Jain}]{Xu2021}
+\bibinfo{author}{Xu, X.}, \bibinfo{author}{Sharma, P.}, \bibinfo{author}{Shu, S.}, \bibinfo{author}{Lin, T.S.}, \bibinfo{author}{Ciais, P.}, \bibinfo{author}{Tubiello, F.N.}, \bibinfo{author}{Smith, P.}, \bibinfo{author}{Campbell, N.}, \bibinfo{author}{Jain, A.K.}, \bibinfo{year}{2021}.
+\newblock \bibinfo{title}{Global greenhouse gas emissions from animal-based foods are twice those of plant-based foods}.
+\newblock \bibinfo{journal}{Nat. Food} \bibinfo{volume}{2}, \bibinfo{pages}{724--732}.
+\newblock \DOIprefix\doi{https://doi.org/10.59117/20.500.11822/44236}.
+%Type = Article
+\bibitem[{Zabel et~al.(2019)Zabel, Delzeit, Schneider, Seppelt, Mauser and V{\'a}clav{\'\i}k}]{Zabel2019}
+\bibinfo{author}{Zabel, F.}, \bibinfo{author}{Delzeit, R.}, \bibinfo{author}{Schneider, J.M.}, \bibinfo{author}{Seppelt, R.}, \bibinfo{author}{Mauser, W.}, \bibinfo{author}{V{\'a}clav{\'\i}k, T.}, \bibinfo{year}{2019}.
+\newblock \bibinfo{title}{Global impacts of future cropland expansion and intensification on agricultural markets and biodiversity}.
+\newblock \bibinfo{journal}{Nat. comm.} \bibinfo{volume}{10}, \bibinfo{pages}{2844}.
+%Type = Article
+\bibitem[{Zalc et~al.(2003)Zalc, Szalai and Muzzio}]{Zalc2003}
+\bibinfo{author}{Zalc, J.}, \bibinfo{author}{Szalai, E.}, \bibinfo{author}{Muzzio, F.}, \bibinfo{year}{2003}.
+\newblock \bibinfo{title}{Mixing dynamics in the {SMX} static mixer as a function of injection location and flow ratio}.
+\newblock \bibinfo{journal}{Polym. Eng. Sci.} \bibinfo{volume}{43}, \bibinfo{pages}{875--890}.
+%Type = Article
+\bibitem[{Zhan et~al.(2019)Zhan, Hagrot, Brandt and Chotteau}]{Zhan2019}
+\bibinfo{author}{Zhan, C.}, \bibinfo{author}{Hagrot, E.}, \bibinfo{author}{Brandt, L.}, \bibinfo{author}{Chotteau, V.}, \bibinfo{year}{2019}.
+\newblock \bibinfo{title}{Study of hydrodynamics in wave bioreactors by computational fluid dynamics reveals a resonance phenomenon}.
+\newblock \bibinfo{journal}{Chem. Eng. Sci.} \bibinfo{volume}{193}, \bibinfo{pages}{53--65}.
+%Type = Article
+\bibitem[{Zhang et~al.(2025)Zhang, Zhang, Ran, Zhang, Dai, Zhao, Ye and Tan}]{Zhang2025}
+\bibinfo{author}{Zhang, B.}, \bibinfo{author}{Zhang, X.}, \bibinfo{author}{Ran, Q.}, \bibinfo{author}{Zhang, W.}, \bibinfo{author}{Dai, G.}, \bibinfo{author}{Zhao, L.}, \bibinfo{author}{Ye, Q.}, \bibinfo{author}{Tan, W.S.}, \bibinfo{year}{2025}.
+\newblock \bibinfo{title}{Rheology of {CHO} cell suspensions and its effects on high-density cultivation process and bioreactor design}.
+\newblock \bibinfo{journal}{Biotechnol. J.} \bibinfo{volume}{20}, \bibinfo{pages}{e70003}.
+%Type = Article
+\bibitem[{Zhao et~al.(2018)Zhao, Hu, Chen, Lim and Wang}]{Zhao2018}
+\bibinfo{author}{Zhao, D.}, \bibinfo{author}{Hu, Z.}, \bibinfo{author}{Chen, G.}, \bibinfo{author}{Lim, S.}, \bibinfo{author}{Wang, S.}, \bibinfo{year}{2018}.
+\newblock \bibinfo{title}{Nonlinear sloshing in rectangular tanks under forced excitation}.
+\newblock \bibinfo{journal}{Int. J. Nav. Archit. Ocean Eng.} \bibinfo{volume}{10}, \bibinfo{pages}{545--565}.
+
+\end{thebibliography}
