@@ -33,5 +33,58 @@
     "binary": "/oscar/scratch/eaguerov/BioReactor-mpi-video",
     "mem": "4G",
     "walltime": "2-00:00:00"
-  }
+  },
+  "chained": true,
+  "chain_manifest": {
+    "17.5": [
+      "61d53bc5",
+      "7c00faee",
+      "1986b360",
+      "80c3f213"
+    ],
+    "20.0": [
+      "75087d18",
+      "222d7a79",
+      "96b288c5",
+      "12f9f2d3"
+    ],
+    "22.5": [
+      "f02f61c2",
+      "b45ba00b",
+      "b588009d",
+      "2c967e2c"
+    ],
+    "25.0": [
+      "25cc70a4",
+      "82fae85d",
+      "6eb93ff0",
+      "65afee32"
+    ],
+    "27.5": [
+      "d0f8d91a",
+      "d64dc783",
+      "2e1d4fc4"
+    ],
+    "30.0": [
+      "9d0601a0",
+      "871e0274",
+      "c2cbe11a"
+    ],
+    "32.5": [
+      "27df5c5f",
+      "0ed7f52a",
+      "0f4d25bc"
+    ],
+    "35.0": [
+      "a863434c",
+      "877b2033",
+      "029c4769"
+    ],
+    "37.5": [
+      "b5c5004d",
+      "180d98c4",
+      "a47de25a"
+    ]
+  },
+  "note": "Original single-segment attempt timed out for all 9 conditions (real per-condition rate was 2.7-6.6 days, not the originally estimated 25h). Resubmitted 2026-07-06 as multi-segment checkpoint-restart chains (3-4 segments of 2-day walltime each) under normal QOS. Final results.json for each condition lands in the LAST run_id of its chain (see chain_manifest)."
 }

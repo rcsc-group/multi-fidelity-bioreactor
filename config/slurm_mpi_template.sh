@@ -124,6 +124,8 @@ if exp:
         WALLTIME=$(python3 -c "import json,sys; p=json.load(open(sys.argv[1])); print(p.get('_walltime','04:00:00'))" "$NEXT_PARAMS_CANON" 2>/dev/null)
         MEM=$(python3 -c "import json,sys; p=json.load(open(sys.argv[1])); print(p.get('_mem','4G'))" "$NEXT_PARAMS_CANON" 2>/dev/null)
         NTASKS=$(python3 -c "import json,sys; p=json.load(open(sys.argv[1])); print(p.get('_ntasks',16))" "$NEXT_PARAMS_CANON" 2>/dev/null)
+        MAIL_USER=$(python3 -c "import json,sys; p=json.load(open(sys.argv[1])); print(p.get('_mail_user',''))" "$NEXT_PARAMS_CANON" 2>/dev/null)
+        MAIL_TYPE=$(python3 -c "import json,sys; p=json.load(open(sys.argv[1])); print(p.get('_mail_type','FAIL'))" "$NEXT_PARAMS_CANON" 2>/dev/null)
         NEXT_DUMP_ARG=""
         if [ -f "$NEXT_SCRATCH/checkpoint.dump" ]; then
             NEXT_DUMP_ARG="DUMP=$NEXT_SCRATCH/checkpoint.dump"
@@ -131,11 +133,16 @@ if exp:
         # Resolve project root from RUNS_ROOT (runs/ is one level below project root)
         TEMPLATE="$RUNS_ROOT/../config/slurm_mpi_template.sh"
         [ ! -f "$TEMPLATE" ] && [ -n "$CANON_RUN" ] && TEMPLATE="$(dirname "$CANON_RUN")/../config/slurm_mpi_template.sh"
+        MAIL_ARGS=()
+        if [ -n "$MAIL_USER" ]; then
+            MAIL_ARGS=(--mail-type="$MAIL_TYPE" --mail-user="$MAIL_USER")
+        fi
         NEXT_JID=$(sbatch --no-requeue \
             --time="$WALLTIME" \
             --mem-per-cpu="$MEM" \
             --ntasks="$NTASKS" \
             --cpus-per-task=1 \
+            "${MAIL_ARGS[@]}" \
             --export="NONE,PARAMS=$NEXT_SCRATCH/params.json${NEXT_DUMP_ARG:+,$NEXT_DUMP_ARG}" \
             "$TEMPLATE" | awk '{print $NF}')
         echo "$NEXT_JID" > "$NEXT_SCRATCH/.slurm_jid"
