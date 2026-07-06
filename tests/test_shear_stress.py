@@ -1,8 +1,9 @@
 """Tests for the shear stress percentile KPI pipeline.
 
 shear_stress.dat columns: i t tau_95 tau_98 tau_100 tau_mean
-All tau values are non-dimensional: [μ_nd × U_bio / L] = [μ₁ × 1/T_bio].
-postprocess._compute_tau98_kpis() converts to Pa using τ_Pa = τ_nd × μ_w / T_bio.
+BioReactor.c sets rho1=1, mu1=1/Re_w, so tau_nd = tau_dim / (rho_w * U_bio^2)
+-- not tau_dim * T_bio / mu_w. postprocess._compute_tau98_kpis() converts to
+Pa using tau_Pa = tau_nd * rho_w * U_bio^2, with U_bio = geometry.a / T_bio.
 """
 import json
 import math
@@ -14,7 +15,15 @@ from scripts.postprocess import _t_scales, _compute_tau98_kpis
 from tests.conftest import CANONICAL_PARAMS
 
 F_LIQ_MEAN = 0.3571
-MU_W = 1.0e-3   # Pa·s, water viscosity — matches BioReactor.c
+RHO_W = 1.0e3   # kg/m^3, water density — matches postprocess._compute_tau98_kpis
+
+
+def _tau_scale(params: dict) -> float:
+    """tau_Pa = tau_nd * RHO_W * U_bio^2, U_bio = geometry.a / T_bio."""
+    T_bio, _ = _t_scales(params)
+    L = params.get("geometry", {}).get("a", 0.25)
+    U_bio = L / T_bio
+    return RHO_W * U_bio**2
 
 
 # ── file writers ──────────────────────────────────────────────────────────────
@@ -73,7 +82,7 @@ def test_tau98_extraction_known_value(tmp_path):
 
     result = _compute_tau98_kpis(run_dir, CANONICAL_PARAMS)
 
-    expected_pa = tau_nd * MU_W / T_bio
+    expected_pa = tau_nd * _tau_scale(CANONICAL_PARAMS)
     assert math.isfinite(result["tau_98_qss"]), "tau_98_qss is not finite"
     assert abs(result["tau_98_qss"] - expected_pa) / expected_pa < 0.01, (
         f"tau_98_qss={result['tau_98_qss']:.4e} Pa, expected {expected_pa:.4e} Pa"
@@ -98,7 +107,7 @@ def test_tau98_qss_excludes_ramp(tmp_path):
     (run_dir / "params.json").write_text(json.dumps(CANONICAL_PARAMS))
 
     result = _compute_tau98_kpis(run_dir, CANONICAL_PARAMS)
-    tau_scale = MU_W / T_bio
+    tau_scale = _tau_scale(CANONICAL_PARAMS)
 
     assert math.isfinite(result["tau_98_qss"])
     assert result["tau_98_qss"] < tau_normal * tau_scale * 2.0, (
@@ -125,7 +134,7 @@ def test_tau98_nan_on_missing_file(tmp_path):
 
 
 def test_tau98_dimensional_conversion(tmp_path):
-    """Known tau_nd → tau_Pa = tau_nd × μ_w / T_bio within 1%."""
+    """Known tau_nd → tau_Pa = tau_nd * rho_w * U_bio^2 within 1%."""
     run_dir = tmp_path / "run_tau_dim"
     run_dir.mkdir()
 
@@ -140,7 +149,7 @@ def test_tau98_dimensional_conversion(tmp_path):
 
     result = _compute_tau98_kpis(run_dir, CANONICAL_PARAMS)
 
-    expected_pa = tau_nd * MU_W / T_bio
+    expected_pa = tau_nd * _tau_scale(CANONICAL_PARAMS)
     assert abs(result["tau_98_qss"] - expected_pa) / expected_pa < 0.01, (
         f"Dimensional conversion error: got {result['tau_98_qss']:.4e} Pa, "
         f"expected {expected_pa:.4e} Pa"

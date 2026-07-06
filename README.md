@@ -34,7 +34,9 @@ If you are new to CFD or HPC, read this section first.
 The rate at which oxygen dissolves from the air into the liquid in the bag,
 measured per unit time. Higher kLa = better mixing and faster oxygenation.
 `kLa_25` is the value when the liquid has reached 25 % of full oxygen saturation
-and is the standard industrial metric. Units: 1/time (non-dimensional in this code).
+and is the standard industrial metric. Units: h⁻¹ (converted from the solver's
+internal non-dimensional rate via `3600 / T_bio`, so it is directly comparable
+to literature values such as Kim et al. 2024).
 
 **Rocking period (T)**
 The time it takes the bag to complete one full back-and-forth rock.
@@ -80,8 +82,11 @@ reach a steady state before taking measurements. Typical value: 80 cycles for a 
 **t_buffer**
 The duration (in non-dim time) of the kLa measurement window after oxygen injection.
 Larger t_buffer gives a longer average and more stable kLa estimate, at the cost of more
-compute time. Rule of thumb: t_buffer > ln(2) / kLa_expected. At fidelity 7, kLa ≈ 0.03–0.1,
-so t_buffer = 30–50 is sufficient. At fidelity 5, kLa ≈ 0.1–0.5, so t_buffer = 10–30 suffices.
+compute time. Rule of thumb: t_buffer > ln(2) / kLa_nd_expected, where kLa_nd is the
+solver's internal *non-dimensional* rate (not the h⁻¹ value reported in `results.json` —
+t_buffer is itself a non-dim duration, so it must be sized against the non-dim rate).
+At fidelity 7, kLa_nd ≈ 0.03–0.1, so t_buffer = 30–50 is sufficient. At fidelity 5,
+kLa_nd ≈ 0.1–0.5, so t_buffer = 10–30 suffices.
 
 **Superellipse (geometry.n)**
 The mathematical shape of the bag cross-section. n=2 is a standard ellipse;
@@ -209,23 +214,37 @@ python scripts/simulate.py runs/my_run/params.json --slurm --wait --walltime 04:
 uv run python scripts/postprocess.py runs/my_run/
 ```
 
-Writes `runs/my_run/results.json` with ten KPIs:
+Writes `runs/my_run/results.json` with eighteen KPIs (kLa/tau are dimensional;
+NaN when the underlying data file is absent or too short, e.g. tau_* are NaN
+whenever oxygen transport was disabled for the run, and vice versa):
 
 ```json
 {
-  "kLa_10": 0.085,  "kLa_25": 0.074,  "kLa_50": 0.055,
-  "kLa_inst_10": 0.093, "kLa_inst_25": 0.059, "kLa_inst_50": 0.046,
-  "dtmix_0.50": 3.95,   "dtmix_0.75": 5.92,   "dtmix_0.95": 15.8,
-  "vor_mean": 1.374
+  "kLa_10": 47.87,  "kLa_25": 45.14,  "kLa_50": 29.01,
+  "kLa_inst_10": 50.79, "kLa_inst_25": 44.73, "kLa_inst_50": 27.62,
+  "dtmix_0.50": 13.66,  "dtmix_0.75": 27.63,  "dtmix_0.95": 86.53,
+  "vor_mean": 1.028,    "vel_rms_qss": 0.250, "kla_fit_rmse_25": 0.00046,
+  "tau_95_qss": 0.0023, "tau_98_qss": 0.0108, "tau_100_qss": 0.0986,
+  "tau_95_max": 0.0028, "tau_98_max": 0.0138, "tau_100_max": 0.1458
 }
 ```
 
 | Key | Description | Unit |
 |-----|-------------|------|
-| `kLa_10/25/50` | O₂ transfer rate at 10/25/50 % saturation (5-point log-linear fit) | 1/t_nd |
-| `kLa_inst_10/25/50` | Same, estimated instantaneously via dC*/dt | 1/t_nd |
+| `kLa_10/25/50` | O₂ transfer rate at 10/25/50 % saturation (5-point log-linear fit) | h⁻¹ |
+| `kLa_inst_10/25/50` | Same, estimated instantaneously via dC*/dt | h⁻¹ |
 | `dtmix_0.50/0.75/0.95` | Time for tracer to reach 50/75/95 % homogeneity | seconds |
 | `vor_mean` | Period-averaged mean absolute vorticity (steady streaming strength) | 1/s |
+| `vel_rms_qss` | RMS velocity over the quasi-steady-state window | non-dim |
+| `kla_fit_rmse_25` | Fit quality (RMSE) of the kLa_25 log-linear regression | non-dim |
+| `tau_95/98/100_qss` | Median shear-stress percentile over the QSS window | Pa |
+| `tau_95/98/100_max` | Global-max shear-stress percentile over the whole run | Pa |
+
+kLa is converted from the solver's internal non-dimensional rate via `× 3600 / T_bio`
+(h⁻¹). tau is converted via `× ρ_w U_bio²` (Pa), where `U_bio = geometry.a / T_bio`
+(BioReactor.c sets `rho1=1`, `mu1=1/Re_w`, so `τ_nd = τ_dim / (ρ_w U_bio²)`, not
+`τ_dim × T_bio / μ_w`). Both conversions make results directly comparable to
+Kim et al. 2024 and other dimensional literature values.
 
 `kLa_25` is the standard industrial metric. `vor_mean` is the hydrodynamic
 root cause: stronger steady streaming → faster mixing and higher kLa.
@@ -709,8 +728,9 @@ Runtimes are per segment (one SLURM job) with the sweep t_end of ~35–98 nondim
 | 5 | 32×32 | ~2 min | ~1 min | BO DoE, low-fidelity surrogate |
 | 6 | 64×64 | ~15 min | ~5 min | Mid-fidelity check |
 | 7 | 128×128 | ~2 h | ~30 min | Standard production sweeps |
-| 9 | 512×512 | ~days | ~hours | High-fidelity reference |
-| 10 | 1024×1024 | — | ~days | Publication (Kim et al. 2025) |
+| 8 | 256×256 | ~16 h (approx.) | ~4 h (approx.) | Grid-convergence check vs. fidelity 7 |
+| 9 | 512×512 | ~days | ~10–11 h/condition (measured) | High-fidelity reference |
+| 10 | 1024×1024 | — | ~2.7–6.6 days/condition (measured) | Publication (Kim et al. 2024/2025) |
 
 For sweeps: use **fidelity 5** (fast, qualitative) or **fidelity 7 at 16 CPUs** (production).
 Specify `"cpus": 16` in `_sweep` when using fidelity ≥ 7.
@@ -734,7 +754,7 @@ rocking-bioreactor-2d/
 │
 ├── scripts/
 │   ├── simulate.py           # Core API: run_local() / submit_slurm() / wait_for_result()
-│   ├── postprocess.py        # 10 KPIs from run output files → results.json
+│   ├── postprocess.py        # 18 KPIs from run output files → results.json
 │   ├── collect_results.py    # Aggregate all results.json across runs → CSV
 │   ├── plot_heatmaps.py      # KPI heatmaps from sweep results → experiments/figures/
 │   ├── render_videos.py      # Called automatically by SLURM: frame dumps → mp4
@@ -794,15 +814,20 @@ rocking-bioreactor-2d/
 
 ## 13. Test suite
 
+`pyproject.toml` sets `addopts = -m 'not medium and not hpc'`, so the default
+invocation runs only the fast, hermetic unit tests. `medium` and `hpc` tests are
+opt-in — pass an explicit `-m` to include them (this overrides addopts, it does
+not combine with it).
+
 ```bash
-# Fast unit tests only (no binary, no SLURM — ~10 s)
-uv run python -m pytest tests/ -m "not medium and not hpc"
-
-# Include numerical verification tests (runs binary at fidelity 3, ~10 min)
-uv run python -m pytest tests/ -m "not hpc"
-
-# Full suite including SLURM integration test (needs cluster allocation, ~15 min)
+# Fast unit tests only (no binary, no SLURM — ~20 s). This is the default.
 uv run python -m pytest tests/
+
+# Include numerical verification tests (runs the real binary at fidelity 3, ~2 min each)
+uv run python -m pytest tests/ -m medium
+
+# Full suite including SLURM integration tests (submits real jobs, needs cluster allocation)
+uv run python -m pytest tests/ -m "medium or hpc"
 ```
 
 ---

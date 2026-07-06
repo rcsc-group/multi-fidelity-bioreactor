@@ -23,12 +23,14 @@ SHORT_PARAMS = {**CANONICAL_PARAMS, "run_id": "sim_test", "fidelity": 3}
 
 # ── run_local ─────────────────────────────────────────────────────────────────
 
+@pytest.mark.medium
 def test_run_local_creates_run_dir(tmp_path):
     """run_local creates runs/{run_id}/ under project_root."""
     run_local(SHORT_PARAMS, project_root=PROJECT_ROOT, runs_root=tmp_path)
     assert (tmp_path / SHORT_PARAMS["run_id"]).is_dir()
 
 
+@pytest.mark.medium
 def test_run_local_writes_params_json(tmp_path):
     """run_local writes params.json into the run directory."""
     run_local(SHORT_PARAMS, project_root=PROJECT_ROOT, runs_root=tmp_path)
@@ -38,6 +40,7 @@ def test_run_local_writes_params_json(tmp_path):
     assert loaded["omega_b"] == SHORT_PARAMS["omega_b"]
 
 
+@pytest.mark.medium
 def test_run_local_returns_run_dir(tmp_path):
     """run_local returns the Path of the run directory."""
     run_dir = run_local(SHORT_PARAMS, project_root=PROJECT_ROOT, runs_root=tmp_path)

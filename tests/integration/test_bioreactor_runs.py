@@ -39,6 +39,7 @@ def compiled_binary(tmp_path_factory):
     return binary
 
 
+@pytest.mark.medium
 def test_bioreactor_produces_output_files(compiled_binary, tmp_path):
     """BioReactor starts cleanly and writes tr_oxy.dat + normf.dat.
 

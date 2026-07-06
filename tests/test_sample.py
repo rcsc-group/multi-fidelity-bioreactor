@@ -16,7 +16,20 @@ import yaml
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from scripts.sample import _row_to_params, run_sampling
+from scripts.loop import _compute_t_end, _ed_to_params
+from scripts.sample import run_sampling
+
+
+def _row_to_params(row: pd.Series, fidelity: int, t_buffer: float, n_max: int) -> dict:
+    """Match sample.py's own composition: convert row, then compute t_end from t_buffer.
+
+    sample.py deduplicated this into scripts.loop._ed_to_params (row -> params,
+    t_end left unset) + scripts.loop._compute_t_end (params, t_buffer -> t_end);
+    this helper recomposes them for tests that exercise the old single-call shape.
+    """
+    params = _ed_to_params(row, fidelity, None, n_max)
+    params["t_end"] = _compute_t_end(params, t_buffer)
+    return params
 
 # ── fixtures ──────────────────────────────────────────────────────────────────
 
@@ -163,39 +176,38 @@ class TestRowToParams:
 # ── run_sampling ──────────────────────────────────────────────────────────────
 
 class TestRunSampling:
+    """All tests pass an isolated tmp_path runs_root -- run_sampling() must
+    never write into the real project runs/ directory during tests."""
+
     def test_unknown_strategy_raises(self, tmp_path):
         cfg = _minimal_cfg(tmp_path, strategy="bogus")
         with pytest.raises(ValueError, match="bogus"):
-            run_sampling(cfg)
+            run_sampling(cfg, runs_root=tmp_path / "runs")
 
     def test_all_known_strategies_accepted(self, tmp_path):
         for strategy in ("latin", "random", "sobol"):
             cfg = _minimal_cfg(tmp_path / strategy, strategy=strategy, n_samples=2)
-            run_sampling(cfg)  # must not raise
+            run_sampling(cfg, runs_root=tmp_path / "runs" / strategy)  # must not raise
 
     def test_no_submit_writes_params_json(self, tmp_path):
         cfg = _minimal_cfg(tmp_path, n_samples=2, submit=False)
-        run_sampling(cfg)
-        runs_root = Path(__file__).parents[1] / "runs"
+        runs_root = tmp_path / "runs"
+        run_sampling(cfg, runs_root=runs_root)
         written = list(runs_root.glob("*/params.json"))
         assert len(written) >= 2
 
     def test_correct_number_of_runs_written(self, tmp_path):
         cfg = _minimal_cfg(tmp_path, n_samples=4, submit=False)
-        runs_root = Path(__file__).parents[1] / "runs"
-        before = set(runs_root.glob("*/params.json"))
-        run_sampling(cfg)
-        after = set(runs_root.glob("*/params.json"))
-        new_runs = after - before
-        assert len(new_runs) == 4
+        runs_root = tmp_path / "runs"
+        run_sampling(cfg, runs_root=runs_root)
+        written = list(runs_root.glob("*/params.json"))
+        assert len(written) == 4
 
     def test_params_json_has_required_keys(self, tmp_path):
         cfg = _minimal_cfg(tmp_path, n_samples=1, submit=False)
-        runs_root = Path(__file__).parents[1] / "runs"
-        before = set(runs_root.glob("*/params.json"))
-        run_sampling(cfg)
-        after = set(runs_root.glob("*/params.json"))
-        new_file = list(after - before)[0]
+        runs_root = tmp_path / "runs"
+        run_sampling(cfg, runs_root=runs_root)
+        new_file = list(runs_root.glob("*/params.json"))[0]
         params = json.loads(new_file.read_text())
         for key in ("run_id", "fidelity", "omega_b", "theta_max",
                     "geometry", "fill_level", "t_end"):
@@ -203,17 +215,15 @@ class TestRunSampling:
 
     def test_unique_run_ids(self, tmp_path):
         cfg = _minimal_cfg(tmp_path, n_samples=5, submit=False)
-        runs_root = Path(__file__).parents[1] / "runs"
-        before = set(runs_root.glob("*/params.json"))
-        run_sampling(cfg)
-        after = set(runs_root.glob("*/params.json"))
-        new_files = after - before
-        ids = [json.loads(f.read_text())["run_id"] for f in new_files]
+        runs_root = tmp_path / "runs"
+        run_sampling(cfg, runs_root=runs_root)
+        ids = [json.loads(f.read_text())["run_id"]
+               for f in runs_root.glob("*/params.json")]
         assert len(ids) == len(set(ids)), "All run_ids must be unique"
 
     def test_experiment_data_store_created(self, tmp_path):
         cfg = _minimal_cfg(tmp_path, n_samples=2, submit=False)
-        run_sampling(cfg)
+        run_sampling(cfg, runs_root=tmp_path / "runs")
         exp_dir = Path(cfg["experiment_dir"])
         # f3dasm stores at least an input CSV
         assert any(exp_dir.iterdir()), "Experiment dir should not be empty"
@@ -221,22 +231,20 @@ class TestRunSampling:
     def test_submit_false_does_not_call_sbatch(self, tmp_path):
         cfg = _minimal_cfg(tmp_path, n_samples=2, submit=False)
         with patch("scripts.simulate.submit_slurm") as mock_sbatch:
-            run_sampling(cfg)
+            run_sampling(cfg, runs_root=tmp_path / "runs")
             mock_sbatch.assert_not_called()
 
     def test_submit_true_calls_sbatch_n_times(self, tmp_path):
         cfg = _minimal_cfg(tmp_path, n_samples=3, submit=True)
         with patch("scripts.simulate.submit_slurm", return_value="12345") as mock_sbatch:
-            run_sampling(cfg)
+            run_sampling(cfg, runs_root=tmp_path / "runs")
             assert mock_sbatch.call_count == 3
 
     def test_params_within_param_space_bounds(self, tmp_path):
         cfg = _minimal_cfg(tmp_path, n_samples=10, submit=False)
-        runs_root = Path(__file__).parents[1] / "runs"
-        before = set(runs_root.glob("*/params.json"))
-        run_sampling(cfg)
-        after = set(runs_root.glob("*/params.json"))
-        for path in after - before:
+        runs_root = tmp_path / "runs"
+        run_sampling(cfg, runs_root=runs_root)
+        for path in runs_root.glob("*/params.json"):
             p = json.loads(path.read_text())
             assert 1.57 <= p["omega_b"] <= 6.28, f"omega_b out of bounds: {p['omega_b']}"
             assert 0.3  <= p["fill_level"] <= 0.7, f"fill_level out of bounds: {p['fill_level']}"
@@ -245,11 +253,9 @@ class TestRunSampling:
 
     def test_phi_angular_index0_always_zero_in_output(self, tmp_path):
         cfg = _minimal_cfg(tmp_path, n_samples=5, submit=False)
-        runs_root = Path(__file__).parents[1] / "runs"
-        before = set(runs_root.glob("*/params.json"))
-        run_sampling(cfg)
-        after = set(runs_root.glob("*/params.json"))
-        for path in after - before:
+        runs_root = tmp_path / "runs"
+        run_sampling(cfg, runs_root=runs_root)
+        for path in runs_root.glob("*/params.json"):
             p = json.loads(path.read_text())
             assert p["phi_angular"][0] == 0.0, \
                 f"phi_angular[0] must be 0.0, got {p['phi_angular'][0]}"

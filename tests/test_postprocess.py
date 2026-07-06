@@ -27,6 +27,13 @@ from tests.conftest import CANONICAL_PARAMS
 
 F_LIQ_MEAN = 0.3571   # typical f_liq_sum for fill_level=0.5, geometry as in CANONICAL_PARAMS
 
+# main() converts kLa from non-dimensional (1/t_nd) to h⁻¹ via 3600/T_bio (see
+# postprocess._t_scales); synthetic runs below have no params.json, so main()
+# falls back to _t_scales({}) defaults, which equal CANONICAL_PARAMS. Tests
+# construct C*(t) using a non-dimensional true_kla, so the dimensional result
+# must be compared against true_kla scaled by this same factor.
+_KLA_TO_H = 3600.0 / _t_scales({})[0]
+
 
 def _write_tr_oxy(run_dir: Path, t: np.ndarray, oxy_liq_sum: np.ndarray) -> None:
     """Write a realistic 12-column tr_oxy.dat (unused columns set to 0)."""
@@ -82,8 +89,9 @@ def test_kla_extracted_from_synthetic_data(tmp_path):
     results = json.loads((run_dir / "results.json").read_text())
     assert math.isfinite(results["kLa_25"]), "kLa_25 is not finite"
     assert results["kLa_25"] > 0, "kLa_25 is not positive"
-    assert abs(results["kLa_25"] - true_kla) / true_kla < 0.05, (
-        f"kLa_25={results['kLa_25']:.4f} too far from true {true_kla}"
+    expected = true_kla * _KLA_TO_H
+    assert abs(results["kLa_25"] - expected) / expected < 0.05, (
+        f"kLa_25={results['kLa_25']:.4f} too far from true {expected} (h⁻¹)"
     )
 
 
@@ -175,8 +183,9 @@ def test_kla_noise_robustness(tmp_path):
     postprocess_main(str(run_dir))
     results = json.loads((run_dir / "results.json").read_text())
     assert math.isfinite(results["kLa_25"]), "kLa_25 not finite under noise"
-    assert abs(results["kLa_25"] - true_kla) / true_kla < 0.10, (
-        f"kLa_25={results['kLa_25']:.4f} more than 10% from true {true_kla}"
+    expected = true_kla * _KLA_TO_H
+    assert abs(results["kLa_25"] - expected) / expected < 0.10, (
+        f"kLa_25={results['kLa_25']:.4f} more than 10% from true {expected} (h⁻¹)"
     )
 
 
@@ -252,8 +261,9 @@ def test_t_inject_detected_at_known_time(tmp_path):
     postprocess_main(str(run_dir))
     results = json.loads((run_dir / "results.json").read_text())
     assert math.isfinite(results["kLa_25"]), "kLa_25 not finite with offset injection"
-    assert abs(results["kLa_25"] - true_kla) / true_kla < 0.10, (
-        f"kLa_25={results['kLa_25']:.4f} too far from true {true_kla} (injection at t={t_inj})"
+    expected = true_kla * _KLA_TO_H
+    assert abs(results["kLa_25"] - expected) / expected < 0.10, (
+        f"kLa_25={results['kLa_25']:.4f} too far from true {expected} (h⁻¹, injection at t={t_inj})"
     )
 
 
@@ -366,6 +376,7 @@ def test_c_star_robust_to_f_liq_variation(tmp_path):
     postprocess_main(str(run_dir))
     results = json.loads((run_dir / "results.json").read_text())
     assert math.isfinite(results["kLa_25"]), "kLa_25 not finite with f_liq variation"
-    assert abs(results["kLa_25"] - true_kla) / true_kla < 0.10, (
-        f"kLa_25={results['kLa_25']:.4f} more than 10% from true {true_kla} with f_liq variation"
+    expected = true_kla * _KLA_TO_H
+    assert abs(results["kLa_25"] - expected) / expected < 0.10, (
+        f"kLa_25={results['kLa_25']:.4f} more than 10% from true {expected} (h⁻¹) with f_liq variation"
     )

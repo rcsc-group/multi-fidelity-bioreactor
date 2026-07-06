@@ -335,7 +335,7 @@ from unittest.mock import call, patch
 from scripts.sweep import submit_sweep, submit_sweep_videos
 
 
-def _minimal_sweep_cfg(tmp_path: Path, n_omega: int = 2) -> Path:
+def _minimal_sweep_cfg(tmp_path: Path, n_omega: int = 2, chain: bool = False) -> Path:
     """Write a minimal sweep config JSON to tmp_path and return its path."""
     import json
     cfg = {
@@ -348,8 +348,9 @@ def _minimal_sweep_cfg(tmp_path: Path, n_omega: int = 2) -> Path:
         "amplitude_h": [0.0, 0.0, 0.0],
         "phi_horizontal": [0.0, 0.0, 0.0],
         "n_harmonics": 1,
-        "omega_b": [1.571, 1.833][:n_omega],
+        "omega_b": [round(1.571 + 0.2 * i, 3) for i in range(n_omega)],
         "_sweep": {
+            "chain": chain,
             "n_mix_cycles": 3,
             "n_transition_cycles": 3,
             "t_buffer": 5.0,
@@ -382,7 +383,7 @@ def test_submit_sweep_only_submits_seg0_per_chain(tmp_path):
         "omega_h": 0.0, "amplitude_h": [0.0, 0.0, 0.0],
         "phi_horizontal": [0.0, 0.0, 0.0], "n_harmonics": 1,
         "omega_b": [1.571, 1.833, 2.094],  # 3 values → cartesian → 3 segs/chain
-        "_sweep": {"n_mix_cycles": 3, "n_transition_cycles": 3,
+        "_sweep": {"chain": True, "n_mix_cycles": 3, "n_transition_cycles": 3,
                    "t_buffer": 5.0, "walltime": "00:05:00", "submit": True},
     }
     cfg_path = tmp_path / "self_submit_test.json"
@@ -394,7 +395,7 @@ def test_submit_sweep_only_submits_seg0_per_chain(tmp_path):
         return str(10000 + len(submitted))
 
     with patch("scripts.simulate.submit_slurm", side_effect=fake_submit):
-        job_ids = submit_sweep(cfg_path)
+        job_ids = submit_sweep(cfg_path, runs_root=tmp_path / "runs")
 
     # 2 chains → exactly 2 submit calls (one seg-0 per chain)
     assert len(submitted) == 2, f"Expected 2 submissions (seg-0 only), got {len(submitted)}"
@@ -416,7 +417,7 @@ def test_submit_sweep_does_not_submit_video_jobs(tmp_path):
     """
     cfg = _minimal_sweep_cfg(tmp_path)
     with patch("scripts.simulate.submit_slurm", return_value="99999") as mock_sbatch:
-        submit_sweep(cfg)
+        submit_sweep(cfg, runs_root=tmp_path / "runs")
     # All calls should use the default sim template, NOT the video template
     video_template = str(_PROJECT_ROOT / "config" / "slurm_video_template.sh")
     for c in mock_sbatch.call_args_list:
@@ -430,11 +431,11 @@ def test_submit_sweep_does_not_submit_video_jobs(tmp_path):
 def test_submit_sweep_writes_next_run_id_for_chain(tmp_path):
     """All segments except the last must have next_run_id in params.json."""
     import json
-    cfg = _minimal_sweep_cfg(tmp_path, n_omega=3)  # 3 segs/chain
+    cfg = _minimal_sweep_cfg(tmp_path, n_omega=3, chain=True)  # 3 segs/chain
+    runs_root = tmp_path / "runs"
     with patch("scripts.simulate.submit_slurm", return_value="99999"):
-        submit_sweep(cfg)
+        submit_sweep(cfg, runs_root=runs_root)
 
-    runs_root = _PROJECT_ROOT / "runs"
     # Find the submitted seg-0 run dir (has next_run_id set)
     seg0_dirs = [d for d in runs_root.iterdir()
                  if d.is_dir() and (d/"params.json").exists()]

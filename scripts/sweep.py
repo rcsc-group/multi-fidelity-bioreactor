@@ -411,7 +411,7 @@ def _init_experiment_store(path: Path, options: dict,
     return str(exp_dir)
 
 
-def submit_sweep(path: str | Path) -> list[str]:
+def submit_sweep(path: str | Path, runs_root: Path | None = None) -> list[str]:
     """End-to-end: parse → expand → submit.
 
     Default mode (chain=false in _sweep): every combination is submitted as a
@@ -426,10 +426,13 @@ def submit_sweep(path: str | Path) -> list[str]:
 
     An ExperimentData store is created at experiments/<config_stem>/ in both
     modes and is the canonical provenance record for all runs in this sweep.
+
+    runs_root : defaults to <project_root>/runs; tests inject tmp_path here
+    so sweep submissions never write into the real runs/ directory.
     """
     params_list, options = parse_sweep_config(path)
 
-    runs_root    = _PROJECT_ROOT / "runs"
+    runs_root    = Path(runs_root) if runs_root is not None else _PROJECT_ROOT / "runs"
     walltime_cfg = options.get("walltime", "04:00:00")   # may be "auto"
     cpus         = int(options.get("cpus", 4))
     mem          = str(options.get("mem", "12G"))

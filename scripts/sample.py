@@ -42,7 +42,13 @@ _STRATEGY_ALIASES = {
 }
 
 
-def run_sampling(cfg: dict) -> None:
+def run_sampling(cfg: dict, runs_root: Path | None = None) -> None:
+    """Generate and (optionally) submit a batch of runs.
+
+    runs_root : defaults to <project_root>/runs; tests inject tmp_path here
+    so sampling runs never land in the real runs/ directory.
+    """
+    runs_root = Path(runs_root) if runs_root is not None else _PROJECT_ROOT / "runs"
     exp_dir  = _PROJECT_ROOT / cfg["experiment_dir"]
     exp_dir.mkdir(parents=True, exist_ok=True)
 
@@ -82,7 +88,7 @@ def run_sampling(cfg: dict) -> None:
         params["t_end"] = _compute_t_end(params, t_buffer)
         params_list.append(params)
 
-        run_dir = _PROJECT_ROOT / "runs" / params["run_id"]
+        run_dir = runs_root / params["run_id"]
         print(f"  [{i+1:3d}/{n_samples}] run={params['run_id']}  "
               f"omega_b={params['omega_b']:.2f}  "
               f"fill={params['fill_level']:.2f}  "
@@ -92,7 +98,7 @@ def run_sampling(cfg: dict) -> None:
             job_id = simulate.submit_slurm(
                 params,
                 project_root=_PROJECT_ROOT,
-                runs_root=_PROJECT_ROOT / "runs",
+                runs_root=runs_root,
                 walltime=walltime,
             )
             job_ids.append(job_id)

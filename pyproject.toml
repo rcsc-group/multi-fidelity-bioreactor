@@ -23,3 +23,13 @@ dev-dependencies = [
     "pytest",
     "pytest-cov",
 ]
+
+[tool.pytest.ini_options]
+# Default run is the fast, hermetic unit-test suite only. "medium" (real
+# fidelity-3 CFD run, ~2 min) and "hpc" (submits real SLURM jobs and waits
+# for completion) are opt-in via `pytest -m medium` / `-m hpc` / `-m "medium or hpc"`.
+addopts = "-m 'not medium and not hpc'"
+markers = [
+    "medium: short CFD run, fidelity 3; ~2 min on OSCAR",
+    "hpc: SLURM-required; fidelity 5-7",
+]
