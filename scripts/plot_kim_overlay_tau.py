@@ -9,10 +9,17 @@ We overlay our L8 theta sweep (theta ∈ {2,3,4,5,6,7}°, RPM ∈ {15..37.5}):
   - Marker size proportional to theta_max
   - tau_100_max on the y-axis  (direct analog of Kim's tau_liq_max)
 
+...and our L9 tau/RPM sweep at fixed theta=7° (hydrodynamics-only runs, no
+oxygen injection -- t_end is far shorter than t_mix by design, so only the
+shear-stress KPIs are meaningful here):
+  - Black squares
+  - tau_100_max on the y-axis, same convention as the L8 series
+
 Usage:
     uv run python scripts/plot_kim_overlay_tau.py
 """
 
+import json
 import math
 import os
 from pathlib import Path
@@ -23,10 +30,12 @@ import numpy as np
 import pandas as pd
 
 # ── paths ─────────────────────────────────────────────────────────────────────
-HERE     = Path(__file__).parent.parent          # dev/rocking-bioreactor-2d/
-KIM_CSV  = HERE / "docs/kimetal2024/csv_raw/shear_ediss_vs_frequency.csv"
-EXP_DIR  = HERE / "experiments/sweep_fb_theta_l8_mpi_ckpt/experiment_data"
-OUT_DIR  = HERE / "experiments/figures"
+HERE       = Path(__file__).parent.parent          # dev/rocking-bioreactor-2d/
+KIM_CSV    = HERE / "docs/kimetal2024/csv_raw/shear_ediss_vs_frequency.csv"
+EXP_DIR    = HERE / "experiments/sweep_fb_theta_l8_mpi_ckpt/experiment_data"
+L9_META    = HERE / "experiments/sweep_tau_theta7_l9/_sweep_metadata.json"
+L9_SCRATCH = Path("/oscar/scratch/eaguerov/mpi_runs")
+OUT_DIR    = HERE / "experiments/figures"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 # ── load Kim data ──────────────────────────────────────────────────────────────
@@ -50,6 +59,19 @@ ours = pd.DataFrame({
 }).dropna(subset=["tau_max"])
 
 THETAS = sorted(ours["theta"].unique())   # [2, 3, 4, 5, 6, 7]
+
+# ── load L9 tau/RPM sweep (theta=7 fixed, scratch-resident results) ────────────
+l9_meta = json.loads(L9_META.read_text())
+l9_rows = []
+for rpm, run_id in zip(l9_meta["rpms"], l9_meta["run_ids"]):
+    results_path = L9_SCRATCH / run_id / "results.json"
+    if not results_path.exists():
+        continue
+    tau_max = json.loads(results_path.read_text()).get("tau_100_max")
+    if tau_max is None or not math.isfinite(tau_max):
+        continue
+    l9_rows.append({"rpm": rpm, "tau_max": tau_max})
+l9 = pd.DataFrame(l9_rows)
 
 # Red colormap: darker shade for larger theta
 _cmap = plt.colormaps["Reds"]
@@ -83,6 +105,11 @@ for _, row in ours.iterrows():
                color=c_map[row["theta"]], alpha=0.70,
                edgecolors="none", zorder=4)
 
+# Ours — L9 tau/RPM sweep at theta=7°: black squares
+ax.plot(l9["rpm"], l9["tau_max"],
+        color="black", marker="s", ms=6, lw=1.0, ls="-",
+        markerfacecolor="black", alpha=0.85, zorder=4)
+
 # ── legend: Kim series + size guide for theta ─────────────────────────────────
 kim_max_handle  = mlines.Line2D([], [], color="royalblue", marker="o",
                                 ms=7, lw=1.2,
@@ -100,8 +127,11 @@ theta_handles = [
     for th in THETAS
 ]
 
-ax.legend(handles=[kim_max_handle, kim_mean_handle] + theta_handles,
-          fontsize=7.5, framealpha=0.9, loc="upper left",
+l9_handle = mlines.Line2D([], [], color="black", marker="s", ms=6, lw=1.0,
+                           label=r"L9, $\theta=7°$")
+
+ax.legend(handles=[kim_max_handle, kim_mean_handle] + theta_handles + [l9_handle],
+          fontsize=7.5, framealpha=0.9, loc="lower left",
           handlelength=1.4, handletextpad=0.5)
 
 # ── axes ──────────────────────────────────────────────────────────────────────
