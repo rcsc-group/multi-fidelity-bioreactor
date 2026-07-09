@@ -599,6 +599,20 @@ event dump_checkpoint (t = t_dump_checkpoint) {
   p.nodump = pf.nodump = false;
   dump (file = "checkpoint.dump");
   p.nodump = pf.nodump = true;
+  // acceleration(i++) and oxygen(t=t_mix;i++) are unconditional (no t<=t_end
+  // bound), so Basilisk's events() never marks them done and run() keeps
+  // stepping forever past t_dump_checkpoint once every t<=t_end-bounded event
+  // (logstats/normcal/movies_output) has expired -- confirmed by direct
+  // instrumentation: iter/t kept climbing indefinitely with zero further
+  // file output after the checkpoint write, for both fidelity 6 and 7, with
+  // both oversubscribed and dedicated MPI ranks.  This is why every SHORT
+  // fresh run (short relative to typical L7 t_end) was walltime-killed with
+  // no results.json, while long L7 runs happened to fit under the walltime.
+  // Returning 1 from an event action is the documented Basilisk idiom for
+  // stopping run()'s event loop immediately and cleanly (main()'s fclose()
+  // calls after run() still execute) -- see grid/events.h: event_do() treats
+  // a nonzero action return as event_stop, and events() then returns 0.
+  return 1;
 }
 
 //  Log performance and runtime

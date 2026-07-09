@@ -248,5 +248,65 @@
     "observation": "CONFIRMED: kLa_25=0.1409, oxy_liq_sum=0.169709 at t=299.1; zero crashes. Agreement with ref kLa_25=0.139: |\u0394|/ref=1.4%.",
     "status": "confirmed",
     "date": "2026-06-18"
+  },
+  {
+    "thread": "l9-l10-post-checkpoint-hang",
+    "hypothesis": "3/4 running L10 seg0 SLURM jobs (16 dedicated ranks) had written checkpoint.dump 1-9h ago with zero further file writes since, while still burning 99.5% CPU on all ranks -- same signature as the 4 orphaned L9 runs found earlier (walltime-killed at t>=t_end, no results.json)",
+    "prediction": "checkpoint.dump + .dat trajectories are already complete and stable; postprocess.py can be run directly on them without waiting for a walltime kill",
+    "commit": "36a7c3e",
+    "job_id": "3678522,3678524,3678525",
+    "observation": "CONFIRMED: postprocess.py produced finite tau_98_qss/tau_100_max for all 3 runs (61d53bc5, f02f61c2, 25cc70a4); kLa_25=nan as expected (hydrodynamics-only, n_mix_cycles=500)",
+    "status": "confirmed",
+    "date": "2026-07-08"
+  },
+  {
+    "thread": "l9-l10-post-checkpoint-hang",
+    "hypothesis": "the hang is reproducible at tiny scale (fidelity 6, t_end=1.0) in ~2 minutes, independent of production fidelity/rank-count, so it can be iterated on cheaply",
+    "prediction": "a 2-rank oversubscribed run of the same params (minus fidelity/t_end) will show checkpoint.dump written, then zero file writes + ~99% CPU on both ranks indefinitely",
+    "commit": "36a7c3e",
+    "job_id": "interactive-PID-2067053",
+    "observation": "CONFIRMED: checkpoint.dump written at t=1.2, then 0 further logstats.dat lines for 3+ min while both ranks held ~42% CPU (oversubscribed on 1 core, ~85% combined)",
+    "status": "confirmed",
+    "date": "2026-07-08"
+  },
+  {
+    "thread": "l9-l10-post-checkpoint-hang",
+    "hypothesis": "geometry.n=8 (unusual flat superellipse bag shape vs default n=2) triggers the hang via an embedded-boundary/AMR edge case",
+    "prediction": "the same repro with geometry.n=2.0 instead of 8.0 will exit cleanly after checkpoint",
+    "commit": "36a7c3e",
+    "job_id": "interactive-PID-2069419",
+    "observation": "FALSIFIED: identical hang with n=2.0 -- checkpoint written, then 0 further writes for 3+ min",
+    "status": "falsified",
+    "date": "2026-07-08"
+  },
+  {
+    "thread": "l9-l10-post-checkpoint-hang",
+    "hypothesis": "the hang occurs because oxygen injection never fires within t_end (n_mix_cycles=500 makes t_mix >> t_end for the tau-only sweep), causing some rank-asymmetric code path",
+    "prediction": "n_mix_cycles=1 (injection fires well before checkpoint) will exit cleanly",
+    "commit": "36a7c3e",
+    "job_id": "interactive-PID-2072442",
+    "observation": "FALSIFIED: identical hang with n_mix_cycles=1 -- checkpoint written, then 0 further writes",
+    "status": "falsified",
+    "date": "2026-07-08"
+  },
+  {
+    "thread": "l9-l10-post-checkpoint-hang",
+    "hypothesis": "the hang is an artifact of --oversubscribe (2 MPI ranks time-sliced on 1 CPU), not present with genuinely dedicated ranks",
+    "prediction": "4 dedicated ranks via a real sbatch job (mbessa-gcondo QOS) on the same tiny repro params will exit cleanly after checkpoint",
+    "commit": "36a7c3e",
+    "job_id": "3759438",
+    "observation": "FALSIFIED: identical hang with 4 dedicated ranks, no oversubscription -- checkpoint written, then 0 further writes for the full observation window",
+    "status": "falsified",
+    "date": "2026-07-08"
+  },
+  {
+    "thread": "l9-l10-post-checkpoint-hang",
+    "hypothesis": "root cause: acceleration(i++) and oxygen(t=t_mix;i++) are unconditional Basilisk events (no t<=t_end bound); once every t<=t_end-bounded event (logstats/normcal/pressure_diagnostics/movies_output) has expired past t_dump_checkpoint, these unbounded events alone keep run()'s event loop alive forever with zero further file output, until SLURM walltime kills the job. Confirmed-working long L7 runs (t_end~95) merely reach a t_end large enough that this was never noticed distinctly from normal long runtimes -- direct per-rank/per-step instrumentation (temporary, reverted) showed iter/t climbing indefinitely past checkpoint with no further disk writes, at both fidelity 6 and fidelity 7, oversubscribed and dedicated ranks",
+    "prediction": "having dump_checkpoint's event action `return 1` (the documented Basilisk idiom for stopping run()'s event loop cleanly, per grid/events.h: event_do() treats a nonzero action return as event_stop) will make the binary exit with code 0 immediately after writing the checkpoint, for both fresh and restart-segment runs, at fidelities/t_end values that previously hung indefinitely",
+    "commit": "fix(mpi-checkpoint): dump_checkpoint returns 1 to stop run() cleanly",
+    "job_id": "interactive (fix build), synchronous local runs",
+    "observation": "CONFIRMED: fidelity=6, t_end=1.0 -- exit code 0 in 39s (previously hung 100+s with zero progress). fidelity=6, t_end=4.56 (matches originally-stalled production run 61d53bc5's t_end exactly) -- exited cleanly with the standard Basilisk closing summary printed ('3657 steps, ... 158.4 real'); postprocess.py produced finite tau_98_qss=0.00517, tau_100_max=0.0316, vor_mean=0.918 (kLa_25=nan as expected, hydrodynamics-only config). Restart-segment path (t_checkpoint>0) from that same checkpoint, t_end=1.5 more -- also exited cleanly with a closing summary printed ('4969 steps, ... 50.28 real')",
+    "status": "confirmed",
+    "date": "2026-07-09"
   }
 ]
