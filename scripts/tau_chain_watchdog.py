@@ -24,7 +24,10 @@ L9_RUN_IDS = ["44133566", "0183ca21", "8994c04a", "b1b72f63"]
 
 
 def _has_result(run_id: str) -> bool:
-    f = RUNS / run_id / "results.json"
+    # postprocess.py writes results.json to the scratch run dir, not the
+    # project's canonical runs/ dir (which only ever gets params.json for
+    # this scratch-only sweep) -- checking RUNS here always returned False.
+    f = SCRATCH / run_id / "results.json"
     if not f.exists():
         return False
     try:
