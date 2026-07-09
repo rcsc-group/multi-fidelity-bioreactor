@@ -245,3 +245,78 @@ source commit: main @ 6f15883 (merged from mpi-checkpoint via 15f9f03)
 ```
 
 Specify it in any sweep config via `"_binary": "/oscar/scratch/eaguerov/BioReactor-mpi-stripped"`.
+
+---
+
+## Bug 5 — Process Never Terminates After the Final Checkpoint Write (short runs)
+
+**Discovered:** 2026-07-08/09, while auditing why 3 of 4 running L10 tau-sweep
+seg0 jobs and all 4 submitted L9 runs showed `checkpoint.dump` written hours
+earlier with zero further file output since, yet all 16 MPI ranks still at
+~99.5% CPU. This is a different bug from Bugs 1–4 above (those were about
+restart *correctness*; this one is about fresh-run *termination*), found in a
+separate debugging session after the original restart fix above had already
+been validated and merged.
+
+**Symptom:** After `dump_checkpoint` writes `checkpoint.dump` at
+`t = t_dump_checkpoint` (the period-aligned point at or just after `t_end`),
+the binary keeps running indefinitely — full CPU on every rank, zero further
+disk writes — until SLURM's walltime limit kills the job. No `results.json`
+is ever produced, because the job script's postprocess step only runs after
+the binary exits on its own.
+
+**Root cause:** `event acceleration (i++)` and `event oxygen (t=t_mix; i++)`
+are *unconditional* Basilisk events — no `t <= t_end` bound. Basilisk's
+`run()` loop (`grid/events.h`) only stops once every event with an active
+condition or single-shot init has become "finished"; once the four
+`t <= t_end`-bounded events (`logstats`, `normcal`, `pressure_diagnostics`,
+`movies_output`) expire past `t_dump_checkpoint`, these two unconditional
+events are all that's left, and they keep the loop alive forever with no
+further observable output.
+
+**Why L7 sweeps never surfaced this distinctly:** L7 production runs have
+`t_end ~ 95` (many rocking periods), so a fresh L7 job's *total* wall time
+already spans hours — the "extra" post-checkpoint tail, if it existed, was
+indistinguishable from normal long-running work within the walltime budget.
+L9/L10 tau-only sweeps (hydrodynamics-only, `t_end ~ 1–20`) made the bug
+obvious: the useful work finishes in minutes, but the job then silently
+burns the *rest* of its multi-day walltime allocation doing nothing.
+
+**Falsification chain** (full detail in `experiments/hypothesis_ledger.json`,
+thread `l9-l10-post-checkpoint-hang`) — each of the following was tested and
+ruled out before landing on the actual cause:
+
+| Hypothesis | Result |
+|---|---|
+| `geometry.n=8` (unusual bag shape) triggers it | Falsified — identical hang with `n=2` |
+| Oxygen injection never firing (`n_mix_cycles=500`) triggers it | Falsified — identical hang with `n_mix_cycles=1` |
+| MPI oversubscription (2 ranks / 1 core) is an artifact | Falsified — identical hang with 4 genuinely dedicated ranks |
+| Fidelity (grid size) is the differentiator | Falsified — identical hang at fidelity 6 *and* 7 |
+| **No termination condition once `t<=t_end` events expire** | **Confirmed** via temporary per-rank/per-step instrumentation showing `iter`/`t` climbing indefinitely past checkpoint with zero disk writes |
+
+**Fix (commit `90f9b4e`):** have `dump_checkpoint`'s event action `return 1`
+immediately after `dump()`. Returning a nonzero value from an event action is
+the documented Basilisk idiom for stopping `run()`'s event loop cleanly and
+immediately (`grid/events.h`: `event_do()` treats a nonzero return as
+`event_stop`) — `main()`'s `fclose()` calls after `run()` still execute
+normally, so this is a clean exit, not an abrupt `exit()`/`abort()`.
+
+**Validation:**
+- Fidelity 6, `t_end=1.0` (the shortest tested): exit code 0 in 39 s
+  (previously hung 100+ s with zero progress at the same point).
+- Fidelity 6, `t_end=4.56` (matches the originally-stalled production run
+  `61d53bc5` exactly): clean exit with Basilisk's standard closing summary
+  printed; `postprocess.py` produced finite `tau_98_qss=0.00517`,
+  `tau_100_max=0.0316`, `vor_mean=0.918` (`kLa_25=nan` as expected —
+  hydrodynamics-only config, oxygen never injected by design).
+- Restart-segment path (`t_checkpoint>0`, continuing from that same
+  checkpoint for `t_end=1.5` more): also exited cleanly with its own closing
+  summary.
+- **Not yet validated** at full production scale (fidelity 9/10, 16
+  dedicated ranks) — the fix is only proven at fidelity 6/7 with 2–4 ranks.
+  The fixed binary has **not** been deployed to
+  `/oscar/scratch/eaguerov/BioReactor-mpi-video` yet (a backup of the
+  pre-fix binary was made at `BioReactor-mpi-video.pre-checkpoint-fix-backup`
+  in the same directory, but the swap itself was intentionally held for
+  explicit confirmation before touching the binary real sweep jobs depend
+  on).
