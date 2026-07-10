@@ -551,7 +551,17 @@ def _compute_tau98_kpis(run_dir: Path, params: dict) -> dict:
         i  t  tau_95  tau_98  tau_100  tau_mean
 
     where tau = |μ(∂u/∂y + ∂v/∂x)| over liquid cells (f[]>0.5), and tau_100
-    is the per-timestep maximum (100th percentile = max).
+    is the per-timestep maximum (100th percentile = max); tau_mean is the
+    per-timestep spatial average over liquid cells.
+
+    Kim et al. (2024) Fig. 13a report two quantities per rocking frequency,
+    both taken as a max *over one period* in the quasi-steady regime (not a
+    global max, which would be contaminated by the startup transient):
+      - tau_liq_max  = absolute max of tau over space AND time (solid circles)
+      - tau_liq_mean = max over time of the spatially-averaged tau (hollow
+        circles) -- i.e. max_t <tau(t)>_space, NOT a mean over time.
+    tau_100_max and tau_mean_max below are the direct analogs, both restricted
+    to the QSS window to match "over one period" rather than the whole run.
 
     QSS window: t_ramp (3 rocking periods) < t < t_inject.
     Physical conversion: tau_Pa = tau_nd × rho_w × U_bio²  (BioReactor.c sets mu1=1/Re_w, rho1=1).
@@ -560,24 +570,28 @@ def _compute_tau98_kpis(run_dir: Path, params: dict) -> dict:
     -------
     dict with keys (all in Pa):
         tau_95_qss, tau_98_qss, tau_100_qss  — median of each percentile over QSS window
-        tau_95_max, tau_98_max, tau_100_max  — global run maximum of each percentile
+        tau_95_max, tau_98_max, tau_100_max  — max of each percentile over QSS window
+        tau_mean_max                          — max of the spatially-averaged tau over
+                                                 the QSS window (Kim's "hollow circle" analog)
     """
     nan_result = {
         "tau_95_qss":  math.nan, "tau_98_qss":  math.nan, "tau_100_qss":  math.nan,
         "tau_95_max":  math.nan, "tau_98_max":  math.nan, "tau_100_max":  math.nan,
+        "tau_mean_max": math.nan,
     }
     tau_path = run_dir / "shear_stress.dat"
     if not tau_path.exists():
         return nan_result
 
     arr = _load_dat(tau_path)
-    if arr is None or arr.shape[0] < 3 or arr.shape[1] < 5:
+    if arr is None or arr.shape[0] < 3 or arr.shape[1] < 6:
         return nan_result
 
     t        = arr[:, 1]   # non-dimensional time
     tau_95   = arr[:, 2]   # 95th percentile (non-dimensional)
     tau_98   = arr[:, 3]   # 98th percentile
     tau_100  = arr[:, 4]   # 100th percentile (per-timestep max)
+    tau_mean = arr[:, 5]   # per-timestep spatial average
 
     T_bio, T_per_nd = _t_scales(params)
     t_ramp = 3.0 * T_per_nd
@@ -615,16 +629,19 @@ def _compute_tau98_kpis(run_dir: Path, params: dict) -> dict:
     def _qss_median(col):
         return float(np.median(col[qss_mask]) * tau_scale)
 
-    def _global_max(col):
-        return float(col.max() * tau_scale)
+    def _qss_max(col):
+        # Restricted to the QSS window -- matches Kim et al.'s "over one
+        # period" in the quasi-steady regime, excluding the startup transient.
+        return float(col[qss_mask].max() * tau_scale)
 
     return {
-        "tau_95_qss":  _qss_median(tau_95),
-        "tau_98_qss":  _qss_median(tau_98),
-        "tau_100_qss": _qss_median(tau_100),
-        "tau_95_max":  _global_max(tau_95),
-        "tau_98_max":  _global_max(tau_98),
-        "tau_100_max": _global_max(tau_100),
+        "tau_95_qss":   _qss_median(tau_95),
+        "tau_98_qss":   _qss_median(tau_98),
+        "tau_100_qss":  _qss_median(tau_100),
+        "tau_95_max":   _qss_max(tau_95),
+        "tau_98_max":   _qss_max(tau_98),
+        "tau_100_max":  _qss_max(tau_100),
+        "tau_mean_max": _qss_max(tau_mean),
     }
 
 
@@ -686,6 +703,7 @@ def main(run_dir: str, params: dict | None = None) -> dict:
         "vel_rms_qss": math.nan, "kla_fit_rmse_25": math.nan,
         "tau_95_qss": math.nan, "tau_98_qss": math.nan, "tau_100_qss": math.nan,
         "tau_95_max": math.nan, "tau_98_max": math.nan, "tau_100_max": math.nan,
+        "tau_mean_max": math.nan,
     }
 
     try:
@@ -779,6 +797,7 @@ def _register_to_experiment_store(run_dir: Path, params: dict,
         "vel_rms_qss", "kla_fit_rmse_25",
         "tau_95_qss", "tau_98_qss", "tau_100_qss",
         "tau_95_max", "tau_98_max", "tau_100_max",
+        "tau_mean_max",
     )}
 
     new_ed = ExperimentData(
