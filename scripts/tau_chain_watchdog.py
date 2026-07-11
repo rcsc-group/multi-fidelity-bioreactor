@@ -24,18 +24,22 @@ L9_RUN_IDS = ["44133566", "0183ca21", "8994c04a", "b1b72f63"]
 
 
 def _has_result(run_id: str) -> bool:
-    # postprocess.py writes results.json to the scratch run dir, not the
-    # project's canonical runs/ dir (which only ever gets params.json for
-    # this scratch-only sweep) -- checking RUNS here always returned False.
-    f = SCRATCH / run_id / "results.json"
-    if not f.exists():
-        return False
-    try:
-        r = json.loads(f.read_text())
-        v = r.get("tau_100_max")
-        return v is not None and math.isfinite(float(v))
-    except Exception:
-        return False
+    # slurm_mpi_template.sh writes results.json to the CANONICAL runs/ dir
+    # when a run's params.json has _canonical_run_dir/_experiment_dir set
+    # (the normal case for tracked sweep segments); manually-rescued runs
+    # (postprocessed directly against the scratch dir, bypassing the
+    # template) only ever have it in SCRATCH. Check both.
+    for f in (RUNS / run_id / "results.json", SCRATCH / run_id / "results.json"):
+        if not f.exists():
+            continue
+        try:
+            r = json.loads(f.read_text())
+            v = r.get("tau_100_max")
+            if v is not None and math.isfinite(float(v)):
+                return True
+        except Exception:
+            pass
+    return False
 
 
 def _active_job_ids() -> set[str]:
