@@ -1,12 +1,12 @@
 """Status/self-heal watchdog for the L9+L10 tau-only sweep (theta=7deg, 9 RPM conditions).
 
 On each invocation:
-  1. Checks each of 4 L9 (single-shot) and 9 L10 (checkpoint-restart chain) conditions
+  1. Checks each of 9 L9 (single-shot) and 9 L10 (checkpoint-restart chain) conditions
      for a finite tau_100_max in results.json.
   2. For L10 chains: if a segment finished but the next segment in its chain has
      neither a result nor a queued/running job, resubmits it from the checkpoint
      (self-healing against timeouts/preemption).
-  3. Exits 0 when all 13 conditions are done, 1 otherwise.
+  3. Exits 0 when all 18 conditions are done, 1 otherwise.
 
 Safe to run repeatedly -- never double-submits a queued job.
 """
@@ -18,9 +18,13 @@ ROOT     = Path(__file__).parents[1]
 RUNS     = ROOT / "runs"
 SCRATCH  = Path("/oscar/scratch/eaguerov/mpi_runs")
 TEMPLATE = ROOT / "config" / "slurm_mpi_template.sh"
+EXP_L9   = ROOT / "experiments" / "sweep_tau_theta7_l9"
 EXP_L10  = ROOT / "experiments" / "sweep_tau_theta7_l10"
 
-L9_RUN_IDS = ["44133566", "0183ca21", "8994c04a", "b1b72f63"]
+# Previously hardcoded to only 4 of the 9 actual L9 run_ids (17.5, 20.0, 22.5,
+# 25.0), silently excluding 27.5-37.5 from tracking and undercounting the
+# true total (13 instead of 18). Load the full list from the sweep metadata.
+L9_RUN_IDS = json.loads((EXP_L9 / "_sweep_metadata.json").read_text())["run_ids"]
 
 
 def _has_result(run_id: str) -> bool:
