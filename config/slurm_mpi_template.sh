@@ -21,7 +21,7 @@ set -euo pipefail
 
 module load openmpi
 module load ffmpeg
-export PATH="$HOME/scratch/basilisk/src:$PATH"
+export PATH="/oscar/data/dharri15/eaguerov/basilisk/src:$PATH"
 
 # Set HOME so srun workers can initialise OpenMPI's opal layer.
 if [ -z "${HOME:-}" ]; then

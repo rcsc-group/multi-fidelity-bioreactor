@@ -134,8 +134,11 @@ make build-video     # + frame dumps for videos  → build/BioReactor-video
 make build-health    # + Poisson diagnostics      → build/BioReactor-health
 ```
 
-The Makefile calls `~/scratch/basilisk/src/qcc` (scratch-compiled; the OSCAR
-spack module has a broken header path — never use `module load basilisk`).
+The Makefile calls `/oscar/data/dharri15/eaguerov/basilisk/src/qcc` (built under
+the persistent data allocation, not scratch — `/oscar/scratch` purges files
+unmodified for ~30 days, and Basilisk is only ever read from, never modified,
+so it silently looked stale and got swept there in July 2026. The OSCAR spack
+module has a broken header path — never use `module load basilisk`).
 
 ### Install Python dependencies
 

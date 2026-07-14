@@ -66,7 +66,13 @@ double t_end;                      // Final simulation time (simulation time uni
 
 // Output time intervals (derived from experimental timing)
 const double dt_video= 0.6074/5;  // Interval for video frames
-const double t_out   = 0.1;       // Output interval for statistics [non-dim time]
+// 0.1 gave only ~6.1 samples/rocking-period (T_per_nd~0.608, RPM-independent
+// by construction), less than half Kim et al. (2024)'s ~13 samples/cycle.
+// Confirmed via direct A/B test at 22.5 rpm (fidelity 9): tau_100_max went
+// from 0.37x Kim's value at t_out=0.1 to 1.03x at t_out=0.02 (~30 samples/
+// cycle), with negligible added wall-clock cost (I/O is cheap relative to
+// the physics compute). See experiments/hypothesis_ledger.json.
+const double t_out   = 0.02;      // Output interval for statistics [non-dim time]
 
 
 // ================================================================== //

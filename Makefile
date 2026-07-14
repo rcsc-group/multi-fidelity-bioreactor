@@ -31,8 +31,9 @@
 #       PARAMS      path to params.json (required for 'run' and 'submit')
 #
 #  ENVIRONMENT ─────────────────────────────────────────────────────────────────
-#       Uses qcc from $BASILISK/.. or ~/scratch/basilisk/src/qcc as fallback.
-#       Set $BASILISK before running, or let the Makefile find the scratch build.
+#       Uses qcc from $BASILISK/.. or /oscar/data/dharri15/eaguerov/basilisk/src/qcc
+#       as fallback. Set $BASILISK before running, or let the Makefile find the
+#       persistent-storage build.
 #
 #  Maintainer: Elvis Aguero    │   Last update: <2026-05-04>
 # ────────────────────────────────────────────────────────────────────────────────
@@ -40,18 +41,23 @@
 
 # ==========================================================
 #  Locate qcc
-#  Prefer the scratch-built qcc over any spack module because
+#  Prefer the persistent-storage-built qcc over any spack module because
 #  the spack-installed qcc on OSCAR has a hardcoded dead build-
 #  time path (/tmp/yliu385/spack-stage/…) and cannot find its
-#  own headers.  The scratch build uses the real $BASILISK path.
+#  own headers.  This build uses the real $BASILISK path.
+#  NOTE: previously built under ~/scratch/basilisk, but /oscar/scratch is
+#  purged of files not modified within ~30 days -- Basilisk itself is only
+#  ever read from (compiled against), never modified after install, so it
+#  silently looked "stale" and got swept. Rebuilt 2026-07-14 under the
+#  persistent /oscar/data/dharri15 allocation instead.
 # ==========================================================
-SCRATCH_QCC := $(HOME)/scratch/basilisk/src/qcc
-ifneq ($(wildcard $(SCRATCH_QCC)),)
-  QCC := $(SCRATCH_QCC)
+PERSISTENT_QCC := /oscar/data/dharri15/eaguerov/basilisk/src/qcc
+ifneq ($(wildcard $(PERSISTENT_QCC)),)
+  QCC := $(PERSISTENT_QCC)
 else
   QCC := $(shell command -v qcc 2>/dev/null)
   ifeq ($(QCC),)
-    $(error "qcc not found. Build from ~/scratch/basilisk/src or add to PATH.")
+    $(error "qcc not found. Build from /oscar/data/dharri15/eaguerov/basilisk/src or add to PATH.")
   endif
 endif
 
