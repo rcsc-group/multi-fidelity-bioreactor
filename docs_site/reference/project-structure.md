@@ -11,7 +11,7 @@ multi-fidelity-bioreactor/
 │
 ├── scripts/
 │   ├── simulate.py           # Core API: run_local() / submit_slurm() / wait_for_result()
-│   ├── postprocess.py        # 18 KPIs from run output files → results.json
+│   ├── postprocess.py        # 19 KPIs from run output files → results.json (see Reference → Output files)
 │   ├── collect_results.py    # Aggregate all results.json across runs → CSV
 │   ├── plot_heatmaps.py      # KPI heatmaps from sweep results → experiments/figures/
 │   ├── plot_kim_overlay_tau.py  # Overlay our tau/RPM results on Kim et al. Fig. 13a
