@@ -15,7 +15,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from scripts.simulate import run_local, submit_slurm, wait_for_result, run_trial
+from scripts.simulate import (
+    run_local, submit_slurm, wait_for_result, run_trial, get_job_elapsed_seconds,
+)
 from tests.conftest import CANONICAL_PARAMS, PROJECT_ROOT
 
 SHORT_PARAMS = {**CANONICAL_PARAMS, "run_id": "sim_test", "fidelity": 3}
@@ -110,6 +112,42 @@ def test_wait_for_result_raises_on_timeout(tmp_path):
 
     with pytest.raises(TimeoutError):
         wait_for_result(run_dir, timeout=0.3, poll=0.05)
+
+
+# ── get_job_elapsed_seconds ────────────────────────────────────────────────────
+
+@pytest.mark.parametrize("sacct_elapsed,expected_seconds", [
+    ("00:05:30", 5 * 60 + 30),
+    ("01:02:03", 1 * 3600 + 2 * 60 + 3),
+    ("1-02:03:04", 1 * 86400 + 2 * 3600 + 3 * 60 + 4),
+    ("3-00:00:00", 3 * 86400),
+])
+def test_get_job_elapsed_seconds_parses_slurm_format(sacct_elapsed, expected_seconds):
+    """SLURM's Elapsed format is [D-]HH:MM:SS; must parse both with and
+    without a day component."""
+    fake_result = MagicMock()
+    fake_result.stdout = f"{sacct_elapsed}\n"
+    fake_result.returncode = 0
+
+    with patch("subprocess.run", return_value=fake_result) as mock_run:
+        seconds = get_job_elapsed_seconds("123456")
+
+    assert mock_run.called
+    cmd = mock_run.call_args[0][0]
+    assert "sacct" in cmd[0]
+    assert "123456" in cmd
+    assert seconds == expected_seconds
+
+
+def test_get_job_elapsed_seconds_returns_none_on_empty_output():
+    """If sacct returns nothing (job not yet in accounting), return None
+    rather than raising -- callers treat a missing wall time as optional."""
+    fake_result = MagicMock()
+    fake_result.stdout = "\n"
+    fake_result.returncode = 0
+
+    with patch("subprocess.run", return_value=fake_result):
+        assert get_job_elapsed_seconds("999999") is None
 
 
 # ── run_trial ─────────────────────────────────────────────────────────────────

@@ -220,6 +220,30 @@ def submit_slurm(
     return match.group(1)
 
 
+def get_job_elapsed_seconds(job_id: str) -> float | None:
+    """Query sacct for a completed job's wall-clock Elapsed time, in seconds.
+
+    SLURM's Elapsed format is [D-]HH:MM:SS (the day component and its dash
+    are only present once a job has run past 24h).
+
+    Returns None if sacct has no record for this job yet (e.g. queried too
+    soon after completion) -- wall time is optional metadata, so callers
+    should not fail a run just because it's momentarily unavailable.
+    """
+    result = subprocess.run(
+        ["sacct", "-j", job_id, "--format=Elapsed", "--noheader", "-X"],
+        capture_output=True, text=True,
+    )
+    elapsed_str = result.stdout.strip()
+    if not elapsed_str:
+        return None
+
+    day_part, _, clock_part = elapsed_str.rpartition("-")
+    days = int(day_part) if day_part else 0
+    hours, minutes, seconds = (int(x) for x in clock_part.split(":"))
+    return days * 86400 + hours * 3600 + minutes * 60 + seconds
+
+
 def wait_for_result(
     run_dir: Path | str,
     timeout: float = 7200,

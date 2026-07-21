@@ -118,6 +118,11 @@ def _submit_and_wait(params: dict, cfg: dict) -> dict | None:
     try:
         results = simulate.wait_for_result(
             run_dir, timeout=cfg["job_timeout"], poll=30)
+        # Wall-clock time isn't in results.json (postprocess.py only knows
+        # simulated quantities, not the SLURM job's real duration) -- attach
+        # it here, while job_id is still in scope, so a future cost-aware
+        # acquisition function has it available via ExperimentData.
+        results["wall_time_s"] = simulate.get_job_elapsed_seconds(job_id)
         return results
     except TimeoutError:
         print(f"    WARNING: job {job_id} timed out after {cfg['job_timeout']} s")
@@ -173,6 +178,7 @@ def _append_to_ed(ed: ExperimentData, params: dict, results: dict,
             "dtmix_0.75":   results.get("dtmix_0.75",   float("nan")),
             "dtmix_0.95":   results.get("dtmix_0.95",   float("nan")),
             "vor_mean":     results.get("vor_mean",     float("nan")),
+            "wall_time_s":  results.get("wall_time_s"),
         }]),
     )
     return ed + new_ed

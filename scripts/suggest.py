@@ -68,6 +68,29 @@ def _expected_improvement(mean: np.ndarray, std: np.ndarray,
     return ei
 
 
+def _compute_y_best(
+    inp_df, out_df, model, kla_key: str,
+    hf_fidelity: int, lf_fidelity: int, feature_cols: list[str],
+) -> float:
+    """Best observed value on the HF scale, for use as the EI incumbent.
+
+    If HF observations exist, use their raw observed max directly.
+    Otherwise, do NOT fall back to a raw LF-observed value -- LF and HF are
+    expected to have a systematic bias (that's the entire premise of the
+    multi-fidelity correction), so mixing scales would silently corrupt the
+    acquisition decision. Instead, evaluate the already-bias-corrected
+    surrogate at the LF-observed inputs and use its predicted HF-scale mean.
+    """
+    hf_mask = inp_df["fidelity"] == hf_fidelity
+    if hf_mask.sum() > 0:
+        return float(out_df.loc[hf_mask, kla_key].max())
+
+    lf_mask = inp_df["fidelity"] == lf_fidelity
+    X_lf_obs = inp_df.loc[lf_mask, feature_cols].to_numpy(dtype=float)
+    mean_pred, _ = model.predict(X_lf_obs)
+    return float(np.max(mean_pred))
+
+
 def _flat_to_nested(flat: np.ndarray, spec: dict, hf_fidelity: int) -> dict:
     """Convert 18-element feature vector back to a nested params dict."""
     pspace = spec["parameters"]
@@ -142,11 +165,10 @@ def main(
     from f3dasm import ExperimentData
     ed = ExperimentData.from_file(str(experiment_dir))
     inp_df, out_df = ed.to_pandas()
-    hf_mask = inp_df["fidelity"] == hf_fidelity
-    if hf_mask.sum() > 0:
-        y_best = float(out_df.loc[hf_mask, kla_key].max())
-    else:
-        y_best = float(out_df[kla_key].max())
+    y_best = _compute_y_best(
+        inp_df, out_df, model, kla_key,
+        hf_fidelity=hf_fidelity, lf_fidelity=lf_fidelity, feature_cols=_FEATURE_COLS,
+    )
 
     rng        = np.random.default_rng(seed)
     X_cand     = _sample_candidates(spec, n_candidates, rng)
