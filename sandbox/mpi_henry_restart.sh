@@ -12,7 +12,7 @@
 # Tests whether NaN appears in tracer diffusion on checkpoint restart.
 # See mpi_henry_restart.c for experimental design.
 #
-# Submit from dev/rocking-bioreactor-2d/:
+# Submit from the project root:
 #   mkdir -p logs
 #   sbatch sandbox/mpi_henry_restart.sh
 

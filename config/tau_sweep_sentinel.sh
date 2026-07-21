@@ -12,7 +12,7 @@
 #SBATCH --error=logs/sentinel_%j.err
 
 set -uo pipefail
-cd /oscar/data/dharri15/eaguerov/Github/BioReactor3D/dev/rocking-bioreactor-2d
+cd /oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor
 
 while true; do
     date

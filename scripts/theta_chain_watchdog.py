@@ -131,8 +131,8 @@ def _generate_figure_and_commit(n_done: int) -> None:
     if git_root:
         repo = Path(git_root)
     sp.run(["git", "add",
-            "dev/rocking-bioreactor-2d/experiments/sweep_fb_theta_l7_mpi_ckpt/figures/",
-            "dev/rocking-bioreactor-2d/experiments/figures/checkpoint_validation.pdf"],
+            "experiments/sweep_fb_theta_l7_mpi_ckpt/figures/",
+            "experiments/figures/checkpoint_validation.pdf"],
            cwd=str(repo))
     sp.run(["git", "commit", "-m",
             f"data(l7-theta): all 60 theta sweep conditions complete\n\n"
