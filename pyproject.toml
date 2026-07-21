@@ -24,6 +24,12 @@ dev-dependencies = [
     "pytest-cov",
 ]
 
+[dependency-groups]
+docs = [
+    "mkdocs>=1.6",
+    "mkdocs-material>=9.5",
+]
+
 [tool.pytest.ini_options]
 # Default run is the fast, hermetic unit-test suite only. "medium" (real
 # fidelity-3 CFD run, ~2 min) and "hpc" (submits real SLURM jobs and waits
