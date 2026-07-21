@@ -13,9 +13,6 @@ Runtimes are per segment (one SLURM job) with the sweep t_end of ~35–98 nondim
 | 9 | 512×512 | ~days | ~10–11 h/condition (measured) | High-fidelity reference |
 | 10 | 1024×1024 | — | ~2.7–6.6 days/condition (measured) | Publication (Kim et al. 2024/2025) |
 
-For sweeps: use **fidelity 5** (fast, qualitative) or **fidelity 7 at 16 CPUs** (production).
 Specify `"cpus": 16` in `_sweep` when using fidelity ≥ 7.
 
-For the optimization suite, `lf_fidelity: 5` and `hf_fidelity: 7` are the
-recommended pair. Always smoke-test new workflows at fidelity 3 before
-submitting fidelity-7 jobs.
+For which level to actually pick, see [How to choose a fidelity level](../how-to/choose-fidelity.md).

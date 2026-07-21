@@ -11,19 +11,34 @@ shear-stress KPIs as optimization objectives. A multi-fidelity Bayesian
 optimization suite sits on top, using a KRR-LR-GPR surrogate to trade off
 cheap low-fidelity screening runs against expensive high-fidelity corrections.
 
-## Where to start
+## How this documentation is organized
 
-- New to the project? Read the [Glossary](glossary.md) first.
-- Setting up an environment? See [Setup](setup.md).
-- Want to run something? Pick a [workflow](workflows/single-run.md) that matches
-  what you're trying to do — a single run, a parameter sweep, or the full BO loop.
-- Looking up a field or file format? See the [Reference](reference/params.md) section.
+- **[Tutorials](tutorials/first-simulation.md)** — learning by doing, start to
+  finish, with real output shown. Start here if you're new to the project.
+- **How-to guides** — task-focused instructions assuming you already know the
+  basics: [sweep one parameter](how-to/sweep-one-parameter.md),
+  [sweep any parameter combination](how-to/sweep-json-multi-param.md),
+  [batch sampling](how-to/batch-sampling.md),
+  [run the BO loop](how-to/run-bo-loop.md),
+  [generate videos](how-to/generate-videos.md),
+  [choose a fidelity level](how-to/choose-fidelity.md),
+  [diagnose a stalled chain](how-to/diagnose-stalled-chain.md).
+- **[Reference](reference/params.md)** — dry, structured lookup material:
+  params.json fields, output files, the fidelity table, scripts, project layout.
+- **Explanation** — the "why": [checkpoint restart and warm-start chains](explanation/checkpoint-restart.md),
+  [non-dimensionalization](explanation/non-dimensionalization.md),
+  [multi-fidelity Bayesian optimization](explanation/multi-fidelity-bo.md),
+  and an honest account of [where validation against Kim et al. (2024) actually stands](explanation/kim-et-al-validation.md).
+
+New to CFD/HPC terminology used throughout? Read the [Glossary](glossary.md) first.
+Setting up an environment? See [Setup](setup.md).
 
 ## Repository layout at a glance
 
 ```
 ├── src/         # Basilisk solver (BioReactor.c + headers)
 ├── scripts/     # Python orchestration (simulate, sweep, BO loop, postprocess, ...)
+├── examples/    # Runnable, self-contained tutorial companions
 ├── config/      # YAML/JSON configs for each workflow
 ├── tests/       # Unit, integration, and numerical-verification tests
 ├── experiments/ # Sweep metadata, chain manifests, generated figures

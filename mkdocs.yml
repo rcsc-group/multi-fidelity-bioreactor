@@ -34,17 +34,27 @@ nav:
   - Home: index.md
   - Glossary: glossary.md
   - Setup: setup.md
-  - Scripts at a glance: scripts-overview.md
-  - Workflows:
-      - "A — Single run": workflows/single-run.md
-      - "B — Chained parameter sweep (YAML)": workflows/chained-sweep.md
-      - "C — Batch sampling": workflows/batch-sampling.md
-      - "D — Multi-fidelity Bayesian optimisation": workflows/bayesian-optimization.md
-      - "E — JSON multi-param sweep": workflows/json-sweep.md
-  - Video generation: video-generation.md
+  - Tutorials:
+      - "Your first simulation": tutorials/first-simulation.md
+      - "Your first sweep": tutorials/first-sweep.md
+      - "Your first optimization loop": tutorials/first-optimization-loop.md
+  - How-to guides:
+      - "Sweep one parameter": how-to/sweep-one-parameter.md
+      - "Sweep any parameter combination (JSON)": how-to/sweep-json-multi-param.md
+      - "Run a batch DoE": how-to/batch-sampling.md
+      - "Run or resume the BO loop": how-to/run-bo-loop.md
+      - "Generate videos": how-to/generate-videos.md
+      - "Choose a fidelity level": how-to/choose-fidelity.md
+      - "Diagnose a stalled or failed chain": how-to/diagnose-stalled-chain.md
+  - Explanation:
+      - "Checkpoint restart and warm-start chains": explanation/checkpoint-restart.md
+      - "Non-dimensionalization": explanation/non-dimensionalization.md
+      - "Multi-fidelity Bayesian optimization": explanation/multi-fidelity-bo.md
+      - "Validating against Kim et al. (2024)": explanation/kim-et-al-validation.md
   - Reference:
-      - "params.json reference": reference/params.md
-      - "Output files reference": reference/output-files.md
+      - "params.json": reference/params.md
+      - "Output files": reference/output-files.md
       - "Fidelity guide": reference/fidelity-guide.md
+      - "Scripts": reference/scripts.md
       - "Project structure": reference/project-structure.md
   - Test suite: testing.md
