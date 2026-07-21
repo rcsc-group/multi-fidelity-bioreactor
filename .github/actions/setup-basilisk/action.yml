@@ -31,6 +31,22 @@ runs:
         tar xzf basilisk.tar.gz
         cd basilisk/src
         ln -s config.gcc config
+
+        # Basilisk's grid/gpu, grid/cuda, grid/hip, grid/opencl subdirs have a
+        # broken Makefile.deps regeneration rule on a box with no CUDA/HIP/
+        # OpenCL toolchain -- irrelevant to this CPU-only solver, but it makes
+        # `make -k` and even a follow-up plain `make` always exit non-zero,
+        # even though qcc/libglutils/libfb_tiny (everything we actually need)
+        # build successfully regardless. Confirmed via a real CI run: don't
+        # trust make's exit code here -- verify the actual required artifacts.
+        set +e
         make -k
         make
-        test -x qcc  # fail loudly here rather than later inside the project Makefile
+        set -e
+
+        for f in qcc gl/libglutils.a gl/libfb_tiny.a; do
+          if [ ! -e "$f" ]; then
+            echo "::error::Basilisk build did not produce required artifact: $f"
+            exit 1
+          fi
+        done
