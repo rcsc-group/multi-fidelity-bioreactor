@@ -1,5 +1,7 @@
 # Rocking Bioreactor 2D — Simulation Suite
 
+[![CI](https://github.com/rcsc-group/multi-fidelity-bioreactor/actions/workflows/ci.yml/badge.svg)](https://github.com/rcsc-group/multi-fidelity-bioreactor/actions/workflows/ci.yml)
+
 Two-phase CFD solver for a rocking bioreactor, implemented in [Basilisk](http://basilisk.fr/).
 Developed at the Harris Lab (Brown University) in collaboration with the Cimpeanu group (Warwick).
 Publication: [doi: 10.1016/j.ijmultiphaseflow.2025.105375](https://www.sciencedirect.com/science/article/pii/S0301932225002538) | preprint: [arXiv: 2504.05421](https://arxiv.org/abs/2504.05421)
@@ -832,6 +834,13 @@ uv run python -m pytest tests/ -m medium
 # Full suite including SLURM integration tests (submits real jobs, needs cluster allocation)
 uv run python -m pytest tests/ -m "medium or hpc"
 ```
+
+GitHub Actions (`.github/workflows/ci.yml`) runs the fast suite on every push/PR,
+and the `medium` numerical-verification suite (real fidelity-3 CFD runs) on
+pushes to `main`. It builds Basilisk from the official source tarball into a
+cached `basilisk/` directory rather than relying on any OSCAR-specific path —
+`hpc`-marked tests (real SLURM submission) never run in CI, since they need an
+actual cluster allocation.
 
 ---
 

@@ -1,0 +1,36 @@
+name: Setup Basilisk
+description: >
+  Build Basilisk (http://basilisk.fr) from the official source tarball into
+  $GITHUB_WORKSPACE/basilisk, caching the built tree since it's the slowest
+  step in this repo's CI and never changes between runs unless someone
+  bumps BASILISK_CACHE_VERSION. Not vendored in this repo -- Basilisk has no
+  version tags, so pinning a specific darcs revision isn't practical; each
+  cache key is just "current tarball as of whenever the cache was last
+  busted."
+
+runs:
+  using: composite
+  steps:
+    - name: Restore cached Basilisk build
+      id: cache-basilisk
+      uses: actions/cache@v4
+      with:
+        path: basilisk
+        key: basilisk-${{ runner.os }}-${{ env.BASILISK_CACHE_VERSION }}
+
+    - name: Build Basilisk from source
+      if: steps.cache-basilisk.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        set -euo pipefail
+        # gawk specifically (not mawk, Ubuntu's default awk) -- Basilisk's own
+        # build scripts (qcc's translation step) are awk-based and rely on
+        # gawk behavior per basilisk.fr's own install instructions.
+        sudo apt-get update && sudo apt-get install -y gawk
+        wget -q https://basilisk.fr/basilisk/basilisk.tar.gz
+        tar xzf basilisk.tar.gz
+        cd basilisk/src
+        ln -s config.gcc config
+        make -k
+        make
+        test -x qcc  # fail loudly here rather than later inside the project Makefile

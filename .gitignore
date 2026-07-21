@@ -1,6 +1,10 @@
 runs/
 surrogate/
 experiments/results.csv
+
+# Scratch dirs some tests write into the real experiments/ dir instead of tmp_path
+experiments/sweep_test/
+experiments/self_submit_test/
 build/
 __pycache__/
 *.pyc

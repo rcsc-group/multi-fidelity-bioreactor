@@ -1,0 +1,86 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Bump this when you want to force a fresh Basilisk build (e.g. after
+# upgrading gcc, or if a Basilisk upstream fix is needed). Basilisk has no
+# version tags -- this is a manual cache-busting knob, not a pin.
+env:
+  BASILISK_CACHE_VERSION: v1
+
+jobs:
+  fast-tests:
+    name: Fast unit tests (no CFD binary)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install Python deps
+        run: uv sync
+
+      # Fast tests never touch the compiled binary (see tests/conftest.py:
+      # ensure_binaries_current builds `build build-video`, but no fast/default
+      # test actually exercises the binary -- only `medium`/`hpc`-marked tests
+      # do). Still, ensure_binaries_current is session-scoped autouse, so it
+      # runs regardless -- build Basilisk + the binary so it doesn't fail.
+      - name: Restore/build Basilisk
+        uses: ./.github/actions/setup-basilisk
+
+      - name: Install headless GL libs (needed to link build/build-video)
+        run: sudo apt-get update && sudo apt-get install -y libgl1-mesa-dev libglu1-mesa-dev
+
+      - name: Build BioReactor binaries
+        run: |
+          export BASILISK="$GITHUB_WORKSPACE/basilisk/src"
+          export PATH="$BASILISK:$PATH"
+          make build build-video
+
+      - name: Run fast test suite
+        run: |
+          export BASILISK="$GITHUB_WORKSPACE/basilisk/src"
+          export PATH="$BASILISK:$PATH"
+          uv run python -m pytest tests/ -v
+
+  medium-tests:
+    name: Numerical verification tests (real fidelity-3 CFD runs)
+    runs-on: ubuntu-latest
+    # Slower (~2 min per test x ~15 tests) -- keep this off the PR fast path;
+    # run on main pushes and let PR authors opt in via a "run medium tests"
+    # label if that turns out to be wanted. Starting simple: same triggers
+    # as fast-tests, revisit if this job's wall time becomes a problem.
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install Python deps
+        run: uv sync
+
+      - name: Restore/build Basilisk
+        uses: ./.github/actions/setup-basilisk
+
+      - name: Install headless GL libs
+        run: sudo apt-get update && sudo apt-get install -y libgl1-mesa-dev libglu1-mesa-dev
+
+      - name: Build BioReactor binaries
+        run: |
+          export BASILISK="$GITHUB_WORKSPACE/basilisk/src"
+          export PATH="$BASILISK:$PATH"
+          make build build-video build-health
+
+      - name: Run numerical verification suite
+        run: |
+          export BASILISK="$GITHUB_WORKSPACE/basilisk/src"
+          export PATH="$BASILISK:$PATH"
+          uv run python -m pytest tests/ -v -m medium
