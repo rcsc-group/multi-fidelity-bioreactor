@@ -62,6 +62,15 @@ def _build_domain(spec: dict) -> Domain:
         _add(f"geometry_{sub}", key=f"geometry.{sub}")
     _add("fill_level")
     d.add_float("fidelity", 1, 10)
+    # Provenance columns _append_to_ed also writes into input_data. Must be
+    # declared here (matching what f3dasm would auto-infer for a bare
+    # DataFrame) so every new_ed's domain is identical to this one --
+    # otherwise `ed + new_ed` raises on the physical-parameter columns too,
+    # since ExperimentData(no domain given) infers EVERY column as a
+    # generic Parameter, not just the non-numeric ones, and merging a
+    # ContinuousParameter with a generic Parameter is a domain error.
+    for col in ("run_id", "phase", "completed_at", "bo_iteration"):
+        d.add_parameter(col)
     return d
 
 
@@ -166,6 +175,7 @@ def _append_to_ed(ed: ExperimentData, params: dict, results: dict,
         "completed_at":    time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
     }
     new_ed = ExperimentData(
+        domain=ed.domain,
         input_data=pd.DataFrame([row_in]),
         output_data=pd.DataFrame([{
             "kLa_10":       results.get("kLa_10",       float("nan")),
@@ -297,12 +307,16 @@ def run_loop(cfg: dict) -> None:
     hf_mask  = inp_final["fidelity"] == hf_fidelity
     best_row = out_final.loc[hf_mask, kla_key].idxmax()
 
+    _provenance_cols = {"run_id", "phase", "bo_iteration", "completed_at"}
+    best_params = {
+        k: float(inp_final.loc[best_row, k]) for k in inp_final.columns
+        if k not in _provenance_cols
+    }
+
     print("\n" + "=" * 60)
     print(f"Optimisation complete.  Best {kla_key} = {best_so_far:.5f}")
     print("Best parameters:")
-    print(json.dumps({
-        k: float(inp_final.loc[best_row, k]) for k in inp_final.columns
-    }, indent=2))
+    print(json.dumps(best_params, indent=2))
     print("=" * 60)
 
 
