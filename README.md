@@ -1,6 +1,9 @@
 # Rocking Bioreactor 2D — Simulation Suite
 
 [![CI](https://github.com/rcsc-group/multi-fidelity-bioreactor/actions/workflows/ci.yml/badge.svg)](https://github.com/rcsc-group/multi-fidelity-bioreactor/actions/workflows/ci.yml)
+[![Docs](https://github.com/rcsc-group/multi-fidelity-bioreactor/actions/workflows/docs.yml/badge.svg)](https://rcsc-group.github.io/multi-fidelity-bioreactor/)
+
+**📖 Documentation: [rcsc-group.github.io/multi-fidelity-bioreactor](https://rcsc-group.github.io/multi-fidelity-bioreactor/)**
 
 Two-phase CFD solver for a rocking bioreactor, implemented in [Basilisk](http://basilisk.fr/).
 Developed at the Harris Lab (Brown University) in collaboration with the Cimpeanu group (Warwick).
@@ -24,21 +27,24 @@ uv run python -m pytest tests/   # fast unit suite, ~20s, no binary or SLURM nee
 
 ## Documentation
 
-Full setup, workflow tutorials, and reference material live in [`docs_site/`](docs_site/index.md)
-(built with [MkDocs](https://www.mkdocs.org/); run `uv run --group docs mkdocs serve` for a live local preview):
+Full setup, workflow tutorials, and reference material live on the
+[documentation site](https://rcsc-group.github.io/multi-fidelity-bioreactor/)
+(source in [`docs_site/`](docs_site/index.md), built with [MkDocs](https://www.mkdocs.org/);
+run `uv run --group docs mkdocs serve` for a live local preview — auto-deployed
+to Pages on every push to `main`):
 
-- [Glossary](docs_site/glossary.md) — start here if you're new to CFD/HPC terminology used throughout
-- [Setup](docs_site/setup.md)
-- Workflows: [single run](docs_site/workflows/single-run.md) ·
-  [chained sweep](docs_site/workflows/chained-sweep.md) ·
-  [batch sampling](docs_site/workflows/batch-sampling.md) ·
-  [Bayesian optimization](docs_site/workflows/bayesian-optimization.md) ·
-  [JSON multi-param sweep](docs_site/workflows/json-sweep.md)
-- Reference: [params.json](docs_site/reference/params.md) ·
-  [output files](docs_site/reference/output-files.md) ·
-  [fidelity guide](docs_site/reference/fidelity-guide.md) ·
-  [project structure](docs_site/reference/project-structure.md)
-- [Test suite](docs_site/testing.md)
+- [Glossary](https://rcsc-group.github.io/multi-fidelity-bioreactor/glossary/) — start here if you're new to CFD/HPC terminology used throughout
+- [Setup](https://rcsc-group.github.io/multi-fidelity-bioreactor/setup/)
+- Workflows: [single run](https://rcsc-group.github.io/multi-fidelity-bioreactor/workflows/single-run/) ·
+  [chained sweep](https://rcsc-group.github.io/multi-fidelity-bioreactor/workflows/chained-sweep/) ·
+  [batch sampling](https://rcsc-group.github.io/multi-fidelity-bioreactor/workflows/batch-sampling/) ·
+  [Bayesian optimization](https://rcsc-group.github.io/multi-fidelity-bioreactor/workflows/bayesian-optimization/) ·
+  [JSON multi-param sweep](https://rcsc-group.github.io/multi-fidelity-bioreactor/workflows/json-sweep/)
+- Reference: [params.json](https://rcsc-group.github.io/multi-fidelity-bioreactor/reference/params/) ·
+  [output files](https://rcsc-group.github.io/multi-fidelity-bioreactor/reference/output-files/) ·
+  [fidelity guide](https://rcsc-group.github.io/multi-fidelity-bioreactor/reference/fidelity-guide/) ·
+  [project structure](https://rcsc-group.github.io/multi-fidelity-bioreactor/reference/project-structure/)
+- [Test suite](https://rcsc-group.github.io/multi-fidelity-bioreactor/testing/)
 
 ## References
 

@@ -1,5 +1,6 @@
 site_name: Rocking Bioreactor 2D — Simulation Suite
 site_description: Two-phase CFD solver for a rocking bioreactor, with a multi-fidelity Bayesian optimization suite.
+site_url: https://rcsc-group.github.io/multi-fidelity-bioreactor/
 repo_url: https://github.com/rcsc-group/multi-fidelity-bioreactor
 repo_name: rcsc-group/multi-fidelity-bioreactor
 docs_dir: docs_site
