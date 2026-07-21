@@ -90,7 +90,14 @@ def test_tau98_extraction_known_value(tmp_path):
 
 
 def test_tau98_qss_excludes_ramp(tmp_path):
-    """Spike during ramp must not inflate tau_98_qss; tau_98_max should capture it."""
+    """Spike during ramp must not inflate tau_98_qss OR tau_98_max.
+
+    tau_98_max is deliberately QSS-window-restricted (see
+    _compute_tau98_kpis' docstring: it matches Kim et al.'s "max over one
+    period in the quasi-steady regime", explicitly excluding the startup
+    transient) -- a spike entirely inside the excluded ramp must not leak
+    into either metric.
+    """
     run_dir = tmp_path / "run_tau_ramp"
     run_dir.mkdir()
 
@@ -113,8 +120,42 @@ def test_tau98_qss_excludes_ramp(tmp_path):
     assert result["tau_98_qss"] < tau_normal * tau_scale * 2.0, (
         f"tau_98_qss={result['tau_98_qss']:.4e} Pa inflated by ramp spike"
     )
-    assert result["tau_98_max"] > tau_normal * tau_scale * 100.0, (
-        f"tau_98_max={result['tau_98_max']:.4e} Pa did not capture ramp spike"
+    assert result["tau_98_max"] < tau_normal * tau_scale * 2.0, (
+        f"tau_98_max={result['tau_98_max']:.4e} Pa leaked the ramp spike "
+        f"despite being QSS-restricted"
+    )
+
+
+def test_tau98_max_captures_qss_window_spike(tmp_path):
+    """A transient spike INSIDE the QSS window is captured by tau_98_max,
+    while tau_98_qss (median) stays robust to it -- confirms _qss_max is a
+    real per-window max, not a metric that's collapsed to the same median."""
+    run_dir = tmp_path / "run_tau_qss_spike"
+    run_dir.mkdir()
+
+    T_bio, T_per_nd = _t_scales(CANONICAL_PARAMS)
+    t_ramp = 3.0 * T_per_nd
+    t = np.linspace(0.1, t_ramp + 10.0, 160)
+
+    tau_normal = 0.10
+    tau_spike  = tau_normal * 50.0
+    # Single spike well after the ramp, deep inside the QSS window.
+    spike_idx = int(np.argmin(np.abs(t - (t_ramp + 5.0))))
+    tau_98 = np.full_like(t, tau_normal)
+    tau_98[spike_idx] = tau_spike
+    _write_shear_stress(run_dir, t, tau_98)
+    _write_minimal_kla_files(run_dir, t)
+    (run_dir / "params.json").write_text(json.dumps(CANONICAL_PARAMS))
+
+    result = _compute_tau98_kpis(run_dir, CANONICAL_PARAMS)
+    tau_scale = _tau_scale(CANONICAL_PARAMS)
+
+    assert result["tau_98_qss"] < tau_normal * tau_scale * 2.0, (
+        f"tau_98_qss={result['tau_98_qss']:.4e} Pa inflated by a single spike"
+    )
+    assert result["tau_98_max"] > tau_normal * tau_scale * 10.0, (
+        f"tau_98_max={result['tau_98_max']:.4e} Pa did not capture the "
+        f"in-QSS-window spike"
     )
 
 
