@@ -1,0 +1,17 @@
+{
+  "purpose": "Isolate whether same-condition checkpoint restart (segmenting) perturbs tau_100_max/tau_mean_max, independent of fidelity. 17.5 RPM, fidelity=9 (matches existing L9 single-shot baseline run_id=44133566), 4 segments mirroring L10 17.5 RPM chain structure exactly (t_end/t_checkpoint copied from L10 template run_ids 61d53bc5/7c00faee/1986b360/80c3f213), omega_b_prev never set (same-condition restart only, no cross-condition warm-start).",
+  "template_l10_run_ids": [
+    "61d53bc5",
+    "7c00faee",
+    "1986b360",
+    "80c3f213"
+  ],
+  "run_ids": [
+    "4aa84d93",
+    "ecc3be7e",
+    "47fb4662",
+    "2e976ca9"
+  ],
+  "baseline_l9_single_shot_run_id": "44133566",
+  "rpm": 17.5
+}
