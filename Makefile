@@ -77,7 +77,11 @@ ifeq ($(DEBUG),1)
 else
   CFLAGS = -O2
 endif
-CFLAGS += -w -fopenmp -Wall -autolink -lm
+# -lm deliberately NOT here: CFLAGS is placed before the source file on the
+# link line, so a linker that resolves libs strictly left-to-right (modern
+# binutils) sees -lm before anything references it and leaves math symbols
+# (sqrt, pow, sincos, ...) unresolved. -lm must come last -- see LDFLAGS.
+CFLAGS += -w -fopenmp -Wall -autolink
 
 UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Darwin)
@@ -85,7 +89,7 @@ ifeq ($(UNAME_S),Darwin)
 else
   OPENGLIBS = -lfb_tiny -lGL
 endif
-LDFLAGS = -L$(BASILISK)/gl -lglutils $(OPENGLIBS)
+LDFLAGS = -L$(BASILISK)/gl -lglutils $(OPENGLIBS) -lm
 
 
 # ==========================================================
@@ -128,7 +132,7 @@ build-video: $(BUILD_DIR)/BioReactor-video
 
 $(BUILD_DIR)/BioReactor-video: $(SIM_SRC) $(SRC_HEADERS)
 	@mkdir -p $(BUILD_DIR)
-	$(QCC) $(CFLAGS) -DVIDEOS=1 $< -o $@ -L$(BASILISK)/gl -lglutils -lfb_tiny
+	$(QCC) $(CFLAGS) -DVIDEOS=1 $< -o $@ -L$(BASILISK)/gl -lglutils -lfb_tiny -lm
 
 
 # MPI binary: compiled with _MPI=1 using mpicc as the CC99 backend.
@@ -142,7 +146,7 @@ $(BUILD_DIR)/BioReactor-mpi: $(SIM_SRC) $(SRC_HEADERS)
 	@mkdir -p $(BUILD_DIR)
 	module load openmpi && \
 	CC99='mpicc -std=c99 -D_XOPEN_SOURCE=700 -D_GNU_SOURCE=1' \
-	$(QCC) $(CFLAGS) -D_MPI=1 $< -o $@ -L$(BASILISK)/gl -lglutils -lfb_tiny
+	$(QCC) $(CFLAGS) -D_MPI=1 $< -o $@ -L$(BASILISK)/gl -lglutils -lfb_tiny -lm
 
 # Gold-standard production binary: MPI parallelism + inline video generation.
 # This is the default binary for all sweeps and SLURM submissions.
@@ -153,7 +157,7 @@ $(BUILD_DIR)/BioReactor-mpi-video: $(SIM_SRC) $(SRC_HEADERS)
 	@mkdir -p $(BUILD_DIR)
 	module load openmpi && \
 	CC99='mpicc -std=c99 -D_XOPEN_SOURCE=700 -D_GNU_SOURCE=1' \
-	$(QCC) $(CFLAGS) -D_MPI=1 -DVIDEOS=1 $< -o $@ -L$(BASILISK)/gl -lglutils -lfb_tiny
+	$(QCC) $(CFLAGS) -D_MPI=1 -DVIDEOS=1 $< -o $@ -L$(BASILISK)/gl -lglutils -lfb_tiny -lm
 
 
 # ==========================================================
