@@ -128,7 +128,7 @@ that actually renders and encodes them (needs `ffmpeg` on `PATH`; `module
 load ffmpeg` on OSCAR), producing `volume_fraction.mp4` (body frame, rocking
 with the bag) and `volume_fraction_lab.mp4` (lab frame, fixed camera):
 
-![Body-frame volume-fraction animation from a real fidelity-5 run: the liquid (dark) sloshing as the bag rocks back and forth.](../assets/img/first-simulation-fidelity5.gif)
+![Lab-frame volume-fraction animation from a real fidelity-5 run: the bag itself rocking back and forth, with the liquid (red) sloshing inside it, against a fixed camera.](../assets/img/first-simulation-fidelity5-lab.gif)
 
 This is the same VOF field that `vol_frac_interf.dat` records numerically —
 the video is just that field rendered frame by frame, nothing the solver
