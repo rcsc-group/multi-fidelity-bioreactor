@@ -1,37 +1,46 @@
 # How to generate videos
 
-Videos are produced automatically during every simulation run that uses
-`BioReactor-video` — there's no separate rendering step to run.
+## The actual pipeline (verified)
 
-## Build the video-capable binary
-
-```bash
-make build-video    # compiles build/BioReactor-video (only needed if stale)
-```
-
-`ffmpeg` and Basilisk's `ppm2mp4` helper are loaded automatically by the
-SLURM template (`module load ffmpeg`) — no additional setup required.
-
-## Use it
-
-Any workflow that submits via SLURM (chain, sweep, sample, or the BO loop)
-uses `BioReactor-video` already if you set `"videos": true` in a chain
-config, or if the params include the video flags the sweep runner sets. For
-a one-off local run, point directly at the binary:
+`BioReactor-video` does **not** produce an MP4 by itself — it dumps raw
+binary frames (grid + VOF field per timestep) to `run_dir/frames/`.
+`render_videos.py` is the separate step that actually renders and encodes
+them:
 
 ```bash
+make build-video
 build/BioReactor-video runs/my_run/params.json
+uv run python scripts/render_videos.py runs/my_run
 ```
 
-## Output
+Needs `ffmpeg` on `PATH` (`module load ffmpeg` on OSCAR) and Basilisk's own
+`gl` headless-rendering libs to have linked when `build-video` was compiled
+(`libgl1-mesa-dev libglu1-mesa-dev` on Debian/Ubuntu — see [Setup](../setup.md)).
 
-Four MP4s land in `runs/<run_id>/` alongside the data files:
+Produces, in `runs/my_run/`:
 
 | File | Content |
-|------|---------|
-| `vorticity3.mp4` | Vorticity field (body frame) |
-| `volume_fraction3.mp4` | VOF interface (body frame) |
-| `oxygen3.mp4` | Dissolved oxygen concentration |
-| `tracer.mp4` | Tracer mixing (top-half injection) |
+|---|---|
+| `volume_fraction.mp4` | VOF interface, body frame (rotates with the bag) |
+| `volume_fraction_lab.mp4` | Same field, lab frame (fixed camera) |
 
-See [Output files reference](../reference/output-files.md) for everything else written to `runs/<run_id>/`.
+`render_videos.py` cleans up `frames/` once it's done. See
+[Your first simulation](../tutorials/first-simulation.md) for a real
+example, including the actual rendered output.
+
+## When this runs automatically
+
+`chain.py` automates the whole build→run→render sequence for every segment
+when a chain config sets `videos: true` — it switches to
+`config/slurm_video_template.sh`, which calls `render_videos.py` itself at
+the end of the SLURM job. For a one-off local run (as above), you run the
+two steps yourself.
+
+## The other video pathway (not verified here)
+
+`scripts/submit_video_run.py` + `config/slurm_video_template.sh` exist as a
+second, standalone way to submit a single video run via SLURM directly.
+It calls the exact same `render_videos.py` step, so it should produce the
+same `volume_fraction*.mp4` files — but that specific script hasn't been
+run end-to-end while writing this page, unlike the direct-invocation path
+above.

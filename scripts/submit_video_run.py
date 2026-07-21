@@ -34,4 +34,4 @@ else:
 
 job_id = submit_slurm(params, project_root=root, walltime="02:00:00", template=template)
 print(f"Submitted job {job_id}  run_id={params['run_id']}  run_dir=runs/{params['run_id']}/")
-print("Expected outputs: vorticity3.mp4, volume_fraction3.mp4, oxygen3.mp4, tracer*.mp4")
+print("Expected outputs: volume_fraction.mp4, volume_fraction_lab.mp4")

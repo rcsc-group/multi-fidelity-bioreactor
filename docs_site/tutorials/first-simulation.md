@@ -91,12 +91,55 @@ This writes `runs/tutorial_demo/results.json`. Ours came out to:
 }
 ```
 
-!!! warning "Don't trust these numbers physically"
-    `kLa_25 ≈ 1762 h⁻¹` is not a real oxygen-transfer rate for anything —
-    it's an artifact of the artificially short `n_mix_cycles`/`t_end` we used
-    to make this tutorial fast. Fidelity 3 is for smoke-testing the pipeline
-    only; see the [fidelity guide](../reference/fidelity-guide.md) for which
-    level to use when you actually care about the physics.
+## 5. See it
+
+Fidelity 3 is too coarse to look at — 8×8 cells barely resolves the
+interface. Bumping to fidelity 5 (32×32) and using `BioReactor-video`
+instead makes the sloshing actually visible, at the cost of ~1 minute
+instead of ~15 seconds:
+
+```bash
+make build-video
+mkdir -p runs/tutorial_video_demo
+cat > runs/tutorial_video_demo/params.json <<'EOF'
+{
+  "run_id": "tutorial_video_demo",
+  "fidelity": 5,
+  "omega_b": 3.93,
+  "n_harmonics": 1,
+  "theta_max": [7.0, 0.0, 0.0],
+  "phi_angular": [0.0, 0.0, 0.0],
+  "omega_h": 0.0,
+  "amplitude_h": [0.0, 0.0, 0.0],
+  "phi_horizontal": [0.0, 0.0, 0.0],
+  "geometry": {"a": 0.25, "b": 0.071, "n": 8.0},
+  "fill_level": 0.5,
+  "n_mix_cycles": 8,
+  "t_end": 20.0
+}
+EOF
+build/BioReactor-video runs/tutorial_video_demo/params.json
+uv run python scripts/render_videos.py runs/tutorial_video_demo
+```
+
+`BioReactor-video` itself only dumps raw binary frames to
+`runs/tutorial_video_demo/frames/` — `render_videos.py` is the separate step
+that actually renders and encodes them (needs `ffmpeg` on `PATH`; `module
+load ffmpeg` on OSCAR), producing `volume_fraction.mp4` (body frame, rocking
+with the bag) and `volume_fraction_lab.mp4` (lab frame, fixed camera):
+
+![Body-frame volume-fraction animation from a real fidelity-5 run: the liquid (dark) sloshing as the bag rocks back and forth.](../assets/img/first-simulation-fidelity5.gif)
+
+This is the same VOF field that `vol_frac_interf.dat` records numerically —
+the video is just that field rendered frame by frame, nothing the solver
+computes differently.
+
+!!! note "There's a second, separate video pipeline"
+    `config/slurm_video_template.sh` + `scripts/submit_video_run.py` render
+    videos a different way — directly from Basilisk's own view/`bview`
+    output via `ppm2mp4`, producing `vorticity3.mp4`/`oxygen3.mp4`/`tracer*.mp4`
+    instead of `volume_fraction*.mp4`. That path hasn't been exercised while
+    writing this page; the steps above are the ones actually verified here.
 
 ## What you just exercised
 

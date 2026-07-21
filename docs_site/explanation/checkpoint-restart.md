@@ -63,6 +63,17 @@ restart-ramp transient exists, nothing currently excludes it from KPIs like
 `tau_100_max` that are explicitly a *max* over the QSS window (and therefore
 maximally sensitive to a brief spike, however small).
 
+![tau_98 across a real 2-segment smoke-test chain: no visible discontinuity at the t≈13.2 restart boundary.](../assets/img/first-sweep-tau98.png)
+
+At fidelity 3 over a few rocking cycles, the same-condition restart in
+[Your first sweep](../tutorials/first-sweep.md) shows no visible
+discontinuity — which is what "checkpointing is basically free" would
+predict. Whether that holds at production fidelity, over the many-period
+durations `tau_100_max` is actually computed over, is exactly what the
+isolating experiment below is checking — a clean restart at fidelity 3 over
+one period doesn't rule out a small ramp transient getting captured by a
+*max* statistic over a much longer QSS window.
+
 ## Open question, being tested
 
 Whether same-condition segmenting actually perturbs `tau_100_max` in

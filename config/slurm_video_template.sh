@@ -1,6 +1,8 @@
 #!/bin/bash
 # SLURM template for video runs (VIDEOS=1 binary).
-# Produces vorticity3.mp4, volume_fraction3.mp4, oxygen3.mp4, tracer*.mp4
+# BioReactor-video only dumps raw binary frames to run_dir/frames/;
+# render_videos.py (called below) is what actually renders them, producing
+# volume_fraction.mp4 (body frame) and volume_fraction_lab.mp4 (lab frame)
 # in the run directory alongside the standard output files.
 # Submit via scripts/submit_video_run.py.
 #
@@ -16,13 +18,11 @@
 
 set -euo pipefail
 
-# Basilisk's save("*.mp4") pipes PPM frames through ppm2mp4 (a helper script
-# in the scratch Basilisk tree) which in turn calls ffmpeg.  Both must be
-# findable via which().  We add the scratch Basilisk bin dir to PATH for the
-# helper scripts, and load the ffmpeg module for the encoder itself.
-# Do NOT load the 'basilisk' module — the cluster's qcc is broken.
+# render_videos.py invokes ffmpeg directly to encode the rendered frames.
+# Do NOT load the 'basilisk' module — the cluster's qcc is broken; use the
+# persistent build instead (see docs_site/setup.md).
 module load ffmpeg
-export PATH="$HOME/scratch/basilisk/src:$PATH"
+export PATH="/oscar/data/dharri15/eaguerov/basilisk/src:$PATH"
 
 if [ -z "${PARAMS:-}" ]; then
     echo "ERROR: PARAMS env var not set. Submit with: sbatch --export=PARAMS=<path> $0" >&2

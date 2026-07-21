@@ -11,10 +11,9 @@ All files land in `runs/{run_id}/`.
 | `tr_oxy.dat` | BioReactor | `i t oxy_liq_sum oxy_liq_sum2 [c_liq...] c2_liq_sum c2_liq_sum2 ...` — dissolved O₂ and tracer integrals; written from `t_mix` onward |
 | `results.json` | postprocess.py | 19 KPIs — see the table below |
 | `checkpoint.dump` | BioReactor | Binary Basilisk dump at the end of each run (for chain restart) |
-| `vorticity3.mp4` | BioReactor-video | Vorticity field animation |
-| `volume_fraction3.mp4` | BioReactor-video | VOF interface animation (body frame) |
-| `oxygen3.mp4` | BioReactor-video | Dissolved oxygen concentration |
-| `tracer.mp4` | BioReactor-video | Tracer mixing animation |
+| `frames/` | BioReactor-video | Raw binary frame dumps (grid + VOF field per timestep) — temporary; `render_videos.py` consumes and deletes this directory |
+| `volume_fraction.mp4` | render_videos.py | VOF interface animation, body frame (rotates with the bag) |
+| `volume_fraction_lab.mp4` | render_videos.py | Same field, lab frame (fixed camera) |
 
 All `.dat` files have a one-line header beginning with `i`.
 Time `t` is non-dimensional; `t_physical = t × T_bio`.

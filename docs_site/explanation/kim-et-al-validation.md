@@ -58,6 +58,8 @@ segments, same total duration, final segment only), same code:
 | 30.0 | +52.4% | −42.4% |
 | 32.5 | +22.4% | −46.9% |
 
+![tau_100_max vs. rocking speed: Kim et al.'s reported curve in black, our L9 (fidelity 9, single-shot) in blue consistently below it, our L10 (fidelity 10, checkpoint-chained) in red consistently above it at every RPM where both exist -- the dotted lines connecting L9 and L10 at the same RPM show the gap and its sign flip directly.](../assets/img/kim-validation-tau100max.png)
+
 ## The part that "smells"
 
 Going from L9 to L10 should mean *only* a mesh refinement — same total

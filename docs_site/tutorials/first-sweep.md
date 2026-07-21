@@ -59,6 +59,22 @@ uv run python scripts/postprocess.py runs/bedb814c/
 Each writes its own `results.json` — a chain doesn't aggregate results for
 you; see [Output files reference](../reference/output-files.md).
 
+## What the restart actually looks like in the data
+
+`head -1` proves segment 1 didn't start cold, but plotting the same KPI
+across both segments' raw `shear_stress.dat` files makes it concrete:
+
+![tau_98 plotted against non-dimensional time across both segments, with a dashed vertical line marking the checkpoint restart at t≈13.2 — segment 1's curve continues smoothly from where segment 0 left off, no discontinuity.](../assets/img/first-sweep-tau98.png)
+
+Segment 1 (red) picks up `tau_98` right where segment 0 (blue) left off —
+no jump, no reset. This is also the first thing to check if a chain looks
+suspicious: a real discontinuity at the restart boundary in any KPI is a
+sign something (fidelity mismatch, wrong checkpoint staged, a bug in the
+restart ramp) actually did perturb the physics — see
+[Checkpoint restart and warm-start chains](../explanation/checkpoint-restart.md)
+for a case where that's an open, actively-investigated question, not just a
+smoke-test check.
+
 ## Next
 
 - [Sweep one parameter](../how-to/sweep-one-parameter.md) — do this for real, at production fidelity
