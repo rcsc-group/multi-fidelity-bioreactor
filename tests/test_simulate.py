@@ -59,7 +59,8 @@ def test_submit_slurm_calls_sbatch(tmp_path):
     fake_result.returncode = 0
 
     with patch("subprocess.run", return_value=fake_result) as mock_run:
-        job_id = submit_slurm(SHORT_PARAMS, project_root=PROJECT_ROOT, runs_root=tmp_path)
+        job_id = submit_slurm(SHORT_PARAMS, project_root=PROJECT_ROOT, runs_root=tmp_path,
+                               mpi_scratch_root=tmp_path / "mpi_scratch")
 
     assert mock_run.called
     cmd = mock_run.call_args[0][0]
@@ -76,7 +77,7 @@ def test_submit_slurm_passes_walltime(tmp_path):
 
     with patch("subprocess.run", return_value=fake_result) as mock_run:
         submit_slurm(SHORT_PARAMS, project_root=PROJECT_ROOT, runs_root=tmp_path,
-                     walltime="02:30:00")
+                     walltime="02:30:00", mpi_scratch_root=tmp_path / "mpi_scratch")
 
     cmd = mock_run.call_args[0][0]
     assert any("02:30:00" in a for a in cmd), f"walltime not in sbatch args: {cmd}"

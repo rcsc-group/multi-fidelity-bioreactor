@@ -30,6 +30,7 @@ import warnings
 from pathlib import Path
 
 _DEFAULT_TEMPLATE = Path(__file__).parents[1] / "config" / "slurm_mpi_template.sh"
+_DEFAULT_MPI_SCRATCH_ROOT = Path("/oscar/scratch/eaguerov/mpi_runs")
 _DEFAULT_BINARY   = Path(__file__).parents[1] / "build" / "BioReactor"
 
 
@@ -130,6 +131,7 @@ def submit_slurm(
     checkpoint: str | None = None,
     dependency: str | None = None,
     begin: str | None = None,
+    mpi_scratch_root: Path | str | None = None,
 ) -> str:
     """Write params.json and submit a SLURM job via sbatch.
 
@@ -147,6 +149,10 @@ def submit_slurm(
                    DUMP env var is exported so the binary receives it as argv[2]
     dependency   : SLURM dependency string, e.g. "afterok:12345"; passed as
                    --dependency to sbatch (enables chained job submission)
+    mpi_scratch_root : where to stage params/checkpoint for MPI jobs (real MPI
+                   compute nodes can't see project_root); defaults to the
+                   real OSCAR scratch path. Overridable so tests exercising
+                   the MPI staging branch don't touch the real filesystem.
 
     Returns
     -------
@@ -175,7 +181,8 @@ def submit_slurm(
     _using_mpi    = Path(template).resolve() == _mpi_template
     if _using_mpi:
         import shutil as _shutil
-        scratch_base = Path("/oscar/scratch/eaguerov/mpi_runs") / params["run_id"]
+        _scratch_root = Path(mpi_scratch_root) if mpi_scratch_root else _DEFAULT_MPI_SCRATCH_ROOT
+        scratch_base = _scratch_root / params["run_id"]
         scratch_base.mkdir(parents=True, exist_ok=True)
         # Store canonical path so the MPI job can write results back to Lustre
         canon_params = json.loads(params_path.read_text())
