@@ -842,6 +842,15 @@ cached `basilisk/` directory rather than relying on any OSCAR-specific path —
 `hpc`-marked tests (real SLURM submission) never run in CI, since they need an
 actual cluster allocation.
 
+**Known open issue:** the `medium` job's numerical-verification step is
+currently non-blocking (`continue-on-error`). `test_interface_oscillates_at_rocking_frequency`
+passes reproducibly on OSCAR — including against the exact same Basilisk
+tarball CI uses, built fresh there — but fails on the CI runner's Ubuntu/gcc
+toolchain (6.5% spectral power in the expected band vs. a 20% threshold,
+typical correct value ~37%; not a borderline rounding difference). Basilisk
+source version and simple run-to-run nondeterminism have both been ruled out
+as the cause; not yet root-caused.
+
 ---
 
 ## References
