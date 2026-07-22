@@ -1,4 +1,4 @@
-# Rocking Bioreactor 2D — Simulation Suite
+# Rocking Bioreactor 2D 
 
 [![CI](https://github.com/rcsc-group/multi-fidelity-bioreactor/actions/workflows/ci.yml/badge.svg)](https://github.com/rcsc-group/multi-fidelity-bioreactor/actions/workflows/ci.yml)
 [![Docs](https://github.com/rcsc-group/multi-fidelity-bioreactor/actions/workflows/docs.yml/badge.svg)](https://rcsc-group.github.io/multi-fidelity-bioreactor/)
