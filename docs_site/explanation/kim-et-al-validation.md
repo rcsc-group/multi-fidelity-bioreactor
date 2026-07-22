@@ -28,6 +28,22 @@ our L9 nor L10 sweep reproduces Kim et al.'s reported values within any
 reasonable tolerance**, and the discrepancy doesn't even have a consistent
 sign.
 
+!!! danger "17.5 RPM L9 data was found compromised while writing this page — excluded"
+    `44133566` (17.5 RPM's L9 run) was the pilot for an abandoned
+    cross-condition warm-start rerun plan from earlier in this project's
+    history. Its `params.json` shows `t_checkpoint=18.85`,
+    `omega_b_prev=2.356194` (22.5 RPM's own frequency) — it was actually
+    re-executed as a warm-start from 22.5 RPM's checkpoint, which truncated
+    and overwrote its original cold-start `shear_stress.dat`
+    (`fopen(..., "w")` on every invocation). The genuine cold-start raw data
+    for this condition no longer exists. Every other L9 condition used
+    below was individually re-verified clean (`t_checkpoint=None`,
+    `shear_stress.dat` starting at `t=0`) before being trusted — this one
+    wasn't caught until [Checkpoint restart and warm-start chains](checkpoint-restart.md)'s
+    isolation experiment needed a clean 17.5 RPM baseline and didn't have
+    one. The isolation experiment has been redone on 30.0 RPM instead,
+    which passed the same verification.
+
 **L9** (fidelity 9, single monolithic run per condition — no checkpoint
 restart of any kind, cold-started, run straight to `t_end=18.243`),
 re-postprocessed with the current code and verified against each
@@ -35,7 +51,7 @@ condition's own raw `shear_stress.dat`:
 
 | RPM | `tau_100_max` error vs. Kim | `tau_mean_max` error vs. Kim |
 |---|---|---|
-| 17.5 | −15.2% | −16.1% |
+| 17.5 | *(data compromised — see above)* | *(data compromised — see above)* |
 | 27.5 | −28.9% | −39.9% |
 | 30.0 | −21.3% | −37.4% |
 | 32.5 | −36.2% | −43.7% |
@@ -50,7 +66,8 @@ raw data. It's excluded here, not because it's inconvenient, but because
 it's been directly falsified.)
 
 **L10** (fidelity 10, same condition chained across 3–4 same-omega_b
-segments, same total duration, final segment only), same code:
+segments, same total duration, final segment only), same code — this data
+is unaffected by the L9 contamination above (different run_ids entirely):
 
 | RPM | `tau_100_max` error vs. Kim | `tau_mean_max` error vs. Kim |
 |---|---|---|
@@ -58,16 +75,16 @@ segments, same total duration, final segment only), same code:
 | 30.0 | +52.4% | −42.4% |
 | 32.5 | +22.4% | −46.9% |
 
-![tau_100_max vs. rocking speed: Kim et al.'s reported curve in black, our L9 (fidelity 9, single-shot) in blue consistently below it, our L10 (fidelity 10, checkpoint-chained) in red consistently above it at every RPM where both exist -- the dotted lines connecting L9 and L10 at the same RPM show the gap and its sign flip directly.](../assets/img/kim-validation-tau100max.png)
+![tau_100_max vs. rocking speed: Kim et al.'s reported curve in black, our L9 (fidelity 9, single-shot) in blue consistently below it, our L10 (fidelity 10, checkpoint-chained) in red consistently above it -- the 17.5 RPM L9 point is the compromised one described above and should be read with that caveat.](../assets/img/kim-validation-tau100max.png)
 
 ## The part that "smells"
 
 Going from L9 to L10 should mean *only* a mesh refinement — same total
-simulated duration, same physical condition, higher resolution. Instead,
-`tau_100_max` flips sign at every directly-comparable condition: L9
-under-predicts, L10 over-predicts. `tau_mean_max` doesn't flip sign, but
-does get somewhat worse. A genuine mesh refinement shouldn't do this on its
-own.
+simulated duration, same physical condition, higher resolution. Instead, at
+the two conditions with a verified-clean L9 baseline (30.0 and 32.5 RPM),
+`tau_100_max` flips sign: L9 under-predicts, L10 over-predicts.
+`tau_mean_max` doesn't flip sign, but does get somewhat worse. A genuine
+mesh refinement shouldn't do this on its own.
 
 Ruled out already, with real experiments, not assumption:
 
@@ -79,21 +96,14 @@ Ruled out already, with real experiments, not assumption:
   identically 3×, always gives the same result.
 - **Basilisk source-version difference** between the persistent OSCAR build
   and a fresh tarball build — a fresh build still reproduces L9's result.
-- **Same-condition checkpoint restart itself, for `tau_100_max`** — tested
-  directly: one condition (17.5 RPM) held at L9's own fidelity, deliberately
-  split into the same 4-segment structure L10's chains use. Result:
-  `tau_100_max` moved by only −2.4% relative to the untouched single-shot
-  baseline (0.07901 vs. 0.08097) — nowhere near enough to explain L9
-  under-predicting Kim by 15% while L10 over-predicts by 30%+ at the same
-  condition. See [Checkpoint restart and warm-start chains](checkpoint-restart.md#resolved-a-real-but-partial-effect)
-  for the full numbers.
 
-Partially confirmed: the same experiment found checkpoint restart **does**
-measurably degrade `tau_mean_max` (−17.1% at the same fidelity, same
-condition) — a real contaminant, just not the one responsible for the
-`tau_100_max` sign flip. That leaves the mesh-fidelity change itself (or
-something else specific to L10 that isn't checkpointing) as the leading
-open explanation for `tau_100_max` — not yet identified.
+Being tested: whether **same-condition checkpoint restart itself** explains
+the `tau_100_max` sign flip. A first attempt at this used 17.5 RPM as the
+isolation experiment's baseline — exactly the condition later discovered to
+be compromised above, so that result doesn't count and isn't reported here.
+The experiment has been redone on 30.0 RPM (verified clean beforehand) — see
+[Checkpoint restart and warm-start chains](checkpoint-restart.md#testing-the-hypothesis)
+for the current status.
 
 ## What this means if you're using these numbers
 

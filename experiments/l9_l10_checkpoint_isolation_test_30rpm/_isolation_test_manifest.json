@@ -1,0 +1,16 @@
+{
+  "purpose": "CORRECTED isolation test (supersedes l9_l10_checkpoint_isolation_test, which used 17.5 RPM/44133566 as its baseline -- that run was discovered to have been overwritten by an abandoned cross-condition warm-start pilot from 22.5 RPM, not a genuine cold-start (t_checkpoint=18.85, omega_b_prev=2.356194 found in its params.json). 30.0 RPM/488db14b verified clean: t_checkpoint=None, omega_b_prev=None, shear_stress.dat starts at t=0.",
+  "template_l10_run_ids": [
+    "9d0601a0",
+    "871e0274",
+    "c2cbe11a"
+  ],
+  "run_ids": [
+    "9c7cd68a",
+    "02f642c2",
+    "6a184e92"
+  ],
+  "baseline_l9_single_shot_run_id": "488db14b",
+  "baseline_verified_clean": true,
+  "rpm": 30.0
+}

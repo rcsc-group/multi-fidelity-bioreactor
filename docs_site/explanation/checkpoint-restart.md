@@ -74,29 +74,31 @@ isolating experiment below is checking — a clean restart at fidelity 3 over
 one period doesn't rule out a small ramp transient getting captured by a
 *max* statistic over a much longer QSS window.
 
-## Resolved: a real, but partial, effect
+## Testing the hypothesis
 
-The isolating experiment: run one condition (17.5 RPM) at a fidelity that
-already has a trusted single-shot baseline (fidelity 9), deliberately split
-into the same 4-segment same-condition structure a real multi-segment chain
+The isolating experiment: run one condition at a fidelity that already has
+a *verified-clean* single-shot baseline (fidelity 9), deliberately split
+into the same same-condition segment structure a real multi-segment chain
 uses, and compare against that baseline.
 
-| Metric | Single-shot baseline | Same-fidelity, 4-segment chain | Difference |
-|---|---|---|---|
-| `tau_100_max` | 0.08097 | 0.07901 | **−2.4%** — within normal run-to-run noise |
-| `tau_mean_max` | 0.0006463 | 0.0005360 | **−17.1%** — real, not noise |
+!!! danger "The first attempt at this used a corrupted baseline — its result doesn't count"
+    17.5 RPM was the original choice, compared against L9 run `44133566` as
+    the "trusted single-shot baseline." That baseline wasn't trusted enough
+    — `44133566` turned out to have been overwritten by an abandoned
+    cross-condition warm-start pilot (`t_checkpoint=18.85`,
+    `omega_b_prev=2.356194`, seeded from 22.5 RPM), not a genuine cold
+    start. The −2.4%/−17.1% numbers from that comparison are retracted, not
+    reported here. See [Validating against Kim et al. (2024)](kim-et-al-validation.md)
+    for the full story of how this was found. Every condition used anywhere
+    else on this site was individually re-verified (`t_checkpoint=None`,
+    raw data starting at `t=0`) specifically because this happened —
+    reusing an existing "baseline" without checking its actual params.json
+    first is exactly the mistake to avoid.
 
-So the restart ramp is a real contaminant, but only for `tau_mean_max` — a
-spatially-averaged statistic, apparently sensitive to the ramp in a way a
-2.4% difference wouldn't explain by chance. It does **not** explain the
-much larger `tau_100_max` swings seen between L9 and L10 (see
-[Validating against Kim et al. (2024)](kim-et-al-validation.md)) — 2.4%
-can't account for a metric flipping from under-predicting Kim et al. by 15%
-to over-predicting by 30%+ at the same condition. Whatever's driving that
-is a genuine effect of the fidelity-9-to-10 mesh refinement, or something
-else specific to L10, not checkpointing itself.
-`experiments/l9_l10_checkpoint_isolation_test/` has the full manifest and
-raw results.
+Redone on 30.0 RPM, whose L9 baseline (`488db14b`) was verified clean before
+use: `t_checkpoint=None`, `omega_b_prev=None`, `shear_stress.dat` starting
+at `t=0`. `experiments/l9_l10_checkpoint_isolation_test_30rpm/` has the
+manifest; results land there as each segment finishes.
 
 ## `n_mix_cycles` vs `n_transition_cycles`
 
