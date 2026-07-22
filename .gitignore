@@ -1,6 +1,7 @@
 runs/
 surrogate/
 experiments/results.csv
+experiment_data/
 logs/
 
 # Scratch dirs some tests write into the real experiments/ dir instead of tmp_path

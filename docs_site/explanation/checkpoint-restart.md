@@ -74,18 +74,29 @@ isolating experiment below is checking — a clean restart at fidelity 3 over
 one period doesn't rule out a small ramp transient getting captured by a
 *max* statistic over a much longer QSS window.
 
-## Open question, being tested
+## Resolved: a real, but partial, effect
 
-Whether same-condition segmenting actually perturbs `tau_100_max` in
-practice — independent of mesh fidelity — is an active investigation, not a
-confirmed conclusion. The isolating experiment: run one condition (17.5 RPM)
-at a fidelity that already has a trusted single-shot baseline, deliberately
-split into the same 4-segment same-condition structure a real multi-segment
-chain uses, and compare against that baseline. See
-[Validating against Kim et al. (2024)](kim-et-al-validation.md) for the
-numbers this is trying to explain, and
-`experiments/l9_l10_checkpoint_isolation_test/` for this specific
-experiment's manifest and status.
+The isolating experiment: run one condition (17.5 RPM) at a fidelity that
+already has a trusted single-shot baseline (fidelity 9), deliberately split
+into the same 4-segment same-condition structure a real multi-segment chain
+uses, and compare against that baseline.
+
+| Metric | Single-shot baseline | Same-fidelity, 4-segment chain | Difference |
+|---|---|---|---|
+| `tau_100_max` | 0.08097 | 0.07901 | **−2.4%** — within normal run-to-run noise |
+| `tau_mean_max` | 0.0006463 | 0.0005360 | **−17.1%** — real, not noise |
+
+So the restart ramp is a real contaminant, but only for `tau_mean_max` — a
+spatially-averaged statistic, apparently sensitive to the ramp in a way a
+2.4% difference wouldn't explain by chance. It does **not** explain the
+much larger `tau_100_max` swings seen between L9 and L10 (see
+[Validating against Kim et al. (2024)](kim-et-al-validation.md)) — 2.4%
+can't account for a metric flipping from under-predicting Kim et al. by 15%
+to over-predicting by 30%+ at the same condition. Whatever's driving that
+is a genuine effect of the fidelity-9-to-10 mesh refinement, or something
+else specific to L10, not checkpointing itself.
+`experiments/l9_l10_checkpoint_isolation_test/` has the full manifest and
+raw results.
 
 ## `n_mix_cycles` vs `n_transition_cycles`
 

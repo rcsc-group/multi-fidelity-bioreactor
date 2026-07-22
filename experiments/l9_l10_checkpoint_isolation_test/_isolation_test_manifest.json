@@ -13,5 +13,12 @@
     "2e976ca9"
   ],
   "baseline_l9_single_shot_run_id": "44133566",
-  "rpm": 17.5
+  "rpm": 17.5,
+  "results": {
+    "status": "complete",
+    "baseline_single_shot": {"tau_100_max": 0.08097145561254496, "tau_mean_max": 0.0006463345028119614},
+    "final_segment_chained": {"run_id": "2e976ca9", "tau_100_max": 0.07900624736143293, "tau_mean_max": 0.0005360068151009723},
+    "relative_difference": {"tau_100_max_pct": -2.43, "tau_mean_max_pct": -17.07},
+    "conclusion": "Checkpoint restart segmenting does NOT meaningfully perturb tau_100_max at fixed fidelity (-2.4%, within noise) -- rules it out as the explanation for the L9-vs-L10 tau_100_max sign flip. It DOES measurably degrade tau_mean_max (-17.1%) at fixed fidelity -- a real, partial contaminant for that metric specifically. See docs_site/explanation/checkpoint-restart.md and docs_site/explanation/kim-et-al-validation.md."
+  }
 }

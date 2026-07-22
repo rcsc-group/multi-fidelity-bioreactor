@@ -79,24 +79,26 @@ Ruled out already, with real experiments, not assumption:
   identically 3×, always gives the same result.
 - **Basilisk source-version difference** between the persistent OSCAR build
   and a fresh tarball build — a fresh build still reproduces L9's result.
+- **Same-condition checkpoint restart itself, for `tau_100_max`** — tested
+  directly: one condition (17.5 RPM) held at L9's own fidelity, deliberately
+  split into the same 4-segment structure L10's chains use. Result:
+  `tau_100_max` moved by only −2.4% relative to the untouched single-shot
+  baseline (0.07901 vs. 0.08097) — nowhere near enough to explain L9
+  under-predicting Kim by 15% while L10 over-predicts by 30%+ at the same
+  condition. See [Checkpoint restart and warm-start chains](checkpoint-restart.md#resolved-a-real-but-partial-effect)
+  for the full numbers.
 
-Currently being tested: whether the **same-condition checkpoint restart
-itself** — not the mesh refinement — is the actual explanation, since
-`BioReactor.c`'s restart path re-triggers a forcing ramp unconditionally on
-every restart, and L10's chain (unlike L9's single-shot run) hits that path
-2–3 extra times. See
-[Checkpoint restart and warm-start chains](checkpoint-restart.md) for the
-mechanism, and `experiments/l9_l10_checkpoint_isolation_test/` for the
-isolating experiment: one condition, held at L9's own fidelity, deliberately
-segmented the same way L10 is, compared against L9's untouched single-shot
-baseline. If that experiment's chained-but-same-fidelity run disagrees with
-the single-shot baseline, checkpointing is the contaminant, independent of
-mesh resolution.
+Partially confirmed: the same experiment found checkpoint restart **does**
+measurably degrade `tau_mean_max` (−17.1% at the same fidelity, same
+condition) — a real contaminant, just not the one responsible for the
+`tau_100_max` sign flip. That leaves the mesh-fidelity change itself (or
+something else specific to L10 that isn't checkpointing) as the leading
+open explanation for `tau_100_max` — not yet identified.
 
 ## What this means if you're using these numbers
 
 Don't treat either sweep's `tau_100_max`/`tau_mean_max` as validated against
 Kim et al. yet. If you need a shear-stress KPI for a real decision today,
 prefer `tau_98_qss`/`tau_100_qss` (the median-over-QSS-window metrics,
-robust to a single transient spike) over the `_max` variants until the
-restart-ramp hypothesis above is resolved one way or the other.
+robust to a single transient spike) over the `_max` variants — the `_max`
+variants are the ones with an unresolved, condition-flipping discrepancy.
