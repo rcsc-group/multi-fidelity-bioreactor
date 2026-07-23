@@ -106,9 +106,13 @@ Ruled out already, with real experiments, not assumption:
   [Checkpoint restart and warm-start chains](checkpoint-restart.md#resolved-not-a-real-effect)
   for the full numbers.
 
-That leaves the mesh-fidelity change (9 → 10) itself, or something else
-specific to L10, as the sole remaining open explanation for the
-`tau_100_max` sign flip — not yet identified.
+None of that identifies what *does* explain the sign flip — it only
+narrows what's been checked. The mesh-fidelity change (9 → 10) is one
+candidate among possibly several untested ones (something else specific
+to L10's setup or pipeline), not a conclusion reached by elimination.
+We have not yet run an experiment that isolates fidelity itself, and
+until we do, it should be treated as an open hypothesis, not "the"
+explanation.
 
 ## What this means if you're using these numbers
 

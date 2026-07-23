@@ -116,8 +116,10 @@ with ordinary run-to-run/restart numerics, not a systematic effect.
 
 That rules checkpointing out as the explanation for the L9-vs-L10
 `tau_100_max` sign flip (see [Validating against Kim et al. (2024)](kim-et-al-validation.md))
-more firmly than before. The mesh-fidelity change (9 → 10) itself, or
-something else specific to L10, remains the open explanation.
+more firmly than before. It does **not** tell us what the actual
+explanation is — the mesh-fidelity change (9 → 10) is an untested
+candidate, not a confirmed cause; it hasn't been isolated from other
+things that differ between L9 and L10 runs. That remains open.
 `experiments/l9_l10_checkpoint_isolation_test_30rpm/` has the full manifest
 and raw results.
 
