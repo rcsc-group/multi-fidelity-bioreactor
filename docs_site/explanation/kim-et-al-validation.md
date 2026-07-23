@@ -96,14 +96,19 @@ Ruled out already, with real experiments, not assumption:
   identically 3×, always gives the same result.
 - **Basilisk source-version difference** between the persistent OSCAR build
   and a fresh tarball build — a fresh build still reproduces L9's result.
+- **Same-condition checkpoint restart itself** — tested properly on 30.0
+  RPM, against a baseline verified clean *before* use (a first attempt on
+  17.5 RPM used a baseline later discovered to be corrupted; that result
+  was retracted, not reported here). Result: `tau_100_max` moved by only
+  −3.0%, `tau_mean_max` by −2.6% — both small, neither anywhere near
+  enough to explain L9 under-predicting Kim by 20%+ while L10 over-predicts
+  by 20-50% at the same conditions. See
+  [Checkpoint restart and warm-start chains](checkpoint-restart.md#resolved-not-a-real-effect)
+  for the full numbers.
 
-Being tested: whether **same-condition checkpoint restart itself** explains
-the `tau_100_max` sign flip. A first attempt at this used 17.5 RPM as the
-isolation experiment's baseline — exactly the condition later discovered to
-be compromised above, so that result doesn't count and isn't reported here.
-The experiment has been redone on 30.0 RPM (verified clean beforehand) — see
-[Checkpoint restart and warm-start chains](checkpoint-restart.md#testing-the-hypothesis)
-for the current status.
+That leaves the mesh-fidelity change (9 → 10) itself, or something else
+specific to L10, as the sole remaining open explanation for the
+`tau_100_max` sign flip — not yet identified.
 
 ## What this means if you're using these numbers
 

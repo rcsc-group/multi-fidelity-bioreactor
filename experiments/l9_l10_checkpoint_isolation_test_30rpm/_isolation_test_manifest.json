@@ -12,5 +12,12 @@
   ],
   "baseline_l9_single_shot_run_id": "488db14b",
   "baseline_verified_clean": true,
-  "rpm": 30.0
+  "rpm": 30.0,
+  "results": {
+    "status": "complete",
+    "baseline_single_shot": {"tau_100_max": 0.13659267369449304, "tau_mean_max": 0.0010077838514090242},
+    "final_segment_chained": {"run_id": "6a184e92", "tau_100_max": 0.13244838944923742, "tau_mean_max": 0.0009818250209142055},
+    "relative_difference": {"tau_100_max_pct": -3.03, "tau_mean_max_pct": -2.58},
+    "conclusion": "On a verified-clean baseline, same-condition checkpoint restart segmenting does NOT meaningfully perturb tau_100_max (-3.0%) or tau_mean_max (-2.6%) -- both small, consistent with ordinary run-to-run/restart numerics. This supersedes the retracted 17.5 RPM result (../l9_l10_checkpoint_isolation_test/), which showed a spurious -17.1% tau_mean_max gap that was actually an artifact of comparing against a corrupted (cross-condition warm-started) baseline, not evidence of real restart contamination. Checkpointing is ruled out as the explanation for the L9-vs-L10 tau_100_max sign flip. See docs_site/explanation/checkpoint-restart.md and docs_site/explanation/kim-et-al-validation.md."
+  }
 }

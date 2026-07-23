@@ -95,10 +95,31 @@ uses, and compare against that baseline.
     reusing an existing "baseline" without checking its actual params.json
     first is exactly the mistake to avoid.
 
-Redone on 30.0 RPM, whose L9 baseline (`488db14b`) was verified clean before
-use: `t_checkpoint=None`, `omega_b_prev=None`, `shear_stress.dat` starting
-at `t=0`. `experiments/l9_l10_checkpoint_isolation_test_30rpm/` has the
-manifest; results land there as each segment finishes.
+## Resolved: not a real effect
+
+Redone on 30.0 RPM, whose L9 baseline (`488db14b`) was verified clean
+*before* use this time: `t_checkpoint=None`, `omega_b_prev=None`,
+`shear_stress.dat` starting at `t=0`.
+
+| Metric | Clean single-shot baseline | Same-fidelity, 3-segment chain | Difference |
+|---|---|---|---|
+| `tau_100_max` | 0.13659 | 0.13245 | **−3.0%** |
+| `tau_mean_max` | 0.0010078 | 0.0009818 | **−2.6%** |
+
+Both small — neither remotely close to the −17.1% `tau_mean_max` gap the
+retracted (corrupted-baseline) 17.5 RPM experiment showed. That result was
+almost certainly an artifact of comparing against a cross-condition
+warm-started run, not evidence of genuine restart contamination. On a valid
+comparison, **same-condition checkpoint restart segmenting does not
+meaningfully perturb either metric** — both differences here are consistent
+with ordinary run-to-run/restart numerics, not a systematic effect.
+
+That rules checkpointing out as the explanation for the L9-vs-L10
+`tau_100_max` sign flip (see [Validating against Kim et al. (2024)](kim-et-al-validation.md))
+more firmly than before. The mesh-fidelity change (9 → 10) itself, or
+something else specific to L10, remains the open explanation.
+`experiments/l9_l10_checkpoint_isolation_test_30rpm/` has the full manifest
+and raw results.
 
 ## `n_mix_cycles` vs `n_transition_cycles`
 
