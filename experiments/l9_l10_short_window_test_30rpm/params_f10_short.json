@@ -1,0 +1,38 @@
+{
+  "geometry": {
+    "a": 0.25,
+    "b": 0.071,
+    "n": 8.0
+  },
+  "fill_level": 0.5,
+  "phi_angular": [
+    0.0,
+    0.0,
+    0.0
+  ],
+  "omega_h": 0.0,
+  "amplitude_h": [
+    0.0,
+    0.0,
+    0.0
+  ],
+  "phi_horizontal": [
+    0.0,
+    0.0,
+    0.0
+  ],
+  "n_harmonics": 1,
+  "theta_max": [
+    7.0,
+    0.0,
+    0.0
+  ],
+  "fidelity": 10,
+  "omega_b": 3.141593,
+  "n_mix_cycles": 500,
+  "t_end": 8.0,
+  "_binary": "/oscar/scratch/eaguerov/BioReactor-mpi-video",
+  "_ntasks": 16,
+  "_mem": "4G",
+  "_walltime": "2-00:00:00"
+}

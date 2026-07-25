@@ -1,0 +1,26 @@
+{
+  "purpose": "Cheaper falsifiable test of whether the L9-vs-L10 tau_100_max sign flip is a fast, resolution-intrinsic effect. Two cold-start, single-segment (no checkpoint restart at all), non-chained runs at 30.0 RPM, truncated to t_end=8.0 (t_ramp=6.0 + one full period, T=2.0) -- mirrors Kim et al.'s own 'one period in quasi-steady' window more literally than the multi-period max used elsewhere on this site.",
+  "condition": {"rpm": 30.0, "omega_b": 3.141593, "theta_max": [7.0, 0.0, 0.0]},
+  "hypothesis": "If fidelity 10 already over-predicts tau_100_max relative to fidelity 9 within this single early QSS period, that supports a fast resolution-intrinsic effect. If the two track closely, fidelity is likely not a fast effect and a different explanation is needed for the full-duration sign flip.",
+  "cost_basis": "Both runs measured at ~5.5-6.3 h/unit (f10) and ~0.6-0.9 h/unit (f9) on the nodes assigned -- slower than the historical rates this experiment was originally sized on, but both jobs still completed within their requested walltimes (f9_short: 5:21:54 of 6:00:00; f10_short: 1-23:50:13 of 2-00:00:00, i.e. within ~10 minutes of its walltime limit).",
+  "walltime_risk": "Confirmed real: f10_short's dump_checkpoint event (src/BioReactor.c:598, fires once at t_dump_checkpoint) very nearly missed its 48h budget -- it completed with under 10 minutes of margin. Had it been killed, shear_stress.dat's continuous fflush would still have given usable partial data, but this run avoided needing that fallback.",
+  "runs": {
+    "f9_short": {
+      "run_id": "8b3c0065", "job_id": "4235068", "fidelity": 9, "t_end_target": 8.0,
+      "status": "COMPLETED", "elapsed": "05:21:54", "actual_t_final": 8.5,
+      "results": {"tau_100_max": 0.13666373837623938, "tau_mean_max": 0.0010078242947238391}
+    },
+    "f10_short": {
+      "run_id": "e8ebf9f5", "job_id": "4235069", "fidelity": 10, "t_end_target": 8.0,
+      "status": "COMPLETED", "elapsed": "1-23:50:13", "actual_t_final": 8.5,
+      "results": {"tau_100_max": 0.2902397154848254, "tau_mean_max": 0.000954652890974937}
+    }
+  },
+  "comparison": {
+    "window": "t=[6.0, 8.5] for both runs, identical",
+    "tau_100_max_pct_change": 112.4,
+    "tau_mean_max_pct_change": -5.27
+  },
+  "conclusion": "tau_100_max more than doubles (+112%) going from fidelity 9 to fidelity 10 within a single short window, with no checkpoint restart, no chaining, and no long-time integration involved. This is a real, large, fast-onset effect in the same direction as the full-duration L9-vs-L10 sign flip (L9 under-predicts Kim et al., L10 over-predicts). tau_mean_max shows only a small decrease (-5.3%), consistent with that metric not flipping sign in the full-duration data. This is direct evidence -- not merely an untested hypothesis -- that the mesh-fidelity change (9->10) itself is a genuine, fast, resolution-intrinsic driver of the tau_100_max discrepancy. It does not yet identify the underlying numerical/physical mechanism (e.g. whether fidelity 9 under-resolves a boundary-layer peak, or fidelity 10 resolves a spurious sharp transient) -- that remains a separate, open question.",
+  "status": "complete"
+}

@@ -106,13 +106,30 @@ Ruled out already, with real experiments, not assumption:
   [Checkpoint restart and warm-start chains](checkpoint-restart.md#resolved-not-a-real-effect)
   for the full numbers.
 
-None of that identifies what *does* explain the sign flip — it only
-narrows what's been checked. The mesh-fidelity change (9 → 10) is one
-candidate among possibly several untested ones (something else specific
-to L10's setup or pipeline), not a conclusion reached by elimination.
-We have not yet run an experiment that isolates fidelity itself, and
-until we do, it should be treated as an open hypothesis, not "the"
-explanation.
+None of the above identifies what explains the sign flip — those three
+only narrow what's been ruled out. A separate, direct test of the
+mesh-fidelity change itself did find real evidence, though:
+
+- **Mesh-fidelity change (9 → 10), tested directly** — two cold-start,
+  non-chained, single-segment runs at 30.0 RPM, one at each fidelity,
+  each truncated to the same short window just past the ramp
+  (t=[6.0, 8.5], about 1.25 rocking periods —
+  `experiments/l9_l10_short_window_test_30rpm/`). `tau_100_max` more
+  than doubled between fidelity 9 (0.1367) and fidelity 10 (0.2902), a
+  **+112% increase**, with no chaining and no long-time integration
+  involved at all. `tau_mean_max` moved only slightly (−5.3%), consistent
+  with that metric not flipping sign in the full-duration data. This is
+  real, direct evidence that the mesh-fidelity change itself is a fast,
+  resolution-intrinsic driver of the `tau_100_max` discrepancy — not
+  merely an untested candidate anymore.
+
+This doesn't yet say *why* refining the mesh has this effect (e.g.
+whether fidelity 9 under-resolves a boundary-layer peak that fidelity 10
+correctly resolves, or whether fidelity 10 is resolving a spurious sharp
+transient that a coarser mesh smooths away) — that mechanism is still an
+open question. But the sign-flip's *proximate cause* — resolution,
+not checkpointing, not something else specific to L10's pipeline — is no
+longer speculative.
 
 ## What this means if you're using these numbers
 

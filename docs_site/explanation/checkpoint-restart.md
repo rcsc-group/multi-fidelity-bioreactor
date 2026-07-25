@@ -116,12 +116,19 @@ with ordinary run-to-run/restart numerics, not a systematic effect.
 
 That rules checkpointing out as the explanation for the L9-vs-L10
 `tau_100_max` sign flip (see [Validating against Kim et al. (2024)](kim-et-al-validation.md))
-more firmly than before. It does **not** tell us what the actual
-explanation is — the mesh-fidelity change (9 → 10) is an untested
-candidate, not a confirmed cause; it hasn't been isolated from other
-things that differ between L9 and L10 runs. That remains open.
-`experiments/l9_l10_checkpoint_isolation_test_30rpm/` has the full manifest
-and raw results.
+more firmly than before. `experiments/l9_l10_checkpoint_isolation_test_30rpm/`
+has the full manifest and raw results.
+
+A follow-up, cheaper experiment (`experiments/l9_l10_short_window_test_30rpm/`)
+then tested the mesh-fidelity change directly: two cold-start runs at the
+same condition, one at fidelity 9 and one at fidelity 10, each truncated to
+a single short window just past the ramp (t=[6.0, 8.5], no chaining, no
+checkpoint restart of any kind). `tau_100_max` more than doubled
+(+112%) between fidelity 9 and fidelity 10 in that short window alone. That
+is real, direct evidence — not an untested guess — that the mesh-fidelity
+change itself is a fast, resolution-intrinsic driver of the sign flip; see
+[Validating against Kim et al. (2024)](kim-et-al-validation.md#the-part-that-smells)
+for the full numbers.
 
 ## `n_mix_cycles` vs `n_transition_cycles`
 
