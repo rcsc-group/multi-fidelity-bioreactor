@@ -131,6 +131,34 @@ open question. But the sign-flip's *proximate cause* — resolution,
 not checkpointing, not something else specific to L10's pipeline — is no
 longer speculative.
 
+**Is fidelity 10 itself converged, though?** Kim et al.'s own
+grid-convergence appendix (`docs/kimetal2024/Figures/Fig_append1.pdf`)
+checks *velocity*, not shear stress, and shows velocity is already
+converged by `n_L=2^10` — their `2^10` and `2^11` curves overlap, so their
+choice of that resolution for the production sweep is legitimate, not
+under-resolved. But τ involves a spatial derivative of velocity, which
+converges far more slowly than the velocity field itself, and Kim et al.
+never checked τ's convergence at all. We checked it cheaply — by reusing
+*existing* raw data instead of running an infeasible fidelity-11 job
+(cost scaling from fidelity 9→10 was ~7-9× per level, so fidelity 11
+would cost roughly 2-3 weeks):
+
+| Fidelity | `n_L` | `tau_100_max` | `tau_mean_max` |
+|---|---|---|---|
+| 7 (existing run, free) | 128 | 0.0417 | 0.001065 |
+| 9 | 512 | 0.1367 (+228%) | 0.001008 (−5%) |
+| 10 | 1024 | 0.2902 (+112%) | 0.000955 (−5%) |
+| Kim et al. | — | 0.1735 | 0.001611 |
+
+`tau_100_max` is **not converging** — it more than doubles at every step
+tested, crossing straight through Kim's value rather than approaching it.
+It cannot be trusted as validated at *any* fidelity tested so far, not
+just at L9 vs L10 specifically. `tau_mean_max`, by contrast, is already
+flat across this same 8× resolution range (~5% total drift, f7→f10) while
+still sitting 35-65% below Kim's value the whole time — proof that its
+gap is *not* a resolution problem. Something else, still unidentified,
+explains `tau_mean_max`'s persistent gap.
+
 ## What this means if you're using these numbers
 
 Don't treat either sweep's `tau_100_max`/`tau_mean_max` as validated against

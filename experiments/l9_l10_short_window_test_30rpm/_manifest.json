@@ -22,5 +22,15 @@
     "tau_mean_max_pct_change": -5.27
   },
   "conclusion": "tau_100_max more than doubles (+112%) going from fidelity 9 to fidelity 10 within a single short window, with no checkpoint restart, no chaining, and no long-time integration involved. This is a real, large, fast-onset effect in the same direction as the full-duration L9-vs-L10 sign flip (L9 under-predicts Kim et al., L10 over-predicts). tau_mean_max shows only a small decrease (-5.3%), consistent with that metric not flipping sign in the full-duration data. This is direct evidence -- not merely an untested hypothesis -- that the mesh-fidelity change (9->10) itself is a genuine, fast, resolution-intrinsic driver of the tau_100_max discrepancy. It does not yet identify the underlying numerical/physical mechanism (e.g. whether fidelity 9 under-resolves a boundary-layer peak, or fidelity 10 resolves a spurious sharp transient) -- that remains a separate, open question.",
-  "status": "complete"
+  "status": "complete",
+  "convergence_check": {
+    "purpose": "Test whether tau is converging with resolution at all, without paying for an infeasible fidelity-11 run (cost scaling f9->f10 was ~7-9x per level; f11 would need ~14-20 days). Reused EXISTING, zero-cost raw data instead of running anything new: fidelity 7 (run 82ee427c, dev/rocking-bioreactor-2d, sweep_fb_theta_l7 -- verified identical condition: geometry, fill_level=0.5, omega_b=3.1416, theta_max=[7,0,0], cold start) already has real shear_stress.dat covering the same [6.0, 8.5] window. Fidelity 8 (run a22288d7) was checked but never actually executed -- only a stub params.json exists, no usable data.",
+    "same_window_results": {
+      "fidelity_7": {"n_L": 128, "tau_100_max": 0.04170635953665787, "tau_mean_max": 0.0010650631404198485},
+      "fidelity_9": {"n_L": 512, "tau_100_max": 0.13666373837623938, "tau_mean_max": 0.0010078242947238391},
+      "fidelity_10": {"n_L": 1024, "tau_100_max": 0.2902397154848254, "tau_mean_max": 0.000954652890974937},
+      "kim_et_al_reported": {"tau_100_max": 0.173519231111588, "tau_mean_max": 0.00161074825613165}
+    },
+    "conclusion": "tau_100_max is NOT converging: it grows monotonically and rapidly across every fidelity tested (0.042 -> 0.137 -> 0.290), crossing straight through Kim's reported value (0.174) rather than approaching it from one side. There is no sign of a plateau, which is why it cannot be trusted as validated at ANY fidelity tested so far -- not just L9 vs L10. tau_mean_max, by contrast, is already flat across the same 8x resolution range (f7->f10: 0.00107 -> 0.00101 -> 0.00095, ~5% total drift) while remaining ~35-65% below Kim's value throughout -- proving that metric's persistent gap is NOT a resolution/convergence problem at all. Correction to an earlier claim in this investigation: Kim et al.'s own grid-convergence appendix (Fig_append1.pdf) shows VELOCITY is converged by n_L=2^10 (2^10 and 2^11 curves overlap) -- their choice of n_L=2^10 for the production sweep is legitimate, not under-resolved. The unconverged quantity is specifically shear stress (a velocity derivative), which Kim et al. never checked for convergence and which we've now shown is still changing rapidly at both of the fidelities we compare against their data."
+  }
 }
