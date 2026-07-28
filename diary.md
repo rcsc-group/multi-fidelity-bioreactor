@@ -57,15 +57,19 @@ time, same control condition:**
 1. *Ramp shape + duration*: upstream's exact linear-over-30-physical-
    -seconds ramp (`ramp_dur = 30./T_bio; alpha = x_ss` instead of
    smooth-step) instead of our smooth-step-over-3-cycles. Result:
-   `ux_rms/U_b` peak = **5.03** vs. control's 5.34 (~6% difference).
-   **Refuted** — ramp has nothing to do with it.
+   `ux_rms/U_b` peak = **5.03**, a ~6% change *relative to our own control
+   (5.34)* — NOT 6% of the way toward Kim's ~0.8 target. Still ~6x too
+   high vs. Kim either way. **Refuted** — ramp has nothing to do with it.
 2. *Multi-harmonic forcing loop structure*: upstream's literal unrolled
    single-harmonic formula (`Th_max2=alpha*Th_max_deg; Th=Th_max2*sin(...)`,
    no loop, no phase interpolation) instead of our generalized
    `for (k=1..n_harmonics)` sum (which reduces to the same formula at
    n_harmonics=1, but tested the actual literal old code path, not just
    the algebra). Result (stacked on top of test 1's ramp reversion):
-   peak = **4.74**. Still nowhere near 0.8. **Refuted.**
+   peak = **4.74**, an ~11% change *relative to the control* — again not
+   11% closer to Kim's target. Still ~6x too high vs. Kim's ~0.8.
+   **Refuted.** Neither reversion closed any of the gap to Kim; both are
+   noise-level perturbations around the same ~5x-6x-too-high baseline.
 
 **Also checked: `normf()`'s actual RMS definition** (read the real
 source, `basilisk/src/utils.h:138-153`, rather than assuming) —
@@ -76,6 +80,25 @@ normalizes by liquid volume only (half the tank at fill_level=0.5), which
 would make the *true* liquid-only RMS **larger** by `√2` than what we
 compute — i.e. correcting this would make our mismatch worse, not better.
 Confirmed not the explanation; not implementing it.
+
+**gdb retried on request (2026-07-28, later same day), confirmed genuinely
+blocked, not just untried:** `module avail gdb` — no such module (only
+`gdbm`, an unrelated library); `/usr/bin/gdb` exists already. Confirmed
+this bash session runs inside an active SLURM allocation (compute node
+node2333, `SLURM_JOB_UID` etc. set), not the login node, so it wasn't a
+login-node restriction. `gdb -batch -ex run -ex bt --args
+BioReactor_upstream_i 0.25 7 32.5` still fails: `ptrace: Operation not
+permitted`. Root cause identified precisely this time:
+`/proc/sys/kernel/yama/ptrace_scope` = `2` ("admin-only" — no ptrace
+without `CAP_SYS_PTRACE`, not even parent-process-spawns-and-runs-child,
+which scope `1` would normally allow). Also tried `coredumpctl list` to
+read an already-generated core file post-mortem (doesn't need live
+ptrace) — blocked too: "No journal files were opened due to insufficient
+permissions." This is a kernel/container capability restriction on this
+specific sandbox, not a missing tool — no module load or retry fixes it
+without a genuinely different execution environment (e.g. a `salloc`
+session with different container privileges, if that's even available
+here).
 
 **Where this leaves things:** every individual mechanism reverted or
 checked today (ramp, harmonic-loop structure, RMS/volume definition) came
