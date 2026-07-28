@@ -10,6 +10,60 @@ hashes exactly, not "the run from earlier."
 
 ---
 
+## 2026-07-28 (session 3, continued yet further) — REOPENED: the "12x
+discrepancy, definitively confirmed" conclusion from the previous entries
+may be wrong in kind, not just magnitude. Found via user pushback
+("discrepancy too big, are we sure inputs match") to actually re-verify
+rather than trust the prior conclusion.
+
+**Re-verified `U_bio` is NOT the problem.** Added a direct debug print
+inside the actual C code (`fprintf` right after the `U_bio`/`T_bio`
+computation, not a Python reimplementation) and ran it: code reports
+`U_bio=0.0822425`, matching the Python-side value used throughout this
+session's analysis (`0.08224`) to 6 significant figures. Also re-verified
+`normf.dat` column indexing via the `0.286` (=Ly, the fluid-domain volume)
+anchor values that appear in the `_vol` columns — confirms `ux_liq_rms` is
+really column 8 (index 7) as assumed throughout.
+
+**Re-rendered `Fig_append1.pdf` at 400dpi and read the y-axis directly
+(not from memory/caption text): confirmed 0.0-1.2 scale, peaks ~0.8** —
+not a misread axis. But: the curve's SHAPE and PHASE match our simulation
+exactly (double-hump per period, troughs/peaks at the identical `t/T_p`
+values, e.g. peaks at 29.0/29.5/30.0/30.5/31.0) — only the amplitude
+differs, by a consistent ~11.75x. A shape/phase match with a fixed
+amplitude-only offset is the classic signature of a missing/wrong scale
+factor, not wrong physics — which was the working theory going into this
+entry.
+
+**That theory just broke.** Checked a SECOND, independent figure for the
+same condition: `Fig_simul_setup.pdf` (main text), which plots
+`⟨u_x'⟩/U_b` — the PLAIN SIGNED SPATIAL AVERAGE (no "rms"), not the
+appendix's RMS quantity. Kim's own figure shows this oscillating
+symmetrically around zero, roughly ±0.5, matching θ_b's oscillation
+frequency (one hump per period, not two). **Our own `ux_liq_avg/U_b`
+(same simulation, `kim_upstream_clean/run_test_fine/normf.dat`, column 7)
+ranges from 0.95 to 5.96 — ALWAYS POSITIVE, never crosses zero.** This is
+not an amplitude-scale mismatch, it's a QUALITATIVE difference: our
+simulation carries a large, persistent, one-directional mean x-velocity
+that Kim's own published figure shows should not exist (or be
+negligible) at this condition. This is far too large to be genuine
+second-order steady-streaming (which the paper describes as a *small*
+correction, not a dominant first-order effect the same magnitude as the
+oscillation itself).
+
+**Status: reopened, not resolved.** The previous conclusion ("Kim et
+al.'s own code doesn't reproduce their own figure, full stop, case
+closed") is premature. This net-drift signature is a much more specific,
+falsifiable lead than "12x amplitude gap" was, and points at something
+structural — a pivot/geometry asymmetry (`L_piv=0.143`), a sign error in
+one of the pseudo-force terms, or a frame-of-reference issue in how
+`⟨u_x'⟩` is actually computed/reported vs. what `ux_liq_avg` from
+`normf()` gives — rather than a normalization-constant error. NEXT STEP:
+investigate why `ux_liq_avg` has a large positive mean instead of
+oscillating around zero, before revisiting the RMS comparison at all.
+
+---
+
 ## 2026-07-28 (session 3, continued further) — DEFINITIVE RESULT: Kim et
 al.'s own code, built against their own era's Basilisk, with properly
 resolved sampling, does not reproduce their own published figure
