@@ -100,6 +100,16 @@ without a genuinely different execution environment (e.g. a `salloc`
 session with different container privileges, if that's even available
 here).
 
+**Confirmed with direct evidence, not just the error message, on a second
+retry the same day:** `gdb --version` works fine (16.3-2.0.1.el9, real
+binary, not missing) — so the earlier failure was never about gdb itself.
+`/proc/self/status` shows `CapEff: 0000000000000000` — this shell has
+*zero* effective Linux capabilities, including `CAP_SYS_PTRACE`, despite
+the bounding set (`CapBnd`) nominally allowing it. Combined with
+`ptrace_scope=2`, this is conclusive: no ptrace-based tool (gdb, strace,
+core-file attach) can work here regardless of version or invocation
+method. This is a sandbox/container privilege-drop, not a tooling gap.
+
 **Where this leaves things:** every individual mechanism reverted or
 checked today (ramp, harmonic-loop structure, RMS/volume definition) came
 back negative. Combined with the previous session's findings (geometry/
