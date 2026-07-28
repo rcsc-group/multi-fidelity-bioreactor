@@ -10,6 +10,87 @@ hashes exactly, not "the run from earlier."
 
 ---
 
+## 2026-07-28 (session 2) — Bisecting the velocity mismatch by literal reversion, and a blocked attempt at running raw upstream
+
+**Method shift, per direct feedback:** rather than reasoning about whether
+upstream and our code "should" be equivalent, revert one piece of OUR
+working code to upstream's literal formula at a time, rerun the same cheap
+control condition, and read off the number. All tests below use fidelity 6,
+theta=7deg, f_b=32.5rpm, cold start (control run: `46acc8f0`,
+`ux_liq_rms/U_bio` peak over the last 2 periods = **5.34**, vs. Kim's
+Appendix A range of ~0.1-0.8 — i.e. our own working code is already ~6-7x
+too high before touching anything).
+
+**Attempted: run Kim's actual raw upstream `BioReactor.c`/`henry_oxy2.h`
+under our current Basilisk, minimally patched only for the two documented
+compatibility fixes (commit `8d6ae01`).** Segfaults almost immediately
+(within the first i++ event group, before any user timestep completes).
+Bisected via fprintf instrumentation (ptrace/gdb unavailable in this
+sandbox; ASan unavailable too, `libasan.so.6` missing) and local-copy
+`-I.` header overrides:
+- Found and fixed ONE real, independent bug: `henry_oxy2.h`'s
+  `tracer_diffusion` event declares `struct HDiffusion q; q.D=D; q.beta=beta;`
+  with `q.embed_flux` left as **uninitialized stack garbage**, then later
+  reads `if (!q.embed_flux && ...)`. This is exactly the H10/H11 bug our own
+  hypothesis_ledger.json already found and fixed (`src/henry_oxy2.h:347`,
+  `q.embed_flux = NULL`) — but that fix was framed as restart-specific.
+  It is NOT restart-specific: `tracer_diffusion` runs on every timestep,
+  fresh start included, so upstream's raw code needs this fix just to not
+  crash on a cold start, full stop.
+- Applying that fix was not sufficient — still segfaults, at the same
+  point, even with `TRACER=0`, `OXYGEN=0`, `EMBED=0`, and without
+  `-fopenmp` (ruled out tracer/oxygen transport, embedding, and threading
+  entirely as the cause). Crash is somewhere in/around `vof(i++)`
+  (confirmed via `-I.` local-copy instrumentation of `vof.h` reaching the
+  binary, verified by `strings` on the compiled executable) but the
+  instrumented fprintf as the literal first line of that event body never
+  printed — crash is not inside the function body itself, more likely in
+  Basilisk's own event dispatch/scheduling around it.
+- **Closed as inconclusive.** Could not pin down further without a
+  stack-trace tool. This blocks "run raw upstream directly" as a way to
+  bisect the velocity mismatch — pivoted to reverting pieces of our own
+  code instead (see below), which doesn't need upstream to run at all.
+
+**Reverted our own code to upstream's literal formulas, one piece at a
+time, same control condition:**
+
+1. *Ramp shape + duration*: upstream's exact linear-over-30-physical-
+   -seconds ramp (`ramp_dur = 30./T_bio; alpha = x_ss` instead of
+   smooth-step) instead of our smooth-step-over-3-cycles. Result:
+   `ux_rms/U_b` peak = **5.03** vs. control's 5.34 (~6% difference).
+   **Refuted** — ramp has nothing to do with it.
+2. *Multi-harmonic forcing loop structure*: upstream's literal unrolled
+   single-harmonic formula (`Th_max2=alpha*Th_max_deg; Th=Th_max2*sin(...)`,
+   no loop, no phase interpolation) instead of our generalized
+   `for (k=1..n_harmonics)` sum (which reduces to the same formula at
+   n_harmonics=1, but tested the actual literal old code path, not just
+   the algebra). Result (stacked on top of test 1's ramp reversion):
+   peak = **4.74**. Still nowhere near 0.8. **Refuted.**
+
+**Also checked: `normf()`'s actual RMS definition** (read the real
+source, `basilisk/src/utils.h:138-153`, rather than assuming) —
+volume-weighted RMS, `sqrt(∫f²dV/∫dV)`, denominator is the *whole tank*
+(water+air, wherever `cm>0`), not water-only. Main.tex's Appendix A text
+explicitly says "liquid-phase" — so Kim's actual reported curve likely
+normalizes by liquid volume only (half the tank at fill_level=0.5), which
+would make the *true* liquid-only RMS **larger** by `√2` than what we
+compute — i.e. correcting this would make our mismatch worse, not better.
+Confirmed not the explanation; not implementing it.
+
+**Where this leaves things:** every individual mechanism reverted or
+checked today (ramp, harmonic-loop structure, RMS/volume definition) came
+back negative. Combined with the previous session's findings (geometry/
+embedding, forcing amplitude, physical constants, dimensionless numbers,
+boundary conditions, pivot location, pseudo-force terms — all verified
+identical to upstream), the velocity mismatch has survived every specific,
+testable hypothesis so far. Genuinely open. Remaining untested angle:
+Basilisk version itself (the actual numerical scheme in `vof.h`/
+`centered.h`/`embed.h`), which can't be isolated without either (a) an old
+Basilisk install to compile upstream against, or (b) finishing the crash
+bisection above with better tooling than this sandbox allows.
+
+---
+
 ## 2026-07-28 — Reproducing Kim et al.: root-cause hunt for the tau/velocity mismatch
 
 **Context.** Neither our L9 nor L10 sweep reproduces Kim et al. (2024)'s
