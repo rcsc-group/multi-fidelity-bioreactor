@@ -1,4 +1,15 @@
 
+// [PROJECT NOTE] This header began as Kim et al.'s upstream henry_oxy2.h
+// (https://github.com/rcsc-group/BioReactor/tree/main/DriverCodes). It has
+// grown from 273 to 397 lines in this fork, almost entirely to fix MPI
+// checkpoint-restart bugs that only manifest under conditions upstream never
+// exercises (upstream has no restart at all — see BioReactor.c's [PROJECT
+// ADDED] checkpoint-restart note). Every added block below already carries
+// its own detailed "why" comment (from the debugging thread recorded in
+// experiments/hypothesis_ledger.json and diary.md) — those existing comments
+// ARE this file's project-authorship markers; anything reading as generic
+// Basilisk-style documentation prose (like the "Defaults"/tree-conservation
+// paragraph immediately below) is upstream's original text, unchanged.
 //# Advection/diffusion of a soluble tracer
 
 attribute {

@@ -2,6 +2,26 @@
 // Contributor: Radu Cimpeanu
 // Contributor: Daniel Harris
 // Date: 03/04/2025
+//
+// ============================================================================
+// ANNOTATION LEGEND (this project's additions on top of the file above)
+// ============================================================================
+// This file began as Minki Kim et al.'s driver code, published at
+// https://github.com/rcsc-group/BioReactor/tree/main/DriverCodes (predates
+// the Basilisk version this fork compiles against). Everything below without
+// a `[PROJECT ...]` tag is Kim et al.'s original code/comments, unmodified
+// in substance even where reformatted.
+//
+//   [PROJECT ADDED: ...]    a block that does not exist in Kim's upstream file
+//   [PROJECT CHANGED: ...]  upstream had different logic/values here; why we
+//                           changed it
+//   [PROJECT REMOVED: ...]  upstream had code here that this fork deletes
+//                           outright (noted at the point of removal, or in
+//                           a summary comment where nothing replaces it)
+//
+// Full account of what's changed and why is in diary.md (repo root) and the
+// project's own commit history (`git log -- src/BioReactor.c`).
+// ============================================================================
 
 // Core Basilisk modules for embedding geometries and centered Navier-Stokes solver
 #include "embed.h"
@@ -27,9 +47,28 @@
 #define _USE_MATH_DEFINES
 #include <math.h>
 
-// JSON parameter reader (jsmn-based); replaces argv[1..3] with params.json
+// [PROJECT ADDED] JSON parameter reader (jsmn-based). Upstream took L_bio,
+// ANGLE, RPM as three positional argv[] floats; this project needed many
+// more tunable parameters (fidelity, geometry shape, multi-harmonic forcing,
+// checkpoint-restart timing, ...) for the sweep/optimization pipeline, so
+// argv parsing was replaced with a params.json file. See main()'s
+// [PROJECT CHANGED] block below for exactly which upstream argv reads this
+// replaces.
 #include "params_read.h"
 
+// [PROJECT REMOVED] Upstream also defines these feature flags, along with
+// the code blocks they gate, all deleted from this fork (unused for the
+// validated baseline configuration; not required by Kim et al.'s published
+// results at theta=7deg/32.5rpm, which use none of them):
+//   CONTACT (contact-angle BC), OXYGEN_CIRCLE (circular oxygen init),
+//   HORIZONTAL_MIXL/HORIZONTAL_MIXR (horizontal tracer mixing variants),
+//   VERTICAL_MIXDOWN (downward tracer mixing variant), AMR (adaptive mesh
+//   refinement — see MINLEVEL/MAXLEVEL note above; upstream itself ran with
+//   AMR=0 for its own published results, so this is not a discrepancy vs.
+//   Kim's actual runs), REMOVE_DROP (droplet/bubble removal), CFL_COND
+//   (custom CFL override), DUMP (upstream's own dump mechanism — this fork
+//   has its own checkpoint-restart dump/restore, added separately, see
+//   event dump_checkpoint below).
 // Flags to control the inclusion of features (set to 1 = enable, 0 = disable)
 #define EMBED            1   // Enable embedded boundary for solid geometry
 #define OXYGEN           1   // Enable oxygen concentration simulation
@@ -42,6 +81,11 @@
 // Other simulation options
 #define ACCELERATION     1   // Enable acceleration (rocking motion)
 #define NORMCAL          1   // Calculate statistics (norms)
+// [PROJECT ADDED] VIDEOS/DIAGNOSTICS have no upstream equivalent (upstream
+// has no compile-time video toggle — its view3.h/draw3.h calls are
+// unconditional — and no separate pressure-residual health-check output).
+// `#ifndef` (rather than plain #define) so `make build-video`/`build-mpi-
+// video` can override via `-DVIDEOS=1` without editing this file.
 #ifndef VIDEOS
 #define VIDEOS           0   // Videos: enable only for diagnostics; not needed in optimization loop
 #endif
@@ -58,6 +102,20 @@
 //                       SIMULATION SETUP                             //
 // ================================================================== //
 int NN;  // Grid resolution: set from params.fidelity as 1<<fidelity in main()
+// [PROJECT CHANGED] Upstream: `const double t_change = 30;` — a fixed 30
+// PHYSICAL SECONDS before regular rocking motion is established (Main.tex
+// line 430: "constant amplitude at the regular mode is attained after 30
+// seconds"), i.e. Kim et al.'s own paper explicitly uses this criterion.
+// Changed to a fixed cycle-count so the ramp scales with omega_b instead of
+// being a fixed physical duration (commit 7ec98f9, "ramp duration = 3
+// rocking cycles instead of hardcoded 30 s" -- rationale not recorded beyond
+// the commit subject). NOTE (diary.md, 2026-07-28): because T_bio scales
+// with 1/omega_b, a fixed-cycle-count ramp is proportionally MUCH shorter in
+// real seconds at high RPM than at low RPM, whereas Kim's fixed-30s ramp is
+// not. Tested whether skipping more analysis-window time reproduces the
+// effect of a longer forcing ramp -- it does not (see diary.md) -- but that
+// only tested the post-hoc window, not re-running with the actual 30s
+// forcing profile itself. Still open.
 #define N_RAMP_CYCLES 3            // Ramp duration in rocking cycles; t_change_st = N_RAMP_CYCLES * T_per_st
 const double th_cont = 90;        // Contact angle for wetting conditions (degrees)
 double t_mix,t_dump;              // Time at which tracer is released, and dump file is saved (computed later)
@@ -65,13 +123,27 @@ const double nMix_cycle = 80;     // Number of cycles for tracer release (used t
 double t_end;                      // Final simulation time (simulation time unit); set from params.t_end in main()
 
 // Output time intervals (derived from experimental timing)
+// [PROJECT ADDED] `dt_video`/`t_out` have no upstream equivalent — Kim et
+// al.'s driver has no shear-stress KPI pipeline at all (see the tau_95/98/
+// 100/mean block in event normcal below, entirely new) and no video-frame
+// dumping at a tunable interval.
 const double dt_video= 0.6074/5;  // Interval for video frames
-// 0.1 gave only ~6.1 samples/rocking-period (T_per_nd~0.608, RPM-independent
-// by construction), less than half Kim et al. (2024)'s ~13 samples/cycle.
-// Confirmed via direct A/B test at 22.5 rpm (fidelity 9): tau_100_max went
-// from 0.37x Kim's value at t_out=0.1 to 1.03x at t_out=0.02 (~30 samples/
-// cycle), with negligible added wall-clock cost (I/O is cheap relative to
-// the physics compute). See experiments/hypothesis_ledger.json.
+// [PROJECT CHANGED, commit 1c3440c, 2026-07-14] was t_out=0.1 (~6.1 samples/
+// rocking-period, T_per_nd~0.608 is RPM-independent by construction), raised
+// to 0.02 (~30 samples/cycle) to at least match Kim et al. (2024)'s stated
+// ~13 samples/cycle for their own extended-window turbulent-case sampling.
+// CORRECTION (diary.md, 2026-07-28): the commit message claims this change
+// alone moved tau_100_max from 0.37x to 1.03x Kim's value at 22.5 rpm/
+// fidelity 9, citing experiments/hypothesis_ledger.json — that file was
+// never actually updated with the entry, and the run pair that appears to
+// be the actual A/B test
+// (/oscar/scratch/eaguerov/mpi_runs/8994c04a.STALE_pre_tout_fix vs.
+// _tout_test_22p5) shows NO meaningful difference when recomputed directly
+// (0.371x vs. 0.372x Kim). That specific justification did not survive
+// re-verification. t_out=0.02 is kept anyway (finer sampling is not
+// expected to hurt, and it did fix a real aliasing problem in velocity
+// time-series reconstruction — see diary.md), but do not cite the commit's
+// stated tau_100_max improvement as evidence of anything.
 const double t_out   = 0.02;      // Output interval for statistics [non-dim time]
 
 
@@ -132,11 +204,26 @@ FILE * fp_stats, * fp_norm, * fp_stats2, * fp_stats3, * fp_tau;
 
 // Key physical and dimensionless parameters (computed in main)
 double U0, Re_w, Re_a, We_w, Fr, rhor, mur, Pe_tracer_1, Pe_tracer_2, Pe_oxy_1, Pe_oxy_2, Th, Th_d, Th_2d, U_bio, w_bio, w_bio_st, T_per_st, T_bio, t_change_st;
+// [PROJECT ADDED] `params` holds everything read from params.json (see
+// params_read.h); replaces the three scalar globals (L_bio/ANGLE/RPM) that
+// upstream populated straight from argv.
 BioreactorParams params;  // global so all events (acceleration, init) can access it
-// Restart / checkpoint support
+// [PROJECT ADDED] Checkpoint-restart bookkeeping. Upstream has no restart
+// concept at all — every run is a fresh cold start. This project's sweeps
+// are walltime-limited, so a run may need to continue across multiple SLURM
+// jobs (or deliberately warm-start a new condition from a converged one);
+// these three globals carry the state that decision needs. See main()'s
+// [PROJECT ADDED] checkpoint-restart block below.
 static double t_ramp_start      = 0.0;   // simulation time when the current ramp began
 static double t_dump_checkpoint = 0.0;   // simulation time to write checkpoint.dump
 static const char * restart_file = NULL; // argv[2] if this is a restart run
+// Upstream declares these for its `#if AMR` adaptive-refinement path (see
+// upstream BioReactor.c:141,160-162,445-448). Upstream itself runs with
+// `#define AMR 0` (uniform grid) for its published results, same as this
+// fork — AMR was never actually exercised in either codebase's production
+// runs. [PROJECT: the `#if AMR` refine() block itself was not carried over
+// into this fork at all; these two variables are vestigial, kept only so
+// nothing else referencing them fails to compile.]
 int MINLEVEL, MAXLEVEL;    // Mesh refinement levels
 
 
@@ -145,6 +232,13 @@ int MINLEVEL, MAXLEVEL;    // Mesh refinement levels
 // ================================================================== //
 int main(int argc, char * argv[]){
 
+  // [PROJECT CHANGED] Upstream: `double L_bio=atof(argv[1]); double ANGLE=
+  // atof(argv[2]); double RPM=atof(argv[3]);` — three positional command-line
+  // floats. Replaced with a single params.json (see params_read.h) because
+  // this project's sweeps need many more knobs than upstream's three
+  // (fidelity, geometry shape/fill, multi-harmonic forcing, checkpoint-restart
+  // timing, MPI/video toggles, ...) and passing dozens of positional argv
+  // floats does not scale.
   if (argc < 2) { fprintf(stderr, "Usage: BioReactor params.json\n"); return 1; }
   params = params_read(argv[1]);
 
@@ -155,10 +249,19 @@ int main(int argc, char * argv[]){
   L_bio = params.geometry_a;  // bag half-length (m); sets all non-dim scales
   double ANGLE = params.theta_max[0];       // Fundamental rocking amplitude (degrees)
   double RPM   = params.omega_b * 60. / (2.*M_PI);  // Convert rad/s → RPM
+  // [PROJECT CHANGED] Upstream: `const double NN = 64;` — a fixed resolution
+  // (equivalent to fidelity 6 in this project's convention). Made runtime-
+  // configurable because comparing accuracy/cost across resolutions is this
+  // project's actual purpose (multi-fidelity optimization).
   NN    = 1 << params.fidelity;             // fidelity → grid cells per side (4→16, 7→128, 9→512)
   t_end = params.t_end;                    // non-dimensional sim time; 1 unit = T_bio seconds
 
+  // [PROJECT CHANGED] Upstream: `L0 = LL;` with `LL` a plain (undimensioned)
+  // constant =1.0. The `[0]` annotation is required by the current Basilisk
+  // install's dimensional-analysis checking (see CLAUDE.md) — Kim et al.'s
+  // upstream code predates that requirement, not a physics difference.
   L0 = 1. [0];  // [0] declares space dimensionless: simulation is fully non-dimensionalized (scaled by L_bio, T_bio, U_bio); Basilisk dimensional analysis requires annotations on literals, not variables
+  // [PROJECT ADDED] Upstream never sets DT (uses Basilisk's default, unbounded).
   // DT: maximum allowed timestep (dimensionless).  HUGE is fine for serial/OpenMP
   // but MPI's global dtmax reduction can behave unexpectedly with infinity on
   // some implementations.  1.0 [0] (one non-dim time unit) is always larger than
@@ -168,6 +271,11 @@ int main(int argc, char * argv[]){
 
   init_grid(NN);
 
+  // [PROJECT CHANGED] Upstream: `double Ly = 0.286;` — a fixed constant
+  // (aspect ratio for the one geometry Kim et al. studied). Made runtime-
+  // configurable (geometry.b/geometry.a) so the sweep/optimization pipeline
+  // can vary bag shape as a parameter. At Kim's own values (a=0.25, b=0.071)
+  // this recovers Ly=0.284, matching upstream's 0.286 to within rounding.
   // Bag geometry from params (must precede anything that uses Ly or H_bio)
   Ly = params.geometry_b / L_bio;  // dimensionless half-height; overwrites hardcoded 0.286
 
@@ -192,6 +300,12 @@ int main(int argc, char * argv[]){
   t_mix      = T_per_st*params.n_mix_cycles; // rocking cycles before tracer/oxygen start (wired from params.json)
   t_dump = t_mix;                   // Time to dump data (simulation time)
 
+  // [PROJECT ADDED] Checkpoint restart — has no upstream equivalent at all;
+  // Kim et al.'s driver is always a single cold-started run. Added because
+  // this project's fidelity-9/10 sweeps need days per condition, longer than
+  // one SLURM job's walltime allows, and because warm-starting a new
+  // condition from an already-developed flow field (skipping its own
+  // cold-start transient) makes chained sweeps far cheaper.
   // ── Checkpoint restart ─────────────────────────────────────────────────────
   // Detected via params.t_checkpoint > 0 (set by chain.py for restart segments).
   // params.t_end is a RELATIVE duration; the C code adds params.t_checkpoint.
@@ -279,6 +393,11 @@ int main(int argc, char * argv[]){
 #endif
 
 // Boundary conditions
+// [VERIFIED UNCHANGED vs. upstream, diary.md 2026-07-28] Line-for-line
+// identical to upstream's BC block, including the embed BCs below. Checked
+// specifically because it looked, from the geometry formula alone, like this
+// fork might be embedding all four walls where Kim only embeds two — it
+// isn't; see the [PROJECT CHANGED] note at the superellipse solid() call.
   u.n[left]  = dirichlet(0.);  // Set no-slip velocity boundary conditions (zero velocity)
   u.t[left]  = dirichlet(0.);
   u.n[right] = dirichlet(0.);
@@ -449,10 +568,30 @@ event init (t = 0)
     double a_nd = params.geometry_a / L_bio;
     double b_nd = params.geometry_b / L_bio;  // == Ly
 
+    // [PROJECT CHANGED] Upstream: `double y_init = 0.0;` — fixed liquid
+    // level (always half-full, matching Kim's own 0.5 fill fraction). Made
+    // parametric for the sweep/optimization pipeline. At fill_level=0.5 this
+    // reduces to y_fill = b_nd*(2*0.5-1) = 0, i.e. y_init=0.0 exactly,
+    // matching upstream for Kim's own condition.
     // Fill level: liquid occupies fill_level fraction of bag height, measured from bottom
     double y_fill = b_nd * (2.*params.fill_level - 1.);
     fraction(f, y_fill - y);
 
+    // [PROJECT CHANGED] Upstream's `init` event only ever builds a plain
+    // rectangle here: `solid(cs, fs, intersection(-(y-0.5*Ly), -(-y-0.5*Ly)))`
+    // — note this bounds ONLY y; the x-direction walls are upstream's plain
+    // domain box edges (u.n[left]/u.n[right] boundary conditions below), not
+    // embedded at all. This fork generalized the shape to a parametric
+    // superellipse so bag corner-rounding could be a sweep variable. VERIFIED
+    // (diary.md, 2026-07-28) that this generalization does NOT change the
+    // effective geometry/BCs at Kim's own parameters: `params.geometry_n=8`
+    // hits the `>= 8` branch below, which builds the exact same sharp
+    // rectangle as upstream's intersection() call (a_nd - fabs(x), not a
+    // rounded pow() formula), and because a_nd (=1, by construction) exceeds
+    // the domain box's own half-width (0.5), the x-constraint in that
+    // rectangle is never actually binding inside the box either way — so the
+    // x-walls are, in practice, upstream's plain box edges here too. No
+    // discrepancy vs. upstream survives this check.
     // Superellipse solid: |x/a|^n + |y/b|^n = 1
     // n >= 8 → perfect rectangle (avoids pow() singularities at sharp corners)
     #if EMBED
@@ -537,6 +676,18 @@ event oxygen (t=t_mix; i++){
 #if ACCELERATION
 event acceleration(i++)
 {
+  // [PROJECT CHANGED] Upstream's ramp is a plain LINEAR interpolation over a
+  // fixed 30 PHYSICAL SECONDS, applied only to amplitude (phase/frequency
+  // unramped): `Th_max2 = (Th_max/t_change_st)*t; Th = Th_max2*sin(w_bio_st*t);`
+  // (see upstream BioReactor.c lines ~397-407). Replaced with a smooth-step
+  // (3x²-2x³) interpolation of BOTH amplitude and phase, over N_RAMP_CYCLES
+  // cycles instead of a fixed time, so that: (a) checkpoint-restart segments
+  // that warm-start a NEW condition from an old one can interpolate between
+  // two nonzero states (upstream's ramp only makes sense starting from
+  // Th_max2=0, i.e. a true cold start) and (b) the ramp duration scales with
+  // omega_b rather than being a fixed physical duration. See N_RAMP_CYCLES's
+  // definition above for the still-open question of whether this changes
+  // quasi-steady-state results relative to upstream's 30s linear ramp.
   // Smooth-step parameter interpolation: alpha: 0→1 over N_RAMP_CYCLES.
   // For fresh runs, *_prev fields are 0 → reproduces the original cold-start ramp.
   // For restarts, *_prev fields carry the previous segment's values → smooth transition
@@ -546,7 +697,12 @@ event acceleration(i++)
   double x_ss     = (elapsed < ramp_dur) ? elapsed / ramp_dur : 1.0;
   double alpha    = 3.*x_ss*x_ss - 2.*x_ss*x_ss*x_ss;   // smooth-step ∈ [0,1]
 
-
+  // [PROJECT CHANGED] Upstream applies a single harmonic unconditionally:
+  // `Th=Th_max*sin(w_bio_st*t); Th_d=w_bio_st*Th_max*cos(...); Th_2d=-w_bio_st²*
+  // Th_max*sin(...)`. Generalized to a sum over params.n_harmonics so the
+  // sweep/optimization pipeline can explore multi-harmonic rocking motions;
+  // at n_harmonics=1 this reduces to exactly upstream's formula (verified
+  // algebraically, diary.md 2026-07-28 — Ak=theta_max[0]*pi/180, phk=0).
   // Multi-harmonic angular forcing with smooth-step interpolation of amplitude and phase.
   // For each harmonic k: Ak and phk are interpolated from _prev → current over N_RAMP_CYCLES.
   Th = 0;  Th_d = 0;  Th_2d = 0;
@@ -561,6 +717,11 @@ event acceleration(i++)
     Th_2d += -Ak * wk*wk * sin(wk*t + phk);
   }
 
+  // [PROJECT ADDED] Horizontal translational forcing has no upstream
+  // equivalent at all — Kim et al.'s bioreactor only rocks (angular motion).
+  // Added so the sweep/optimization pipeline can also explore horizontal
+  // shaking/translation as a control parameter. Zero by default
+  // (omega_h=0), which recovers upstream's pure-rocking motion exactly.
   // Multi-harmonic horizontal forcing with smooth-step interpolation.
   double x_acc = 0.;
   {
@@ -714,6 +875,28 @@ event normcal (t+=t_out; t<=t_end){
     c3_liq_sum    = statsf2(c3_liq).sum;
     c3_liq_sum2   = statsf2(c3_liq).sum2;
 
+    // [PROJECT ADDED] The entire shear-stress KPI pipeline (this block through
+    // the tau_95/98/100/mean percentile walk and fp_tau write below) has no
+    // upstream equivalent whatsoever — Kim et al.'s driver computes no shear
+    // stress at all (it is presumably computed in their own postprocessing,
+    // outside this file). Added (commits bc1c74a, 6d08f53) to reproduce their
+    // Fig. 13a tau_liq_max/tau_liq_mean KPIs from this project's own sweeps.
+    //
+    // CAUTION (diary.md, 2026-07-28): the comment below claims this stencil
+    // "mirrors vorticity() in basilisk/src/utils.h" — checked directly against
+    // basilisk/src/utils.h:286-292, and that claim is only half true. The real
+    // vorticity() weights by face metric factors fm.x/fm.y/cm and divides by
+    // 2*(cm[]+SEPS)*Delta, which correct the finite-difference stencil near
+    // embedded cut-cells (i.e. near walls — exactly where peak shear stress is
+    // largest). This implementation uses plain 2*Delta with no metric
+    // correction at all. This is a real, confirmed discrepancy from the
+    // pattern it claims to follow. NOT YET FIXED: has not been shown to
+    // explain the ~5x mean-VELOCITY mismatch found in the same investigation
+    // (velocity is a primitive field, this bug can only affect a derivative
+    // quantity), so it is at most a partial explanation, and the user's
+    // explicit instruction is to make no changes beyond what's strictly
+    // numerically necessary — not yet applied pending further diagnosis.
+    //
     // ── 98th-percentile shear stress τ₉₈(t) ──────────────────────────────────
     // tau = |μ(∂u/∂y + ∂v/∂x)| in the liquid domain (f[] > 0.5).
     // Masked to bulk liquid to exclude interface artefacts.

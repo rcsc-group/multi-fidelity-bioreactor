@@ -1,3 +1,5 @@
+// [PROJECT NOTE] Byte-identical to Kim et al.'s upstream utils2.h
+// (verified diff, 2026-07-28) — unmodified in this fork.
 /**
 # Various utility functions
 
