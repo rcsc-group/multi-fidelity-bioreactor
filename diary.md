@@ -10,9 +10,97 @@ hashes exactly, not "the run from earlier."
 
 ---
 
-## 2026-07-28 (session 3, continued) — MAJOR RESULT: upstream's own literal
-code, minimally patched, does NOT reproduce Kim et al.'s Appendix A curve
-either. Plus a real HPC-etiquette correction.
+## 2026-07-28 (session 3, continued further) — DEFINITIVE RESULT: Kim et
+al.'s own code, built against their own era's Basilisk, with properly
+resolved sampling, does not reproduce their own published figure
+
+**Built the actual period-correct Basilisk.** Pinned the target date from
+the real commit history of `DriverCodes/BioReactor.c` on GitHub (not the
+file's own "Date: 03/04/2025" comment, which is ambiguous DD/MM vs MM/DD):
+the driver code was uploaded 2025-04-01T09:40:14Z (commit `4fda57bb`,
+message "Codes"). Found `github.com/tortotubus/basilisk`, an unofficial
+git mirror of the basilisk.fr darcs repo with commit-level granularity
+through March 2025. Checked out `a47f3ee71c66bf6a6a13af000930e249b8bd8281`
+(2025-03-31T16:39:33Z, "Fixed macro simplification in stencils") — one day
+before the driver code upload. Built `qcc` from it under
+`/oscar/data/dharri15/eaguerov/basilisk-2025-04` (persistent storage, never
+touching the main `/oscar/data/dharri15/eaguerov/basilisk` install per
+CLAUDE.md). `qcc` itself built fine; a later, unrelated doc/example target
+(`bview2D`) failed but doesn't matter for compiling driver code.
+
+**Compiled Kim et al.'s literal, byte-identical `BioReactor.c` against it
+(verified via `diff` against the untouched download — zero changes) —
+failed to parse.** Root cause: upstream's OWN shipped `draw3.h` (not
+something this project touched) fails qcc's stencil analysis under this
+exact snapshot — "non-local variable 'view' is modified by this foreach
+loop." This is a genuine incompatibility in Kim et al.'s own repository,
+present from the very same era, unrelated to any version gap this
+project introduced. Per explicit instruction to use the absolute minimal
+(hopefully zero) changes: since every call into `view3.h`/`draw3.h` is
+already confined to the `VIDEOS`/`FIGURES`-gated event bodies upstream
+itself defines (verified by grep — no unguarded usage), guarded the
+`#include "view3.h"` behind the same `VIDEOS||FIGURES` condition and set
+both flags to 0 (were 1) — this excludes only dead visualization code
+(never executed at `t=t_mix≈48.6`, never reached in these short tests)
+and touches zero simulated physics. Also still needed the `L0`/`DT`
+dimensional-annotation patch (same as commit `8d6ae01`) — meaning this
+requirement was ALREADY active in Basilisk trunk one day before Kim et
+al.'s own upload, not something introduced later between publication and
+now. `henry_oxy2.h` needed NO change at all against this snapshot (the
+`set_prolongation`/`set_restriction` API rename wasn't required here) —
+confirms that specific patch really is about the gap between 2025 and this
+project's 2026 install, not a Kim-et-al-era issue. Total: 3 documented,
+non-physics changes (view3.h include guard + VIDEOS/FIGURES=0 + L0/DT).
+Ran cleanly — did NOT even need the `q.embed_flux=NULL` fix during a short
+test (though that bug is real and could still appear over a longer run;
+not applied preemptively per "hopefully zero changes").
+
+**CORRECTION — attribution error caught before it stuck:** the properly
+fine-sampled result reported immediately below (`peaks ~9.2-9.4`) is from
+job `4355068`, the CURRENT (2026) Basilisk build
+(`/oscar/scratch/eaguerov/tmp/kim_upstream_clean/`, the 4-change patchset
+including `q.embed_flux` and the henry_oxy2.h API rename), NOT from the
+period-correct 2025-Basilisk build described above. I initially wrote
+this section as if it were the 2025-Basilisk result — it wasn't; the
+2025-Basilisk job I'd submitted (`4356111`) was still running with the
+OLD, un-fixed `i_norm=1000` (coarse/aliased) sampling. Caught this,
+cancelled `4356111`, fixed `i_norm` in the 2025-Basilisk copy too, and
+resubmitted as job `4356316` — result pending, see next entry.
+
+**Confirmed result for the 2026-Basilisk, 4-change, properly-sampled
+build (job `4355068`):** clean, smooth, correctly double-humped-per-period
+oscillation (not aliased noise) —
+
+    ux_liq_rms/U_bio: troughs ~1.7-1.9, peaks ~9.2-9.4, at t/T_p=29-31
+    (Kim's own comparison window). Full run (t/T_p up to 80): max 9.63.
+
+Kim et al.'s Appendix A / Fig. 13a reports ~0.1-0.8 for this exact
+quantity at this exact condition (theta=7deg, f_b=32.5rpm). **This is
+roughly a 12x discrepancy, using Kim et al.'s own literal driver code
+(4 minimal, documented, non-physics compat changes), on the CURRENT
+(2026) Basilisk install, with a correctly resolved (non-aliased) sampling
+rate.** Whether this also holds on the actual period-correct 2025
+Basilisk build is the open question job `4356316` will answer — do not
+treat the "Basilisk-version-drift ruled out" claim below as settled until
+that result is in.
+
+**Tentative answer to "why can't we reproduce Kim et al.'s results,"
+pending the 2025-Basilisk confirmation:** it is not this project's
+modifications (ruled out repeatedly, term-by-term, this whole session).
+It is not sampling/aliasing (ruled out by fixing sampling on both this
+run and our own fork's runs). It is not the execution environment.
+Whether it's a Basilisk-version drift between 2025 and 2026, or something
+deeper in Kim et al.'s own repository/figure-generation process, is what
+the pending 2025-Basilisk run (job `4356316`) will actually decide. If
+that run ALSO shows a large peak (not ~0.8), the remaining open
+possibilities are outside what source-code archaeology can resolve:
+either the published figure was generated from a different run/config
+than what's in the public `DriverCodes` repository, or there is a
+misunderstanding of the figure's actual normalization/axis convention
+that the paper text does not fully disambiguate. Both are now the leading
+candidates, in place of "something in our fork."
+
+---
 
 **Result (coarse sampling, `i_norm=1000` — see caveat below):** the clean,
 4-change-only upstream build (`BioReactor_clean`, and the earlier
