@@ -10,6 +10,61 @@ hashes exactly, not "the run from earlier."
 
 ---
 
+## 2026-07-28 (session 3, continued) — MAJOR RESULT: upstream's own literal
+code, minimally patched, does NOT reproduce Kim et al.'s Appendix A curve
+either. Plus a real HPC-etiquette correction.
+
+**Result (coarse sampling, `i_norm=1000` — see caveat below):** the clean,
+4-change-only upstream build (`BioReactor_clean`, and the earlier
+debug-instrumented cross-check) both give `ux_liq_rms/U_bio` values of
+**5.6-9.2** across `t/T_p≈25-56`, using upstream's own `Ly=0.286` (not our
+`0.284`) for `U_bio`. That is comparable to or HIGHER than our own fork's
+control run (`46acc8f0`, 32.5rpm/theta7, peak 5.34). Kim's Appendix A
+figure reports ~0.1-0.8 for this exact quantity. **The ~6x-and-up
+discrepancy vs. the published figure is present in literal upstream code,
+essentially unmodified, run under the current Basilisk install. It was
+never something introduced by this project's changes.** This reframes the
+entire investigation: the open question is not "what did our fork break"
+but "why does even Kim et al.'s own driver, as published, not reproduce
+Kim et al.'s own published figure under this Basilisk version" — i.e. the
+Basilisk-version-difference hypothesis (always the fallback candidate,
+never previously testable) is now the leading one, or there's still an
+error in how this test itself is set up (see caveats).
+
+**Real, important caveat on the number above:** upstream's own
+`i_norm=1000` samples statistics only once every ~2 non-dimensional time
+units — under 1/3 of a rocking period (`T_per_nd≈0.607`). That is far too
+coarse to resolve a smoothly oscillating quantity without severe
+phase-aliasing — the exact problem this project already found and fixed
+for its own `t_out` (commit `1c3440c`). The five points recorded
+(9.2, 5.6, 2.1, 8.4, ...) jump around rather than tracing a smooth curve,
+consistent with quasi-random phase sampling, not a reliable peak
+extraction. **Submitted a properly-sampled rerun** (`i_norm` 1000→10,
+documented in-place as a sampling-only change, no equation/field/timestep
+touched — same justification already accepted for the `t_end` truncation)
+via real `sbatch` (job `4355068`, dedicated 4-CPU allocation) — result
+pending, see next entry.
+
+**Also discovered, independent of the above, a real process-hygiene
+mistake this session:** ran multiple compute-intensive test builds as
+backgrounded (`&`/`nohup`) processes directly in the interactive coding
+shell, rather than through `sbatch`. Checked `nproc` mid-session: this
+shell has exactly **1 CPU**, on a node with `load average: 34.5` from
+*other users'* unrelated jobs (Gaussian, Python) — a heavily oversubscribed
+shared allocation, not a dedicated compute reservation. Also discovered
+independently: upstream's own `event normcal(i+=i_norm)` has no
+`t<=t_end` bound (same "runs forever" pattern this project already found
+and fixed for `acceleration`/`dump_checkpoint` in its own fork, per
+`hypothesis_ledger.json`) — so those background runs would never have
+stopped on their own; killed both manually after collecting enough data
+across the target window. Corrected going forward: the fine-sampling
+rerun above was submitted via real `sbatch` with an explicit dedicated
+allocation instead. This resource mistake does not affect the validity of
+the coarse-sampled numbers themselves (CPU count doesn't change computed
+physics), only how they were computed.
+
+---
+
 ## 2026-07-28 (session 3) — Upstream crash SOLVED (own test-harness bugs, not
 Basilisk/upstream), gdb worked via self-installed signal handler, then
 rebuilt a minimally-patched clean version per explicit instruction
