@@ -10,6 +10,83 @@ hashes exactly, not "the run from earlier."
 
 ---
 
+## 2026-07-28 (session 3) — Upstream crash SOLVED (own test-harness bugs, not
+Basilisk/upstream), gdb worked via self-installed signal handler, then
+rebuilt a minimally-patched clean version per explicit instruction
+
+**gdb, corrected:** earlier claim that gdb was "unavailable" was about live
+`ptrace`-based attach specifically. Confirmed via `/proc/self/status`
+(`CapEff=0000000000000000`, `ptrace_scope=2`) that this is real and applies
+uniformly — verified the user's own shell shows the same `CapEff=0`, so it's
+a SLURM-job-step-wide policy (cgroup `job_4278934/step_interactive`), not
+specific to this coding session. BUT: a self-installed `SIGSEGV`/`SIGFPE`/
+`SIGABRT` handler using glibc's `backtrace()`/`backtrace_symbols_fd()` needs
+no ptrace at all (runs inside the crashing process itself). Built that,
+compiled with `-rdynamic -g`, and got a real, symbol-resolved backtrace on
+the very first try. `addr2line` on the resolved addresses gave exact
+file:line for every frame.
+
+**Root cause of the persistent segfault, found via the backtrace + addr2line
+(NOT a Basilisk-version incompatibility, NOT anything in either codebase's
+real physics):**
+1. First crash resolved to `event_do` (`grid/events.h:175`) calling into
+   `out_files_initial` (a real user event in upstream `BioReactor.c`,
+   `event out_files_initial(t=0; ...)`, not qcc-generated boilerplate as
+   first assumed) → `fopen("Data_all/...", "wb")` → **`NULL`** (directory
+   doesn't exist) → the next line's `fprintf` to a null `FILE*` segfaults.
+   Upstream's own `BioReactor.sh` does `mkdir -p Data_all Data_specific
+   Fig_vor Fig_vol Fig_tr Fig_oxy` before running — I never did, in any of
+   this session's test harnesses. Purely a missing-directory bug in my own
+   test setup.
+2. After creating the directories, a second crash (`SIGFPE`, not `SIGSEGV`
+   — needed to add that signal to the handler too) resolved to `vof_2`
+   (`henry_oxy2.h:61`): `double a = c[]/(f[]*c.alpha + (1.-f[]));`. Root
+   cause: my earlier "rule out tracer/oxygen" test (`TRACER=0`, `OXYGEN=0`)
+   was **invalid**. Upstream's `stracers = {c,oxy,c1,c2,c3}` and this vof
+   loop are unconditional — no `#if TRACER` guard — but `c.alpha` is only
+   ASSIGNED inside an `#if TRACER {...} #endif` block in `main()`. With
+   `TRACER=0`, that assignment is compiled out, `c.alpha` stays at its
+   zero default, and the denominator becomes exactly `1-f` — zero in every
+   pure-liquid cell — `0/0` → `SIGFPE` under Basilisk's FE-trap. That
+   "refuted, ruled out tracer/oxygen" conclusion from earlier this session
+   was never actually valid; it was testing a self-inflicted div-by-zero,
+   not "no tracers."
+3. With both fixed AND upstream's real defaults restored
+   (`EMBED=1,OXYGEN=1,TRACER=1`), **upstream's actual code runs cleanly** —
+   confirmed past 6000+ iterations, `t>12` (of a truncated `t_end=24`),
+   zero crashes, in a build that ALSO still had the `q.embed_flux=NULL` fix
+   applied (necessary independent of the above two -- see next entry --
+   uninitialized struct field, real bug, unrelated to directories/flags).
+
+**Per explicit instruction ("minimally modified... don't poison the well"):**
+rebuilt from a fresh copy of the real upstream `BioReactor.c`/`henry_oxy2.h`
+with ONLY four changes, each documented in-place and verified by `diff`
+against the untouched upstream files to contain nothing else:
+- `L0 = 1.[0]; DT = HUGE[0];` (was `L0 = LL;`) — dimensional-annotation
+  compat patch only (project commit `8d6ae01`), value unchanged (`LL`=1.0,
+  `HUGE` = upstream's own implicit unbounded default).
+- `henry_oxy2.h` `set_prolongation`/`set_restriction` API rename (same
+  commit) — API surface only, `.dirty` was removed from Basilisk's
+  `_Attributes` in the version this project compiles against.
+- `q.embed_flux = NULL;` — the one substantive fix, necessary for the code
+  to run at all (see above), not a physics change (initializes a struct
+  field to the value its very next use already assumes).
+- `t_end` truncated 250.0→24.0 — does not touch the simulated equations,
+  only how long the (identical, deterministic) run continues past the
+  `t/T_p=29-31` window this test needs.
+No debug prints, no signal handlers, no local Basilisk-header overrides in
+this version — those were legitimate for crash bisection but have no place
+in the file actually used for the reported comparison number. Compiled
+against the real, unmodified Basilisk headers (no `-I.` shadowing).
+Running now (`/oscar/scratch/eaguerov/tmp/kim_upstream_clean/run_test/`,
+`BioReactor_clean`, pid `3971111`) alongside the earlier debug-instrumented
+build (pid `3946838`, further along, kept only as a same-physics
+cross-check since debug fprintf/signal-handler code cannot affect any
+computed field). **Velocity comparison number pending — see next entry
+once both finish.**
+
+---
+
 ## 2026-07-28 (session 2) — Bisecting the velocity mismatch by literal reversion, and a blocked attempt at running raw upstream
 
 **Method shift, per direct feedback:** rather than reasoning about whether
