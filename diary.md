@@ -84,21 +84,43 @@ Basilisk build is the open question job `4356316` will answer — do not
 treat the "Basilisk-version-drift ruled out" claim below as settled until
 that result is in.
 
-**Tentative answer to "why can't we reproduce Kim et al.'s results,"
-pending the 2025-Basilisk confirmation:** it is not this project's
-modifications (ruled out repeatedly, term-by-term, this whole session).
-It is not sampling/aliasing (ruled out by fixing sampling on both this
-run and our own fork's runs). It is not the execution environment.
-Whether it's a Basilisk-version drift between 2025 and 2026, or something
-deeper in Kim et al.'s own repository/figure-generation process, is what
-the pending 2025-Basilisk run (job `4356316`) will actually decide. If
-that run ALSO shows a large peak (not ~0.8), the remaining open
-possibilities are outside what source-code archaeology can resolve:
-either the published figure was generated from a different run/config
-than what's in the public `DriverCodes` repository, or there is a
+**RESOLVED — job `4356316` (period-correct 2025-Basilisk, properly
+fine-sampled) result:**
+
+    ux_liq_rms/U_bio at t/T_p=[29,31]: peak = 9.4169 (vs. 9.4366 on
+    2026-Basilisk -- agree to the 3rd significant figure). Full run
+    (t/T_p up to 202): max 9.5502, n=6011 samples.
+
+**Basilisk-version drift is definitively ruled out.** Kim et al.'s own
+literal driver code, compiled against the actual Basilisk snapshot from
+one day before they uploaded it, with properly resolved sampling, gives
+essentially the identical large peak (~9.4) as it does on the current
+2026 install. This is now a fully settled, three-way-confirmed number:
+our own fork (5.34), upstream on 2026 Basilisk (9.44), upstream on
+2025-era Basilisk (9.42) — all in the same regime, all ~6-12x above Kim
+et al.'s own published Fig. 13a / Appendix A value of ~0.1-0.8, at the
+exact same condition (theta=7deg, f_b=32.5rpm), using the exact metric
+their own paper text specifies (`u_x,rms` on the liquid phase, in the
+non-inertial frame, over `t/T_p=29-31`).
+
+**Final answer to "why can't we reproduce Kim et al.'s results":** it is
+not this project's modifications (ruled out repeatedly, term-by-term).
+It is not sampling/aliasing (ruled out by fixing sampling on every run
+compared). It is not the execution environment. It is not a Basilisk
+version drift between 2025 and 2026 (ruled out directly, just now, by
+building and running the actual period-correct compiler). **Kim et al.'s
+own published driver code, run on their own era's toolchain, does not
+reproduce their own published figure.** The remaining open possibilities
+are outside what source-code archaeology can resolve: either the
+published figure was generated from a different run/configuration than
+what's in the public `DriverCodes` repository, or there is a
 misunderstanding of the figure's actual normalization/axis convention
-that the paper text does not fully disambiguate. Both are now the leading
-candidates, in place of "something in our fork."
+that the paper text does not fully disambiguate (e.g. `U_b` might be a
+measured/fitted quantity in their actual analysis pipeline rather than
+the analytical formula stated in the text, even though that formula
+checks out algebraically against everything else). Both are now the
+leading candidates, in place of "something in our fork" or "something in
+Basilisk's evolution" — both of which are now closed.
 
 ---
 
