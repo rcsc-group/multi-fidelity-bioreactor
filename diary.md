@@ -10,6 +10,42 @@ hashes exactly, not "the run from earlier."
 
 ---
 
+## 2026-07-28 (session 3, continued yet further still, part 2) — grid
+resolution RULED OUT as the source of the ~11.8x amplitude gap.
+
+**Hypothesis:** our quick test builds use `NN=64` (uniform grid, `AMR=0`
+by default), while Kim's paper explicitly states `n_L=2^10=1024` for this
+exact condition (θ=7°, 32.5rpm) — a 16x coarser grid per direction.
+Under-resolved VOF two-phase flow is a well-known source of spurious
+inflated velocities near the interface, so this seemed like a strong
+candidate for a resolution-independent-looking-like-real-physics bug.
+
+**Test:** built `NN=128` (one line changed, documented inline;
+`/oscar/scratch/eaguerov/tmp/kim_res_128/`, binary `BioReactor_res128`,
+job 4362964, killed after t=45.7, well past the t/T_p=[29,31] window).
+
+**Result** (`check_res128.py`):
+```
+NN=64  : ux_rms/U_b peak = 9.4366,  ux_savg/U_b amplitude = 5.9523
+NN=128 : ux_rms/U_b peak = 9.3197,  ux_savg/U_b amplitude = 5.9308
+```
+<2% change between NN=64 and NN=128 — **already grid-converged at NN=64**.
+**Hypothesis falsified: this is not a resolution artifact.**
+
+**Status:** since the amplitude ratio is (a) consistent across two
+independently-computed statistics, (b) confirmed against two different
+published figures, and (c) insensitive to a 4x increase in cell count,
+the remaining most likely explanation is a genuine physical-parameter
+mismatch (fluid properties feeding directly into the solver's effective
+Re/We — not just the diagnostic dimensionless-number prints) rather than
+a numerical or normalization-formula bug. Next step: verify `rho1, rho2,
+mu1, mu2` (the actual values consumed by the two-phase solver) against
+Table 1's stated water/air properties, not just the `Re_w/Re_a/We_w`
+bookkeeping variables which may be computed independently of what the
+solver actually uses.
+
+---
+
 ## 2026-07-28 (session 3, continued yet further still) — "net drift" mystery
 CLOSED (statistics artifact, not physics), amplitude gap now DOUBLY
 CONFIRMED via an independent quantity.
