@@ -10,6 +10,44 @@ hashes exactly, not "the run from earlier."
 
 ---
 
+## 2026-07-28 (session 3, continued yet further still, part 3) — physical
+parameters, dimensionless numbers, and ramp timing ALL checked out; no
+further cheap hypotheses left to falsify via source-code reading alone.
+
+Checked, for the exact condition under test (θ=7°, f_b=32.5rpm,
+L_bio=0.25):
+- `rho_w, rho_a, mu_w, mu_a, grav, sigma` in `BioReactor.c:114-119` match
+  Table 1 of the paper exactly (`Main.tex:325-368`).
+- `Ly=0.286` in code vs `β_b=0.285` in the paper text — a <0.4% difference,
+  clearly not the source of an ~11.8x gap.
+- Computed `Re_w = rho_w*U_bio*L_bio/mu_w = 20560`, `We_w =
+  rho_w*U_bio^2*L_bio/sigma = 23.2`, `Fr = U_bio/sqrt(g*L_bio) = 0.053` —
+  all three fall inside the paper's stated ranges for the full parameter
+  sweep (`Re_w: 9.5e3-2.4e4`, `We_w: 5-31`, `Fr: 0.024-0.061`,
+  `Main.tex:379-422`). `mu1=1/Re_w`, `f.sigma=1/We_w` are what the solver
+  actually consumes (`BioReactor.c:222,224`), not just diagnostic prints
+  — so this isn't a "computed but unused" false confirmation.
+- `t_change_st = t_change/T_bio = 30/3.0398 = 9.869` (nondimensional
+  units) — our sampling window `t/T_p=[29,31]` corresponds to raw
+  `t∈[17.6,18.8]`, well past the ramp-up. Not a transient-contamination
+  issue.
+
+**Status:** every mechanism reachable by reading the driver code and
+comparing against the paper's stated formulas/values has now been
+checked and is consistent. The ~11.8x amplitude gap (confirmed via two
+independent statistics, two independent published figures, and shown
+resolution-independent up to 2x grid refinement) remains unexplained by
+anything visible in the C source. Remaining candidates, in order of
+cost/likelihood: (1) run at the paper's actual published resolution
+(n_L=2^10=1024, ~120 CPU-hours per the paper) to rule out a much larger,
+qualitatively different resolution effect not visible in the NN=64→128
+step (unlikely given the convergence trend, but not yet eliminated with
+certainty); (2) the discrepancy may live entirely in Kim et al.'s own
+plotting/post-processing scripts, which are NOT part of the public
+`DriverCodes` repo and are therefore unverifiable from here.
+
+---
+
 ## 2026-07-28 (session 3, continued yet further still, part 2) — grid
 resolution RULED OUT as the source of the ~11.8x amplitude gap.
 
