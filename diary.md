@@ -10,6 +10,66 @@ hashes exactly, not "the run from earlier."
 
 ---
 
+## 2026-07-28 (session 3, continued yet further still) — "net drift" mystery
+CLOSED (statistics artifact, not physics), amplitude gap now DOUBLY
+CONFIRMED via an independent quantity.
+
+**Hypothesis:** `normf()`'s `avg` field is not a signed spatial mean.
+
+**Evidence:** `/oscar/data/dharri15/eaguerov/basilisk/src/utils.h:138-153`,
+inside `normf()`: `double v = fabs(f[]); ... avg += dv()*v;`. The `avg`
+column is volume-averaged **mean absolute value**, not the signed mean
+Kim's `Fig_simul_setup.pdf` plots (`⟨u_x'⟩/U_b`, which crosses zero by
+construction). Note `rms += dv()*sq(v)` is unaffected by the fabs (squaring
+removes sign), so the RMS columns were never in question. Upstream's own
+`event normcal` (`kim_upstream_clean/BioReactor.c:529`) calls
+`normf(ux_liq).avg` directly for the `ux_liq_avg` output column — so
+upstream's own `normf.dat` has this same property; Kim's paper figure was
+necessarily generated some other way, not by directly plotting that column.
+
+**Falsifiable test:** added a true signed volume average via
+`statsf2(ux_liq).sum / statsf2(ux_liq).volume` (`statsf2` uses a raw signed
+`sum += dv()*f[]`, already used elsewhere in upstream's own code for
+`f_liq_sum`, so this isn't a new/foreign statistic — just applying an
+existing upstream utility to a different field). Debug-only build (NOT
+part of the tracked minimal-diff builds): `/oscar/scratch/eaguerov/tmp/
+kim_signedavg_test/` (copy of `kim_upstream_clean`, one instrumentation
+block added, clearly marked `[DEBUG TEST -- not part of the minimal-change
+build]`). Job 4362869 (2026-Basilisk, `i_norm=10`), killed after t=24.3
+(past our target window; `normcal` has no `t<=t_end` bound, same unbounded-
+event issue noted previously). Data: `run_test/normf_snapshot.dat`.
+
+**Result** (`check_signed_avg.py`, t/T_p=[29,31], n=60 points):
+```
+normf().avg (fabs-based) ux/U_b: min 0.9494 max 5.9608  (always positive: True)
+TRUE SIGNED ux_savg/U_b:          min -5.9523 max 5.9137  (crosses zero: True)
+TRUE SIGNED uy_savg/U_b:          min -0.4365 max 0.4557
+```
+The true signed average **does** oscillate around zero, matching the
+qualitative shape of `Fig_simul_setup.pdf`. **Net-drift mystery closed —
+it was a statistics-function definition mismatch, not a physics bug.**
+
+**But:** the properly-computed signed amplitude is ~±5.9 in `U_bio` units,
+while Kim's own figure for the identical condition shows ~±0.5 — an
+**~11.8x ratio**. This is the SAME ratio (within noise) as the ~11.75x
+found earlier comparing `ux_rms/U_b` against `Fig_append1.pdf`. Two
+independently-computed quantities (signed avg via `statsf2`, RMS via
+`normf`) from two different published figures both show the same ~11.8x
+scale factor. This is much stronger evidence of one consistent,
+systematic scale/normalization discrepancy than either comparison alone —
+not two unrelated bugs, and not a red herring.
+
+**Status: amplitude gap re-confirmed and strengthened, root cause of the
+~11.8x factor still open.** Next step: since the ratio is consistent
+across two independently-defined statistics, the discrepancy is most
+likely in a single scalar quantity common to both — a candidate to check
+next is whether `U_bio` (or an equivalent reference velocity) as computed
+in the driver code matches whatever reference velocity Kim actually used
+to non-dimensionalize the PAPER's figures (they may not be the same
+formula/constant, independent of any code bug at all).
+
+---
+
 ## 2026-07-28 (session 3, continued yet further) — REOPENED: the "12x
 discrepancy, definitively confirmed" conclusion from the previous entries
 may be wrong in kind, not just magnitude. Found via user pushback
