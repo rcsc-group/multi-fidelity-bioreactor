@@ -10,6 +10,51 @@ hashes exactly, not "the run from earlier."
 
 ---
 
+## 2026-07-29 — grid convergence CONCLUSIVELY confirmed at n_L=2^8 (level 8),
+the resolution where Kim's own Fig_append1 convergence study looks
+near-converged. Amplitude gap is not a resolution artifact at any scale
+checked so far.
+
+User requested this specific level as a cheaper intermediate before
+committing to the full published n_L=2^10=1024 (~120 CPU-hrs).
+
+**Build:** `/oscar/scratch/eaguerov/tmp/kim_res_256/`, `NN=256`
+(one-line change from `kim_res_128`, documented inline), binary
+`BioReactor_res256`.
+
+**Run history (HPC note for future self):** first submission (job
+4370537, 6h/12cpu) hit the walltime limit at `t=15.49` (`t/T_p≈25.5`),
+just short of the `[29,31]` window — this build has no checkpoint/restart
+capability (`#define DUMP 0`, and the one dump event fires only at
+`t=t_dump≈48.6`, never reached). Considered adding a minimal
+`dump()`/`restore()` checkpoint but decided against it for a one-off
+diagnostic build, given this project's own history of subtle checkpoint-
+restart correctness bugs (`19c3a31`) — not worth the risk for a throwaway
+test. Resubmitted instead with a longer walltime (job 4375858, 14h/16cpu),
+which reached `t=18.945` (`t/T_p=31.2`) in 5h52m.
+
+**Result** (`check_res256.py`, t/T_p=[29,31], n=258 points):
+```
+NN=64  : ux_rms/U_b peak = 9.4366,  ux_savg/U_b amplitude = 5.9523
+NN=128 : ux_rms/U_b peak = 9.3197,  ux_savg/U_b amplitude = 5.9308
+NN=256 : ux_rms/U_b peak = 9.4256,  ux_savg/U_b amplitude = 5.9768
+Kim et al. (target): ux_rms/U_b peak ~ 0.8,  ux_savg/U_b amplitude ~ 0.5
+```
+<1.5% spread across a 16x range in cell count (NN=64 to NN=256), non-
+monotonic (no trend toward Kim's target in either direction). **Grid
+resolution is conclusively not the explanation for the ~11.8x amplitude
+gap, even at the resolution level Kim's own Appendix A convergence figure
+treats as visually converged.**
+
+**Status:** with resolution ruled out at three points spanning the range
+Kim's own paper uses to argue convergence, the only resolution-related
+possibility left is a qualitatively different behavior specifically at
+n_L=1024 (unlikely given the flat trend, and expensive to test directly).
+The amplitude gap increasingly looks like it originates outside anything
+checkable from the driver code + paper text alone.
+
+---
+
 ## 2026-07-28 (session 3, continued yet further still, part 3) — physical
 parameters, dimensionless numbers, and ramp timing ALL checked out; no
 further cheap hypotheses left to falsify via source-code reading alone.
