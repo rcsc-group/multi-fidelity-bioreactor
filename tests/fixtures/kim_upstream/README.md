@@ -34,9 +34,9 @@ fork intentionally differs from upstream in several documented ways
 `diary.md`, 2026-07-30 entries), so a discrepancy here is expected, not a
 bug. It exists purely so a large, unexpected *change* in that discrepancy
 (e.g. from a future refactor) is visible to whoever runs it, instead of
-going unnoticed. Note this test is `hpc`-marked and does NOT run in
-GitHub Actions CI (cloud-hosted, no OSCAR access) — invoke it manually via
-`pytest -m hpc` on an OSCAR compute node.
+going unnoticed. This test is `medium`-marked and runs automatically in
+GitHub Actions CI (`medium-tests` job) — Basilisk is built from source
+there already, so no OSCAR access is needed.
 
 **Do not edit these files to "fix" the discrepancy against our own fork.**
 If Kim's own code needs a change to keep compiling against a newer

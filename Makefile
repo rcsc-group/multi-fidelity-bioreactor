@@ -144,7 +144,8 @@ build-mpi: $(BUILD_DIR)/BioReactor-mpi
 
 $(BUILD_DIR)/BioReactor-mpi: $(SIM_SRC) $(SRC_HEADERS)
 	@mkdir -p $(BUILD_DIR)
-	module load openmpi && \
+	if command -v mpicc >/dev/null 2>&1; then :; \
+	elif command -v module >/dev/null 2>&1; then module load openmpi; fi && \
 	CC99='mpicc -std=c99 -D_XOPEN_SOURCE=700 -D_GNU_SOURCE=1' \
 	$(QCC) $(CFLAGS) -D_MPI=1 $< -o $@ -L$(BASILISK)/gl -lglutils -lfb_tiny -lm
 
@@ -155,7 +156,8 @@ build-mpi-video: $(BUILD_DIR)/BioReactor-mpi-video
 
 $(BUILD_DIR)/BioReactor-mpi-video: $(SIM_SRC) $(SRC_HEADERS)
 	@mkdir -p $(BUILD_DIR)
-	module load openmpi && \
+	if command -v mpicc >/dev/null 2>&1; then :; \
+	elif command -v module >/dev/null 2>&1; then module load openmpi; fi && \
 	CC99='mpicc -std=c99 -D_XOPEN_SOURCE=700 -D_GNU_SOURCE=1' \
 	$(QCC) $(CFLAGS) -D_MPI=1 -DVIDEOS=1 $< -o $@ -L$(BASILISK)/gl -lglutils -lfb_tiny -lm
 
