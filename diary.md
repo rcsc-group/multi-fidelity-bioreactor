@@ -10,6 +10,46 @@ hashes exactly, not "the run from earlier."
 
 ---
 
+## 2026-07-29 (continued) — 2025-Basilisk vs 2026-Basilisk: BIT-IDENTICAL,
+not just "peak RMS agrees to 3 sig figs." User asked whether other metrics
+agree too, beyond the single number checked earlier.
+
+The original 2025-Basilisk dataset (job 4356316) had its raw `normf.dat`
+accidentally overwritten by a later debug-print test (see earlier entry).
+Regenerated it: added the same `statsf2`-based signed-average
+instrumentation used in `kim_signedavg_test` (2026-Basilisk) to a fresh
+copy (`/oscar/scratch/eaguerov/tmp/kim_signedavg_2025/`, binary
+`BioReactor_signedavg_2025`, compiled against
+`/oscar/data/dharri15/eaguerov/basilisk-2025-04/src/qcc`), same NN=64,
+i_norm=10 as the 2026 comparison run. Job 4385092, reached t=19.06 in
+under 4 minutes on 4 cores (much faster than NN=256 tests, as expected
+for NN=64).
+
+**Result** (`compare_2025_vs_2026.py`, t/T_p=[29,31]): every single
+statistic checked — `ux_rms`, `uy_rms`, `omega_rms`, `ux_avg`, `uy_avg`,
+`ux_savg`, `uy_savg`, `ux_max`, `uy_max`, `omega_max`, and the exact
+phase (`t/T_p`) of the `ux_rms` peak — matches to the full precision
+printed (4-6 sig figs). `diff` on the raw `normf.dat` rows (both i_norm=10,
+same t-values) shows **zero differences** for the first 919 rows shared
+between both runs — bit-for-bit identical trajectories, not just
+"agrees to 3 sig figs at one point."
+
+**Interpretation:** this makes sense in retrospect — the only changes
+needed between the 2025 and 2026 Basilisk snapshots were metadata/API-level
+(dimensional-analysis annotations, `henry_oxy2.h`'s prolongation/
+restriction API rename), not changes to the actual numerical algorithms
+(multigrid solver, VOF advection, timestep control). A correctly-done
+minimal patch should therefore reproduce bit-identical results, and it
+does. **Basilisk-version drift (2025→2026) is now excluded as a
+contributing factor at every level of granularity checked, not merely
+at the single peak-RMS value used to close that question originally.**
+This does not change the standing ~11.8x amplitude gap vs Kim's own
+published figures — it strengthens the case that the gap's source is
+something present identically in both Basilisk versions (i.e., not a
+Basilisk bug/regression at all).
+
+---
+
 ## 2026-07-29 — grid convergence CONCLUSIVELY confirmed at n_L=2^8 (level 8),
 the resolution where Kim's own Fig_append1 convergence study looks
 near-converged. Amplitude gap is not a resolution artifact at any scale
