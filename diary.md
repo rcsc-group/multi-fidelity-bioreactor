@@ -108,17 +108,53 @@ t=18.08, adjacent to the t/T_p=29-31 peak-ux_rms window).
   is a property of the embedded-boundary treatment / geometry, present
   identically in both Basilisk snapshots, not a version-specific bug.
 
-**Status: strong root-cause candidate, not yet a fix.** Next steps to
-consider: (1) quantify the effect precisely -- recompute ux_rms with
-cut cells below some cs threshold excluded/flagged, see how much of the
-gap that recovers; (2) check whether this is inherent to the superellipse
-mask shape/alignment or specific to certain wall locations; (3) look for
-an existing embed.h small-cell stabilization option in Basilisk not
-currently enabled. Have NOT yet determined whether Kim et al.'s own
-published results are immune to this (their own code has the identical
-mechanism, so unless their actual production runs happened to avoid bad
-cut-cell fractions at their specific resolution/geometry, they may share
-this issue too -- untested).
+**UPDATE (same session, continued) — cut-cell hypothesis FALSIFIED by
+direct quantification.** Recomputing the cs-weighted volume-averaged RMS
+with cut cells excluded (cs<0.99, cs<0.9, cs<0.5 all identical: n=128
+cells excluded each time) changed ux_rms/U_b by <1% (9.4162→9.3740 at
+t=17.01). The cut-cell artifact is real (see above) but its properly
+cs-weighted volume contribution is far too small to explain the gap.
+
+**Went further: the excess velocity is a genuine BULK, DOMAIN-WIDE
+phenomenon, not a boundary effect at all.** Excluding a progressively
+thicker near-wall band (top+bottom) shows the anomaly extends deep into
+fully-valid (cs=1) interior cells: excluding 8 cell-rows (~25% of total
+domain height, both walls) only drops ux_rms/U_b from 9.42 to 7.41 --
+nowhere near closing the gap to 0.8. Examining the full 2D field directly:
+at a high-ux_rms instant (t=17.01), the WATER layer (f=1, y<0) shows a
+smooth, wall-to-wall horizontal flow -- near zero at the left/right domain
+edges, peaking (|ux/U_b| up to ~25) near the center -- and the AIR layer
+immediately above it (f=0, y>0) shows a similarly large flow of the
+OPPOSITE sign. This a coherent, structured, whole-domain circulation
+pattern, not noise or a discretization artifact confined to any region.
+
+**Tested the two-phase-VOF "spurious current" hypothesis (large density-
+ratio interfaces are a well-documented source of unphysical velocity via
+imbalanced surface-tension/CSF discretization, independent of true flow
+scale) -- FALSIFIED.** Set `f.sigma=0` (surface tension off entirely,
+`/oscar/scratch/eaguerov/tmp/kim_nosigma_test/`, one-line debug change)
+and reran the identical condition: ux_rms/U_b peak in [29,31] = 9.4487,
+statistically identical to the σ=1/We_w baseline (9.4366, <0.2%
+difference). Surface tension is not a meaningful factor at all.
+
+**Status: this large bulk velocity is now confirmed NOT explained by any
+of: grid resolution (NN=64/128/256), cut cells, near-wall/boundary
+effects (up to 25% of domain height excluded), Basilisk version
+(2025 vs 2026 bit-identical), MPI, checkpoint-restart, or surface
+tension. It also cannot be a normalization/definition artifact (the
+signed-average vs RMS vs normf().avg distinctions were all resolved
+earlier and don't change this). What remains: the acceleration/pseudo-
+force terms themselves (structurally checked against the paper's
+formulas earlier, but not yet verified numerically against real
+simulation data at a problem timestep), viscosity/Reynolds-number-
+dependent solver behavior (Re_w~20560 -- matches the paper's stated range,
+but a genuine laminar-vs-transitional discretization sensitivity hasn't
+been ruled out), and timestep/CFL-size effects (not yet tested at all).
+Also still open: whether this same large-bulk-velocity phenomenon is
+present in Kim et al.'s own actual simulations (their code has the
+identical formulation) but simply not visible in their reported figure
+for a reason specific to their own post-processing/analysis pipeline,
+which we cannot access.
 
 ---
 
