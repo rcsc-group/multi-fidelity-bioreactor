@@ -10,6 +10,76 @@ hashes exactly, not "the run from earlier."
 
 ---
 
+## 2026-07-30 — Kim-upstream-on-2026-Basilisk vs OUR OWN project fork
+(`src/BioReactor.c`) on 2026-Basilisk. User asked specifically about the
+MPI + checkpointing axis. Answer: MPI and checkpoint-restart are BOTH
+cleared (negligible effect); the project's own fork DOES differ
+meaningfully from the literal upstream reproduction, but for reasons
+unrelated to MPI/checkpointing — real, already-documented physics/geometry
+changes.
+
+**Setup:** condition held fixed at θ=7°, 32.5rpm, fidelity 6 (NN=64,
+matching `kim_upstream_clean`'s resolution) throughout. Built via the
+project's own `Makefile` (`make build`, `make build-mpi`) against the
+persistent 2026 Basilisk install — same qcc as every other 2026-Basilisk
+test this investigation has used. Binary staleness checked (memory:
+binary-deployment-preflight) — `src/BioReactor.c`'s last commit postdated
+`build/BioReactor`'s mtime by ~1 min, so forced a rebuild before using it.
+
+**Step 1 — fresh start, serial** (no MPI, `t_checkpoint=0`; params:
+`/oscar/scratch/eaguerov/tmp/ourversion_fresh_serial/params.json`, fidelity
+6, geometry a=0.25/b=0.0715/n=8, fill_level=0.5, same θ/RPM). Result
+(t/T_p=[29,31]): `ux_rms/U_b peak = 5.4229`, `uy_rms/U_b peak = 3.0620`.
+**This already differs from `kim_upstream_clean`'s 9.4366 by ~1.74x** —
+a REAL discrepancy between "Kim upstream, minimal-diff" and "our own
+fork," present before MPI or checkpointing enter the picture at all.
+Also confirms a structural difference: `Omega_liq_vol` (the normf() liquid
+volume) = 0.572, exactly 2x upstream's 0.286 — same 2x seen in this
+project's actual production run `f7f8140e` (0.568, matches to rounding),
+so it's a systematic feature of this fork's geometry/fill parameterization,
+not a fluke of one run. Candidate contributors, from the earlier
+`diff` against `kim_upstream_clean` (see 2026-07-28 entries): shorter ramp
+(`N_RAMP_CYCLES=3` → `t_change_st≈1.82`, vs Kim's own `t_change=30s` →
+`t_change_st≈9.87` for this condition), superellipse tank shape
+(`geometry.n=8`) vs upstream's literal rectangle, and the 2x liquid-volume
+convention. None of these were isolated individually here — this entry
+only establishes that the fork-vs-upstream gap exists and is NOT explained
+by MPI/checkpointing (below).
+
+**Step 2 — MPI, 8 ranks, same params, no checkpoint**
+(`/oscar/scratch/eaguerov/tmp/ourversion_fresh_mpi/`, `make build-mpi`,
+`srun --mpi=pmix`). Result: `ux_rms/U_b peak = 5.4337`, `uy_rms/U_b peak =
+3.0771` — within ~0.2% of the serial run. **MPI domain decomposition
+cleared**: matches the ~0.2%-level floating-point reduction-order noise
+already seen elsewhere in this investigation (e.g. grid-convergence
+spread), not a physics-level discrepancy.
+
+**Step 3 — checkpoint-restart, MPI, same condition across the boundary.**
+Two segments: seg1 (`ourversion_ckpt_seg1/`, fresh start, `t_end=10`,
+checkpoint written at `t=10.32`) → seg2 (`ourversion_ckpt_seg2/`, restart
+from that checkpoint, `t_checkpoint=10.32`, `omega_b_prev=omega_b` and
+`theta_max_prev=theta_max` set EQUAL to the current values so the fork's
+own smooth-step continuity ramp — `(1-alpha)*prev + alpha*current`,
+confirmed in `params_read.h` that `*_prev` JSON keys are actually parsed,
+not silently defaulting to 0 which would have faked a second ramp-from-
+zero — is a no-op; this isolates pure checkpoint mechanics from any
+condition change). Result (t/T_p=[29,31]): `ux_rms/U_b peak = 5.5206`,
+`uy_rms/U_b peak = 3.1068` — within 1.6%/1.0% of the uninterrupted MPI
+run (step 2). **Checkpoint-restart cleared**: same order of magnitude as
+background numerical noise (grid-convergence spread was also ~1.5%), not
+a smoking gun.
+
+**Status:** MPI and checkpoint-restart are both ruled out as contributors
+to any of the discrepancies investigated so far. The fork-vs-upstream
+~1.74x gap (step 1) is real but unrelated to infrastructure — it's a
+downstream consequence of already-documented, intentional physics/geometry
+changes in this project's fork. Neither number (5.4x nor 9.4x) is close
+to Kim's own published ~0.8x target, so this does not resolve the
+standing amplitude-gap investigation — it answers a narrower, specific
+question (does our infrastructure introduce error?) with "no."
+
+---
+
 ## 2026-07-29 (continued) — 2025-Basilisk vs 2026-Basilisk: BIT-IDENTICAL,
 not just "peak RMS agrees to 3 sig figs." User asked whether other metrics
 agree too, beyond the single number checked earlier.
