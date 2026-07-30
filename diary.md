@@ -46,6 +46,64 @@ Invoke manually via `pytest -m hpc` on an OSCAR compute node.
 
 ---
 
+## 2026-07-30 (continued) — FIRST-PRINCIPLES SANITY CHECK (user-suggested):
+Kim et al.'s number is physically correct; ours is the anomaly. This
+reframes the whole investigation.
+
+**Motivation:** after several numerical-hygiene hypotheses each moved
+ux_rms by only single-digit percentages (cut cells, near-wall bands,
+surface tension), the user pushed back: derive an independent estimate
+from pure physics, given only the input parameters, and see which of
+{Kim's paper, our simulation} it agrees with. This does not require
+trusting either simulation.
+
+**Derivation:** already established (2026-07-30 earlier entries) that
+this regime is quasi-static (sub-resonant) and that the interface tilts
+as a PLANE, height η(x,t) = x·tan(Θ(t)) -- directly confirmed in raw
+simulation snapshots. For a shallow liquid layer of depth H, depth-
+integrated mass conservation gives H·∂u/∂x = -∂η/∂t = -x·Θ̇(t).
+Integrating with the no-penetration condition u=0 at both walls
+(x=±L/2) gives a PARABOLIC profile:
+
+    u(x,t) = (Θ̇(t)/2H) · (L²/4 - x²)
+
+-- zero at both walls, maximum at the tank center. This exact shape (zero
+at x=±0.5, peak near x=0) is what the raw `kim_upstream_clean` field
+snapshot showed independently (see cut-cell investigation above), which
+is a good consistency check on the model itself. Peak velocity, at
+maximum angular velocity Θ̇_max = ω_b·θ_max (θ=0 crossing):
+
+    u_max = ω_b·θ_max·L² / (8H)
+
+**Numbers** (ω_b=3.4034 rad/s [32.5rpm], θ_max=0.1222 rad [7°], L=0.25m,
+H=0.0715·0.5=0.03575m [fill_level=0.5]):
+
+    u_max = 3.4034 × 0.1222 × 0.0625 / (8×0.03575) = 0.0909 m/s
+    u_max / U_bio = 0.0909 / 0.0822 = 1.10
+
+**Result: this first-principles estimate (u_max/U_b ≈ 1.1) matches Kim et
+al.'s reported peak (~0.8) to within ~30% -- well within the slop of the
+shallow-water/quasi-static approximations used (neglecting sec²(θ),
+non-uniform depth, etc.). It is ~8.5x SMALLER than our simulation's
+reported peak (~9.4).**
+
+**Conclusion: Kim et al.'s published value is physically sane. Our
+simulation (and by extension `kim_upstream_clean`, a near-literal
+reproduction of their own driver code) is producing a peak velocity
+roughly 8-9x larger than basic kinematics predicts.** This is a much
+stronger and more useful conclusion than "we can't reproduce the paper"
+-- it says the discrepancy is very unlikely to be a normalization/
+methodology mismatch between paper and code, and is overwhelmingly
+likely a genuine numerical or implementation bug producing excess
+velocity, on our side (or a latent bug in Kim's own published code that
+their real production runs happen not to trigger -- not yet
+distinguished). Refocuses the investigation: stop chasing hypotheses that
+only move the number by single-digit percentages (cut cells, near-wall
+bands, surface tension all already ruled out on exactly this basis) and
+look for a mechanism capable of an order-of-magnitude effect.
+
+---
+
 ## 2026-07-30 (continued, major finding) — ROOT CAUSE CANDIDATE FOUND: the
 extreme ux_rms values are dominated by a small-cut-cell instability at the
 embedded tank boundary, not genuine bulk flow.
