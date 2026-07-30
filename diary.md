@@ -46,6 +46,82 @@ Invoke manually via `pytest -m hpc` on an OSCAR compute node.
 
 ---
 
+## 2026-07-30 (continued, major finding) — ROOT CAUSE CANDIDATE FOUND: the
+extreme ux_rms values are dominated by a small-cut-cell instability at the
+embedded tank boundary, not genuine bulk flow.
+
+**Motivation:** a side investigation into why the free surface "looks flat"
+(user observation) established this flow regime is sub-resonant/quasi-
+static (forcing ~3.93 rad/s vs estimated first-sloshing-mode natural
+frequency ~7.2 rad/s for this geometry) — meaning genuine physical
+velocities SHOULD be modest, not ~9-14x U_bio. That contradiction (quasi-
+static regime, but huge reported velocities) motivated actually looking at
+the raw 2D velocity field instead of trusting the aggregate ux_rms/U_b
+statistic any further.
+
+**Method:** `kim_upstream_clean` (2026-Basilisk, minimal-diff Kim
+reproduction) already writes full per-cell snapshots to `Data_all/` via
+its own upstream `out_files_initial` event (x, y, ux, uy, vol_frac(f),
+tracer, solid(cs), ...) every `dt_file≈1.06` — no new instrumentation
+needed. Used the existing completed run
+(`kim_upstream_clean/run_test_fine/Data_all/Data_all_64_18.0761_0.txt`,
+t=18.08, adjacent to the t/T_p=29-31 peak-ux_rms window).
+
+**Finding:**
+- Global max |ux|/U_b = 49.6 sits in a PURE AIR cell (f=0) — correctly
+  excluded from `ux_liq=u.x*f` since f=0 there, so not a red herring for
+  the reported statistic, but flags that something is numerically wrong
+  in the domain generally.
+- Restricting to `ux_liq = u.x*f` (exactly what `normf()` uses): max
+  |ux_liq|/U_b = 14.05, at x=0.289, y=-0.1484, f=1.0 (pure liquid, not an
+  interface cell).
+- The top-1%-by-contribution cells to the RMS sum are 39/40 pure bulk
+  liquid (f≥0.99), only 1/40 interfacial, 0 air — the spurious signal is
+  in bulk liquid cells, not at the free surface.
+- Traced the profile at that (x, y) column: `solid[]` (Basilisk's `cs`,
+  the embedded-boundary fluid-fraction field) = 0.152 at y=-0.1484 (a
+  "cut cell" only 15.2% inside the fluid domain — the tank's bottom wall
+  cuts through this grid cell), jumping to cs=1.0 (fully fluid) at the
+  next row up. ux/U_b at that exact row sequence: **-14.05 (cs=0.152) →
+  -6.87 (cs=1.0) → -3.43 → -2.32 → ... decaying into the bulk.**
+- This is the OPPOSITE of a real no-slip boundary layer (velocity should
+  be ~0 AT the wall, increasing into the bulk) — velocity is maximal AT
+  the small cut cell and decays away from it. Classic signature of the
+  "small cut-cell" numerical instability well-documented in embedded-
+  boundary/cut-cell CFD: a cell with a small fluid-volume fraction is
+  numerically stiff and prone to spurious velocity spikes unless
+  specially stabilized (cell-merging, flux redistribution), independent
+  of overall grid resolution.
+
+**Why this explains prior findings without contradicting them:**
+- Explains the amplitude gap: `normf()`'s volume-weighted RMS is skewed
+  by these cells even after `cs`-weighting, since velocity-squared can be
+  large enough to dominate locally (~13% of ALL cells in this one
+  snapshot have |ux_liq|/U_b > 3).
+- Explains why NN=64→256 grid refinement showed no improvement
+  (2026-07-30 earlier entry): cut-cell fraction distributions are a
+  property of how the curved/superellipse-ish tank boundary intersects
+  the Cartesian grid at whatever resolution, not something that
+  systematically shrinks with more cells — a fine grid can produce
+  small-fraction cut cells just as easily as a coarse one.
+- Consistent with the 2025-vs-2026-Basilisk bit-identical finding: this
+  is a property of the embedded-boundary treatment / geometry, present
+  identically in both Basilisk snapshots, not a version-specific bug.
+
+**Status: strong root-cause candidate, not yet a fix.** Next steps to
+consider: (1) quantify the effect precisely -- recompute ux_rms with
+cut cells below some cs threshold excluded/flagged, see how much of the
+gap that recovers; (2) check whether this is inherent to the superellipse
+mask shape/alignment or specific to certain wall locations; (3) look for
+an existing embed.h small-cell stabilization option in Basilisk not
+currently enabled. Have NOT yet determined whether Kim et al.'s own
+published results are immune to this (their own code has the identical
+mechanism, so unless their actual production runs happened to avoid bad
+cut-cell fractions at their specific resolution/geometry, they may share
+this issue too -- untested).
+
+---
+
 ## 2026-07-30 — Kim-upstream-on-2026-Basilisk vs OUR OWN project fork
 (`src/BioReactor.c`) on 2026-Basilisk. User asked specifically about the
 MPI + checkpointing axis. Answer: MPI and checkpoint-restart are BOTH
