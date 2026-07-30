@@ -8,17 +8,21 @@ disagrees with a near-literal reproduction of Kim et al.'s own upstream code
 by ~1.74x (5.42 vs 9.44 in ux_rms/U_b, same condition/resolution) -- and
 manually confirmed MPI and checkpoint-restart are NOT the cause (both agree
 with the fork's own serial baseline to within ~2%). These tests turn that
-one-off manual investigation into a standing regression guard: if a future
-change to the MPI or checkpoint-restart code path silently breaks physics,
-running `pytest -m hpc` on an OSCAR compute node catches it, without being
-confused by (and without ever asserting anything about) how our fork
-compares to Kim's own code.
+one-off manual investigation into a standing regression guard, run
+automatically by CI: if a future change to the MPI or checkpoint-restart
+code path silently breaks physics, `medium-tests` catches it, without
+being confused by (and without ever asserting anything about) how our
+fork compares to Kim's own code.
 
-Note: this is NOT part of automated GitHub Actions CI -- `hpc`-marked
-tests are excluded from ci.yml (which is cloud-hosted and has no access to
-OSCAR's MPI/SLURM/persistent-Basilisk environment). Run manually via
-`pytest -m hpc tests/verification/test_mpi_checkpoint_parity.py` on an
-OSCAR compute node before trusting a change to the MPI or checkpoint code.
+CI status: marked `medium` and DOES run in GitHub Actions' `medium-tests`
+job (ci.yml installs openmpi via apt and runs `make build-mpi` before this
+suite -- there is no SLURM/module-system dependency; `make build-mpi` was
+fixed to skip `module load` when `mpicc` is already on PATH). The
+MPI-dependent tests here (`test_mpi_matches_serial`,
+`test_combined_mpi_checkpoint_vs_serial`) skip gracefully via the
+`mpi_binary` fixture if `make build-mpi` fails for any reason;
+`test_checkpoint_matches_uninterrupted` needs neither MPI nor SLURM at
+all -- it's a plain serial binary run twice.
 
 Baseline policy (explicit user decision, 2026-07-30): the MANDATORY,
 pass/fail assertions in this file compare our fork against ITSELF (serial
@@ -28,10 +32,8 @@ vendored copy of Kim's own driver code lives in
 test_kim_upstream_comparison.py; see that file's docstring for why it never
 raises.
 
-All tests here are real CFD runs (fidelity 5 = 32x32 cells, or fidelity 6
-where a checkpoint fixture is reused from another test) and are marked
-`hpc`: run manually on an OSCAR compute node via `pytest -m hpc`, not in
-GitHub Actions (see tests/conftest.py, ci.yml).
+All tests here are real CFD runs at fidelity 5 (32x32 cells) or fidelity 6
+where a checkpoint fixture is reused from another test.
 """
 from __future__ import annotations
 
@@ -95,7 +97,7 @@ def _vel_rms(run_dir: Path, params: dict) -> float:
     return _mean_post_ramp_vel_rms(load_normf(run_dir), _t_ramp_nd(params))
 
 
-@pytest.mark.hpc
+@pytest.mark.medium
 def test_mpi_matches_serial(mpi_binary, tmp_path):
     """(a) MPI must reproduce our own serial run's post-ramp velocity RMS.
 
@@ -121,7 +123,7 @@ def test_mpi_matches_serial(mpi_binary, tmp_path):
     )
 
 
-@pytest.mark.hpc
+@pytest.mark.medium
 def test_checkpoint_matches_uninterrupted(tmp_path):
     """(b) A checkpoint-restart (same condition across the boundary) must
     reproduce an uninterrupted run's post-ramp velocity RMS.
@@ -178,7 +180,7 @@ def test_checkpoint_matches_uninterrupted(tmp_path):
     )
 
 
-@pytest.mark.hpc
+@pytest.mark.medium
 def test_combined_mpi_checkpoint_vs_serial(mpi_binary, tmp_path):
     """(c) MPI + checkpoint-restart TOGETHER (the actual production
     configuration) must reproduce a plain serial/uninterrupted run's

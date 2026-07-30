@@ -70,14 +70,17 @@ jobs:
       - name: Restore/build Basilisk
         uses: ./.github/actions/setup-basilisk
 
-      - name: Install headless GL libs
-        run: sudo apt-get update && sudo apt-get install -y libgl1-mesa-dev libglu1-mesa-dev
+      - name: Install headless GL libs and OpenMPI
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgl1-mesa-dev libglu1-mesa-dev libx11-dev \
+            openmpi-bin libopenmpi-dev
 
       - name: Build BioReactor binaries
         run: |
           export BASILISK="$GITHUB_WORKSPACE/basilisk/src"
           export PATH="$BASILISK:$PATH"
-          make build build-video build-health
+          make build build-video build-health build-mpi
 
       # continue-on-error: known open issue -- test_interface_oscillates_at_rocking_frequency
       # passes reproducibly on OSCAR (incl. against this exact same Basilisk tarball, built
