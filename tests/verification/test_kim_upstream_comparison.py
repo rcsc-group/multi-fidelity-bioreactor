@@ -1,11 +1,5 @@
-"""Informational-only comparison: our fork vs a near-literal reproduction of
-Kim et al.'s own upstream driver code, at matched resolution and condition.
-
-This test NEVER asserts and NEVER fails on a numeric mismatch. It exists
-purely to surface, via a pytest warning, how far this project's fork has
-drifted from Kim et al.'s own published code -- so a large, unexpected
-*change* in that drift (e.g. introduced by a future refactor) is visible
-to a human running it, instead of going unnoticed.
+"""Regression guard: our fork vs a near-literal reproduction of Kim et
+al.'s own upstream driver code, at matched resolution and condition.
 
 CI status: marked `medium`, DOES run in GitHub Actions' `medium-tests` job
 -- Basilisk is already built from source there by `.github/actions/setup-
@@ -13,21 +7,31 @@ basilisk` (no OSCAR dependency; `_find_qcc()` below checks `$BASILISK`,
 which CI's setup-basilisk step sets, before falling back to the OSCAR
 persistent-storage install for local/manual runs).
 
-Why this is warning-only, not a pass/fail gate
------------------------------------------------
+Why this asserts against a measured BASELINE, not against Kim's absolute
+value
+-------------------------------------------------------------------------
 As of 2026-07-30 (diary.md), our fork's serial baseline and a minimal-diff
 reproduction of Kim's own code (`tests/fixtures/kim_upstream/`, see its
-README for exact provenance) disagree by ~1.74x in ux_rms/U_b at matched
-condition and resolution (fidelity 6 / NN=64) -- for real, intentional,
-already-documented reasons: a much shorter forcing ramp (3 rocking cycles
-vs. Kim's own fixed 30-second ramp), a superellipse tank cross-section vs.
-a literal rectangle, and a 2x difference in the liquid-volume convention
-used to normalize normf() output. None of that is a bug in the ordinary
-sense -- it's this project's fork intentionally diverging from Kim's setup
-for its own optimization pipeline. A hard-tolerance assert here would
-either be so loose it catches nothing, or so tight it fails today, on
-main, for reasons unrelated to code health. Use test_mpi_checkpoint_parity.py
-for the actual pass/fail regression guards.
+README for exact provenance) disagree by ~1.74x-1.8x in post-ramp velocity
+RMS at matched condition and resolution (fidelity 6 / NN=64) -- for real,
+intentional, already-documented reasons: a much shorter forcing ramp (3
+rocking cycles vs. Kim's own fixed 30-second ramp), a superellipse tank
+cross-section vs. a literal rectangle, and a 2x difference in the liquid-
+volume convention used to normalize normf() output. None of that is a bug
+in the ordinary sense -- it's this project's fork intentionally diverging
+from Kim's setup for its own optimization pipeline. Asserting our fork
+must match Kim's ABSOLUTE value would therefore be wrong (it would fail
+today, on main, for reasons unrelated to code health).
+
+But that's an argument against asserting equality with Kim, not against
+asserting no drift from our OWN already-measured, reproducible baseline
+ratio (see _BASELINE_RATIO below) -- exactly the same regression-guard
+principle test_mpi_checkpoint_parity.py already uses. Every real bug
+surfaced during the 2026-07-30 investigation (a units double-division, a
+missing embedded-boundary metric correction, etc.) moved comparisons like
+this one by 1.7x-12x, so a wide-but-finite tolerance around the measured
+baseline catches genuine regressions while tolerating the ~1.5% run-to-run
+noise actually observed across independent CI runs.
 """
 from __future__ import annotations
 
@@ -140,10 +144,33 @@ def _mean_post_ramp_vel_rms(normf_data: np.ndarray, t_ramp: float) -> float:
     return float(post[len(post) // 2:].mean())
 
 
+# Measured baseline ratio (our fork's post-ramp combined velocity RMS,
+# divided by Kim upstream's, both computed by _mean_post_ramp_vel_rms at
+# matched condition/resolution): 0.547 and 0.555 across two independent
+# CI runs (2026-07-30/31) -- ~1.5% run-to-run spread. This is NOT a claim
+# that 0.55 is "correct" (our fork intentionally differs from Kim's setup
+# for documented reasons: shorter ramp, tank shape, liquid-volume
+# convention -- see this file's docstring). It's a regression baseline:
+# every real bug surfaced during the 2026-07-30 investigation moved this
+# kind of ratio by 1.7x-12x, so a wide-but-finite tolerance around the
+# measured baseline catches genuine regressions (a sign error, a dropped
+# term, an accidental parameter change) while easily tolerating normal
+# run-to-run noise. If you deliberately change the ramp duration, tank
+# shape, or volume convention to move the fork closer to Kim's own setup,
+# this ratio WILL legitimately shift -- update _BASELINE_RATIO to the
+# newly-measured value rather than loosening the tolerance.
+_BASELINE_RATIO = 0.55
+_BASELINE_RTOL  = 0.30  # relative tolerance around _BASELINE_RATIO
+
+
 @pytest.mark.medium
-def test_our_fork_vs_kim_upstream_informational(kim_upstream_binary, tmp_path):
-    """Report (never assert) the velocity-RMS gap between our fork and Kim's
-    own upstream code, at matched condition and resolution."""
+def test_our_fork_vs_kim_upstream_no_regression(kim_upstream_binary, tmp_path):
+    """Report the velocity-RMS gap between our fork and Kim's own upstream
+    code, at matched condition and resolution, and guard against it
+    regressing far from its measured baseline (see _BASELINE_RATIO above).
+    This does NOT assert our fork matches Kim's absolute value -- it
+    asserts our fork hasn't drifted far from ITS OWN established ratio.
+    """
     our_dir = run_bioreactor(_OUR_PARAMS, tmp_path, timeout=1800)
     if not (our_dir / "normf.dat").exists():
         pytest.skip("our fork's normf.dat not written -- run failed, nothing to compare")
@@ -162,11 +189,19 @@ def test_our_fork_vs_kim_upstream_informational(kim_upstream_binary, tmp_path):
 
     ratio = vel_our / vel_kim if vel_kim else float("nan")
     warnings.warn(
-        f"our fork vs Kim upstream (informational, not a failure): "
-        f"post-ramp combined velocity RMS -- our fork={vel_our:.4f}, "
-        f"Kim upstream={vel_kim:.4f}, ratio={ratio:.3f}. "
-        "Historical reference (2026-07-30, diary.md): ratio ~0.57 (5.42/9.44 "
-        "in peak ux_rms/U_b terms, a related but not identical metric). "
-        "A large *change* from that historical reference is worth investigating; "
-        "the discrepancy itself is expected and not a bug -- see this file's docstring."
+        f"our fork vs Kim upstream: post-ramp combined velocity RMS -- "
+        f"our fork={vel_our:.4f}, Kim upstream={vel_kim:.4f}, ratio={ratio:.3f} "
+        f"(baseline {_BASELINE_RATIO} +/-{_BASELINE_RTOL:.0%})."
+    )
+    rel_err = abs(ratio - _BASELINE_RATIO) / _BASELINE_RATIO
+    assert rel_err < _BASELINE_RTOL, (
+        f"our-fork-vs-Kim-upstream velocity ratio has drifted far from its measured "
+        f"baseline: ratio={ratio:.4f}, baseline={_BASELINE_RATIO} "
+        f"(rel_err={rel_err:.1%}, threshold {_BASELINE_RTOL:.0%}). "
+        f"our fork={vel_our:.4f}, Kim upstream={vel_kim:.4f}. "
+        "This does not mean our fork must match Kim's absolute value (it "
+        "intentionally doesn't, for documented reasons) -- it means something "
+        "changed relative to the last measured baseline. If that change was "
+        "deliberate (e.g. ramp duration, tank shape, volume convention), update "
+        "_BASELINE_RATIO to the newly-measured value; if not, investigate."
     )

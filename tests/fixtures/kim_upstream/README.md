@@ -24,19 +24,21 @@ The four changes, all in `BioReactor.c` / `henry_oxy2.h`:
    `if (!q.embed_flux && ...)`); not a Basilisk-version issue.
 
 **Why this exists:** `tests/verification/test_kim_upstream_comparison.py`
-uses this fixture to report (as a non-fatal warning, never a test
-failure) how far this project's own fork has drifted from a
-close-to-literal reproduction of Kim et al.'s published code, for a
-condition and resolution matched as closely as possible to this fork's
-own regression tests. This is NOT a correctness gate — this project's
-fork intentionally differs from upstream in several documented ways
-(ramp duration, tank cross-section shape, liquid-volume convention; see
-`diary.md`, 2026-07-30 entries), so a discrepancy here is expected, not a
-bug. It exists purely so a large, unexpected *change* in that discrepancy
-(e.g. from a future refactor) is visible to whoever runs it, instead of
-going unnoticed. This test is `medium`-marked and runs automatically in
-GitHub Actions CI (`medium-tests` job) — Basilisk is built from source
-there already, so no OSCAR access is needed.
+uses this fixture as a *regression* guard on how far this project's own
+fork has drifted from a close-to-literal reproduction of Kim et al.'s
+published code, for a condition and resolution matched as closely as
+possible to this fork's own tests. It does NOT assert our fork matches
+Kim's absolute value — this project's fork intentionally differs from
+upstream in several documented ways (ramp duration, tank cross-section
+shape, liquid-volume convention; see `diary.md`, 2026-07-30 entries), so
+an absolute-value mismatch here is expected, not a bug. Instead it asserts
+the fork-vs-Kim-upstream RATIO hasn't drifted far from its own measured
+baseline (`_BASELINE_RATIO` in the test file) — every real bug surfaced
+during the 2026-07-30 investigation moved this kind of ratio by 1.7x-12x,
+so this catches genuine regressions while tolerating normal run-to-run
+noise. This test is `medium`-marked and runs automatically in GitHub
+Actions CI (`medium-tests` job) — Basilisk is built from source there
+already, so no OSCAR access is needed.
 
 **Do not edit these files to "fix" the discrepancy against our own fork.**
 If Kim's own code needs a change to keep compiling against a newer
