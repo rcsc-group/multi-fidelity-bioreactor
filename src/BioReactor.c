@@ -127,7 +127,11 @@ double t_end;                      // Final simulation time (simulation time uni
 // al.'s driver has no shear-stress KPI pipeline at all (see the tau_95/98/
 // 100/mean block in event normcal below, entirely new) and no video-frame
 // dumping at a tunable interval.
-const double dt_video= 0.6074/5;  // Interval for video frames
+// [PROJECT ADDED, 2026-07-30] frames_per_period wired from params.json so a
+// one-off higher-cadence video render doesn't require editing/recompiling
+// this file; default (5) preserves prior behavior exactly for existing
+// production configs that don't set it.
+double dt_video;  // Interval for video frames; set from T_per_st/params.frames_per_period in main()
 // [PROJECT CHANGED, commit 1c3440c, 2026-07-14] was t_out=0.1 (~6.1 samples/
 // rocking-period, T_per_nd~0.608 is RPM-independent by construction), raised
 // to 0.02 (~30 samples/cycle) to at least match Kim et al. (2024)'s stated
@@ -295,6 +299,7 @@ int main(int argc, char * argv[]){
   w_bio  = 2*pi/T_per;              // Angular velocity (rad/s)
   w_bio_st = w_bio*T_bio;           // Dimensionless angular velocity
   T_per_st = T_per/T_bio;           // Dimensionless period
+  dt_video = T_per_st / (params.frames_per_period > 0 ? params.frames_per_period : 5);
   U0     = w_bio_st*Th_max;         // Initial rotational velocity
   t_change_st = N_RAMP_CYCLES * T_per_st;  // ramp over 3 cycles regardless of omega_b
   t_mix      = T_per_st*params.n_mix_cycles; // rocking cycles before tracer/oxygen start (wired from params.json)
@@ -988,9 +993,19 @@ event normcal (t+=t_out; t<=t_end){
 // Make videos — field data exported as binary frames; rendered by scripts/render_videos.py
 #if VIDEOS
 int _vframe = 0;
+double _last_vdump = -1e30;
 
-event movies_output(t = t_mix; t += dt_video; t <= t_end)
+// [PROJECT CHANGED, 2026-07-30] Basilisk's `t += dt_video` event-repeat
+// syntax requires dt_video to be a compile-time constant (qcc error:
+// "events can only use a single condition" once dt_video became a
+// runtime value driven by params.frames_per_period) -- switched to a
+// plain per-timestep check so the cadence can be runtime-configurable.
+event movies_output(i++)
 {
+  if (t < t_mix || t > t_end || t - _last_vdump < dt_video)
+    return;
+  _last_vdump = t;
+
   // MPI-safe video output:
   // interpolate() is collective (MPI_Allreduce per point) — ALL ranks must call it.
   // File I/O is guarded to rank 0 only so no two ranks open the same file.

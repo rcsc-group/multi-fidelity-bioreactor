@@ -5,6 +5,12 @@
 
 **📖 Documentation: [rcsc-group.github.io/multi-fidelity-bioreactor](https://rcsc-group.github.io/multi-fidelity-bioreactor/)**
 
+<video src="docs_site/assets/img/hero-rocking-l9-lab.mp4" controls muted loop playsinline width="600">
+  Rocking bioreactor simulation at fidelity 9 (512x512 cells), θ=7°, 32.5rpm, lab-frame view.
+</video>
+
+*Fidelity-9 simulation of the rocking bioreactor (θ=7°, 32.5rpm, lab frame — tank rocks, water finds its level).*
+
 Two-phase CFD solver for a rocking bioreactor, implemented in [Basilisk](http://basilisk.fr/).
 Developed at the Harris Lab (Brown University) in collaboration with the Cimpeanu group (Warwick).
 Publication: [doi: 10.1016/j.ijmultiphaseflow.2025.105375](https://www.sciencedirect.com/science/article/pii/S0301932225002538) | preprint: [arXiv: 2504.05421](https://arxiv.org/abs/2504.05421)

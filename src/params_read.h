@@ -36,6 +36,7 @@ typedef struct {
   double fill_level;
   double t_end;                 // simulation end time [non-dim]; default 250.0
   int    n_mix_cycles;          // rocking cycles before oxygen/tracer start; default 80
+  int    frames_per_period;     // video-frame cadence (VIDEOS builds only); default 5, 0 means unset
   // Checkpoint restart fields (set by chain.py for restart segments; 0 for fresh runs)
   double t_checkpoint;               // absolute non-dim time of the restored checkpoint
   double omega_b_prev;               // omega_b of the segment that wrote the checkpoint
@@ -86,6 +87,7 @@ static BioreactorParams params_read(const char *path) {
   p.n_harmonics   = 1;         // default: single sinusoid (pure rocking)
   p.t_end         = 250.0;    // default if not present in params.json
   p.n_mix_cycles  = 80;       // default: 80 rocking cycles (upstream hardcoded value)
+  p.frames_per_period = 5;    // default: matches the previous hardcoded dt_video=T_per_st/5
 
   FILE *fp = fopen(path, "r");
   if (!fp) {
@@ -128,6 +130,8 @@ static BioreactorParams params_read(const char *path) {
       p.t_end = tok_double(json, &tokens[++i]);
     else if (jsoneq(json, &tokens[i], "n_mix_cycles"))
       p.n_mix_cycles = tok_int(json, &tokens[++i]);
+    else if (jsoneq(json, &tokens[i], "frames_per_period"))
+      p.frames_per_period = tok_int(json, &tokens[++i]);
     else if (jsoneq(json, &tokens[i], "theta_max")) {
       tok_array(json, tokens, ++i, p.theta_max, N_MAX);
       i += tokens[i].size;
