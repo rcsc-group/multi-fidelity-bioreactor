@@ -46,6 +46,82 @@ Invoke manually via `pytest -m hpc` on an OSCAR compute node.
 
 ---
 
+## 2026-07-30 (continued, RESOLUTION) — THE ENTIRE "AMPLITUDE GAP" WAS A
+UNITS BUG IN MY OWN PYTHON POST-PROCESSING, NOT A SOLVER OR PAPER ISSUE.
+Case closed, for real this time, with direct numerical confirmation.
+
+**How this was found:** after the first-principles kinematic estimate
+confirmed Kim's number is physically sane and every numerical-hygiene
+hypothesis (grid, cut cells, near-wall bands, surface tension, CFL/
+timestep) was falsified while the pseudo-force terms verified correct
+term-by-term, the user pushed back: "it's very strange that not even
+Kim's code can reproduce it -- this smells heavily as apples to oranges."
+That reframing was exactly right. Re-reading Appendix A's text confirmed
+we had the right figure, quantity, condition, and time instant
+(t/T_p=29.77, stated explicitly in the text) -- and re-examining
+Fig_append1(a) at high resolution confirmed even Kim's OWN COARSEST
+tested resolution (n_L=2^5=32 cells, coarser than anything we tested)
+already gives ~0.8, ruling out a coarse-vs-converged mismatch definitively.
+
+**The actual bug:** `L0 = 1.[0]` in the code represents `L_bio` (length
+nondimensionalized by `L_bio`), and the code's own time variable `t` is
+ALREADY expressed in units of `T_bio` -- this is exactly what
+`w_bio_st = w_bio*T_bio` is for, so that `sin(w_bio_st*t)` gives the
+correct physical oscillation when `t` is measured in `T_bio` units. Given
+length in units of `L_bio` and time in units of `T_bio`, the code's
+velocity field `u.x` is AUTOMATICALLY expressed in units of
+`L_bio/T_bio = U_bio` (by the very definition `T_bio = L_bio/U_bio`).
+**The raw `ux_liq_rms`/`ux_liq_avg` columns in `normf.dat` are therefore
+ALREADY `⟨u_x'⟩/U_b` -- exactly the quantity Kim's figures plot. No
+further division by `U_bio` should ever have been applied.** Every
+Python analysis script this entire investigation divided these already-
+dimensionless columns by `U_bio` (0.08224) a SECOND time, inflating the
+apparent value by a spurious factor of `1/U_bio ≈ 12.2` -- matching the
+observed ~11.8x discrepancy almost exactly.
+
+**Direct numerical confirmation**, from the exact same
+`kim_upstream_clean/run_test_fine/normf.dat` used throughout this
+investigation, t/T_p=[29,31] window, RAW values (no division):
+```
+ux_rms peak (raw):        0.7761   vs Kim's Fig_append1:     ~0.8   (2.5% off)
+signed ux_avg amplitude:  0.4896   vs Kim's Fig_simul_setup: ~0.5   (2% off)
+```
+Both match to within ~2-3%, comfortably inside eyeballing-a-figure
+precision.
+
+**What this means for everything else investigated this session:** all
+comparisons that were RATIOS or EQUALITIES between two of our own runs
+(grid convergence NN=64/128/256, 2025-vs-2026-Basilisk bit-identical
+match, MPI-vs-serial, checkpoint-vs-uninterrupted, cut-cell/near-wall/
+surface-tension/CFL exclusion tests) remain entirely VALID conclusions --
+the erroneous extra `U_bio` division was a constant multiplicative
+factor applied identically to both sides of every one of those
+comparisons, so it cancels out and doesn't change any of those
+findings. It ONLY invalidates the specific claim "our absolute velocity
+is ~11.8x larger than Kim's published value" -- that claim is retracted.
+**Kim et al.'s own driver code, run with only the documented minimal
+changes needed to compile on current Basilisk, reproduces their
+published Fig_simul_setup and Fig_append1(a) results correctly.** There
+was no reproduction failure, no solver bug, no cut-cell instability
+contaminating the physics, and no pseudo-force error -- all of that
+careful falsification work was real and correct, it was just falsifying
+hypotheses for a discrepancy that didn't actually exist outside of a
+factor-of-U_bio bug in the analysis scripts used to LOOK at the results.
+
+**Lesson for future sessions:** when a Basilisk simulation nondimension-
+alizes via `L0=1[dimension]` representing a physical length scale and a
+`T_bio`-derived time variable, its OWN native field variables are already
+expressed in the corresponding derived units (here, velocity already in
+`U_bio`) -- check this before assuming raw solver output needs the same
+normalization applied to convert to a paper's nondimensional plotted
+quantity. A missing OR duplicated normalization step produces a
+constant, resolution to the previous entries' unresolved discrepancy that
+survives every other diagnostic precisely because those diagnostics
+(grid convergence, version comparison, MPI/checkpoint parity) are ratio-
+based and insensitive to a global scale error.
+
+---
+
 ## 2026-07-30 (continued) — timestep/CFL hypothesis also falsified: the
 solution is fully converged in BOTH space and time. Points strongly
 toward a genuine equations/physics bug, not a numerical artifact.
