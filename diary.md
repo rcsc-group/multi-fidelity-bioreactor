@@ -46,6 +46,52 @@ Invoke manually via `pytest -m hpc` on an OSCAR compute node.
 
 ---
 
+## 2026-07-30 (continued) — timestep/CFL hypothesis also falsified: the
+solution is fully converged in BOTH space and time. Points strongly
+toward a genuine equations/physics bug, not a numerical artifact.
+
+**Hypothesis:** the Coriolis coupling (`2*Th_d*u.y` in the u.x equation,
+and the symmetric term in u.y) is applied explicitly per-timestep using
+the previous step's velocity. If the adaptive CFL-based timestep were too
+large relative to the ROTATIONAL (Coriolis) timescale specifically (as
+opposed to the ADVECTIVE timescale CFL is actually based on), that's a
+known source of spurious energy injection in explicit rotational-coupling
+schemes.
+
+**Test:** enabled upstream's own (pre-existing, disabled-by-default)
+`CFL_COND` flag with its own predefined `CFL_num=0.01` -- a 50x smaller
+CFL number than Basilisk's ~0.5 default.
+(`/oscar/scratch/eaguerov/tmp/kim_smalldt_test/`, one line flipped from 0
+to 1, zero other changes.) Job 4443171, ~2 hours to reach the target
+window (vs ~4 minutes for the default-CFL baseline -- confirms the
+timestep really is ~50x smaller as intended).
+
+**Result:** ux_rms/U_b peak in [29,31] = 9.4368, vs baseline 9.4366
+(0.002% difference -- indistinguishable from noise).
+
+**Conclusion: timestep size has zero effect. Combined with the grid-
+resolution tests (NN=64/128/256 all agree to <2%), the solution is
+demonstrably converged in BOTH space and time.** A numerically converged
+solution that is still ~8.5x larger than first-principles physics
+predicts cannot be a discretization/convergence artifact -- it must come
+from a genuine error in the EQUATIONS being solved (most likely the
+pseudo-force/acceleration terms), not from how well the (wrong) equations
+are being solved. This significantly narrows the search: stop looking at
+numerical hygiene (resolution, cut cells, CFL, surface tension -- all now
+ruled out) and look directly at the acceleration event's physics.
+
+**Next candidate, not yet tested:** whether Basilisk's `two-phase.h`
+applies any of its OWN default gravity/body-force handling that could be
+double-counted alongside the manually-added `-sin(Th)/Fr²`,
+`-cos(Th)/Fr²` gravity terms in `event acceleration` -- given `1/Fr²≈362`
+is by far the largest coefficient in the whole acceleration expression
+(other terms are O(1-13)), even a small relative hydrostatic-balance
+error multiplied by this large coefficient could plausibly produce an
+order-of-magnitude spurious acceleration. Not yet checked whether
+`two-phase.h`'s own gravity mechanism (if any) is active here.
+
+---
+
 ## 2026-07-30 (continued) — FIRST-PRINCIPLES SANITY CHECK (user-suggested):
 Kim et al.'s number is physically correct; ours is the anomaly. This
 reframes the whole investigation.
