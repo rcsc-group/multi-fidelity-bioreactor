@@ -10,6 +10,106 @@ hashes exactly, not "the run from earlier."
 
 ---
 
+## 2026-08-01 — squeezing the L10 dataset: (1) velocity/vorticity
+convergence probe strongly supports a genuine moving-contact-line-type
+stress singularity, (2) accidentally found a real checkpoint-restart-of-
+a-restart bug causing genuine numerical blowup at fidelity 10.
+
+**Context:** reusing the completed f9/f10 short-window runs from the
+falsified metric-correction test (`/oscar/scratch/eaguerov/tmp/
+tau_metric_fix_test/`, 30rpm/theta=7deg, t=[6,8.5]) instead of running
+anything new, per explicit instruction to extract maximum value from
+already-paid-for compute (f10 alone cost 8.5h on 48 cores).
+
+**Probe 1 -- does the tau_100_max non-convergence show up in OTHER
+pointwise-max statistics already in normf.dat, independent of my (already
+falsified/reverted) tau stencil code?**
+```
+quantity       f9 peak    f10 peak   ratio   p=log2(ratio)
+omega_rms      20.705     21.097     1.019   0.027   (converged)
+omega_max     460.009    804.949     1.750   0.807   (NOT converged)
+ux_rms          0.4236     0.4238    1.000   0.001   (converged)
+ux_max          1.1343     1.1375    1.003   0.004   (converged)
+uy_rms          0.2338     0.2341    1.001   0.002   (converged)
+uy_max          0.9465     0.9606    1.015   0.021   (converged)
+```
+Velocity -- even its pointwise max, not just spatial averages -- is
+essentially perfectly converged between fidelity 9 and 10. Only
+`omega_max` (vorticity, computed by Basilisk's own unmodified, native
+`vorticity()` -- nothing to do with my reverted tau code) fails to
+converge, growing with `p≈0.81` (i.e. roughly like `1/Δx^0.8`). This
+independently reproduces the same non-convergence pattern documented for
+`tau_100_max` (`p≈1.05` in the same f9→f10 comparison, using the buggy
+metric-corrected formula but the SAME qualitative behavior) via a
+completely different, unmodified code path -- ruling out "it's just a
+quirk of my tau formula" and pointing at something in the velocity
+GRADIENT specifically, not the velocity field itself.
+
+**Probe 2 -- is the divergence a rare fluke, or does it recur every
+cycle?** Printed `omega_max` every ~3rd sample across the full [6,8.5]
+window for both fidelities: it's a RECURRING, roughly-once-per-rocking-
+cycle spike (not a one-off), with f10's spike consistently ~1.6-1.8x
+higher than f9's at essentially every single cycle. This is a real,
+periodic, robust feature, not noise.
+
+**Hypothesis: this matches the classic moving-contact-line stress
+singularity (Huh & Scriven 1971)** -- the no-slip condition at a solid
+wall combined with a moving free-surface contact line produces a
+formally unbounded stress/vorticity in the continuum Navier-Stokes limit
+unless explicitly regularized (slip length, precursor film, etc.), which
+this code does not do (`CONTACT=0`, confirmed disabled in both Kim's
+upstream code and this fork). A discretely-sampled peak sampling ever
+closer to a true singularity as Δx→0 would show exactly this signature:
+robust, periodic (once per contact-line sweep), growing roughly like
+1/Δx, present in vorticity (unmodified native code) but absent from the
+smooth primitive velocity field. Not yet directly confirmed by inspecting
+the actual spatial (x,y) location of the peak -- see below.
+
+**Probe 3 -- locate the peak spatially, reusing the checkpoint instead of
+rerunning from scratch.** Added a temporary debug event
+(`/oscar/scratch/eaguerov/tmp/tau_metric_fix_test/locate_peak_src/`)
+printing the (x,y,cs,f) of the peak-|vorticity| cell whenever it exceeds
+400, and restarted from f10's own `checkpoint.dump` (t=8.513) rather than
+rerunning the expensive 8.5h integration. First attempt
+(`locate_peak_run`, job 4511305) crashed with a genuine Poisson-solver
+divergence (residual growing from ~1e10 to ~1e20 within ~0.001 nondim
+time) right at t≈10.341 -- traced to MY OWN debug event declaring
+`scalar omega[]` inside a per-timestep `event(i++)`, exactly the anti-
+pattern already flagged in this file's own comments ("leaks a Basilisk
+scalar on every call... causes segfaults at fidelity >=7"). Fixed by
+computing vorticity inline (no scalar allocation) instead, matching the
+tau code's own established pattern. Rebuilt, reran (job 4512659) --
+**crashed again, at the exact same t≈10.341, same divergence signature.**
+Since the fix demonstrably didn't change anything, the crash isn't caused
+by my debug code at all.
+
+**Real finding: checkpoint-restart-of-a-restart is fragile at high
+fidelity.** The run that crashed was a THIRD segment in a chain: fresh
+0→8.513 (clean), restart 8.513→10.34 (clean, `f10_continue`), restart
+10.34→crash (`locate_peak_run`, both attempts). To isolate whether this
+is restart-chaining fragility or a genuine approaching blowup, ran a
+SINGLE-hop extension directly from the known-good 8.513 checkpoint past
+the same time region (`f10_continue_extended`, job 4513174, t_end=2.0,
+reaching t=10.95 in one hop, no intermediate restart) -- **completed
+cleanly**, `omega_max` reaching a comparable ~725 with no instability at
+all through the identical t≈10.34-10.95 window. This rules out "genuine
+physical/numerical blowup approaching a true singularity" as the cause of
+the crash (that would show up in the single-hop run too) and implicates
+restarting-from-an-already-restarted-checkpoint specifically, at fidelity
+10. Ties directly to this project's own prior documented history of
+checkpoint-restart correctness issues (commit 19c3a31, "guard checkpoint
+restarts against unproven segments") -- but this is a NEW instance:
+the existing `test_mpi_checkpoint_parity.py` regression guard only tests
+a SINGLE restart hop at fidelity 5, which would not catch this. L9/L10
+production sweeps chain across MULTIPLE checkpoint segments routinely --
+exactly the scenario that just failed here. Not yet root-caused (what
+state degrades across a second restart hop specifically) or reproduced
+at lower, cheaper fidelity to confirm whether it's fidelity-10-specific
+or general. Worth a dedicated follow-up given the production pipeline's
+reliance on exactly this pattern.
+
+---
+
 ## 2026-07-31 — shear-stress metric-correction hypothesis FALSIFIED by
 direct experiment. Reverted. `tau_100_max`'s non-convergence with
 resolution remains unexplained.
