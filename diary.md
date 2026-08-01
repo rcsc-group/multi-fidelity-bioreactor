@@ -10,6 +10,78 @@ hashes exactly, not "the run from earlier."
 
 ---
 
+## 2026-07-31 — shear-stress metric-correction hypothesis FALSIFIED by
+direct experiment. Reverted. `tau_100_max`'s non-convergence with
+resolution remains unexplained.
+
+**Motivation:** user asked to verify whether "mean shear stress agrees,
+only max disagrees" was accurate. Digging into the existing (correct,
+already-rigorous) validation doc
+(`docs_site/explanation/kim-et-al-validation.md`) turned up an
+already-known, never-fixed lead: the shear-stress stencil in `event
+normcal` claims to "mirror `vorticity()` in basilisk/src/utils.h" but is
+missing the face-metric weighting (`fm.x`/`fm.y`/`cm`) that `vorticity()`
+actually uses to correct the finite-difference stencil near embedded
+cut-cells. That was flagged in a prior session (2026-07-28) but left
+unfixed because it couldn't explain the velocity mismatch under
+investigation at the time -- which is now known (2026-07-30) to have been
+an unrelated Python units bug, clearing the way to actually test this.
+
+**Hypothesis:** a missing metric correction near the tank's embedded
+walls -- exactly where peak shear stress occurs -- could explain both why
+`tau_100_max` doesn't converge with grid resolution (0.042 -> 0.137 ->
+0.290 across fidelity 7/9/10, more than doubling each step, crossing
+straight through Kim's 0.174 rather than approaching it) and why
+`tau_mean_max` (dominated by bulk cells far from the boundary) stays
+resolution-stable but persistently low.
+
+**Fix attempted:** rederived the metric-corrected stencil directly from
+`basilisk/src/utils.h:286-292`'s `vorticity()` (which computes
+`dv/dx - du/dy`, metric-corrected), combining its two derivative terms
+with a PLUS instead of a MINUS to get `du/dy + dv/dx` (the shear-stress
+combination) instead of the antisymmetric curl. Compiled cleanly, no
+qcc errors.
+
+**Test:** reran the project's own established short-window methodology
+(`experiments/l9_l10_short_window_test_30rpm/`, 30rpm/theta=7deg,
+t=[6,8.5], ~1.25 periods) at fidelity 9 and 10, reusing the exact same
+params files, with the metric-corrected stencil.
+(`/oscar/scratch/eaguerov/tmp/tau_metric_fix_test/`, jobs 4490680 (f9,
+3h19m/16cpu) and 4490675 (f10, 8h28m/48cpu), both COMPLETED cleanly to
+t=8.5.)
+
+**Result:**
+```
+                    tau_100_max          tau_mean_max
+f9,  unfixed (docs):  0.1367               0.001008
+f9,  metric-fixed:    0.0242  (-82%)       0.000200  (-80%)
+f10, unfixed (docs):  0.2902               0.000955
+f10, metric-fixed:    0.0502  (-83%)       0.000170  (-82%)
+Kim et al.:           0.1735               0.001611
+```
+Both metrics moved DRAMATICALLY further from Kim's value with the fix
+(mean stress error went from 35-65% low to ~87-90% low). The f9->f10
+growth ratio is essentially unchanged (2.07x fixed vs 2.12x unfixed) --
+the non-convergence pattern is untouched.
+
+**Conclusion: hypothesis falsified. Reverted the source change entirely**
+(`git checkout -- src/BioReactor.c`, rebuilt `build/BioReactor{,-mpi,-mpi-
+video}` from the reverted source and verified the rebuild is clean).
+Missing metric correction is not the (or at least not the dominant)
+cause of `tau_100_max`'s non-convergence. The uniform ~80-90% reduction
+across both metrics and both fidelities suggests either an algebra
+mistake in adapting `vorticity()`'s antisymmetric (curl) combination to
+the symmetric (strain-rate) sum shear stress needs -- the metric-weighting
+technique may not carry over as directly as assumed -- or some other
+flaw in the rederivation. Have not re-attempted a corrected version;
+`tau_100_max`'s non-convergence with resolution remains an open,
+unexplained problem, and `tau_mean_max`'s persistent 35-65% gap
+(resolution-stable, so NOT a convergence issue) remains separately
+unexplained too. See `kim-et-al-validation.md` for the full, still-
+accurate standing writeup of what's ruled out and what isn't.
+
+---
+
 ## 2026-07-30 (continued) — turned the MPI/checkpoint manual investigation
 into standing pytest regression guards, per explicit user request.
 
