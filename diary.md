@@ -10,6 +10,139 @@ hashes exactly, not "the run from earlier."
 
 ---
 
+## 2026-08-02 — with the bottom cut cell suppressed, the peak
+consistently relocates to the FREE SURFACE (f≈0.5-0.7, `cs=1`, no
+embedded boundary involved at all) every single rocking cycle. The
+moving-contact-line-type hypothesis is back, in a refined form: it's a
+free-surface feature, not a wall-contact-line feature.
+
+**Context:** direct follow-on to the entry immediately below (origin-
+shift fix falsified — growth ratio unchanged, absolute values worse).
+That entry answered "does the fix restore convergence" (no) but not
+"where does the peak go once the bottom cut cell can't win anymore."
+Re-ran the same peak-location debug technique from 2026-08-01 (epsilon-
+tolerance argmax search over `|vorticity|`, restricted this time to
+`f[]>0.5` to match exactly what `tau_100_max`/`tau_mean_val` actually
+integrate over — src/BioReactor.c:920 `if (f[] > 0.5)` — my first attempt
+omitted this filter and got swamped by irrelevant gas-phase noise).
+
+**Method (cheap, fidelity 6, reused build discipline):** added the debug
+`locate_vorticity_peak(i++)` event to a copy of the origin-shifted fixed
+source (`/oscar/scratch/eaguerov/tmp/cutcell_fix_test/
+locate_peak_fixed_src/BioReactor.c`), fresh fidelity-6 run, same params as
+`smoke6/` (30rpm, theta=7, t_end=12, n_mix_cycles=0), job 4543066
+(~1 min). Two bugs caught and fixed before trusting the result:
+1. First attempt placed the event inside `#if VIDEOS ... #endif` (right
+   after the block housing `movies_output`) — this build doesn't define
+   `VIDEOS`, so qcc's preprocessing silently compiled the whole event out
+   (confirmed by `strings` on the binary finding no "PEAKLOC" string at
+   all, and by dumping qcc's `-source` translation and finding the event
+   absent from it entirely). Moved it above the `#if VIDEOS` block, to
+   unconditional code; confirmed present in the translated source and
+   binary via `strings` before rerunning.
+2. First (successful-compile) run's un-filtered top locations were
+   `cs=1, f=0` (ordinary gas-phase cells) and `cs=0.352, f=0` (the TOP
+   wall's cut cell, but on its GAS side) — neither is what
+   `tau_100_max` actually measures, since that quantity is restricted to
+   `f[]>0.5`. Added the same restriction to the debug locator so it's an
+   apples-to-apples proxy for what we actually care about.
+
+**Result, per-rocking-cycle peak location (T=2.0 nondim, `omega_b=π`):**
+```
+cycle   n(events)  max|omega|   x        y        cs      f
+0       686        275.8       -0.148    0.005    1.000   0.578
+1       1065       240.0        0.055    0.005    1.000   0.518
+2       1234       244.5        0.180    0.021    1.000   0.567
+3       1161       218.8        0.336    0.036    1.000   0.721
+4       1151       243.8        0.305    0.036    1.000   0.591
+5       1131       227.2       -0.305    0.036    1.000   0.544
+6       104        213.4        0.367    0.036    1.000   0.720
+```
+Every single cycle's peak sits at `cs=1.000` — an ORDINARY cell, not a
+cut cell, no embedded boundary within a cell-width of it — with
+`f` in [0.52, 0.72], i.e. squarely straddling the VOF interface
+(f=0.5 boundary), at y≈0-0.04 (near mid-height, consistent with fill
+level 0.5 and the free surface's rest position). x drifts cycle-to-cycle
+exactly as expected for a sloshing wave crest whose horizontal position
+depends on rocking phase. This is a completely different, and far more
+consistent, signature than the previous (unfixed-origin) peak location:
+no cut cell, no wall, no persistently-pinned (x,y) — instead a feature
+that RIDES the free surface and recurs with 100% consistency, once per
+cycle, for every cycle sampled.
+
+**Also checked and set aside:** a secondary, slower-building cluster at
+`cs=1, f=1, y≈-0.276` (interior liquid, near the bottom but NOT at any
+wall — no cut cell there either) that only starts appearing around
+cycle 2 and grows in frequency through cycle 5, peaking at
+omega≈96 — an order of magnitude below the free-surface peak (240-276)
+and not among any cycle's actual maximum. Noted as a possible slow
+transient/settling effect, not investigated further since it never wins.
+
+**Interpretation:** this strongly RESURRECTS the moving-contact-line-type
+singularity hypothesis considered and set aside on 2026-08-01 — but in a
+corrected form. The 2026-08-01 rejection ("peak occurs at f=1, not
+f≈0.5, so it can't be a contact-line effect") was measured on the
+UNFIXED geometry, where the bottom-wall cut cell's own artifact (a
+numerically stiff, tiny-fraction cell) was large enough to dominate and
+mask whatever the free surface was doing underneath. With that mask
+removed, the genuine, underlying, physically-motivated feature is
+exposed: a free-surface curvature/breakup structure (consistent with
+under-resolved VOF interface curvature, or a genuine sharp velocity
+gradient where the sloshing wave front is steepest) that recurs every
+cycle and would plausibly get MORE extreme, not less, as resolution
+increases and the interface is captured more sharply — i.e. exactly the
+`p≈0.8-1.0` growth-with-resolution behavior seen throughout this
+investigation (2026-08-01 Probe 1, and the f7→f9 ratio in the entry
+below), now with a coherent mechanistic story that does NOT depend on
+embedded-BC geometry at all.
+
+**Standing implication:** the embedded-boundary/cut-cell explanation
+(bottom wall, and by extension any other wall) should be considered
+RULED OUT as the primary driver of `tau_100_max` non-convergence. The
+active hypothesis is now: sharp free-surface curvature under VOF, at
+under-resolved grids, producing an unbounded-in-the-continuum-limit (or
+at minimum severely under-resolved) vorticity/shear-stress peak at the
+interface. This also explains why Kim et al.'s own reported value could
+be a resolution artifact too (they never checked shear-stress grid
+convergence, per the 2026-07-xx finding referenced in
+`docs_site/explanation/kim-et-al-validation.md`) — not proof their value
+is wrong, but removes the assumption that it's a converged ground truth
+to chase to 20% relerr with an under-resolved cut-cell fix.
+
+**Control check, same day: does the free-surface signature already
+exist in the UNFIXED geometry, just outranked?** Ran the identical
+`f[]>0.5`-filtered locator on the unmodified (unshifted-origin) source
+(`/oscar/scratch/eaguerov/tmp/cutcell_fix_test/locate_peak_unfixed_src/`,
+job 4543237, same fidelity-6/t_end=12 params). Result: **the bottom
+cut cell wins every single cycle, by a wide margin**:
+```
+cycle   n(events)  max|omega|   x        y        cs      f
+0       732        382.8        0.055   -0.289    0.176   1.000
+1       1191       452.6       -0.055   -0.289    0.176   1.000
+2       1243       488.2       -0.102   -0.289    0.176   1.000
+3       1201       539.8        0.023   -0.289    0.176   1.000
+4       1132       554.6        0.195   -0.289    0.176   1.000
+5       1167       562.7       -0.180   -0.289    0.176   1.000
+6       97         519.1        0.227   -0.289    0.176   1.000
+```
+Same fixed (y, cs) signature as the original 2026-08-01 finding, at
+magnitudes (383-563) roughly 2x the fixed-geometry free-surface peak
+(213-276) — confirming the free surface's peak was ALREADY present and
+already the second-place contender, simply masked by the larger,
+also-worsening-cycle-over-cycle bottom-wall artifact. This closes the
+loop: the free-surface signature is not an artifact created by the
+origin shift, it was there all along underneath. Bonus observation: the
+bottom cut cell's own peak magnitude visibly GROWS cycle-over-cycle here
+too (383 → 563 across cycles 0-5) — a second, independent non-
+convergence signature for the cut-cell mechanism itself, on top of the
+already-established growth-with-GRID-resolution one.
+
+Scratch data: `/oscar/scratch/eaguerov/tmp/cutcell_fix_test/
+locate_peak_{fixed,unfixed}_{src,run}/` (jobs 4543066, 4543237); parsing
+script `/oscar/scratch/eaguerov/tmp/cutcell_fix_test/parse_peaklocs.py`.
+
+---
+
 ## 2026-08-02 — origin-shift cut-cell fix FALSIFIED: eliminates the
 bottom-wall cut cell but leaves the tau_100_max non-convergence fully
 intact, and moves us FURTHER from Kim et al.'s value.
