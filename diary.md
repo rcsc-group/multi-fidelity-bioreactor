@@ -10,6 +10,92 @@ hashes exactly, not "the run from earlier."
 
 ---
 
+## 2026-08-02 — origin-shift cut-cell fix FALSIFIED: eliminates the
+bottom-wall cut cell but leaves the tau_100_max non-convergence fully
+intact, and moves us FURTHER from Kim et al.'s value.
+
+**Context:** prior entry located the `tau_100_max`/`omega_max` peak to a
+persistently small-fraction cut cell at the tank's bottom embedded wall
+(`cs≈0.176`, `y≈-0.289`, `f=1`). Hypothesis: shifting the domain origin
+by a small delta so the flat bottom wall falls exactly on a grid line
+(eliminating that specific cut cell) should remove its contribution to
+`tau_100_max` and restore proper grid convergence. User's target:
+replicate Kim et al.'s shear-stress result to within 20% relative error.
+
+**Cost-consciousness correction:** originally planned an f9-vs-f10 test
+(f10 alone costs ~8.5h/48 cores). User explicitly questioned this
+("are you sure we need an L10 run... avoid wasting time when a cheaper
+alternative exists"). Checked f10's actual progress: only t=0.52 after
+1h19m, projecting ~20+h total (job 4524957) — cancelled it (`scancel
+4524957`) and substituted a much cheaper f7-vs-f9 comparison instead,
+which answers the identical convergence-ratio question.
+
+**Fix:** `origin(-L0/2., -L0/2. - 0.00275);` in a throwaway copy
+(`/oscar/scratch/eaguerov/tmp/cutcell_fix_test/BioReactor.c`) — delta
+chosen relative to the coarsest tested grid (1/128) so the shift stays
+grid-aligned at all finer power-of-2 subdivisions simultaneously. NOT
+applied to the tracked repo (`src/BioReactor.c` untouched).
+
+**Fidelity-6 smoke test** (job 4524954, `smoke6/`): confirms the fix
+does what it's supposed to at the target cell — `omega_max` over t≥2.0
+dropped from (min=104.6, max=528.6, mean=269.0) unfixed to (min=53.0,
+max=175.5, mean=112.1) fixed — roughly 3x reduction in peak, 2.4x in
+mean. The bottom-wall cut cell is real and the shift removes its
+contribution.
+
+**Definitive test — full [6,8.5] window, both runs completed cleanly**
+(f7: job 4527039, N=128, fresh run to t=8.513; f9: jobs 4524956 → time-
+limited at t=7.22 → resubmitted from scratch as 4530078 [1.5h, immediately
+recognized as underbudgeted and cancelled] → 4530083 [4h, completed
+cleanly to t=8.5]):
+
+| | tau_100_max | tau_mean_max |
+|---|---|---|
+| f7 fixed (N=128) | 0.00776724 | 0.000184 |
+| f9 fixed (N=512) | 0.0250447 | 0.000167122 |
+| **growth ratio f9/f7** | **3.224** | 0.908 (converged) |
+| unfixed growth ratio (docs, f9/f7) | 3.278 | — |
+
+The growth ratio is essentially UNCHANGED (3.224 vs 3.278 unfixed) —
+the fix does **not** restore grid convergence of `tau_100_max`. Worse,
+the absolute fixed values are now much further from Kim's target
+(0.1735) than the unfixed ones were:
+
+- fixed f9: relerr = 85.6% (0.02504 vs 0.1735)
+- unfixed f9 (docs): relerr = 21.2% (0.1367 vs 0.1735) — already close
+  to the user's 20% target
+- fixed f9 tau_mean_max: relerr = 89.6% (0.000167 vs 0.001611)
+- unfixed f9 tau_mean_max (docs): relerr = 37.4% (0.001008 vs 0.001611)
+
+**Conclusion:** the bottom-wall cut cell is a real, confirmed artifact
+(directly located spatially, reproduced cheaply, removable by a grid
+shift) but it is NOT the driver of the `tau_100_max` non-convergence.
+Suppressing it removes a large chunk of *signal* (the pointwise-max
+statistic is dominated by whichever cut cell is currently worst) without
+touching the underlying growth-with-resolution *mechanism* — something
+else (most likely the TOP wall, left un-aligned by this single-delta
+shift, or a broader population of small cut cells) is still driving the
+`p≈0.8-1.0` growth exponent seen across f7→f9→f10. Net effect: this
+particular fix is actively harmful for matching Kim's absolute value.
+
+**Decision:** do not apply this fix to the tracked repo. `src/
+BioReactor.c` remains at its pre-experiment (metric-fix-reverted) state,
+which is closer to Kim's target than any cut-cell-suppression variant
+tried so far. Reopens the question of what specifically drives the
+non-convergence; the working theory of "SOME small-cut-cell population"
+survives, but "the bottom wall specifically" does not.
+
+**Also flagged, still unfixed:** a genuine checkpoint-restart-of-a-
+restart (double-hop) numerical fragility discovered while probing L10
+data (2026-08-01 entry below) — divergence at t≈10.341 reproduced twice,
+absent in an equivalent single-hop restart. Relevant to production
+L9/L10 sweeps that chain across multiple checkpoint segments; not yet
+root-caused.
+
+Scratch data: `/oscar/scratch/eaguerov/tmp/cutcell_fix_test/{smoke6,f7,f9}/`.
+
+---
+
 ## 2026-08-01 — squeezing the L10 dataset: (1) velocity/vorticity
 convergence probe strongly supports a genuine moving-contact-line-type
 stress singularity, (2) accidentally found a real checkpoint-restart-of-
