@@ -83,6 +83,52 @@ tau code's own established pattern. Rebuilt, reran (job 4512659) --
 Since the fix demonstrably didn't change anything, the crash isn't caused
 by my debug code at all.
 
+**Probe 3, continued -- location found, hypothesis REFINED (not a moving
+contact line after all).** After fixing two bugs in the debug event
+(scalar-leak anti-pattern, then a floating-point exact-equality `==`
+comparison across the reduction/serial-search passes that never matched
+-- fixed with an epsilon tolerance) and validating cheaply at fidelity 6
+before spending more fidelity-10 compute, got real, non-zero peak
+locations:
+```
+t=2.410  omega=416.8  x=-0.0078  y=-0.2891  cs=0.176  f=1
+t=2.412  omega=415.0  x=-0.0078  y=-0.2891  cs=0.176  f=1
+...
+t=2.693  omega=402.2  x=-0.1172  y=-0.2891  cs=0.176  f=1
+...
+```
+y and cs are essentially PINNED across every single recorded peak (only
+x drifts slightly, consistent with the worst cell shifting along a row
+of similarly-small-cs cells as the flow field evolves). Critically,
+**f=1 -- this is deep in bulk liquid, not at the free surface.** A moving
+contact line requires the interface to be present (f≈0.5); this rules
+that mechanism out.
+
+**Revised hypothesis, mechanistically complete:** the fixed (y, cs)
+signature matches a persistently small-fraction cut cell at the tank's
+bottom embedded wall (cs≈0.176 here; recall the EARLIER, independent
+finding for `kim_upstream_clean` in this same investigation showed
+cs≈0.152 UNIFORM across its entire bottom row -- same structural issue,
+different code). This fully explains the asymmetry between statistics:
+pointwise MAX quantities don't weight by cell volume, so a tiny-fraction
+cut cell can dominate `tau_100_max`/`omega_max` even though its
+contribution to any volume-weighted integral (`tau_mean_max`,
+`omega_rms`) is negligible -- exactly the observed pattern. It also
+explains the periodic recurrence (the flow field's local gradient at that
+FIXED geometric location oscillates with the rocking cycle) and is at
+least plausible as an explanation for apparent "growth with resolution"
+(a finer grid does not guarantee a LARGER cut-cell fraction at the same
+nominal wall position -- it can just as easily produce an equally or more
+poorly-conditioned cell, with no guarantee of monotonic improvement).
+
+**This is now a mechanistically well-supported, and potentially
+ACTIONABLE, finding** -- unlike an unregularized continuum singularity
+(which no amount of code fixing addresses), a persistently-small cut-cell
+fraction is a known, treatable issue in embedded-boundary CFD (cell-
+merging, flux redistribution, or simply nudging the wall's vertical
+position to align better with grid lines). Not yet attempted -- this
+entry documents the diagnosis, not a fix.
+
 **Real finding: checkpoint-restart-of-a-restart is fragile at high
 fidelity.** The run that crashed was a THIRD segment in a chain: fresh
 0→8.513 (clean), restart 8.513→10.34 (clean, `f10_continue`), restart
