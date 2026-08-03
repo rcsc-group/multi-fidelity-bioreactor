@@ -10,6 +10,68 @@ hashes exactly, not "the run from earlier."
 
 ---
 
+## 2026-08-03 — CORRECTION: the "2.0 nondim period" used to bin cycles
+in the two entries below is wrong by ~3.3x. True period is
+`T_per_st=0.608085`, RPM-independent. Does not change either entry's
+scientific conclusion (peak location/magnitude), only the cycle-count
+labels.
+
+**Context:** triggered by needing an exact `t/T_p` value to build a
+Kim-et-al-style Fig. A.16 replica (next entry) — that axis is the first
+place this project has needed the *exact* period rather than just "does
+a periodic feature recur." Re-deriving it exposed that the two entries
+below (2026-08-01, 2026-08-02) silently assumed `period = 2π/ω_b`
+(treating `omega_b` as if it were already the nondimensional forcing
+frequency in code time-units) — which gave `2.0` for `omega_b=π`
+(30 rpm) and was used to bin "cycle 0, 1, 2, ..." in both the L10
+data-mining probes and the peak-locator cycle tables.
+
+**That's not what the code actually does.** `BioReactor.c:290-301`:
+time itself is non-dimensionalized by `T_bio = L_bio/U_bio` (see
+[non-dimensionalization.md](docs_site/explanation/non-dimensionalization.md)),
+and the tank's forcing angle is `Th(t) = Th_max·sin(w_bio_st·t)` with
+`w_bio_st = w_bio·T_bio` (`BioReactor.c:300,721`) — NOT `w_bio` itself.
+The true period in code time-units is `T_per_st = T_per/T_bio`
+(`BioReactor.c:301`), and because `U_bio ∝ 1/T_per` for fixed geometry,
+`T_bio ∝ T_per` too, so `T_per_st` is **RPM-independent** — a point the
+2026-08-01/02 entries never checked.
+
+**Verified two ways, not just re-derived by hand:**
+1. Added one-line debug prints of `T_per_st` and of `Th(t)` itself
+   (zero-crossings) to a throwaway copy of the source
+   (`/oscar/scratch/eaguerov/tmp/period_check/`), ran trivial fidelity-4
+   jobs (jobs 4576602 @ 30 rpm, 4576665 @ 32.5 rpm, few seconds each).
+   Both print `T_per_st=0.608085` exactly, confirming RPM-independence
+   directly from the running code, not just algebra. `Th(t)` zero-
+   crossings land at `t≈0.304` (half period) and `t≈0.608` (full
+   period) — matches to 3 significant figures.
+2. This also resolves a puzzle from the original FFT check on
+   `ux_liq_avg` (bulk liquid velocity): its dominant frequency
+   corresponded to period `0.304`, exactly *half* of `T_per_st`, which
+   looked like a mismatch at the time. It isn't — the bulk-average
+   speed response has its strongest power at the tank's 2nd rocking
+   harmonic (physically sensible: bulk speed peaks symmetrically each
+   half-swing), while `Th(t)` itself — the actual forcing, ground truth
+   for "period" — is unambiguous at `T_per_st=0.608085`.
+
+**Effect on the two entries below:** the 2026-08-01 Probe 2 ("recurring
+roughly-once-per-rocking-cycle spike") and the 2026-08-02 peak-locator
+per-cycle tables both used bins of width 2.0 — really ~3.3 true rocking
+cycles per bin. The underlying raw PEAKLOC data and conclusions (bottom
+cut cell dominates in the unfixed geometry; free surface dominates once
+it's suppressed; magnitudes and locations) are UNCHANGED — those came
+directly from the raw event log, not from the mislabeled bins. Only the
+"cycle N" labels and the implicit "recurs every single cycle" framing
+should be read as "recurs every few-cycle window sampled," not
+literally verified at every individual 0.608-period cycle. Not
+re-running those probes — the corrected period doesn't change what to
+do next, only what the tables above should be read as.
+
+Scratch data: `/oscar/scratch/eaguerov/tmp/period_check/` (jobs
+4576602, 4576665).
+
+---
+
 ## 2026-08-02 — with the bottom cut cell suppressed, the peak
 consistently relocates to the FREE SURFACE (f≈0.5-0.7, `cs=1`, no
 embedded boundary involved at all) every single rocking cycle. The
