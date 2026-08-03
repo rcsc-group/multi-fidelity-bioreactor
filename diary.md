@@ -10,6 +10,86 @@ hashes exactly, not "the run from earlier."
 
 ---
 
+## 2026-08-03 (correction to the entry immediately below) — the H_bio
+FORMULA fix alone is NOT sufficient. The actual simulated bag geometry
+(not just the non-dim scale) is genuinely 2x too tall vs Kim's real bag
+-- confirmed by testing the formula fix in isolation, seeing it only
+partially close the gap AND overshoot `u_y`, then testing formula-fix +
+a corrected `geometry.b` VALUE together and getting a clean match.
+
+**Why the previous entry's fix was incomplete:** it patched `H_bio =
+2*L_bio*Ly` (making the non-dim scale self-consistent with whatever
+geometry is actually simulated) but left `geometry.b=0.071`'s VALUE
+untouched. The embedded solid()/y_fill construction was never buggy on
+its own terms — it correctly treats `Ly=geometry_b/L_bio` as a half-
+height semi-axis, exactly as documented. The problem is `geometry.b`'s
+default VALUE (0.071) was set to Kim's real bag's FULL height
+(0.25*0.286=0.0715, from upstream's hardcoded `Ly=0.286`), then fed into
+a formula that treats it as a HALF-height — silently doubling the
+ACTUAL simulated bag, independent of whatever H_bio's formula does.
+
+**Direct test, formula fix alone (job 4584248, same L6 baseline as the
+entry below, rebuilt binary):**
+```
+ux_liq_vol (domain area): 0.568   -- UNCHANGED, confirms geometry itself untouched by the formula fix
+u'_x,rms peak (t/T_p=[29,31], T_per_st recomputed=0.554): 0.488   vs Kim ~0.8   (39% low)
+u'_y,rms peak:                                             0.276   vs Kim ~0.21  (31% HIGH -- now overshoots)
+```
+Partial improvement on `u_x` (0.39→0.49) but nowhere near Kim's 0.8, and
+now makes `u_y` WORSE (was matching at ~0.22, now overshoots at ~0.28).
+This asymmetric, imperfect shift is exactly what you'd expect from
+correctly renormalizing a genuinely-wrong-shaped domain — the physics
+underneath is still simulating the wrong aspect-ratio bag.
+
+**Direct test, formula fix + `geometry.b=0.03575` (job 4584350 --
+`0.03575 = (upstream's Ly=0.286 / 2) * L_bio=0.25`, i.e. the correct
+HALF-height matching Kim's real bag exactly):**
+```
+ux_liq_vol (domain area): 0.286   -- matches upstream exactly
+T_per_st recomputed: 0.6073 (matches upstream almost exactly)
+u'_x,rms peak (t/T_p=[29,31]): 0.773   vs Kim ~0.8   (3.4% off)
+u'_y,rms peak:                 0.212   vs Kim ~0.21  (1.0% off)
+```
+**Clean match, both components, same ~2-3% precision this project
+already established as its baseline "eyeballing a published figure"
+tolerance** (2026-07-30 RESOLVED entry). This is the complete fix.
+
+**What this means, concretely:** `geometry.b`'s default value (0.071,
+used in every example, every test's `CANONICAL_PARAMS`, every sweep this
+project has ever run) does not describe Kim et al.'s actual bag — it
+describes a bag exactly 2x as tall. Every non-dimensional result this
+fork has ever reported (kLa, tau, mixing times, all sweeps) was computed
+for that taller bag, not Kim's real geometry, regardless of the H_bio
+formula (that formula bug and this value bug are independent and both
+need fixing together, as just demonstrated).
+
+**Two ways to actually fix this, genuinely a decision, not resolved
+here:**
+1. **Migrate the default value**: `geometry.b: 0.071 → 0.03575`
+   everywhere (docs, `CANONICAL_PARAMS`, example params files, sweep
+   configs). Preserves the documented "half-height semi-axis" meaning.
+   Touches many files; every historical params.json on disk still says
+   `0.071` and needs to be understood as "the old, 2x-too-tall bag."
+2. **Keep the value, redefine the semantic**: revert `H_bio` to its
+   original `L_bio*Ly` form, and instead introduce a `/2` ONLY at the
+   sites that build the actual embedded solid (`solid()`'s `b_nd`,
+   `y_fill`, `y_tr`) — i.e. `geometry.b` becomes documented as the FULL
+   height (matching upstream's own convention, and coincidentally almost
+   exactly Kim's real value already: 0.071 ≈ 0.0715). No stored value
+   needs to change anywhere. Requires rewriting the "half-height"
+   documentation (`params.md`, `glossary.md`) instead.
+
+Both are demonstrated (by the two confirmation runs above) to produce
+correct physics once applied consistently; they differ only in where
+the change lands (value vs. semantics) and how much of the existing
+codebase/docs/historical-params needs touching. Not choosing here --
+this needs the user's call before either path is taken.
+
+Scratch data: `/oscar/scratch/eaguerov/tmp/fig_a16_replica/{L6_fixed,
+L6_bothfixed}/` (jobs 4584248, 4584350).
+
+---
+
 ## 2026-08-03 — MAJOR FINDING (not yet fixed, needs discussion before
 patching): `H_bio = L_bio*Ly` (`BioReactor.c:295`) silently uses a
 HALF-height where the formula requires the FULL height, making this
