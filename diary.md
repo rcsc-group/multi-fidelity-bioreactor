@@ -10,6 +10,124 @@ hashes exactly, not "the run from earlier."
 
 ---
 
+## 2026-08-03 — MAJOR FINDING (not yet fixed, needs discussion before
+patching): `H_bio = L_bio*Ly` (`BioReactor.c:295`) silently uses a
+HALF-height where the formula requires the FULL height, making this
+fork's simulated bag geometry exactly 2x too tall — likely affecting
+every non-dimensional result this fork has ever produced. Found while
+building a Fig. A.16(a)/(b) replica; not a resolution issue, not a
+python-post-processing units bug (that one was already resolved
+2026-07-30) — a genuine C-code geometry bug, independently confirmed
+against upstream.
+
+**Context:** building an L6 replica of Kim's Fig. A.16(a)/(b)
+(theta=7°, 32.5rpm, fresh cold start, t_end=19 covering t/T_p=[29,31]
+via the corrected `T_per_st=0.608085` from the entry above), panel (b)
+`u'_{y,rms}` matched Kim's curve closely (~0.22 vs Kim's ~0.21), but
+panel (a) `u'_{x,rms}` peaked at only ~0.39 vs Kim's ~0.8 — roughly
+HALF. User pushed back on "maybe it converges at higher resolution":
+pointed out Kim's own Fig. A.16(a) shows the SAME ~0.8 peak envelope
+even at their coarsest tested resolution (`n_L=2^5`), so this can't be
+a grid-convergence story.
+
+**Ruled out resolution as the driver directly:** reran at L7 (job
+4579229) — `ux_rms` plateaus at ~0.34-0.39 there too, same as L6.
+Checked the FULL L6 time series (not just the target window): `ux_rms`
+per-cycle max is already flat (~0.36-0.39) from cycle 3 onward through
+cycle 30 — genuinely steady-periodic, not a slow transient still
+relaxing toward 0.8. Both point at a structural/setup issue, not a
+convergence or transient issue — matching the user's read.
+
+**Isolated it by running Kim's actual upstream driver
+(`rcsc-group/BioReactor`, fetched via `gh api`), not just diffing code.**
+Compiled it against our current Basilisk (needed the SAME two fixes
+this fork already carries for unrelated reasons — `L0 = 1.[0]` and
+`DT = 1.[0]` dimensional annotations, `BioReactor.c:267,273` — and this
+fork's own already-fixed `view3.h`/`draw3.h`/`utils2.h`/`henry_oxy2.h`
+copies, since upstream's raw headers have drifted against the current
+Basilisk API exactly as CLAUDE.md warns). Added a terminal `event
+stop_run(t=t_end){return 1;}` (upstream has no stopping event at all —
+`acceleration(i++)` and `normcal(i+=i_norm)` are both unconditioned, so
+`run()` never terminates on its own; same pitfall this fork's own
+`dump_checkpoint` comment already documents), tightened
+`i_norm` 1000→15 for a usable output cadence, and shortened `t_end`
+250→20 (diagnostic-only changes, `/oscar/scratch/eaguerov/tmp/
+upstream_compare/`, job 4582188, ANGLE=7 RPM=32.5 L_bio=0.25, upstream's
+hardcoded `NN=64` = our fidelity 6).
+
+**Result: upstream's own driver gives `ux_liq_rms≈0.68-0.77` near
+t=19.7-19.96 — matching Kim's ~0.8, NOT our fork's ~0.39.** This
+directly confirms the discrepancy is fork-specific, not a shared
+cut-cell/numerics issue, not a resolution issue, and not something
+present in Kim's own methodology.
+
+**Root cause, found by comparing the two runs' `normf.dat`, not just
+code reading:** upstream's `ux_liq_vol` (= `normf().volume`, the total
+fluid-domain area counted by Basilisk's `dv()>0` cells) = exactly
+`0.286` — matching upstream's hardcoded `Ly=0.286` (Ly IS the full bag
+height in upstream, by construction: `solid(cs,fs,
+intersection(-(y-0.5*Ly),-(-y-0.5*Ly)))` bounds `|y|<0.5*Ly`, giving
+full height `Ly`). **Our fork's `ux_liq_vol`/`Omega_liq_vol` is ALWAYS
+`0.568` — exactly 2x** (already noted in an earlier session as "a
+documented Ly convention difference," but never previously identified
+as changing the actual physics, only as a labeling quirk).
+
+Traced to the exact lines: `BioReactor.c:284` sets
+`Ly = params.geometry_b / L_bio` and its own comment correctly calls
+this "dimensionless HALF-height" — matching `docs_site/reference/
+params.md`'s documented meaning of `geometry.b` ("Bag half-height;
+half the total bag height") and matching how it's correctly used as a
+semi-axis in the `solid()` call (`BioReactor.c:604`,
+`intersection(a_nd-fabs(x), b_nd-fabs(y))` bounds `|y|<b_nd`, giving
+full height `2*b_nd` — CORRECT for a semi-axis). **The bug is that
+`BioReactor.c:295`, `H_bio = L_bio*Ly`, reuses this same `Ly` variable
+as if it were the FULL height** (matching upstream's convention, where
+`Ly` genuinely is the full height) **— an inherited formula that was
+never updated when `Ly` was redefined from upstream's fixed full-height
+constant to this fork's parametric half-height semi-axis.** `H_bio`
+(and everything downstream of it — `U_bio`, `T_bio`, `w_bio_st`,
+`T_per_st`, `Fr`, `Re_w`, `We_w`) is therefore computed from a tank
+HALF as tall as the one actually being simulated (`2*b_nd`) — the
+labeling comment at `BioReactor.c:282` ("this recovers Ly=0.284,
+matching upstream's 0.286 to within rounding") is the exact moment this
+slipped in: it compares this fork's HALF-height numerically against
+upstream's FULL-height constant, sees they're numerically close
+(0.284 vs 0.286), and treats that as confirmation — when they are not
+the same geometric quantity at all. `geometry.b=0.071` was evidently
+chosen to make the fork's half-height match upstream's full-height
+NUMBER, which silently makes the fork's actual simulated bag exactly
+2x upstream's real height.
+
+**Why this plausibly explains the x-specific suppression (not proven
+quantitatively yet):** a genuinely taller container at the same tilt
+angle has proportionally more vertical room to absorb the same angular
+displacement, generating less horizontal (x) bulk sloshing relative to
+vertical (y) motion — consistent with `u_y` matching Kim well while
+`u_x` is suppressed. A pure `U_bio`-rescaling check (holding the
+simulated geometry fixed, just recomputing `H_bio` as `2*L_bio*Ly`)
+only shifts `U_bio` by a factor of ~1.10 — nowhere near enough to
+explain a 2x gap on its own, so most of the effect is likely the
+REAL, altered fluid dynamics of an actually-taller tank, not just a
+mislabeled normalization constant. Not yet decomposed quantitatively.
+
+**Not yet done / explicitly NOT fixed pending discussion:** this bug
+plausibly affects every non-dimensional KPI this fork has ever reported
+(kLa, tau, mixing times, all prior sweeps) to some degree, since `Fr`,
+`Re_w`, `We_w`, `T_per_st` all derive from the same wrong `H_bio`. Given
+the scope, the fix itself (`H_bio = 2*L_bio*Ly` at `BioReactor.c:295`,
+leaving `geometry.b`'s documented half-height meaning and the
+`solid()`/`y_fill` uses of `Ly` untouched) is a one-line, well-
+understood change — but deciding whether/when to apply it, and what to
+do about prior results, is a call for the user, not something to patch
+silently mid-investigation.
+
+Scratch data: `/oscar/scratch/eaguerov/tmp/upstream_compare/` (job
+4582188, upstream reproduction); `/oscar/scratch/eaguerov/tmp/
+fig_a16_replica/{L6,L7}/` (jobs 4577774, 4579229, this fork at two
+fidelities).
+
+---
+
 ## 2026-08-03 — CORRECTION: the "2.0 nondim period" used to bin cycles
 in the two entries below is wrong by ~3.3x. True period is
 `T_per_st=0.608085`, RPM-independent. Does not change either entry's
