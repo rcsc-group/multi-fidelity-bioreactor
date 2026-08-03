@@ -23,7 +23,14 @@ from tests.conftest import CANONICAL_PARAMS, run_bioreactor
 from scripts.postprocess import _compute_c_star
 
 # t_mix ≈ 48.65 non-dim for canonical params; run just past it to get oxygen data
-PARAMS_OXY = {**CANONICAL_PARAMS, "run_id": "cstar_norm", "t_end": 60.0}
+#
+# fidelity=4, not CANONICAL_PARAMS' default fidelity=3 (2026-08-03, diary.md):
+# geometry.b's fix halved the bag's fraction of the L0=1 domain box, halving
+# the number of cells resolving the bag's height at any fixed fidelity. At
+# fidelity=3 that's too coarse to keep C* within [0,1] (measured max=1.156
+# post-fix at fidelity=3 in CI); fidelity=4 restores the effective resolution
+# this test was originally calibrated against (measured max=0.9999).
+PARAMS_OXY = {**CANONICAL_PARAMS, "run_id": "cstar_norm", "fidelity": 4, "t_end": 60.0}
 
 
 @pytest.mark.medium

@@ -10,6 +10,102 @@ hashes exactly, not "the run from earlier."
 
 ---
 
+## 2026-08-03 (CI honesty incident) — reported "CI is green" after the
+geometry fix without noticing `continue-on-error: true` was masking the
+medium-tests job's real pass/fail status. The actual pytest run inside
+had 4 real failures. User caught it ("this smells to me... that is a red
+flag") from the raw pytest summary line. 3 of the 4 were real,
+understood regressions from today's geometry fix (now fixed); 1 remains
+genuinely open.
+
+**The masking mechanism:** `.github/workflows/ci.yml`'s medium-tests job
+had `continue-on-error: true` on its one test-running step, originally
+added to cover a single known-flaky test
+(`test_interface_oscillates_at_rocking_frequency`, documented as failing
+only on the Ubuntu CI runner, not OSCAR). That blanket flag doesn't
+scope to one test -- it makes the WHOLE STEP non-blocking, so the job
+shows green regardless of how many other tests fail inside it. Removed;
+replaced with a targeted `xfail(strict=False)` on just that one test
+(see below).
+
+**Investigated each of the 4 failures by reproducing on OSCAR directly**
+(not by running `-m medium`/`-m hpc` locally -- ad hoc sbatch runs
+matching each test's exact scenario, per this project's established
+convention):
+
+1. **`test_mass_conservation.py`** -- VOF drift 2.62% vs 0.5% threshold.
+   Root cause: `geometry.b`'s fix halved the bag's fraction of the
+   `L0=1` domain box, which at any FIXED fidelity halves the number of
+   cells resolving the bag's height. At fidelity=3 (this test's default,
+   via `CANONICAL_PARAMS`) that's ~4.5 cells -> ~2.3 cells across the
+   whole bag -- confirmed by direct calculation
+   (`NN*2*(geometry.b/geometry.a)`). Verified empirically: same scenario
+   at fidelity=4 gives drift=0.086-0.10% (both a fresh short run and one
+   matching the CI test's exact un-overridden `t_end` default of 250).
+   **Fix: bumped this test's fidelity 3->4**, restoring the effective
+   bag-height resolution this test was originally calibrated against.
+
+2. **`test_cstar_normalization.py`** -- C* exceeded 1.0 (max=1.156).
+   Same root cause as #1 (confirmed: same fidelity=3->4 bump gives
+   max=0.9999, cleanly bounded). **Fix: bumped fidelity 3->4.**
+
+3. **`test_kim_upstream_comparison.py`** -- ratio drifted from its
+   documented baseline (0.55 -> measured 1.2414 in this same CI run).
+   NOT a bug: the baseline explicitly existed to include "a 2x
+   difference in the liquid-volume convention" (this file's own
+   docstring, written 2026-07-30) -- exactly what today's geometry fix
+   eliminated. The test's own comment already said "if you deliberately
+   move the fork closer to Kim's setup, update `_BASELINE_RATIO`."
+   Independently re-measured on OSCAR (job 4588738/4588739, fresh
+   compile of the vendored `tests/fixtures/kim_upstream/` fixture):
+   ratio=1.2435, matching CI's 1.2414 to 0.2%. **Fix: updated
+   `_BASELINE_RATIO` 0.55 -> 1.24.**
+
+4. **`test_forcing_frequency.py`** -- **STILL OPEN, not fixed.**
+   `posY_max`'s spectral power in the expected `omega_b` band dropped
+   from a documented healthy ~37-42% to 1.5% (fidelity=3, OSCAR,
+   corrected geometry) or worse, 0.004% (fidelity=4 -- bumping fidelity
+   made this ONE WORSE, unlike #1/#2, ruling out "just needs more
+   cells"). Confirmed the OLD geometry (`b=0.071`) still passes reliably
+   on OSCAR at fidelity=3 (41.8% power fraction, job in
+   `/oscar/scratch/eaguerov/tmp/ci_failures_investigate/
+   forcing_freq_oldgeom_f3/`) -- so this is a real, reproducible,
+   geometry-fix-triggered change in the flow's spectral behavior, not
+   the pre-existing Ubuntu-runner-only flake it was previously assumed
+   to be (that flake is presumably still separately present underneath,
+   but is no longer the dominant or only story). Inspected the raw
+   `posY_max(t)` time series directly (not just the aggregate FFT
+   fraction) -- no obvious quantization or drift artifact jumped out;
+   the signal looks qualitatively plausible but isn't cleanly
+   dominated by a single frequency the way the old-geometry case is.
+   **Not root-caused.** Marked `xfail(strict=False)` rather than left
+   to silently pass/fail under a blanket `continue-on-error` -- visible
+   in test reports, doesn't block other tests, easy to find and remove
+   once actually understood.
+
+**Also regenerated `runs/health_l6_video`** (job 4588511, t_end=100,
+corrected geometry) -- the pre-existing local reference `test_grid_
+convergence.py` compares against was itself computed under the OLD
+geometry; a fresh L5 run under the NEW `CANONICAL_PARAMS` would have
+been comparing against the wrong physics entirely. This directory is
+gitignored (local artifact, not committed) -- anyone else running this
+suite locally needs to regenerate it themselves before trusting that
+specific test; it's currently silently skipped when absent.
+
+**Lesson:** checking a CI job's outer `conclusion` field is not the
+same as checking whether its tests actually passed. `continue-on-error`
+(and similar constructs -- `|| true`, ignore-exit-code steps) can make a
+job report success while the work inside it failed; when asked to
+confirm CI is green, read the actual step output/summary line, not just
+the job status.
+
+Scratch data: `/oscar/scratch/eaguerov/tmp/ci_failures_investigate/`,
+`/oscar/scratch/eaguerov/tmp/kim_cmp_measure/`, `/oscar/scratch/eaguerov/
+tmp/health_l6_regen/` (jobs 4588511, 4588651-4588654, 4588728-4588739,
+4588883, 4588922).
+
+---
+
 ## 2026-08-03 (resolution) — FIXED, both parts, plus 3 new physically-
 grounded regression tests. Decision made: migrate `geometry.b`'s default
 (0.071 → 0.03575), keep the documented half-height semantic. Also

@@ -82,17 +82,17 @@ jobs:
           export PATH="$BASILISK:$PATH"
           make build build-video build-health build-mpi
 
-      # continue-on-error: known open issue -- test_interface_oscillates_at_rocking_frequency
-      # passes reproducibly on OSCAR (incl. against this exact same Basilisk tarball, built
-      # fresh there) but fails on this runner's Ubuntu/gcc toolchain. Ruled out: Basilisk
-      # source version (same tarball tested on OSCAR still passes) and simple run-to-run
-      # nondeterminism (3x identical reruns on OSCAR, always passes). Leading hypothesis:
-      # a compiler-version-sensitive bug in BioReactor.c's forcing code, not benign FP noise
-      # -- the failure is 6.5% vs a 20% threshold (typical correct value ~37%), not a
-      # borderline rounding wobble. Not yet root-caused; keeping this job non-blocking so CI
-      # stays informative without gating merges on a platform difference under investigation.
+      # [PROJECT FIX, 2026-08-03, diary.md] `continue-on-error: true` used to
+      # sit on this whole step, meant to cover ONE known-flaky test
+      # (test_interface_oscillates_at_rocking_frequency). It actually masked
+      # the entire job's real pass/fail status -- this job showed green on a
+      # push that had 4 real, unrelated test failures inside it (3 now fixed:
+      # test_mass_conservation, test_cstar_normalization, test_kim_upstream_
+      # comparison; see those files' updated comments). Removed. The one
+      # still-open issue (see test_forcing_frequency.py) is now marked
+      # xfail(strict=False) at the test level instead -- visible in reports,
+      # not silently swallowing everything else.
       - name: Run numerical verification suite
-        continue-on-error: true
         run: |
           export BASILISK="$GITHUB_WORKSPACE/basilisk/src"
           export PATH="$BASILISK:$PATH"

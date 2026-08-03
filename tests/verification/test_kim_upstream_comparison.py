@@ -146,20 +146,26 @@ def _mean_post_ramp_vel_rms(normf_data: np.ndarray, t_ramp: float) -> float:
 
 # Measured baseline ratio (our fork's post-ramp combined velocity RMS,
 # divided by Kim upstream's, both computed by _mean_post_ramp_vel_rms at
-# matched condition/resolution): 0.547 and 0.555 across two independent
-# CI runs (2026-07-30/31) -- ~1.5% run-to-run spread. This is NOT a claim
-# that 0.55 is "correct" (our fork intentionally differs from Kim's setup
-# for documented reasons: shorter ramp, tank shape, liquid-volume
-# convention -- see this file's docstring). It's a regression baseline:
-# every real bug surfaced during the 2026-07-30 investigation moved this
-# kind of ratio by 1.7x-12x, so a wide-but-finite tolerance around the
-# measured baseline catches genuine regressions (a sign error, a dropped
-# term, an accidental parameter change) while easily tolerating normal
-# run-to-run noise. If you deliberately change the ramp duration, tank
-# shape, or volume convention to move the fork closer to Kim's own setup,
-# this ratio WILL legitimately shift -- update _BASELINE_RATIO to the
-# newly-measured value rather than loosening the tolerance.
-_BASELINE_RATIO = 0.55
+# matched condition/resolution).
+#
+# RECALIBRATED 2026-08-03 (diary.md): the geometry.b fix eliminated the "2x
+# liquid-volume convention difference" this baseline used to include, so the
+# ratio legitimately jumped from ~0.55 to ~1.24 -- exactly the kind of
+# deliberate shift this comment already told you to expect and recalibrate
+# for, not a new regression. Measured 1.2414 (GitHub Actions CI, this same
+# commit) and 1.2435 (OSCAR, independent rebuild) -- ~0.2% spread, using
+# 1.24. This is NOT a claim that 1.24 is "correct" (our fork still
+# intentionally differs from Kim's setup: shorter ramp, tank shape -- see
+# this file's docstring). It's a regression baseline: every real bug
+# surfaced during the 2026-07-30 investigation moved this kind of ratio by
+# 1.7x-12x, so a wide-but-finite tolerance around the measured baseline
+# catches genuine regressions (a sign error, a dropped term, an accidental
+# parameter change) while easily tolerating normal run-to-run noise. If you
+# deliberately change the ramp duration, tank shape, or volume convention to
+# move the fork closer to Kim's own setup, this ratio WILL legitimately
+# shift -- update _BASELINE_RATIO to the newly-measured value rather than
+# loosening the tolerance.
+_BASELINE_RATIO = 1.24
 _BASELINE_RTOL  = 0.30  # relative tolerance around _BASELINE_RATIO
 
 
