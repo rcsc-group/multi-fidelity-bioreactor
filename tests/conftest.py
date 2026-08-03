@@ -21,7 +21,11 @@ CANONICAL_PARAMS = {
     "omega_h": 0.0,
     "amplitude_h":    [0.0, 0.0, 0.0],
     "phi_horizontal": [0.0, 0.0, 0.0],
-    "geometry": {"a": 0.25, "b": 0.071, "n": 8.0},
+    # geometry.b corrected 2026-08-03 (diary.md): was 0.071, which paired with
+    # H_bio's formula to simulate a bag 2x Kim et al.'s actual height.
+    # 0.03575 = half of Kim's real full height (0.286*0.25/2, from their
+    # upstream driver's hardcoded Ly=0.286).
+    "geometry": {"a": 0.25, "b": 0.03575, "n": 8.0},
     "fill_level": 0.5,
 }
 

@@ -20,7 +20,7 @@ omega_b     = seg0_params["omega_b"]          # 1.5708 — SAME as seg-0
 t_checkpoint = seg0_params["t_end"]           # ≈97.3
 
 # Compute t_end: t_checkpoint + n_mix_cycles * T_per_st
-L, H  = seg0_params["geometry"]["a"], seg0_params["geometry"]["b"]
+L, H  = seg0_params["geometry"]["a"], 2 * seg0_params["geometry"]["b"]  # full height = 2x half-height semi-axis (BioReactor.c:295, fixed 2026-08-03)
 th    = math.radians(seg0_params["theta_max"][0])
 T_per = 2 * math.pi / omega_b
 V     = L/4 * (H + 0.5*L*math.tan(th))

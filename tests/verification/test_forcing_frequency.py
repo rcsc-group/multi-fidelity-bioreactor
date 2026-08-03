@@ -25,14 +25,18 @@ def _omega_b_nd(params: dict) -> float:
 
     Replicates BioReactor.c:
         T_per  = 2*pi / omega_b
-        V_bio  = L/4 * (b + 0.5*L*tan(theta_max[0]))
-        U_bio  = V_bio / (b*0.5) / T_per
+        V_bio  = L/4 * (2*b + 0.5*L*tan(theta_max[0]))
+        U_bio  = V_bio / b / T_per
         T_bio  = L / U_bio
         omega_b_nd = omega_b * T_bio
+
+    Note: geometry.b is a HALF-height semi-axis (docs_site/reference/
+    params.md); H_bio is the FULL bag height, hence the factor of 2
+    (BioReactor.c:295, fixed 2026-08-03 -- see diary.md).
     """
     omega_b = params["omega_b"]
     L_bio   = params["geometry"]["a"]
-    H_bio   = params["geometry"]["b"]
+    H_bio   = 2 * params["geometry"]["b"]  # full height = 2x the half-height semi-axis
     th_max  = math.radians(params["theta_max"][0])
 
     T_per  = 2 * math.pi / omega_b

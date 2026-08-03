@@ -292,7 +292,17 @@ int main(int argc, char * argv[]){
   
   // Characteristic scales
   double H_bio,V_bio;
-  H_bio  = L_bio*Ly;
+  // [PROJECT FIX, 2026-08-03, diary.md] `Ly` above is a HALF-height semi-axis
+  // (matches its use in solid()/y_fill and docs_site/reference/params.md's
+  // documented meaning of geometry.b), but H_bio must be the FULL bag height
+  // to match upstream's convention (where the old fixed `Ly=0.286` constant
+  // WAS the full height by construction). Missing the factor of 2 here made
+  // every run's simulated bag exactly 2x taller than intended -- confirmed
+  // by comparing ux_liq_vol (0.568, should be 0.286) against Kim's own
+  // upstream driver recompiled and run at the same conditions, and by the
+  // resulting u'_x,rms sitting at ~half of Kim's published Fig. A.16 value
+  // while u'_y,rms matched. See diary.md 2026-08-03 for the full derivation.
+  H_bio  = 2.*L_bio*Ly;
   V_bio  = L_bio/4*(H_bio + 0.5*L_bio*tan(Th_max));
   U_bio  = V_bio/(H_bio*0.5)/T_per; // Characteristic velocity scale
   T_bio  = L_bio/U_bio;             // Characteristic time scale

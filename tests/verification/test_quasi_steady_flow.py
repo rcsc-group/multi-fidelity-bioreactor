@@ -27,7 +27,7 @@ def _t_ramp_nd(params: dict) -> float:
     """
     omega_b = params["omega_b"]
     L_bio   = params["geometry"]["a"]
-    H_bio   = params["geometry"]["b"]
+    H_bio   = 2 * params["geometry"]["b"]  # full height = 2x the half-height semi-axis (BioReactor.c:295, fixed 2026-08-03)
     th_max  = math.radians(params["theta_max"][0])
 
     T_per  = 2 * math.pi / omega_b

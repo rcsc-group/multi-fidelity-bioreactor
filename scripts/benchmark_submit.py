@@ -44,7 +44,7 @@ WALLTIME = {4: "00:15:00", 5: "00:30:00", 6: "02:00:00"}
 def t_mix_nd(params):
     """Non-dim t_mix = T_per_st * n_mix_cycles."""
     ob = params["omega_b"]
-    L, H = params["geometry"]["a"], params["geometry"]["b"]
+    L, H = params["geometry"]["a"], 2 * params["geometry"]["b"]  # full height = 2x half-height semi-axis (BioReactor.c:295, fixed 2026-08-03)
     th   = math.radians(params["theta_max"][0])
     T    = 2 * math.pi / ob
     V    = L/4 * (H + 0.5*L*math.tan(th))
@@ -57,7 +57,7 @@ def t_mix_nd(params):
 def t_end_nd(params):
     """t_end = t_mix + T_per_st * n_mix_cycles (kLa window = same length as warmup)."""
     ob = params["omega_b"]
-    L, H = params["geometry"]["a"], params["geometry"]["b"]
+    L, H = params["geometry"]["a"], 2 * params["geometry"]["b"]  # full height = 2x half-height semi-axis (BioReactor.c:295, fixed 2026-08-03)
     th   = math.radians(params["theta_max"][0])
     T    = 2 * math.pi / ob
     V    = L/4 * (H + 0.5*L*math.tan(th))
@@ -71,7 +71,7 @@ def t_end_nd(params):
 def t_end_restart(params, t_ck):
     """t_end for restart seg: t_checkpoint + T_per_st * n_mix_cycles + kLa window."""
     ob = params["omega_b"]
-    L, H = params["geometry"]["a"], params["geometry"]["b"]
+    L, H = params["geometry"]["a"], 2 * params["geometry"]["b"]  # full height = 2x half-height semi-axis (BioReactor.c:295, fixed 2026-08-03)
     th   = math.radians(params["theta_max"][0])
     T    = 2 * math.pi / ob
     V    = L/4 * (H + 0.5*L*math.tan(th))

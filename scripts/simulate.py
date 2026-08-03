@@ -41,7 +41,7 @@ def _t_mix_nd(params: dict) -> float:
     """
     omega_b      = params.get("omega_b", 3.93)
     L            = params.get("geometry", {}).get("a", 0.25)
-    H            = params.get("geometry", {}).get("b", 0.071)
+    H            = 2 * params.get("geometry", {}).get("b", 0.03575)  # full height = 2x half-height semi-axis (BioReactor.c:295, fixed 2026-08-03)
     th           = math.radians(params.get("theta_max", [7.0])[0])
     n_mix_cycles = params.get("n_mix_cycles", 80)
 

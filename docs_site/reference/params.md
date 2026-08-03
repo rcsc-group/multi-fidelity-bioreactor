@@ -30,7 +30,7 @@ All fields for `runs/<run_id>/params.json`.
 | Field | Type | Units | If omitted | Canonical value | Description |
 |-------|------|-------|------------|------------------|-------------|
 | `geometry.a` | float | m | 0.0 (degenerate bag) | 0.25 | Bag half-width (horizontal semi-axis; half the total bag width) |
-| `geometry.b` | float | m | 0.0 (degenerate bag) | 0.071 | Bag half-height (vertical semi-axis; half the total bag height) |
+| `geometry.b` | float | m | 0.0 (degenerate bag) | 0.03575 | Bag half-height (vertical semi-axis; half the total bag height). Corrected 2026-08-03 (diary.md) — was 0.071, which paired with `H_bio`'s formula to simulate a bag 2x Kim et al.'s actual height; 0.03575 = half of Kim's real full height (`0.286 * 0.25 / 2`, from their upstream driver's hardcoded `Ly=0.286`) |
 | `geometry.n` | float | — | 0.0 (degenerate shape) | 8.0 | Superellipse exponent controlling bag shape: n=2 gives an ellipse, n≥8 gives a rounded rectangle |
 | `fill_level` | float | fraction | 0.0 (empty bag) | 0.5 | Fraction of bag volume filled with liquid (0 = empty, 1 = full). Typical range: 0.3–0.7 |
 

@@ -66,7 +66,7 @@ BASE = {
 # Compute t_end for seg-0 (same formula as sweep.py)
 import math
 omega_b = BASE["omega_b"]
-L, H    = BASE["geometry"]["a"], BASE["geometry"]["b"]
+L, H    = BASE["geometry"]["a"], 2 * BASE["geometry"]["b"]  # full height = 2x half-height semi-axis (BioReactor.c:295, fixed 2026-08-03)
 th      = math.radians(BASE["theta_max"][0])
 T_per   = 2 * math.pi / omega_b
 V       = L / 4 * (H + 0.5 * L * math.tan(th))
@@ -92,22 +92,32 @@ seg1 = dict(BASE,
     t_end=round(t_end_seg1, 3),
 )
 
-print("Submitting L5 MPI smoke test (2 segments)...")
-print(f"  seg-0: omega_b=1.5708  t_end={seg0['t_end']:.1f}  (fresh start)")
-print(f"  seg-1: omega_b=1.8326  t_end={seg1['t_end']:.1f}  (checkpoint restart)")
-print(f"  seg-1 will be self-submitted by seg-0 on completion\n")
+def main():
+    print("Submitting L5 MPI smoke test (2 segments)...")
+    print(f"  seg-0: omega_b=1.5708  t_end={seg0['t_end']:.1f}  (fresh start)")
+    print(f"  seg-1: omega_b=1.8326  t_end={seg1['t_end']:.1f}  (checkpoint restart)")
+    print(f"  seg-1 will be self-submitted by seg-0 on completion\n")
 
-# Write seg-1 params to runs dir now (self-submit reads it from there)
-seg1_run_dir = RUNS_ROOT / "smoke_l5_seg1"
-seg1_run_dir.mkdir(parents=True, exist_ok=True)
-seg1_canon = dict(seg1, _canonical_run_dir=str(seg1_run_dir.resolve()))
-(seg1_run_dir / "params.json").write_text(json.dumps(seg1_canon, indent=2))
+    # Write seg-1 params to runs dir now (self-submit reads it from there)
+    seg1_run_dir = RUNS_ROOT / "smoke_l5_seg1"
+    seg1_run_dir.mkdir(parents=True, exist_ok=True)
+    seg1_canon = dict(seg1, _canonical_run_dir=str(seg1_run_dir.resolve()))
+    (seg1_run_dir / "params.json").write_text(json.dumps(seg1_canon, indent=2))
 
-j0 = stage_and_submit(seg0)
-print(f"\nSeg-0 job: {j0}")
-print(f"Seg-1 will be self-submitted by the SLURM script after seg-0 completes.")
-print(f"\nMonitor:")
-print(f"  squeue -u eaguerov")
-print(f"\nPass criteria:")
-print(f"  ls runs/smoke_l5_seg0/results.json runs/smoke_l5_seg1/results.json")
-print(f"  python3 -c \"import json; print(json.load(open('runs/smoke_l5_seg0/results.json'))['kLa_25'])\"")
+    j0 = stage_and_submit(seg0)
+    print(f"\nSeg-0 job: {j0}")
+    print(f"Seg-1 will be self-submitted by the SLURM script after seg-0 completes.")
+    print(f"\nMonitor:")
+    print(f"  squeue -u eaguerov")
+    print(f"\nPass criteria:")
+    print(f"  ls runs/smoke_l5_seg0/results.json runs/smoke_l5_seg1/results.json")
+    print(f"  python3 -c \"import json; print(json.load(open('runs/smoke_l5_seg0/results.json'))['kLa_25'])\"")
+
+
+# [PROJECT FIX, 2026-08-03] This filename ends in "_test.py", matching pytest's
+# default `python_files = test_*.py *_test.py` collection glob -- with no
+# __main__ guard, a plain `pytest` invocation from the repo root IMPORTED this
+# module and submitted a real 16-task MPI job as a side effect (see diary.md
+# 2026-08-03; found alongside the same bug in _submit_short_window_test.py).
+if __name__ == "__main__":
+    main()

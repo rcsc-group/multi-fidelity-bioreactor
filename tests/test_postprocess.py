@@ -303,7 +303,7 @@ def test_t_bio_formula_canonical():
     # Manual replica of the formula in postprocess.py _t_scales
     omega_b = CANONICAL_PARAMS["omega_b"]
     L = CANONICAL_PARAMS["geometry"]["a"]
-    H = CANONICAL_PARAMS["geometry"]["b"]
+    H = 2 * CANONICAL_PARAMS["geometry"]["b"]  # full height = 2x half-height semi-axis (BioReactor.c:295, fixed 2026-08-03)
     th = math.radians(CANONICAL_PARAMS["theta_max"][0])
     T_per = 2 * math.pi / omega_b
     V = L / 4 * (H + 0.5 * L * math.tan(th))

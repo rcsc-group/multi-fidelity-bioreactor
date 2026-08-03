@@ -10,6 +10,114 @@ hashes exactly, not "the run from earlier."
 
 ---
 
+## 2026-08-03 (resolution) — FIXED, both parts, plus 3 new physically-
+grounded regression tests. Decision made: migrate `geometry.b`'s default
+(0.071 → 0.03575), keep the documented half-height semantic. Also
+answers "was this introduced mid-production?" -- no: the bug is
+coextensive with the entire params.json pipeline's existence.
+
+**Historical scope, precisely dated.** `git log --follow -S"Ly = params.
+geometry_b"` finds the bug's origin: commit `6555e49` ("feat: parametric
+superellipse geometry + fill level in init event"). That commit replaced
+the correct, upstream-inherited `solid(cs,fs,intersection(-(y-0.5*Ly),
+-(-y-0.5*Ly)))` (bounds `|y|<0.5*Ly`, i.e. half of a FULL-height `Ly`)
+with `solid(cs,fs,intersection(a_nd-fabs(x), b_nd-fabs(y)))` where
+`b_nd=Ly=geometry_b/L_bio` bounds `|y|<b_nd` directly -- dropping the
+`0.5*` factor that used to convert a full-height constant into a half-
+extent. Checked whether any *correct* production activity happened
+before this: `ea66816` (initial upstream import), `dbb5af0` (params.json
+wiring), and `6555e49` itself are all timestamped the same second
+(2026-05-06 15:58:29-30) -- a single squashed/rebased history import.
+There was no working, params.json-driven state before the bug; this
+project's entire sweep/optimization pipeline was born with it already
+present. Not a mid-production regression -- a day-one defect that
+survived undetected for exactly the reason `test_kim_fig_a16_velocity_
+rms.py` (below) now exists to catch: nothing checked against an
+external reference, only internal self-consistency, which a shared
+constant error can't break.
+
+**The complete, confirmed fix (both parts together, see the two entries
+below for the isolated tests that led here):**
+1. `BioReactor.c:295`, `H_bio = 2.*L_bio*Ly` (formula fix, kept from the
+   first attempt below).
+2. `geometry.b`'s default: `0.071 → 0.03575` (`0.03575 = upstream's
+   Ly=0.286, halved, times L_bio=0.25` -- the correct HALF-height
+   matching Kim's real bag, preserving the already-documented "half-
+   height semi-axis" meaning of `geometry.b` rather than redefining it).
+
+Chose value-migration over redefining the semantic (the two options
+raised below) because: (a) `geometry.a` already uses the half-width
+convention, keeping `a`/`b` symmetric; (b) half-width/half-height is the
+standard mathematical convention for a superellipse's semi-axes; (c)
+since the bug predates any correct production use of the pipeline
+(previous paragraph), there is no body of "already-correct" results
+that a value change would retroactively mislabel -- every historical
+run already used 0.071 paired with the buggy chain, so nothing that was
+right becomes wrong.
+
+**What was and wasn't touched migrating the value:**
+- Fixed: `docs_site/reference/params.md` (canonical default + note),
+  `docs_site/tutorials/first-simulation.md`, `tests/conftest.py`
+  (`CANONICAL_PARAMS`, used by all physics-verification tests), the 12
+  `config/sweep_*.json` FUTURE-sweep templates, and the 3 script fallback
+  defaults (`scripts/simulate.py`, `postprocess.py`,
+  `plot_convergence.py`'s `.get("b", 0.071)` → `0.03575`).
+- Deliberately NOT touched: `diary.md` itself (historical log),
+  `experiments/*/params.json` and `docs/canonical_case/params.json`
+  (records of what was actually run -- rewriting these would falsify
+  history), and the ~10 test files where `0.071` is an arbitrary
+  placeholder value for testing UNRELATED logic (schema validation,
+  sweep-merging, checkpoint chaining) that doesn't depend on physical
+  accuracy at all -- changing those would be pure churn with no
+  correctness benefit.
+- Also updated the 4 already-existing physics-verification tests whose
+  own `H_bio` replica formulas needed the matching `*2` fix
+  (`test_forcing_frequency.py`, `test_quasi_steady_flow.py`,
+  `test_grid_convergence.py`, `test_n_mix_cycles_wired.py`) plus
+  `test_postprocess.py`'s check of `postprocess.py`'s own `_t_scales`.
+
+**Final confirmation, full repo state** (job 4584350, already run with
+`geometry.b=0.03575` and the formula fix; re-verified this is now
+exactly what `CANONICAL_PARAMS` produces):
+```
+ux_liq_vol (domain area): 0.286        -- matches upstream exactly
+u'_x,rms peak (t/T_p=[29,31]): 0.773   vs Kim ~0.8   (3.4% off)
+u'_y,rms peak:                 0.212   vs Kim ~0.21  (1.0% off)
+```
+
+**3 new guardrail tests added** (`tests/verification/`):
+1. `test_bag_height_matches_geometry.py` -- structural: simulated fluid-
+   domain area must equal `2*(geometry.b/geometry.a)`. Cheap (fidelity
+   3), general regression guard on the `solid()`/`y_fill` construction
+   itself (that construction was never the source of THIS bug, but
+   could be broken by a future refactor).
+2. `test_geometry_b_scales_period.py` -- differential: the ratio of
+   measured rocking periods between two distinct `geometry.b` values
+   must match the ratio the closed-form formula predicts. Value-
+   independent (uses its own `b=0.05`/`b=0.10`, not `CANONICAL_PARAMS`),
+   so it stays meaningful even if `CANONICAL_PARAMS` changes again.
+3. `test_kim_fig_a16_velocity_rms.py` -- **the one that actually would
+   have caught this**: runs Kim's exact baseline condition and asserts
+   `u'_x,rms`/`u'_y,rms` within 25% of their published Fig. A.16 values.
+   External, physically-grounded, independent of this code's own
+   formulas. `hpc`-marked (needs a real ~5min fidelity-6 run to
+   `t_end=19`) -- not run via the fast suite, verified manually via the
+   job above instead, matching this project's "don't run `-m medium`/
+   `-m hpc` locally, verify via direct sbatch runs" convention.
+
+Full fast suite (`uv run pytest -q`, excludes `medium`/`hpc`): **150
+passed, 24 deselected** (21 pre-existing + 3 new), no regressions.
+
+**Not done / left for a future pass:** rerunning or reinterpreting any
+of this project's PRIOR sweep results (kLa, tau, mixing-time heatmaps,
+etc.) under the corrected geometry -- every one of them used the old,
+too-tall bag. This entry only fixes the pipeline going forward.
+
+Scratch data: `/oscar/scratch/eaguerov/tmp/fig_a16_replica/L6_bothfixed/`
+(job 4584350).
+
+---
+
 ## 2026-08-03 (correction to the entry immediately below) — the H_bio
 FORMULA fix alone is NOT sufficient. The actual simulated bag geometry
 (not just the non-dim scale) is genuinely 2x too tall vs Kim's real bag

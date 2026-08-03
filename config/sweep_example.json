@@ -1,6 +1,6 @@
 {
   "fidelity":    3,
-  "geometry":    {"a": 0.25, "b": 0.071, "n": 2.0},
+  "geometry":    {"a": 0.25, "b": 0.03575, "n": 2.0},
   "fill_level":  0.5,
   "n_harmonics": 1,
   "theta_max":   [7.0, 0.0, 0.0],

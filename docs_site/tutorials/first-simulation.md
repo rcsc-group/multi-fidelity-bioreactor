@@ -38,7 +38,7 @@ cat > runs/tutorial_demo/params.json <<'EOF'
   "omega_h": 0.0,
   "amplitude_h": [0.0, 0.0, 0.0],
   "phi_horizontal": [0.0, 0.0, 0.0],
-  "geometry": {"a": 0.25, "b": 0.071, "n": 8.0},
+  "geometry": {"a": 0.25, "b": 0.03575, "n": 8.0},
   "fill_level": 0.5,
   "n_mix_cycles": 5,
   "t_end": 40.0
@@ -112,7 +112,7 @@ cat > runs/tutorial_video_demo/params.json <<'EOF'
   "omega_h": 0.0,
   "amplitude_h": [0.0, 0.0, 0.0],
   "phi_horizontal": [0.0, 0.0, 0.0],
-  "geometry": {"a": 0.25, "b": 0.071, "n": 8.0},
+  "geometry": {"a": 0.25, "b": 0.03575, "n": 8.0},
   "fill_level": 0.5,
   "n_mix_cycles": 8,
   "t_end": 20.0

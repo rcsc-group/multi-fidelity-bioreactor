@@ -23,19 +23,29 @@ passed," regardless of whether that bag is small and fast or large and slow.
 ## The actual derivation (`BioReactor.c`)
 
 ```c
-H_bio  = L_bio*Ly;
+Ly     = geometry.b / L_bio;        // dimensionless HALF-height semi-axis
+H_bio  = 2.*L_bio*Ly;               // full bag height (fixed 2026-08-03, diary.md)
 V_bio  = L_bio/4*(H_bio + 0.5*L_bio*tan(Th_max));
 U_bio  = V_bio/(H_bio*0.5)/T_per;   // characteristic velocity scale
 T_bio  = L_bio/U_bio;               // characteristic time scale
 ```
 
 `L_bio` is `geometry.a` (the bag half-width) — everything else derives from
-it. `V_bio` is an estimate of the characteristic sloshing volume swept per
-rocking period, built from the bag's geometry and its maximum tilt angle
-(`Th_max`). Dividing that by half the bag height and by the rocking period
-`T_per` gives `U_bio`, a characteristic sloshing *velocity* — and once you
-have a characteristic length and velocity, `T_bio = L_bio / U_bio` falls out
-as the characteristic *time*.
+it. `Ly` is a half-height *semi-axis* (matches `geometry.b`'s documented
+meaning and its use in the embedded-boundary `solid()` call, which bounds
+`|y| < Ly`), so `H_bio` needs an explicit factor of 2 to become the actual
+*full* bag height. Until 2026-08-03 this factor was missing — `H_bio` was
+computed as if `Ly` were already the full height, silently simulating a bag
+2x taller than the one described by `geometry.b`. See diary.md 2026-08-03
+for how this was found (a Fig. A.16 replica's `u'_{x,rms}` sat at half of
+Kim et al.'s published value) and `tests/verification/
+test_bag_height_matches_geometry.py` for the regression guard. `V_bio` is an
+estimate of the characteristic sloshing volume swept per rocking period,
+built from the bag's geometry and its maximum tilt angle (`Th_max`).
+Dividing that by half the bag height and by the rocking period `T_per`
+gives `U_bio`, a characteristic sloshing *velocity* — and once you have a
+characteristic length and velocity, `T_bio = L_bio / U_bio` falls out as
+the characteristic *time*.
 
 Everything the solver reports in non-dimensional form is scaled against
 these three: a non-dimensional time `t` is `t_physical / T_bio`; a

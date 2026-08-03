@@ -22,7 +22,7 @@ def _t_per_st(params: dict) -> float:
     """Non-dim rocking period for given params."""
     omega_b = params["omega_b"]
     L = params["geometry"]["a"]
-    H = params["geometry"]["b"]
+    H = 2 * params["geometry"]["b"]  # full height = 2x the half-height semi-axis (BioReactor.c:295, fixed 2026-08-03)
     th = math.radians(params["theta_max"][0])
     T_per = 2 * math.pi / omega_b
     V = L / 4 * (H + 0.5 * L * math.tan(th))
