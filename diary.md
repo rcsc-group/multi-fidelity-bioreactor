@@ -8,6 +8,67 @@ why it was done, what it found, and what it does and doesn't prove.
 Convention: newest entries at the top. Link run_ids / job_ids / commit
 hashes exactly, not "the run from earlier."
 
+## 2026-08-04 — data-driven SLURM walltime estimator (`scripts/
+estimate_walltime.py`), built from ~1000 historical job records. Found
+and fixed a real gotcha in Basilisk's own diagnostics along the way:
+`logstats.dat`'s `#Cells` is a PER-RANK local leaf count in MPI mode
+(only rank 0 writes it), not the global total.
+
+**Method:** scanned all 2046 `runs/*/` directories, kept the 995 with
+both `params.json` and a non-empty `logstats.dat`, filtered to the 928
+that reached >80% of their target `t_end` (excludes crashed/timed-out
+runs), computed `core_sec_per_t = wall_clock_s * ntasks / t_reached` per
+run, grouped by `fidelity`. `ntasks` trusted from `params.json`'s
+`_ntasks` field when present (352 rows); inferred from `cpu_s/wall_s`
+otherwise (this ratio is only valid for serial/OpenMP runs, where perf.t
+sums real thread-time -- NOT for MPI, where it's rank-local and always
+≈1 regardless of true rank count, a separate pitfall avoided by
+preferring the explicit field).
+
+**A naive multi-variable regression (log(wall_s) ~ fidelity + log(t_end)
++ log(ntasks)) gave implausible coefficients** (t_end and ntasks
+exponents both ≈0) because the three are confounded in the historical
+sample: higher-fidelity runs historically used systematically shorter
+`t_end` AND more cores. Used a per-fidelity empirical rate instead,
+which self-corrects for whatever `ntasks` was historically paired with
+each fidelity (first-order; doesn't independently verify MPI scaling
+efficiency).
+
+**False alarm, caught and resolved before it mattered:** while building
+this, sanity-checking the table's f10 prediction against `#Cells` in
+`logstats.dat` seemed to show a 16x mismatch (65536 vs the expected
+1024²=1048576) -- looked like a fidelity->NN convention had drifted
+across this project's history. Root cause: `#Cells` is per-RANK, and
+historical high-fidelity runs mostly used 16 ranks (65536*16=1048576,
+exactly right). Multiplying by `ntasks` before comparing resolved it
+completely -- `actual_fidelity` (derived from corrected total cells)
+matches the labeled `fidelity` in 100% of f7-10 rows. The rate table
+itself was never wrong; only my own validation check was.
+
+That same per-rank-#Cells confusion caused a SEPARATE, real scare during
+today's actual L10 run (job 4596701, seg1 of the Kim-baseline recovery
+below): I mis-compared its early progress against a mislabeled data
+point (a `463s at t=4.72, 16 ranks` reading that was actually from the
+L8 smoke test, not L10) and briefly projected ~270 hours to complete.
+The REAL post-cold-start-transient marginal rate (measured directly:
+Δwalltime=74s for Δt=0.02 at 64 ranks) gives ~236800 core-sec/t --
+consistent with the (correctly-computed) historical f10 median of
+174522 (1.4x higher, comfortably inside the historical p90 spread) --
+projecting ~12h for seg1, not 270h. Lesson twofold: (1) don't extrapolate
+from a single early reading without checking it's the RIGHT run's data,
+(2) the huge apparent slowdown in the FIRST ~1.7h (cumulative-average
+rate ~97400 vs marginal ~3700-fold lower) was a genuine cold-start
+Poisson-solve transient, not a persistent problem -- always prefer a
+marginal (two-fresh-readings) rate over a cumulative-since-start one
+when a run is still early.
+
+Tool usage: `python scripts/estimate_walltime.py --fidelity F --t-end T
+--ntasks N [--stat median|p90] [--margin X]`. Defaults to `p90` (the
+table's spread already covers today's own L6/L8/L10 measurements, all
+1.4-1.6x the median but well inside p90).
+
+Scratch data/scripts: `/oscar/scratch/eaguerov/tmp/walltime_formula/`.
+
 ---
 
 ## 2026-08-03 (CI honesty incident, verified) — checked the ACTUAL step
