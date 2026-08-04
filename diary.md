@@ -8,6 +8,63 @@ why it was done, what it found, and what it does and doesn't prove.
 Convention: newest entries at the top. Link run_ids / job_ids / commit
 hashes exactly, not "the run from earlier."
 
+## 2026-08-04 — Fig. 13a/A.16/B.17 replica cleanup: recovered a "FAILED"
+L8 run via manual postprocessing, completed the L8 shear-stress sweep,
+fixed a real RMSE-definition bug in the B.17 kLa comparison, and
+committed the current-best replicas to `docs/kimetal2024/figure_replicas/`.
+
+**Fig 13a (shear stress vs rocking frequency):** the L8 sweep was missing
+Kim's own baseline point (RPM=32.5) — traced to the original 8-point RPM
+list never including it. Submitted `fig_a16_l8_rpm32p5` (job 4645673,
+`--account=mbessa-condo`, one-off exception granted for this point only)
+to fill the gap. `sacct` reported it `FAILED`, but the simulation itself
+completed cleanly (44396 steps, `t=20.65`, checkpoint written) — the
+failure was in the SLURM template's post-run postprocessing step, not the
+solve. Root cause: this job was submitted via a raw `sbatch` call that
+bypassed `scripts.simulate._prepare_run_dir`, so the scratch `params.json`
+never got `_canonical_run_dir` stamped into it. `config/slurm_mpi_template.sh`
+falls back to `PROJECT_ROOT="$(cd "$SCRATCH_RUN/../../.." && pwd)"` when
+that key is absent, which resolves to `/oscar/scratch` (three dirs up from
+`/oscar/scratch/eaguerov/mpi_runs/<run_id>`) instead of the repo root —
+hence `can't open file '/oscar/scratch/scripts/postprocess.py'`. Fix: no
+recompute needed — copied the scratch outputs to the canonical
+`runs/fig_a16_l8_rpm32p5/` and ran `postprocess.main()` manually. Added
+the recovered point (`tau_100_max=0.0945` Pa, `tau_mean_max=0.00121` Pa)
+to `l8_tau_vs_rpm.csv`, completing the 9-point L8 sweep. Takeaway: a raw
+`sbatch` call to mbessa-condo for a one-off point skips staging logic
+that `submit_slurm()` normally does for free — worth going through
+`submit_slurm()` even for exceptions, or manually replicating its
+canonical-dir setup (as the later B.17 submission script did).
+
+**Fig A.16 (grid convergence):** L6 was already at the correct RPM;
+overlaid the recovered L8 point (both at the corrected geometry,
+`omega_b=3.403392`). L7 excluded — that run still used the stale
+pre-geometry-fix value (`geometry.b=0.071`), so it isn't a fair
+convergence comparison. L6/L8 peaks match closely; small trough
+differences are the expected resolution sensitivity.
+
+**Fig B.17 (kLa fitting methods, global vs local 5/11-pt):** the first
+attempt reused `runs/health_l6_video` — wrong on two counts: L6 fidelity
+instead of L8, and (more importantly) `omega_b=3.93` (~37.5 rpm), not
+Kim's actual baseline condition for this figure (theta=7deg, f_b=32.5rpm,
+confirmed directly from Main.tex). Also found a real bug in the RMSE
+comparison: the global fit's RMSE must be computed over the *same*
+5-point window as the local fit for an apples-to-apples comparison — my
+first version used a growing window from injection to t0, which inflated
+the global RMSE and gave a 373x ratio vs. Kim's stated "order of
+magnitude" (~10x). New run `fig_b17_l8_rpm32p5` (job 4652584,
+mbessa-condo again, 16 ranks after the user flagged 64 as too much for
+that condo pool) uses `t_end=165` (nondim) so the physical time axis
+reaches ~500s, matching the paper's own Fig. B.17 x-axis range
+(`T_bio=3.04s` for this condition). Not yet complete at time of writing —
+figures will be regenerated once it finishes.
+
+**General:** replaced a broken/stale `replicated_Fig13.png` (empty left
+panel, leftover debug text) with the current 9-point L6/L8-vs-Kim
+overlay. Added `replicated_FigA16_a.png` / `_b.png`. B.17 replicas will
+be added once job 4652584 completes and the figure is regenerated against
+the correct condition.
+
 ## 2026-08-04 — data-driven SLURM walltime estimator (`scripts/
 estimate_walltime.py`), built from ~1000 historical job records. Found
 and fixed a real gotcha in Basilisk's own diagnostics along the way:
