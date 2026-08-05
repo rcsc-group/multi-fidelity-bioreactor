@@ -78,15 +78,24 @@ fi
 
 echo "Simulation complete. Syncing results..."
 
+# PROJECT_ROOT is hardcoded rather than derived from CANON_RUN/SCRATCH_RUN path
+# arithmetic (2026-08-05, diary.md): that derivation silently resolved to
+# /oscar/scratch whenever _canonical_run_dir was absent from the staged
+# params.json (e.g. a raw sbatch submission that bypassed
+# scripts.simulate._prepare_run_dir) -- hit twice this session (jobs 4645673,
+# 4631100), both times the simulation completed fine but this postprocessing
+# step failed with "can't open file '/oscar/scratch/scripts/postprocess.py'".
+# This repo lives at a single fixed OSCAR path (see CLAUDE.md); no derivation
+# needed.
+PROJECT_ROOT="/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor"
+
 # Copy output files to canonical Lustre path for postprocessing
 if [ -n "$CANON_RUN" ] && [ "$CANON_RUN" != "$SCRATCH_RUN" ]; then
     mkdir -p "$CANON_RUN"
     rsync -a --exclude="params.json" "$SCRATCH_RUN/" "$CANON_RUN/"
-    PROJECT_ROOT="$(dirname "$(dirname "$CANON_RUN")")"
     uv run python "$PROJECT_ROOT/scripts/postprocess.py" "$CANON_RUN"
     echo "Done. Results written to $CANON_RUN/results.json"
 else
-    PROJECT_ROOT="$(cd "$SCRATCH_RUN/../../.." && pwd)"
     uv run python "$PROJECT_ROOT/scripts/postprocess.py" "$SCRATCH_RUN"
     echo "Done. Results written to $SCRATCH_RUN/results.json"
 fi
@@ -130,9 +139,7 @@ if exp:
         if [ -f "$NEXT_SCRATCH/checkpoint.dump" ]; then
             NEXT_DUMP_ARG="DUMP=$NEXT_SCRATCH/checkpoint.dump"
         fi
-        # Resolve project root from RUNS_ROOT (runs/ is one level below project root)
-        TEMPLATE="$RUNS_ROOT/../config/slurm_mpi_template.sh"
-        [ ! -f "$TEMPLATE" ] && [ -n "$CANON_RUN" ] && TEMPLATE="$(dirname "$CANON_RUN")/../config/slurm_mpi_template.sh"
+        TEMPLATE="$PROJECT_ROOT/config/slurm_mpi_template.sh"
         MAIL_ARGS=()
         if [ -n "$MAIL_USER" ]; then
             MAIL_ARGS=(--mail-type="$MAIL_TYPE" --mail-user="$MAIL_USER")

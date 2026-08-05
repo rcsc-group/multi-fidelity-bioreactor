@@ -8,6 +8,41 @@ why it was done, what it found, and what it does and doesn't prove.
 Convention: newest entries at the top. Link run_ids / job_ids / commit
 hashes exactly, not "the run from earlier."
 
+## 2026-08-05 — fixed the recurring `_canonical_run_dir`-missing postprocessing
+bug at its source, and recovered the L10 baseline point the same way as the
+A.16 L8 point.
+
+Job 4631100 (`l10_kim_seg2`, L10, theta=7deg, f_b=32.5rpm -- the chained
+"one L10 point" run from earlier this session) showed `FAILED` in `sacct`
+with the exact same signature as job 4645673 two days ago: simulation
+completed cleanly (352070 steps, t=20.65, checkpoint written), but
+`config/slurm_mpi_template.sh`'s postprocessing step failed with
+`can't open file '/oscar/scratch/scripts/postprocess.py'`. Same root cause:
+the run was submitted via a hand-rolled chain pipeline
+(`/oscar/scratch/eaguerov/tmp/l10_kim_seg2/run_pipeline.sh`) that also
+bypassed `scripts.simulate._prepare_run_dir`, so `_canonical_run_dir` was
+never stamped into the staged scratch params.json, and the template's
+fallback `PROJECT_ROOT="$(cd "$SCRATCH_RUN/../../.." && pwd)"` resolved to
+`/oscar/scratch` again. Recovered the same way as before: copied scratch
+output to `runs/l10_kim_seg2/` and ran `postprocess.main()` manually
+(`tau_100_max=0.449` Pa, `tau_mean_max=0.00125` Pa).
+
+Two hits on the same bug in one session means the derivation itself is
+wrong, not just unlucky submissions -- fixed at the source instead of
+patching a third ad hoc submission script. `config/slurm_mpi_template.sh`
+now hardcodes `PROJECT_ROOT` to this repo's one fixed OSCAR path instead of
+deriving it from `$CANON_RUN`/`$SCRATCH_RUN` path arithmetic (which only
+works when `_canonical_run_dir` happens to be present). Also fixed the
+analogous fragile `TEMPLATE=` derivation in the self-submitting chain block,
+which had the same failure mode but hadn't been hit yet.
+
+Added the recovered L10 point to Fig 13a (`docs/kimetal2024/figure_replicas/
+replicated_Fig13.png`): `tau_mean_max` lands right on the L6/L8/Kim mean
+trend, but `tau_max` overshoots Kim's curve (0.449 Pa vs ~0.2 Pa) rather
+than converging closer than L8 -- flagged, not yet explained; `tau_max` is
+a pointwise max over space and time and known to be more resolution-
+sensitive than the mean.
+
 ## 2026-08-04 — Fig. 13a/A.16/B.17 replica cleanup: recovered a "FAILED"
 L8 run via manual postprocessing, completed the L8 shear-stress sweep,
 fixed a real RMSE-definition bug in the B.17 kLa comparison, and
