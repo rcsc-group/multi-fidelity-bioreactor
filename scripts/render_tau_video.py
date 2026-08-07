@@ -62,8 +62,14 @@ def _make_mask(n: int, Ly: float, n_exp: float) -> np.ndarray:
     return (np.abs(2 * X) ** n_exp + np.abs(2 * Y / Ly) ** n_exp) <= 1.0
 
 
-def _colormap(tau: np.ndarray, vmin: float, vmax: float) -> np.ndarray:
-    norm = np.clip((tau - vmin) / max(vmax - vmin, 1e-30), 0.0, 1.0)
+def _colormap(tau: np.ndarray, vmin: float, vmax: float, gamma: float = 0.4) -> np.ndarray:
+    """Gamma-compressed normalization: shear-stress fields are heavily
+    right-skewed (99% of liquid cells sit under the 3rd percentile of the
+    range set by a few near-wall peak cells) -- a plain linear norm against
+    the true max renders as almost solid black. gamma<1 boosts contrast in
+    the low/mid range at the cost of compressing the extreme peak, which is
+    fine here since the peak is separately marked with the star."""
+    norm = np.clip((tau - vmin) / max(vmax - vmin, 1e-30), 0.0, 1.0) ** gamma
     if _HAVE_MPL:
         rgb = (cm.get_cmap("inferno")(norm)[..., :3] * 255).astype(np.uint8)
     else:
@@ -102,7 +108,7 @@ def _render_body_tau(f_data, tau_data, mask, Ly, out_w, vmin, vmax, t_nd, T_bio,
     liquid = f_data > 0.5
     valid = liquid & mask
 
-    rgb = _colormap(np.flipud(tau_data) * conv, vmin, vmax)
+    rgb = _colormap(np.flipud(tau_data) * conv, vmin, vmax, gamma=0.5)
     msk_disp = np.flipud(mask)
     valid_disp = np.flipud(valid)
     rgb[~msk_disp] = 255
@@ -190,20 +196,33 @@ def main():
         if valid.any():
             all_liquid_tau.append(tau_data[valid] * conv)
     all_liquid_tau = np.concatenate(all_liquid_tau)
-    vmin, vmax = float(all_liquid_tau.min()), float(all_liquid_tau.max())
-    print(f"color-axis limits (Pa): [{vmin:.5f}, {vmax:.5f}]")
+    vmin, vmax_true = float(all_liquid_tau.min()), float(all_liquid_tau.max())
+    # tau is heavily right-skewed (near-zero through the laminar core, only
+    # spiking near the wall boundary layer) -- coloring against the true max
+    # renders as almost solid black since ~99% of cells sit far below it.
+    # Cap the DISPLAYED color scale at the 99th percentile instead (the true
+    # peak, near the star, saturates to the colormap's brightest end, which
+    # is itself a reasonable way to flag "this is the hottest region").
+    vmax_disp = float(np.percentile(all_liquid_tau, 99))
+    print(f"true tau range (Pa): [{vmin:.5f}, {vmax_true:.5f}]")
+    print(f"displayed color scale (99th pct cap, Pa): [{vmin:.5f}, {vmax_disp:.5f}]")
 
+    MIN_DURATION_S = 10.0
+    realtime_fps = 25.0
     if len(loaded) >= 2:
         dt_phys = (loaded[1][1] - loaded[0][1]) * T_bio
-        fps = 1.0 / dt_phys if dt_phys > 0 else 25.0
-    else:
-        fps = 25.0
-    print(f"realtime fps: {fps:.2f}")
+        if dt_phys > 0:
+            realtime_fps = 1.0 / dt_phys
+    fps = min(realtime_fps, len(loaded) / MIN_DURATION_S)
+    fps = max(fps, 1.0)
+    print(f"realtime fps would be {realtime_fps:.2f} ({len(loaded)/realtime_fps:.1f}s) -- "
+          f"using {fps:.2f} fps instead for a {len(loaded)/fps:.1f}s video")
 
     frames = []
     for n, t_nd, Th, xh, f_data, tau_data in loaded:
-        img = _render_body_tau(f_data, tau_data, mask, Ly, 1200, vmin, vmax, t_nd, T_bio, conv)
-        label = [f"t = {t_nd * T_bio:.2f} s", f"tau range: [{vmin:.4f}, {vmax:.4f}] Pa"]
+        img = _render_body_tau(f_data, tau_data, mask, Ly, 1200, vmin, vmax_disp, t_nd, T_bio, conv)
+        label = [f"t = {t_nd * T_bio:.2f} s",
+                 f"color scale: [{vmin:.4f}, {vmax_disp:.4f}] Pa (99th pct; true max {vmax_true:.4f})"]
         frames.append(_draw_label(img, label))
 
     out = Path(args.out) if args.out else run_dir / "shear_stress_body.mp4"
