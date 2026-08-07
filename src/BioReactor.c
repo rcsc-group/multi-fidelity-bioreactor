@@ -1080,3 +1080,110 @@ event movies_output(i++)
 }
 #endif
 
+// [PROJECT ADDED, 2026-08-05] Shear-stress field video export, requested to
+// visualize where tau_100_max (the pointwise-max KPI) occurs and how it
+// moves over time. No upstream equivalent (Kim et al.'s driver computes no
+// shear stress at all -- see the CAUTION above event normcal).
+//
+// Separate from movies_output (VOF field) rather than folding into it,
+// because the gating condition must differ: movies_output only starts at
+// t_mix (oxygen/tracer injection), but shear stress is present from t=0 and
+// is unrelated to injection timing -- gating this on t_mix would produce zero
+// frames for any run with n_mix_cycles large enough that t_mix > t_end (as
+// happened with l10_kim_seg2, the run this was written to visualize).
+//
+// tau_field[] is declared here rather than reusing a scalar declared inside
+// an event body: the CAUTION comment above event normcal already documents
+// that declaring a new scalar (there, tau_liq[]) inside an event leaks a
+// Basilisk scalar on every call and corrupts the global scalar list,
+// segfaulting at fidelity >= 7. Declaring it once at file scope (like c[],
+// oxy[] above) avoids that hazard entirely -- it's allocated once, not
+// once per event call.
+#if VIDEOS
+scalar tau_field[];
+int _vframe_tau = 0;
+double _last_vdump_tau = -1e30;
+
+event movies_output_tau(i++)
+{
+  if (t > t_end || t - _last_vdump_tau < dt_video)
+    return;
+  _last_vdump_tau = t;
+
+#if _MPI
+  if (pid() == 0)
+#endif
+  {
+    if (_vframe_tau == 0)
+      system("mkdir -p frames_tau");
+  }
+
+  // Same stencil as event normcal's tau_100/tau_98/tau_95 computation
+  // (du_dy, dv_dx, tau = mu(f[])*fabs(du_dy+dv_dx)), masked to liquid
+  // (f[] > 0.5) -- kept identical on purpose so the video's tau field
+  // matches the tau_100_max/tau_mean_max KPIs computed from shear_stress.dat.
+  foreach() {
+    if (f[] > 0.5) {
+      double du_dy = (u.x[0,1] - u.x[0,-1]) / (2.*Delta);
+      double dv_dx = (u.y[1]   - u.y[-1])   / (2.*Delta);
+      tau_field[] = mu(f[]) * fabs(du_dy + dv_dx);
+    } else {
+      tau_field[] = 0.;
+    }
+  }
+
+  int    n    = NN;
+  double t_nd = t;
+  double dx   = L0 / n;
+
+  double xh_nd = 0.0;
+  if (params.omega_h > 0.) {
+    double w_h_nd = params.omega_h * T_bio;
+    for (int k = 1; k <= params.n_harmonics; k++) {
+      double wk = k * w_h_nd;
+      xh_nd += (params.amplitude_h[k-1] / L_bio) * sin(wk*t + params.phi_horizontal[k-1]);
+    }
+  }
+
+  // Two buffers per frame: f (for the bag/liquid mask) and tau_field (the
+  // quantity to visualize). Both interpolated on ALL ranks (interpolate()
+  // is collective); only rank 0 writes.
+  float *buf_f   = (float *)malloc(n * n * sizeof(float));
+  float *buf_tau = (float *)malloc(n * n * sizeof(float));
+  int idx = 0;
+  for (int j = 0; j < n; j++) {
+    double yj = Y0 + (j + 0.5) * dx;
+    for (int i = 0; i < n; i++) {
+      double xi = X0 + (i + 0.5) * dx;
+      buf_f[idx]   = (float)interpolate(f, xi, yj);
+      buf_tau[idx] = (float)interpolate(tau_field, xi, yj);
+      idx++;
+    }
+  }
+
+#if _MPI
+  if (pid() == 0)
+#endif
+  {
+    char fpath[512];
+    sprintf(fpath, "frames_tau/frame_%06d.bin", _vframe_tau);
+    FILE *fp = fopen(fpath, "wb");
+    if (fp) {
+      fwrite(&n,       sizeof(int),    1, fp);
+      fwrite(&t_nd,    sizeof(double), 1, fp);
+      fwrite(&Th,      sizeof(double), 1, fp);
+      fwrite(&xh_nd,   sizeof(double), 1, fp);
+      fwrite(buf_f,    sizeof(float), n * n, fp);
+      fwrite(buf_tau,  sizeof(float), n * n, fp);
+      fclose(fp);
+    } else {
+      fprintf(stderr, "movies_output_tau: cannot open %s\n", fpath);
+    }
+  }
+
+  free(buf_f);
+  free(buf_tau);
+  _vframe_tau++;
+}
+#endif
+
