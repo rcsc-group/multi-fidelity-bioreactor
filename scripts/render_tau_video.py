@@ -90,6 +90,62 @@ def _star_polygon(cx: float, cy: float, r_out: float, r_in: float, n_points: int
     return pts
 
 
+def _load_font(size: int):
+    try:
+        return ImageFont.load_default(size=size)
+    except TypeError:
+        return ImageFont.load_default()
+
+
+def _make_header(width: int, height: int, text: str) -> Image.Image:
+    """Plain white strip with the time label -- rendered in its own space,
+    above the bag image, so it never overlaps the field (the previous
+    version stamped text directly onto the bag render and it collided with
+    the bag's own top edge)."""
+    img = Image.new("RGB", (width, height), (255, 255, 255))
+    draw = ImageDraw.Draw(img)
+    font = _load_font(max(14, height // 2))
+    bbox = draw.textbbox((0, 0), text, font=font)
+    tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
+    draw.text((10, (height - th) / 2 - bbox[1]), text, fill=(0, 0, 0), font=font)
+    return img
+
+
+def _make_colorbar(width: int, height: int, vmin: float, vmax_disp: float,
+                    vmax_true: float, gamma: float) -> Image.Image:
+    """Real gradient colorbar (not just text): a horizontal strip using the
+    exact same colormap/gamma/vmax the field itself is rendered with, plus
+    tick marks and value labels at 0 / mid / vmax_disp, and a note that the
+    true max (near the star) saturates past the shown scale."""
+    bar_h = max(18, height // 3)
+    grad = np.linspace(vmin, vmax_disp, width).reshape(1, width)
+    grad_rgb = _colormap(grad, vmin, vmax_disp, gamma=gamma)
+    grad_rgb = np.repeat(grad_rgb, bar_h, axis=0)
+
+    img = Image.new("RGB", (width, height), (255, 255, 255))
+    img.paste(Image.fromarray(grad_rgb), (0, 4))
+    draw = ImageDraw.Draw(img)
+    draw.rectangle([0, 4, width - 1, 4 + bar_h - 1], outline=(0, 0, 0))
+
+    font = _load_font(max(12, height // 5))
+    tick_row_y = 4 + bar_h + 2
+    ticks = [vmin, (vmin + vmax_disp) / 2, vmax_disp]
+    tick_h = 0
+    for tv in ticks:
+        x = (tv - vmin) / max(vmax_disp - vmin, 1e-30) * (width - 1)
+        draw.line([(x, 4), (x, 4 + bar_h - 1)], fill=(255, 255, 255) if tv not in (vmin, vmax_disp) else (0, 0, 0))
+        label = f"{tv:.4f} Pa"
+        bbox = draw.textbbox((0, 0), label, font=font)
+        tw, tick_h = bbox[2] - bbox[0], bbox[3] - bbox[1]
+        tx = min(max(0, x - tw / 2), width - tw)
+        draw.text((tx, tick_row_y), label, fill=(0, 0, 0), font=font)
+
+    note_row_y = tick_row_y + tick_h + 4
+    note = f"clipped at 99th pct -- true max (star) = {vmax_true:.4f} Pa"
+    draw.text((4, note_row_y), note, fill=(80, 80, 80), font=font)
+    return img
+
+
 def _draw_label(img: Image.Image, lines: list[str]) -> Image.Image:
     draw = ImageDraw.Draw(img)
     try:
@@ -218,12 +274,23 @@ def main():
     print(f"realtime fps would be {realtime_fps:.2f} ({len(loaded)/realtime_fps:.1f}s) -- "
           f"using {fps:.2f} fps instead for a {len(loaded)/fps:.1f}s video")
 
+    out_w = 1200
+    header_h = 50
+    colorbar_h = 96
+    colorbar_img = _make_colorbar(out_w, colorbar_h, vmin, vmax_disp, vmax_true, gamma=0.5)
+
     frames = []
     for n, t_nd, Th, xh, f_data, tau_data in loaded:
-        img = _render_body_tau(f_data, tau_data, mask, Ly, 1200, vmin, vmax_disp, t_nd, T_bio, conv)
-        label = [f"t = {t_nd * T_bio:.2f} s",
-                 f"color scale: [{vmin:.4f}, {vmax_disp:.4f}] Pa (99th pct; true max {vmax_true:.4f})"]
-        frames.append(_draw_label(img, label))
+        field_img = _render_body_tau(f_data, tau_data, mask, Ly, out_w, vmin, vmax_disp, t_nd, T_bio, conv)
+        header_img = _make_header(out_w, header_h, f"t = {t_nd * T_bio:.2f} s")
+
+        total_h = header_h + field_img.height + colorbar_h
+        total_h += total_h % 2  # h264/yuv420p requires even height
+        canvas = Image.new("RGB", (out_w, total_h), (255, 255, 255))
+        canvas.paste(header_img, (0, 0))
+        canvas.paste(field_img, (0, header_h))
+        canvas.paste(colorbar_img, (0, header_h + field_img.height))
+        frames.append(canvas)
 
     out = Path(args.out) if args.out else run_dir / "shear_stress_body.mp4"
     print(f"Writing {out} ...")
