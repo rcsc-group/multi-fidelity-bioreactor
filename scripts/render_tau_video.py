@@ -57,8 +57,16 @@ def load_frame(path: Path):
 
 
 def _make_mask(n: int, Ly: float, n_exp: float) -> np.ndarray:
+    """Must mirror BioReactor.c's solid() branch: at n_exp>=8 the C code
+    builds a SHARP rectangle (a_nd=1.0 > domain half-width 0.5, so the
+    x-constraint never binds -- only the y-extent/bag height is embedded).
+    See scripts/render_videos.py's _make_mask for the full explanation;
+    this used to apply the superellipse formula unconditionally, rendering
+    rounded corners that don't exist in the real simulated geometry."""
     coords = (np.arange(n) + 0.5) / n - 0.5
     X, Y = np.meshgrid(coords, coords)
+    if n_exp >= 8.0:
+        return np.abs(2 * Y / Ly) <= 1.0
     return (np.abs(2 * X) ** n_exp + np.abs(2 * Y / Ly) ** n_exp) <= 1.0
 
 

@@ -58,9 +58,23 @@ def load_frame(path: Path) -> tuple[int, float, float, float, np.ndarray]:
 # ── rendering ────────────────────────────────────────────────────────────────
 
 def _make_mask(n: int, Ly: float, n_exp: float) -> np.ndarray:
-    """Boolean (n,n) mask — True inside superellipse. Row 0 = bottom (y=-0.5)."""
+    """Boolean (n,n) mask — True inside the bag. Row 0 = bottom (y=-0.5).
+
+    Must mirror BioReactor.c's own solid() branch (src/BioReactor.c, the
+    `if (params.geometry_n >= 8.)` check just above the embedded-solid
+    call): at n_exp>=8 the C code builds a SHARP rectangle via
+    intersection(a_nd-fabs(x), b_nd-fabs(y)), not the superellipse pow()
+    formula -- and since a_nd (=geometry_a/L_bio=1.0, by construction)
+    exceeds the domain box's own half-width (0.5), the x-constraint never
+    binds inside the box, so the real bag spans the FULL frame width and
+    only the y-extent (bag height) is actually constrained. Applying the
+    superellipse formula unconditionally (as this function used to do)
+    renders visibly rounded corners that do not exist in the real
+    simulated geometry -- a rendering bug, not the true domain shape."""
     coords = (np.arange(n) + 0.5) / n - 0.5   # [-0.5, 0.5)
     X, Y   = np.meshgrid(coords, coords)        # row = y index
+    if n_exp >= 8.0:
+        return np.abs(2 * Y / Ly) <= 1.0
     return (np.abs(2 * X) ** n_exp + np.abs(2 * Y / Ly) ** n_exp) <= 1.0
 
 
