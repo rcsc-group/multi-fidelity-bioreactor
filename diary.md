@@ -8,6 +8,48 @@ why it was done, what it found, and what it does and doesn't prove.
 Convention: newest entries at the top. Link run_ids / job_ids / commit
 hashes exactly, not "the run from earlier."
 
+## 2026-08-07 (later) — audited Kim et al.'s own postprocessing script
+(dev/postprocessing/bio_stress.m, shared directly) against ours. Both of
+his two suggested causes for the tau_max discrepancy are RULED OUT by
+direct evidence, not just reasoned away.
+
+**Kim's point 1 (dimensionalize after max/mean, not before):** checked
+`mu(f[])` in src/BioReactor.c:32 -- `mu1 = 1.0/Re_w`, fully
+nondimensional. Our C-side `tau` is nondim throughout the entire
+max/mean/percentile reduction; the Pa conversion (`rho_w*U_bio^2`) is a
+single global scalar multiply applied once, in Python, after all
+reductions. A positive constant commutes with max/mean by construction --
+order cannot matter here. Not the bug.
+
+**Kim's point 2 (pure-liquid mask, alpha>1-1e-10, vs. our f[]>0.5):** a
+real, previously-unidentified code difference -- confirmed by reading his
+script directly (`in_liq_field2 = find(abs(al_2D_proj)>1-1e-10)`, line
+546). Added `tau_100_strict`/`tau_mean_strict` to `shear_stress.dat`
+(commit pending), computed in the SAME reduction pass as the existing
+KPIs with a stricter `f[]>1-1e-6` gate, so both masks are compared at
+identical native resolution in one run -- not a smoothed/interpolated
+proxy (a first attempt using the L10 video's interpolated field looked
+inconclusive for exactly this reason: interpolation onto a uniform grid
+washes out the sharp near-interface gradients the stricter mask is
+designed to exclude).
+
+**Test:** warm-restarted from `l10_kim_seg2`'s checkpoint again (job
+4778710, same ~1.8 nondim time segment as the video run). Result: 89 of
+91 timesteps have `tau_100_max` and `tau_100_max_strict` EXACTLY equal;
+the two that differ do so by <17% at that single timestep but don't
+change the QSS-window max. Global max across the whole segment is
+bit-for-bit identical (0.062118 at t=21.3) under both masks. At true L10
+resolution, the peak-shear cell is essentially always in the pure-liquid
+interior, not at the interface -- Kim's masking hypothesis does not
+explain the discrepancy.
+
+**Conclusion:** both of Kim's leads are genuinely ruled out, not just
+unconfirmed. `tau_100_max`'s non-convergence with resolution (documented
+in `docs_site/explanation/kim-et-al-validation.md`: grows without bound
+across f7->f9->f10, crossing straight through Kim's value, flips sign
+between L9 and L10) remains unexplained. Worth relaying back to Kim as a
+negative result on both his suggestions, not a fix.
+
 ## 2026-08-07 — shear-stress field video (body/bag frame) at L10, with a
 tau_max marker.
 

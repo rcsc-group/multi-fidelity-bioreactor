@@ -578,6 +578,7 @@ def _compute_tau98_kpis(run_dir: Path, params: dict) -> dict:
         "tau_95_qss":  math.nan, "tau_98_qss":  math.nan, "tau_100_qss":  math.nan,
         "tau_95_max":  math.nan, "tau_98_max":  math.nan, "tau_100_max":  math.nan,
         "tau_mean_max": math.nan,
+        "tau_100_max_strict": math.nan, "tau_mean_max_strict": math.nan,
     }
     tau_path = run_dir / "shear_stress.dat"
     if not tau_path.exists():
@@ -592,6 +593,13 @@ def _compute_tau98_kpis(run_dir: Path, params: dict) -> dict:
     tau_98   = arr[:, 3]   # 98th percentile
     tau_100  = arr[:, 4]   # 100th percentile (per-timestep max)
     tau_mean = arr[:, 5]   # per-timestep spatial average
+    # tau_*_strict (2026-08-07): Kim et al.'s own masking criterion
+    # (dev/postprocessing/bio_stress.m: abs(alpha)>1-1e-10, pure liquid only)
+    # vs. our existing f[]>0.5 (whole liquid-side half of the interface band).
+    # Absent from shear_stress.dat written before this date -- NaN, not an error.
+    has_strict = arr.shape[1] >= 8
+    tau_100_strict  = arr[:, 6] if has_strict else None
+    tau_mean_strict = arr[:, 7] if has_strict else None
 
     T_bio, T_per_nd = _t_scales(params)
     t_ramp = 3.0 * T_per_nd
@@ -642,6 +650,8 @@ def _compute_tau98_kpis(run_dir: Path, params: dict) -> dict:
         "tau_98_max":   _qss_max(tau_98),
         "tau_100_max":  _qss_max(tau_100),
         "tau_mean_max": _qss_max(tau_mean),
+        "tau_100_max_strict":  _qss_max(tau_100_strict) if has_strict else math.nan,
+        "tau_mean_max_strict": _qss_max(tau_mean_strict) if has_strict else math.nan,
     }
 
 
@@ -704,6 +714,7 @@ def main(run_dir: str, params: dict | None = None) -> dict:
         "tau_95_qss": math.nan, "tau_98_qss": math.nan, "tau_100_qss": math.nan,
         "tau_95_max": math.nan, "tau_98_max": math.nan, "tau_100_max": math.nan,
         "tau_mean_max": math.nan,
+        "tau_100_max_strict": math.nan, "tau_mean_max_strict": math.nan,
     }
 
     try:
@@ -798,6 +809,7 @@ def _register_to_experiment_store(run_dir: Path, params: dict,
         "tau_95_qss", "tau_98_qss", "tau_100_qss",
         "tau_95_max", "tau_98_max", "tau_100_max",
         "tau_mean_max",
+        "tau_100_max_strict", "tau_mean_max_strict",
     )}
 
     new_ed = ExperimentData(

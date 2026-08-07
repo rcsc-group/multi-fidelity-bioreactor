@@ -445,7 +445,7 @@ int main(int argc, char * argv[]){
   fprintf(fp_norm, "i t Omega_liq_avg Omega_liq_rms Omega_liq_vol Omega_liq_max ux_liq_avg ux_liq_rms ux_liq_vol ux_liq_max uy_liq_avg uy_liq_rms uy_liq_vol uy_liq_max \n");
   fprintf(fp_stats2, "i t f_liq_sum f_liq_interf posY_max posY_min \n");
   fprintf(fp_stats3, "i t oxy_liq_sum oxy_liq_sum2 c_liq_sum c_liq_sum2 c1_liq_sum c1_liq_sum2 c2_liq_sum c2_liq_sum2 c3_liq_sum c3_liq_sum2 \n");
-  fprintf(fp_tau,   "i t tau_95 tau_98 tau_100 tau_mean \n");
+  fprintf(fp_tau,   "i t tau_95 tau_98 tau_100 tau_mean tau_100_strict tau_mean_strict \n");
 
   NITERMAX = 1000;     // Max iterations per timestep
   TOLERANCE = 5.0e-4;  // // Solver tolerance (convergence criterion)
@@ -925,8 +925,22 @@ event normcal (t+=t_out; t<=t_end){
     // Pass 1: global max and mean via inline reduction (no scalar allocation).
     // Declaring scalar tau_liq[] inside an event leaks a Basilisk scalar on every
     // call and corrupts the global scalar list, causing segfaults at fidelity ≥7.
+    // [PROJECT ADDED, 2026-08-07] tau_*_strict mirrors Kim et al.'s own
+    // postprocessing (dev/postprocessing/bio_stress.m, shared directly):
+    // `in_liq_field2 = find(abs(al_2D_proj) > 1-1e-10)` -- pure liquid only,
+    // excluding ANY interface/mixed cell, vs. our existing f[]>0.5 which
+    // includes the whole liquid-side half of the interface transition band.
+    // Computed in the SAME pass as the existing (f[]>0.5) reduction to avoid
+    // a second loop -- both masks share the identical tau formula, just a
+    // stricter threshold gates the _strict accumulators. 1e-6 instead of
+    // Kim's 1e-10: our f[] is a VOF fraction from a finite-precision solve,
+    // not his post-hoc alpha field, so exact machine-precision equality to 1
+    // is not expected; 1e-6 is still far tighter than the interface's
+    // O(1) width in f, so it excludes the same cells his 1e-10 would.
     double tau_max_val = 0., tau_sum = 0., tau_vol = 0.;
-    foreach(reduction(max:tau_max_val) reduction(+:tau_sum) reduction(+:tau_vol)) {
+    double tau_max_strict = 0., tau_sum_strict = 0., tau_vol_strict = 0.;
+    foreach(reduction(max:tau_max_val) reduction(+:tau_sum) reduction(+:tau_vol)
+            reduction(max:tau_max_strict) reduction(+:tau_sum_strict) reduction(+:tau_vol_strict)) {
       if (f[] > 0.5) {
         double du_dy = (u.x[0,1] - u.x[0,-1]) / (2.*Delta);
         double dv_dx = (u.y[1]   - u.y[-1])   / (2.*Delta);
@@ -934,10 +948,17 @@ event normcal (t+=t_out; t<=t_end){
         if (tau > tau_max_val) tau_max_val = tau;
         tau_sum += tau * (Delta*Delta);
         tau_vol += Delta*Delta;
+        if (f[] > 1. - 1e-6) {
+          if (tau > tau_max_strict) tau_max_strict = tau;
+          tau_sum_strict += tau * (Delta*Delta);
+          tau_vol_strict += Delta*Delta;
+        }
       }
     }
-    double tau_mean_val = (tau_vol > 0.) ? tau_sum / tau_vol : 0.;
+    double tau_mean_val    = (tau_vol > 0.)        ? tau_sum / tau_vol               : 0.;
+    double tau_mean_strict = (tau_vol_strict > 0.) ? tau_sum_strict / tau_vol_strict : 0.;
     if (tau_max_val < 1e-14) tau_max_val = 1e-14;  // guard /0
+    if (tau_max_strict < 1e-14) tau_max_strict = 1e-14;
 
     // Pass 2: 200-bin histogram — recomputes tau inline, no scalar needed
     #define TAU_BINS 200
@@ -994,7 +1015,7 @@ event normcal (t+=t_out; t<=t_end){
       //fprintf(fp_stats3, "%i %g %g %g %g %g \n",i,t,oxy_liq_sum,oxy_liq_sum2,c_liq_sum,c_liq_sum2);
       fflush(fp_stats3);
 
-      fprintf(fp_tau, "%i %g %g %g %g %g \n", i, t, tau_95_val, tau_98_val, tau_max_val, tau_mean_val);
+      fprintf(fp_tau, "%i %g %g %g %g %g %g %g \n", i, t, tau_95_val, tau_98_val, tau_max_val, tau_mean_val, tau_max_strict, tau_mean_strict);
       fflush(fp_tau);
    }
 }
