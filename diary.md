@@ -8,6 +8,48 @@ why it was done, what it found, and what it does and doesn't prove.
 Convention: newest entries at the top. Link run_ids / job_ids / commit
 hashes exactly, not "the run from earlier."
 
+## 2026-08-07 — shear-stress field video (body/bag frame) at L10, with a
+tau_max marker.
+
+**Motivation:** wanted to see where the pointwise `tau_max` KPI actually
+occurs and how it moves in time, given the standing unresolved finding
+(`docs_site/explanation/kim-et-al-validation.md`) that `tau_100_max`
+doesn't converge with grid resolution and flips sign between L9 and L10.
+
+**New capability:** `movies_output_tau` event in `src/BioReactor.c`
+(commit 31dbd78) exports the shear-stress field to `frames_tau/*.bin`,
+masked to liquid, independent of `t_mix` (the existing `movies_output`
+VOF-field event only starts at `t_mix`, which is >> `t_end` for any run
+with `n_mix_cycles` large enough -- as it was for every L10 run this
+session -- so it would have produced zero frames). `tau_field[]` is
+declared once at file scope rather than inside the event body, avoiding
+the exact scalar-leak/segfault hazard the file already documents for a
+scalar of the same name (`tau_liq[]`) declared locally.
+
+Verified cheaply before any real compute: fidelity=6, t_end=3, serial
+smoke test -- frames produced, VOF mask correct, tau zeroed outside
+liquid, argmax resolves to a real liquid cell. Only after that passed was
+the MPI-video binary rebuilt and deployed to
+`/oscar/scratch/eaguerov/BioReactor-mpi-video`.
+
+**Run:** rather than a fresh ~12h L10 cold start, warm-restarted from
+`l10_kim_seg2`'s existing checkpoint (t=20.65, same condition --
+theta=7deg, f_b=32.5rpm) for ~3 more rocking periods (`t_end=1.8`, job
+4768186, 64 ranks, normal QOS). Completed in 1h09m -- confirms the
+`PROJECT_ROOT` hardcoding fix from the previous entry works: canonical
+`runs/l10_kim_tau_video/` was populated correctly with no manual recovery
+needed this time.
+
+**Renderer:** `scripts/render_tau_video.py`, extending the body-frame
+logic from `scripts/render_videos.py`. Body/bag frame only (no
+rotation/translation) per request. Fixed color-axis limits (global
+min/max over all frames' liquid cells, [0, 0.501] Pa for this run) stamped
+as text -- no legend/colorbar. A star marks the per-frame argmax(tau)
+location. Notably, the star moves around near the interface/wall region
+rather than sitting at one fixed spot -- consistent with `tau_max` being
+an unstable, non-converged diagnostic rather than a well-defined physical
+hotspot.
+
 ## 2026-08-05 — fixed the recurring `_canonical_run_dir`-missing postprocessing
 bug at its source, and recovered the L10 baseline point the same way as the
 A.16 L8 point.
