@@ -445,7 +445,7 @@ int main(int argc, char * argv[]){
   fprintf(fp_norm, "i t Omega_liq_avg Omega_liq_rms Omega_liq_vol Omega_liq_max ux_liq_avg ux_liq_rms ux_liq_vol ux_liq_max uy_liq_avg uy_liq_rms uy_liq_vol uy_liq_max \n");
   fprintf(fp_stats2, "i t f_liq_sum f_liq_interf posY_max posY_min \n");
   fprintf(fp_stats3, "i t oxy_liq_sum oxy_liq_sum2 c_liq_sum c_liq_sum2 c1_liq_sum c1_liq_sum2 c2_liq_sum c2_liq_sum2 c3_liq_sum c3_liq_sum2 \n");
-  fprintf(fp_tau,   "i t tau_95 tau_98 tau_100 tau_mean tau_100_strict tau_mean_strict \n");
+  fprintf(fp_tau,   "i t tau_95 tau_98 tau_100 tau_mean tau_100_strict tau_mean_strict tau_100_signed \n");
 
   NITERMAX = 1000;     // Max iterations per timestep
   TOLERANCE = 5.0e-4;  // // Solver tolerance (convergence criterion)
@@ -937,15 +937,28 @@ event normcal (t+=t_out; t<=t_end){
     // not his post-hoc alpha field, so exact machine-precision equality to 1
     // is not expected; 1e-6 is still far tighter than the interface's
     // O(1) width in f, so it excludes the same cells his 1e-10 would.
+    // [PROJECT ADDED, 2026-08-07] tau_max_signed mirrors Kim et al.'s own
+    // formula LITERALLY: dev/postprocessing/bio_stress.m:345,
+    // `tau_field = mu_field.*(duxdy_field(:,3) + duydx_field(:,3))` -- no
+    // fabs() anywhere in his script -- vs. our existing fabs(du_dy+dv_dx).
+    // max(signed) <= max(|signed|) always, and shear reverses sign every
+    // half rocking-cycle, so this could plausibly explain us reading
+    // persistently higher than Kim by a wide margin. Init to a large
+    // negative sentinel, not 0, since the signed quantity can legitimately
+    // be negative throughout a liquid region.
     double tau_max_val = 0., tau_sum = 0., tau_vol = 0.;
     double tau_max_strict = 0., tau_sum_strict = 0., tau_vol_strict = 0.;
+    double tau_max_signed = -1e30;
     foreach(reduction(max:tau_max_val) reduction(+:tau_sum) reduction(+:tau_vol)
-            reduction(max:tau_max_strict) reduction(+:tau_sum_strict) reduction(+:tau_vol_strict)) {
+            reduction(max:tau_max_strict) reduction(+:tau_sum_strict) reduction(+:tau_vol_strict)
+            reduction(max:tau_max_signed)) {
       if (f[] > 0.5) {
         double du_dy = (u.x[0,1] - u.x[0,-1]) / (2.*Delta);
         double dv_dx = (u.y[1]   - u.y[-1])   / (2.*Delta);
-        double tau   = mu(f[]) * fabs(du_dy + dv_dx);
+        double tau_signed = mu(f[]) * (du_dy + dv_dx);
+        double tau   = fabs(tau_signed);
         if (tau > tau_max_val) tau_max_val = tau;
+        if (tau_signed > tau_max_signed) tau_max_signed = tau_signed;
         tau_sum += tau * (Delta*Delta);
         tau_vol += Delta*Delta;
         if (f[] > 1. - 1e-6) {
@@ -1015,7 +1028,7 @@ event normcal (t+=t_out; t<=t_end){
       //fprintf(fp_stats3, "%i %g %g %g %g %g \n",i,t,oxy_liq_sum,oxy_liq_sum2,c_liq_sum,c_liq_sum2);
       fflush(fp_stats3);
 
-      fprintf(fp_tau, "%i %g %g %g %g %g %g %g \n", i, t, tau_95_val, tau_98_val, tau_max_val, tau_mean_val, tau_max_strict, tau_mean_strict);
+      fprintf(fp_tau, "%i %g %g %g %g %g %g %g %g \n", i, t, tau_95_val, tau_98_val, tau_max_val, tau_mean_val, tau_max_strict, tau_mean_strict, tau_max_signed);
       fflush(fp_tau);
    }
 }

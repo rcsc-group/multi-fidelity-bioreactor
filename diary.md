@@ -8,6 +8,41 @@ why it was done, what it found, and what it does and doesn't prove.
 Convention: newest entries at the top. Link run_ids / job_ids / commit
 hashes exactly, not "the run from earlier."
 
+## 2026-08-07 (still later) — third tau_max hypothesis tested and RULED
+OUT: fabs() vs. the signed shear stress.
+
+User pushed back on the point-1/point-2 audit ("our postprocessing
+matches upstream and we still can't recover the max?") -- fair challenge,
+matching two specific things isn't matching everything. Re-read Kim's
+script for anything else and found: `tau_field =
+mu_field.*(duxdy_field(:,3) + duydx_field(:,3))` (bio_stress.m:345) has
+NO fabs() anywhere in the file, so `tau_liq2_max = max(tau_field_liq2_dim)`
+is the max of the SIGNED quantity. Our C code does
+`fabs(du_dy + dv_dx)`. Since max(signed) <= max(|signed|) always, and
+shear reverses sign every half rocking-cycle, this could plausibly
+explain reading persistently higher than Kim.
+
+Added `tau_100_signed` to shear_stress.dat (no fabs, otherwise identical
+formula/reduction pass) and tested at native L10 resolution again
+(job 4780591, same warm-restart pattern from l10_kim_seg2's checkpoint).
+Result: mixed at the per-timestep level (43/91 timesteps differ, up to
+0.037 absolute difference -- so fabs() vs. signed is NOT a total non-issue
+in general) but the actual reported QSS-window MAX -- the single number
+that gets compared against Kim's Fig 13a -- is bit-for-bit identical
+either way: 0.062118. The global peak happens to occur at a
+timestep/cell where shear is already positive, so fabs() adds nothing
+there specifically.
+
+**All three investigated hypotheses for the tau_max discrepancy are now
+ruled out by direct native-resolution evidence, not reasoning:**
+dimensionalization order, liquid-cell mask, and fabs()-vs-signed. The
+non-convergence-with-resolution finding (docs_site/explanation/
+kim-et-al-validation.md) remains genuinely unexplained. Next candidate,
+not yet tested: the missing embedded-boundary metric correction
+(2026-07-31 entry, falsified for a DIFFERENT symptom -- non-convergence
+pattern unchanged -- but that test predates the mask/sign checks above
+and wasn't re-examined combined with them).
+
 ## 2026-08-07 (later) — audited Kim et al.'s own postprocessing script
 (dev/postprocessing/bio_stress.m, shared directly) against ours. Both of
 his two suggested causes for the tau_max discrepancy are RULED OUT by

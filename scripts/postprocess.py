@@ -579,6 +579,7 @@ def _compute_tau98_kpis(run_dir: Path, params: dict) -> dict:
         "tau_95_max":  math.nan, "tau_98_max":  math.nan, "tau_100_max":  math.nan,
         "tau_mean_max": math.nan,
         "tau_100_max_strict": math.nan, "tau_mean_max_strict": math.nan,
+        "tau_100_max_signed": math.nan,
     }
     tau_path = run_dir / "shear_stress.dat"
     if not tau_path.exists():
@@ -600,6 +601,11 @@ def _compute_tau98_kpis(run_dir: Path, params: dict) -> dict:
     has_strict = arr.shape[1] >= 8
     tau_100_strict  = arr[:, 6] if has_strict else None
     tau_mean_strict = arr[:, 7] if has_strict else None
+    # tau_100_signed (2026-08-07): Kim et al.'s literal formula has no fabs()
+    # anywhere (dev/postprocessing/bio_stress.m:345) -- max of the SIGNED
+    # quantity, not max(|tau|). max(signed) <= max(|signed|) always.
+    has_signed = arr.shape[1] >= 9
+    tau_100_signed = arr[:, 8] if has_signed else None
 
     T_bio, T_per_nd = _t_scales(params)
     t_ramp = 3.0 * T_per_nd
@@ -652,6 +658,7 @@ def _compute_tau98_kpis(run_dir: Path, params: dict) -> dict:
         "tau_mean_max": _qss_max(tau_mean),
         "tau_100_max_strict":  _qss_max(tau_100_strict) if has_strict else math.nan,
         "tau_mean_max_strict": _qss_max(tau_mean_strict) if has_strict else math.nan,
+        "tau_100_max_signed":  _qss_max(tau_100_signed) if has_signed else math.nan,
     }
 
 
@@ -715,6 +722,7 @@ def main(run_dir: str, params: dict | None = None) -> dict:
         "tau_95_max": math.nan, "tau_98_max": math.nan, "tau_100_max": math.nan,
         "tau_mean_max": math.nan,
         "tau_100_max_strict": math.nan, "tau_mean_max_strict": math.nan,
+        "tau_100_max_signed": math.nan,
     }
 
     try:
@@ -810,6 +818,7 @@ def _register_to_experiment_store(run_dir: Path, params: dict,
         "tau_95_max", "tau_98_max", "tau_100_max",
         "tau_mean_max",
         "tau_100_max_strict", "tau_mean_max_strict",
+        "tau_100_max_signed",
     )}
 
     new_ed = ExperimentData(
