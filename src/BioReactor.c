@@ -445,7 +445,7 @@ int main(int argc, char * argv[]){
   fprintf(fp_norm, "i t Omega_liq_avg Omega_liq_rms Omega_liq_vol Omega_liq_max ux_liq_avg ux_liq_rms ux_liq_vol ux_liq_max uy_liq_avg uy_liq_rms uy_liq_vol uy_liq_max \n");
   fprintf(fp_stats2, "i t f_liq_sum f_liq_interf posY_max posY_min \n");
   fprintf(fp_stats3, "i t oxy_liq_sum oxy_liq_sum2 c_liq_sum c_liq_sum2 c1_liq_sum c1_liq_sum2 c2_liq_sum c2_liq_sum2 c3_liq_sum c3_liq_sum2 \n");
-  fprintf(fp_tau,   "i t tau_95 tau_98 tau_100 tau_mean tau_100_strict tau_mean_strict tau_100_signed ediss_mean \n");
+  fprintf(fp_tau,   "i t tau_95 tau_98 tau_100 tau_mean tau_100_strict tau_mean_strict tau_100_signed ediss_mean tau_mean_signed \n");
 
   NITERMAX = 1000;     // Max iterations per timestep
   TOLERANCE = 5.0e-4;  // // Solver tolerance (convergence criterion)
@@ -958,9 +958,20 @@ event normcal (t+=t_out; t<=t_end){
     double tau_max_strict = 0., tau_sum_strict = 0., tau_vol_strict = 0.;
     double tau_max_signed = -1e30;
     double ediss_sum = 0.;
+    // [PROJECT ADDED, 2026-08-09] tau_sum_signed: Kim et al.'s Fig. 8a
+    // plots <tau_w'>, the domain-mean of the SIGNED shear stress (their
+    // Fig_tau_Ediss.pdf shows it oscillating through zero, -1.8e-3 to
+    // +1.8e-3 Pa) -- not mean(|tau|). tau_mean_val below has always been
+    // mean(|tau|) (tau_sum accumulates the fabs()'d `tau`, not
+    // `tau_signed`); that's a genuinely different statistic, not just a
+    // scale/units difference, and the one Fig. 8a needs to actually match
+    // Kim's plotted quantity. Caught by the user pointing out Fig 8a's
+    // reproduction didn't match Kim's real figure's shape (sign-crossing)
+    // once actually rendered and viewed side by side, not just captioned.
+    double tau_sum_signed = 0.;
     foreach(reduction(max:tau_max_val) reduction(+:tau_sum) reduction(+:tau_vol)
             reduction(max:tau_max_strict) reduction(+:tau_sum_strict) reduction(+:tau_vol_strict)
-            reduction(max:tau_max_signed) reduction(+:ediss_sum)) {
+            reduction(max:tau_max_signed) reduction(+:ediss_sum) reduction(+:tau_sum_signed)) {
       if (f[] > 0.5) {
         double du_dy = (u.x[0,1] - u.x[0,-1]) / (2.*Delta);
         double dv_dx = (u.y[1]   - u.y[-1])   / (2.*Delta);
@@ -972,6 +983,7 @@ event normcal (t+=t_out; t<=t_end){
         if (tau > tau_max_val) tau_max_val = tau;
         if (tau_signed > tau_max_signed) tau_max_signed = tau_signed;
         tau_sum += tau * (Delta*Delta);
+        tau_sum_signed += tau_signed * (Delta*Delta);
         tau_vol += Delta*Delta;
         ediss_sum += ediss * (Delta*Delta);
         if (f[] > 1. - 1e-6) {
@@ -984,6 +996,7 @@ event normcal (t+=t_out; t<=t_end){
     double tau_mean_val    = (tau_vol > 0.)        ? tau_sum / tau_vol               : 0.;
     double tau_mean_strict = (tau_vol_strict > 0.) ? tau_sum_strict / tau_vol_strict : 0.;
     double ediss_mean_val  = (tau_vol > 0.)        ? ediss_sum / tau_vol             : 0.;
+    double tau_mean_signed = (tau_vol > 0.)        ? tau_sum_signed / tau_vol        : 0.;
     if (tau_max_val < 1e-14) tau_max_val = 1e-14;  // guard /0
     if (tau_max_strict < 1e-14) tau_max_strict = 1e-14;
 
@@ -1042,7 +1055,7 @@ event normcal (t+=t_out; t<=t_end){
       //fprintf(fp_stats3, "%i %g %g %g %g %g \n",i,t,oxy_liq_sum,oxy_liq_sum2,c_liq_sum,c_liq_sum2);
       fflush(fp_stats3);
 
-      fprintf(fp_tau, "%i %g %g %g %g %g %g %g %g %g \n", i, t, tau_95_val, tau_98_val, tau_max_val, tau_mean_val, tau_max_strict, tau_mean_strict, tau_max_signed, ediss_mean_val);
+      fprintf(fp_tau, "%i %g %g %g %g %g %g %g %g %g %g \n", i, t, tau_95_val, tau_98_val, tau_max_val, tau_mean_val, tau_max_strict, tau_mean_strict, tau_max_signed, ediss_mean_val, tau_mean_signed);
       fflush(fp_tau);
    }
 }
@@ -1176,13 +1189,23 @@ event movies_output_tau(i++)
   // Same stencils as event normcal's tau/ediss computation, masked to
   // liquid (f[] > 0.5) -- kept identical on purpose so the video fields
   // match the tau_100_max/tau_mean_max/ediss_mean KPIs in shear_stress.dat.
+  //
+  // [PROJECT CHANGED, 2026-08-09] tau_field now stores the SIGNED shear
+  // stress, not fabs() -- Kim et al.'s Fig. 8b histogram bins the signed
+  // quantity (their Fig_tau_Ediss.pdf shows it centered near zero and
+  // ranging -15e-3 to +15e-3 Pa), and a fabs()'d field can't be un-signed
+  // in post -- the reverse (taking abs() of a signed field at render/
+  // analysis time, if a magnitude heatmap is wanted) is always possible.
+  // NOTE: this changes the on-disk semantics of frames_tau/*.bin's second
+  // buffer for any run recorded after this commit; older recordings
+  // (l10_kim_tau_video, l10_kim_fig8, etc.) still store fabs()'d values.
   foreach() {
     if (f[] > 0.5) {
       double du_dy = (u.x[0,1] - u.x[0,-1]) / (2.*Delta);
       double dv_dx = (u.y[1]   - u.y[-1])   / (2.*Delta);
       double du_dx = (u.x[1]   - u.x[-1])   / (2.*Delta);
       double dv_dy = (u.y[0,1] - u.y[0,-1]) / (2.*Delta);
-      tau_field[]   = mu(f[]) * fabs(du_dy + dv_dx);
+      tau_field[]   = mu(f[]) * (du_dy + dv_dx);
       ediss_field[] = mu(f[]) * (2.*du_dx*du_dx + 2.*dv_dy*dv_dy + (du_dy+dv_dx)*(du_dy+dv_dx));
     } else {
       tau_field[]   = 0.;

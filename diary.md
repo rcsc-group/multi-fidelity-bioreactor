@@ -8,6 +8,58 @@ why it was done, what it found, and what it does and doesn't prove.
 Convention: newest entries at the top. Link run_ids / job_ids / commit
 hashes exactly, not "the run from earlier."
 
+## 2026-08-09 — Fig. 8a was plotting the WRONG statistic; found by actually
+rendering and viewing Kim et al.'s real figure instead of trusting the
+caption text.
+
+User called out the previous entry's "replica" directly: different axis
+scale/limits than Kim's actual figure, and a stated peak (1.3e-3 Pa) that
+didn't match a value read off Kim's real plot (~2e-3 Pa). Fair criticism
+of process, not just numbers -- the 2026-08-08 entry never actually
+rendered `docs/kimetal2024/Figures/Fig_tau_Ediss.pdf`, only read its
+LaTeX caption, then made independent styling choices (log-log axes for
+b/c) without checking Kim's own convention first. Every other figure this
+project has reproduced (A.16, 13a, B.17) matched the source's actual
+visual convention before drawing conclusions; this one skipped that step.
+
+**Rendered the real PDF and looked at it directly.** Two real findings,
+not styling: (1) Kim's panel (a) blue curve genuinely oscillates through
+zero (-1.8e-3 to +1.8e-3 Pa) -- it's the SIGNED domain-mean shear stress,
+<tau_w'>, not its magnitude. Our `tau_mean` has always been mean(|tau|)
+(`tau_sum` accumulates the `fabs()`'d value, never the signed one) --
+that's a different statistic, not a scale/units mismatch, and it's the
+reason the previous panel (a) never crossed zero the way Kim's does.
+(2) Kim's panels (b)/(c) are LINEAR, not log -- the log-log switch in the
+prior entry was an unexamined deviation.
+
+**Fix:** added `tau_mean_signed` (new shear_stress.dat column) computed
+in the same reduction pass, reusing the already-computed `tau_signed`
+local variable -- no new stencil work. Also changed the video export's
+`tau_field` to store the signed value instead of `fabs()` (a magnitude
+heatmap, if wanted, is always recoverable via `abs()` in post; the
+reverse isn't) -- a breaking format change for `frames_tau/*.bin`'s
+second buffer, documented; older recordings (l10_kim_tau_video,
+l10_kim_fig8) still store the old fabs()'d semantics. Verified cheaply
+(fidelity=6 smoke test) before rerunning: `tau_mean_signed` genuinely
+flips sign between consecutive timesteps in the smoke data, confirming
+the fix works as intended.
+
+**Result** (job 4812614, same warm-restart pattern from l10_kim_seg2's
+checkpoint): panel (a) now qualitatively matches Kim's shape (tau crosses
+zero, EDR stays non-negative), but reveals a new, honestly-quantified
+amplitude gap: our tau_mean_signed peaks at +-0.0006 Pa vs Kim's
++-0.0018 Pa (~3x low); ediss_mean peaks at 0.09 W/m^3 vs Kim's ~0.35
+(~3.9x low). Panels (b)/(c) on the CORRECT linear axes: our distributions
+really are ~96-99% concentrated in a single bin near zero, genuinely
+unlike Kim's visibly spread histogram -- not a log-scale artifact this
+time, a real shape difference. Consistent with (not new evidence on its
+own, but corroborating) the standing tau_max non-convergence finding:
+the tail still reaches comparable/larger absolute values while the bulk
+sits far more concentrated near zero than Kim's -- same signature as a
+small number of outlier cells (near-wall/contact-line) carrying
+disproportionate weight, discussed in the earlier moving-contact-line
+hypothesis.
+
 ## 2026-08-08 — Fig. 8(a)-(c) reproduced (tau_Ediss_evol): domain-mean
 shear stress + EDR time series, and their histograms at each quantity's
 own peak instant.

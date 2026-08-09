@@ -1,12 +1,19 @@
-"""Replica of Kim et al. (2024) Fig. 8 (tau_Ediss_evol):
-(a) time evolution of spatially-averaged shear stress (blue) and energy
-    dissipation rate (red), dual y-axis, theta=7deg f_b=32.5rpm baseline.
-(b) normalized histogram of shear stress across the liquid, at the instant
-    tau_mean(t) peaks.
-(c) normalized histogram of EDR across the liquid, at the instant
-    ediss_mean(t) peaks.
+"""Replica of Kim et al. (2024) Fig. 8 (tau_Ediss_evol), v2 -- corrected
+after actually viewing docs/kimetal2024/Figures/Fig_tau_Ediss.pdf:
 
-Data: runs/l10_kim_fig8 (L10, warm-restarted from l10_kim_seg2's
+  (a) domain-mean SIGNED shear stress <tau_w'> (blue) and EDR <eps_w'>
+      (red), dual y-axis, LINEAR scale, matching Kim's style. v1 plotted
+      mean(|tau|) (always >=0) instead of Kim's actual plotted quantity,
+      the signed mean (oscillates through zero) -- a real bug, not a
+      styling choice, caught by comparing against Kim's real figure.
+  (b) histogram of the SIGNED shear stress across the liquid at the
+      instant <tau_w'> peaks. LINEAR axes (Kim's own figure uses linear,
+      not log) -- v1 used log-log, which was a deviation introduced
+      without first checking Kim's actual convention.
+  (c) histogram of EDR (non-negative by construction, no sign issue)
+      across the liquid at the instant <eps_w'> peaks. LINEAR axes.
+
+Data: runs/l10_kim_fig8_signed (L10, warm-restarted from l10_kim_seg2's
 checkpoint at t=20.65, +1.8 nondim time / ~3 rocking periods).
 """
 import json
@@ -24,7 +31,7 @@ mpl_rc['axes.linewidth'] = 1.4
 mpl_rc['xtick.direction'] = 'in'
 mpl_rc['ytick.direction'] = 'in'
 
-RUN_DIR = Path("/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor/runs/l10_kim_fig8")
+RUN_DIR = Path("/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor/runs/l10_kim_fig8_signed")
 OUT_DIR = Path("/oscar/scratch/eaguerov/tmp/fig8")
 
 params = json.load(open(RUN_DIR / "params.json"))
@@ -40,43 +47,47 @@ rho_w = 1000.0
 tau_scale = rho_w * U_bio**2
 ediss_scale = rho_w * U_bio**3 / L
 
-# ── panel (a): time series ────────────────────────────────────────────────
+# ── panel (a): time series, SIGNED tau_mean this time ──────────────────────
 d = np.loadtxt(RUN_DIR / "shear_stress.dat", skiprows=1)
 t_nd = d[:, 1]
-tau_mean_nd = d[:, 5]
+tau_mean_signed_nd = d[:, 10]   # new column
 ediss_mean_nd = d[:, 9]
-tau_mean_pa = tau_mean_nd * tau_scale
+tau_mean_pa = tau_mean_signed_nd * tau_scale
 ediss_mean_wm3 = ediss_mean_nd * ediss_scale
 t_over_Tp = t_nd / T_per_nd
 
-i_tau_peak = int(np.argmax(tau_mean_nd))
-i_ediss_peak = int(np.argmax(ediss_mean_nd))
+# peak = max |signed mean| (matches "amplitude" reading off Kim's fig,
+# not just the positive-going max) for picking the panel-(b) snapshot instant
+i_tau_peak = int(np.argmax(np.abs(tau_mean_pa)))
+i_ediss_peak = int(np.argmax(ediss_mean_wm3))
 t_tau_peak = t_nd[i_tau_peak]
 t_ediss_peak = t_nd[i_ediss_peak]
-print(f"tau_mean peak at t={t_tau_peak:.4f} (t/Tp={t_over_Tp[i_tau_peak]:.3f}), {tau_mean_pa[i_tau_peak]:.6f} Pa")
+print(f"tau_mean_signed |peak| at t={t_tau_peak:.4f} (t/Tp={t_over_Tp[i_tau_peak]:.3f}), {tau_mean_pa[i_tau_peak]:.6f} Pa")
 print(f"ediss_mean peak at t={t_ediss_peak:.4f} (t/Tp={t_over_Tp[i_ediss_peak]:.3f}), {ediss_mean_wm3[i_ediss_peak]:.4f} W/m3")
+print(f"tau_mean_signed range: [{tau_mean_pa.min():.6f}, {tau_mean_pa.max():.6f}] Pa  (Kim: [-1.8e-3, +1.8e-3])")
+print(f"ediss_mean range: [{ediss_mean_wm3.min():.4f}, {ediss_mean_wm3.max():.4f}] W/m3  (Kim: [0, ~0.35])")
 
 fig, ax1 = plt.subplots(figsize=(6.0, 4.2))
 l1, = ax1.plot(t_over_Tp, tau_mean_pa, color="royalblue", lw=1.6, label=r"$\langle\tau_w'\rangle$")
-ax1.axvline(t_over_Tp[i_tau_peak], color="royalblue", lw=0.8, ls=":")
+ax1.axhline(0, color="gray", lw=0.6, ls="-")
 ax1.set_xlabel(r"$t/T_p$", fontsize=13)
 ax1.set_ylabel(r"$\langle\tau_w'\rangle$ (Pa)", fontsize=13, color="royalblue")
 ax1.tick_params(axis="y", labelcolor="royalblue")
 
 ax2 = ax1.twinx()
 l2, = ax2.plot(t_over_Tp, ediss_mean_wm3, color="firebrick", lw=1.6, label=r"$\langle\epsilon_w'\rangle$")
-ax2.axvline(t_over_Tp[i_ediss_peak], color="firebrick", lw=0.8, ls=":")
+ax2.set_ylim(bottom=0)
 ax2.set_ylabel(r"$\langle\epsilon_w'\rangle$ (W/m$^3$)", fontsize=13, color="firebrick")
 ax2.tick_params(axis="y", labelcolor="firebrick")
 
 ax1.legend(handles=[l1, l2], fontsize=10, loc="upper right")
-ax1.text(-0.14, 1.02, r'$(a)$', transform=ax1.transAxes, fontsize=16, style='italic')
+ax1.text(-0.16, 1.02, r'$(a)$', transform=ax1.transAxes, fontsize=16, style='italic')
 fig.tight_layout()
-fig.savefig(OUT_DIR / "fig8_a.png", dpi=150)
-print("saved fig8_a.png")
+fig.savefig(OUT_DIR / "fig8_a_v2.png", dpi=150)
+print("saved fig8_a_v2.png")
 
 
-# ── panels (b),(c): field histograms at the peak instants ──────────────────
+# ── panels (b),(c): field histograms at the peak instants, LINEAR axes ────
 def load_frame(path):
     with open(path, "rb") as fh:
         (n,) = struct.unpack("i", fh.read(4))
@@ -89,8 +100,7 @@ def load_frame(path):
 
 
 frame_files = sorted((RUN_DIR / "frames_tau").glob("frame_*.bin"))
-frame_times = []
-frames = []
+frame_times, frames = [], []
 for p in frame_files:
     t, f, tau, ediss = load_frame(p)
     frame_times.append(t)
@@ -102,37 +112,34 @@ idx_ediss_frame = int(np.argmin(np.abs(frame_times - t_ediss_peak)))
 print(f"nearest video frame to tau peak: t={frame_times[idx_tau_frame]:.4f} (target {t_tau_peak:.4f})")
 print(f"nearest video frame to ediss peak: t={frame_times[idx_ediss_frame]:.4f} (target {t_ediss_peak:.4f})")
 
-f_tau, tau_field, _ = frames[idx_tau_frame]
+f_tau, tau_field, _ = frames[idx_tau_frame]      # tau_field is now SIGNED (2026-08-09 fix)
 f_ediss, _, ediss_field = frames[idx_ediss_frame]
 
 tau_liquid = tau_field[f_tau > 0.5] * tau_scale
 ediss_liquid = ediss_field[f_ediss > 0.5] * ediss_scale
+print(f"tau_liquid (signed) range at peak frame: [{tau_liquid.min():.6f}, {tau_liquid.max():.6f}] Pa")
+print(f"ediss_liquid range at peak frame: [{ediss_liquid.min():.6f}, {ediss_liquid.max():.6f}] W/m3")
 
-def _plot_loglog_hist(values, color, xlabel, panel_label, out_path):
-    """Log-spaced bins + log-y counts: these tau/EDR distributions are
-    heavily right-skewed (near-zero through the laminar bulk, a thin tail
-    near the wall/interface -- same shape found earlier investigating the
-    B.17 kLa fits and the tau_max non-convergence), so a linear histogram
-    is >95% one bin and hides the entire tail. Floor at the smallest
-    positive value (not 0) so log-spaced bins are well-defined."""
-    positive = values[values > 0]
-    floor = np.percentile(positive, 0.01)
-    bins = np.logspace(np.log10(floor), np.log10(values.max()), 60)
-    counts, edges = np.histogram(values, bins=bins)
-    counts_norm = counts / counts.sum()
-    fig, ax = plt.subplots(figsize=(5.0, 4.0))
-    ax.bar(edges[:-1], counts_norm, width=np.diff(edges), align="edge",
-           color=color, edgecolor="none", alpha=0.85)
-    ax.set_xscale("log")
-    ax.set_yscale("log")
-    ax.set_ylim(bottom=1e-6)
-    ax.set_xlabel(xlabel, fontsize=13)
-    ax.set_ylabel("Normalized frequency", fontsize=13)
-    ax.text(-0.16, 1.02, panel_label, transform=ax.transAxes, fontsize=16, style='italic')
-    fig.tight_layout()
-    fig.savefig(out_path, dpi=150)
-    print(f"saved {out_path.name}")
+fig, ax = plt.subplots(figsize=(5.0, 4.0))
+counts, bins = np.histogram(tau_liquid, bins=60)
+counts_norm = counts / counts.sum()
+ax.bar(bins[:-1], counts_norm, width=np.diff(bins), align="edge",
+       color="royalblue", edgecolor="none", alpha=0.85)
+ax.set_xlabel(r"$\tau_w'$ (Pa)", fontsize=13)
+ax.set_ylabel("Normalized frequency", fontsize=13)
+ax.text(-0.16, 1.02, r'$(b)$', transform=ax.transAxes, fontsize=16, style='italic')
+fig.tight_layout()
+fig.savefig(OUT_DIR / "fig8_b_v2.png", dpi=150)
+print("saved fig8_b_v2.png")
 
-
-_plot_loglog_hist(tau_liquid, "royalblue", r"$\tau_w'$ (Pa)", r'$(b)$', OUT_DIR / "fig8_b.png")
-_plot_loglog_hist(ediss_liquid, "firebrick", r"$\epsilon_w'$ (W/m$^3$)", r'$(c)$', OUT_DIR / "fig8_c.png")
+fig, ax = plt.subplots(figsize=(5.0, 4.0))
+counts, bins = np.histogram(ediss_liquid, bins=60)
+counts_norm = counts / counts.sum()
+ax.bar(bins[:-1], counts_norm, width=np.diff(bins), align="edge",
+       color="firebrick", edgecolor="none", alpha=0.85)
+ax.set_xlabel(r"$\epsilon_w'$ (W/m$^3$)", fontsize=13)
+ax.set_ylabel("Normalized frequency", fontsize=13)
+ax.text(-0.16, 1.02, r'$(c)$', transform=ax.transAxes, fontsize=16, style='italic')
+fig.tight_layout()
+fig.savefig(OUT_DIR / "fig8_c_v2.png", dpi=150)
+print("saved fig8_c_v2.png")
