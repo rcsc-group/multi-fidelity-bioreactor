@@ -8,6 +8,59 @@ why it was done, what it found, and what it does and doesn't prove.
 Convention: newest entries at the top. Link run_ids / job_ids / commit
 hashes exactly, not "the run from earlier."
 
+## 2026-08-08 — Fig. 8(a)-(c) reproduced (tau_Ediss_evol): domain-mean
+shear stress + EDR time series, and their histograms at each quantity's
+own peak instant.
+
+Added energy dissipation rate (EDR) to the codebase for the first time --
+matches Kim et al.'s formula exactly (Main.tex Sec. "Shear stress and
+energy dissipation rate", and bio_stress.m:346): epsilon =
+mu*[2*(du_x/dx)^2 + 2*(du_y/dy)^2 + (du_x/dy+du_y/dx)^2]. Two new
+velocity-gradient terms (du_x/dx, du_y/dy) added to the SAME reduction
+pass that already computes tau, reusing du_x/dy and du_y/dx -- no
+duplicate stencil work. Domain-mean only (`ediss_mean`, new column 10 in
+shear_stress.dat) -- Fig. 8a plots spatially-averaged quantities, not a
+max, so no percentile/histogram machinery needed on the scalar side.
+
+Also extended the video export (movies_output_tau) to a THIRD field
+buffer (ediss_field, alongside f and tau) -- needed since panels (b)/(c)
+require the FULL per-cell distribution at a specific instant, which
+shear_stress.dat's scalar time series can't provide. This is a breaking
+format change for frames_tau/*.bin (2-buffer -> 3-buffer); older
+recordings (l10_kim_tau_video, l10_kim_strict_mask_test,
+l10_kim_signed_test) remain readable only with the old 2-buffer loader.
+
+Verified cheaply first (fidelity=6, t_end=3, serial smoke test) before
+touching real compute: ediss_mean nonzero and growing sensibly, field
+export gives ediss=0 outside the liquid mask as expected.
+
+**Run:** reused the same warm-restart pattern as the tau_max
+investigation (l10_kim_seg2's checkpoint at t=20.65, +1.8 nondim time /
+~3 rocking periods, L10, 64 ranks) -- job 4794872, 3h01m (slower than the
+prior two identical-scope runs at 1h09m/1h30m, likely cluster load
+variance; confirmed still actively computing via `sstat` partway through
+rather than assuming a hang).
+
+**Result:** tau_mean(t) and ediss_mean(t) peak at DIFFERENT times within
+each cycle (t=21.56 vs. t=20.92, respectively) -- a real phase shift
+between the two, matching Kim's own text ("the EDR shows a phase shift
+relative to the rocking cycles"). Histograms of both quantities across
+all liquid cells at their respective peak instants are heavily
+right-skewed (same shape already found investigating tau_max and the
+B.17 kLa fits) -- a linear-bin histogram puts >95% of the mass in a
+single bin and hides the entire tail; switched to log-spaced bins with a
+log-y axis, which reveals genuine broad distributions with real
+structure (tau's distribution shows a secondary bump around 0.01-0.1 Pa,
+plausibly the near-wall/interface population separating from the bulk).
+
+**Caveat, stated plainly:** this is a native-resolution snapshot, not a
+validated match against Kim's own histogram data -- we don't have his
+raw per-cell values to compare against, only his qualitative text
+("locally high shear stress and EDR -- up to five times greater than the
+mean values"). Our tails extend further than 5x in both panels, but given
+the standing, unresolved tau_max non-convergence-with-resolution finding,
+that's expected and not by itself informative about a new bug.
+
 ## 2026-08-07 (still later) — third tau_max hypothesis tested and RULED
 OUT: fabs() vs. the signed shear stress.
 

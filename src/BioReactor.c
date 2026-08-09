@@ -445,7 +445,7 @@ int main(int argc, char * argv[]){
   fprintf(fp_norm, "i t Omega_liq_avg Omega_liq_rms Omega_liq_vol Omega_liq_max ux_liq_avg ux_liq_rms ux_liq_vol ux_liq_max uy_liq_avg uy_liq_rms uy_liq_vol uy_liq_max \n");
   fprintf(fp_stats2, "i t f_liq_sum f_liq_interf posY_max posY_min \n");
   fprintf(fp_stats3, "i t oxy_liq_sum oxy_liq_sum2 c_liq_sum c_liq_sum2 c1_liq_sum c1_liq_sum2 c2_liq_sum c2_liq_sum2 c3_liq_sum c3_liq_sum2 \n");
-  fprintf(fp_tau,   "i t tau_95 tau_98 tau_100 tau_mean tau_100_strict tau_mean_strict tau_100_signed \n");
+  fprintf(fp_tau,   "i t tau_95 tau_98 tau_100 tau_mean tau_100_strict tau_mean_strict tau_100_signed ediss_mean \n");
 
   NITERMAX = 1000;     // Max iterations per timestep
   TOLERANCE = 5.0e-4;  // // Solver tolerance (convergence criterion)
@@ -946,21 +946,34 @@ event normcal (t+=t_out; t<=t_end){
     // persistently higher than Kim by a wide margin. Init to a large
     // negative sentinel, not 0, since the signed quantity can legitimately
     // be negative throughout a liquid region.
+    // [PROJECT ADDED, 2026-08-08] Energy dissipation rate (EDR), for Fig. 8a
+    // reproduction: epsilon = mu*[2*(du_x/dx)^2 + 2*(du_y/dy)^2 +
+    // (du_x/dy+du_y/dx)^2] -- matches Kim et al.'s own formula exactly
+    // (Main.tex, Sec. "Shear stress and energy dissipation rate", and their
+    // shared bio_stress.m:346 -- Ediss_field = mu_field.*(2*duxdx.^2 +
+    // 2*duydy.^2 + (duxdy+duydx).^2)). Only the domain-mean is needed here
+    // (Fig. 8a plots spatially-averaged tau and epsilon vs. time, not a
+    // max); reuses the exact same f[]>0.5 mask as tau for consistency.
     double tau_max_val = 0., tau_sum = 0., tau_vol = 0.;
     double tau_max_strict = 0., tau_sum_strict = 0., tau_vol_strict = 0.;
     double tau_max_signed = -1e30;
+    double ediss_sum = 0.;
     foreach(reduction(max:tau_max_val) reduction(+:tau_sum) reduction(+:tau_vol)
             reduction(max:tau_max_strict) reduction(+:tau_sum_strict) reduction(+:tau_vol_strict)
-            reduction(max:tau_max_signed)) {
+            reduction(max:tau_max_signed) reduction(+:ediss_sum)) {
       if (f[] > 0.5) {
         double du_dy = (u.x[0,1] - u.x[0,-1]) / (2.*Delta);
         double dv_dx = (u.y[1]   - u.y[-1])   / (2.*Delta);
+        double du_dx = (u.x[1]   - u.x[-1])   / (2.*Delta);
+        double dv_dy = (u.y[0,1] - u.y[0,-1]) / (2.*Delta);
         double tau_signed = mu(f[]) * (du_dy + dv_dx);
         double tau   = fabs(tau_signed);
+        double ediss = mu(f[]) * (2.*du_dx*du_dx + 2.*dv_dy*dv_dy + (du_dy+dv_dx)*(du_dy+dv_dx));
         if (tau > tau_max_val) tau_max_val = tau;
         if (tau_signed > tau_max_signed) tau_max_signed = tau_signed;
         tau_sum += tau * (Delta*Delta);
         tau_vol += Delta*Delta;
+        ediss_sum += ediss * (Delta*Delta);
         if (f[] > 1. - 1e-6) {
           if (tau > tau_max_strict) tau_max_strict = tau;
           tau_sum_strict += tau * (Delta*Delta);
@@ -970,6 +983,7 @@ event normcal (t+=t_out; t<=t_end){
     }
     double tau_mean_val    = (tau_vol > 0.)        ? tau_sum / tau_vol               : 0.;
     double tau_mean_strict = (tau_vol_strict > 0.) ? tau_sum_strict / tau_vol_strict : 0.;
+    double ediss_mean_val  = (tau_vol > 0.)        ? ediss_sum / tau_vol             : 0.;
     if (tau_max_val < 1e-14) tau_max_val = 1e-14;  // guard /0
     if (tau_max_strict < 1e-14) tau_max_strict = 1e-14;
 
@@ -1028,7 +1042,7 @@ event normcal (t+=t_out; t<=t_end){
       //fprintf(fp_stats3, "%i %g %g %g %g %g \n",i,t,oxy_liq_sum,oxy_liq_sum2,c_liq_sum,c_liq_sum2);
       fflush(fp_stats3);
 
-      fprintf(fp_tau, "%i %g %g %g %g %g %g %g %g \n", i, t, tau_95_val, tau_98_val, tau_max_val, tau_mean_val, tau_max_strict, tau_mean_strict, tau_max_signed);
+      fprintf(fp_tau, "%i %g %g %g %g %g %g %g %g %g \n", i, t, tau_95_val, tau_98_val, tau_max_val, tau_mean_val, tau_max_strict, tau_mean_strict, tau_max_signed, ediss_mean_val);
       fflush(fp_tau);
    }
 }
@@ -1135,6 +1149,13 @@ event movies_output(i++)
 // once per event call.
 #if VIDEOS
 scalar tau_field[];
+// [PROJECT ADDED, 2026-08-08] ediss_field: same rationale as tau_field --
+// declared once at file scope, not inside the event, to avoid the
+// documented scalar-leak/segfault hazard. Needed for Fig. 8b/c
+// reproduction (normalized histograms of tau and epsilon across the
+// liquid, at the instant each domain-mean peaks) -- shear_stress.dat only
+// carries the scalar mean, not the full spatial distribution.
+scalar ediss_field[];
 int _vframe_tau = 0;
 double _last_vdump_tau = -1e30;
 
@@ -1152,17 +1173,20 @@ event movies_output_tau(i++)
       system("mkdir -p frames_tau");
   }
 
-  // Same stencil as event normcal's tau_100/tau_98/tau_95 computation
-  // (du_dy, dv_dx, tau = mu(f[])*fabs(du_dy+dv_dx)), masked to liquid
-  // (f[] > 0.5) -- kept identical on purpose so the video's tau field
-  // matches the tau_100_max/tau_mean_max KPIs computed from shear_stress.dat.
+  // Same stencils as event normcal's tau/ediss computation, masked to
+  // liquid (f[] > 0.5) -- kept identical on purpose so the video fields
+  // match the tau_100_max/tau_mean_max/ediss_mean KPIs in shear_stress.dat.
   foreach() {
     if (f[] > 0.5) {
       double du_dy = (u.x[0,1] - u.x[0,-1]) / (2.*Delta);
       double dv_dx = (u.y[1]   - u.y[-1])   / (2.*Delta);
-      tau_field[] = mu(f[]) * fabs(du_dy + dv_dx);
+      double du_dx = (u.x[1]   - u.x[-1])   / (2.*Delta);
+      double dv_dy = (u.y[0,1] - u.y[0,-1]) / (2.*Delta);
+      tau_field[]   = mu(f[]) * fabs(du_dy + dv_dx);
+      ediss_field[] = mu(f[]) * (2.*du_dx*du_dx + 2.*dv_dy*dv_dy + (du_dy+dv_dx)*(du_dy+dv_dx));
     } else {
-      tau_field[] = 0.;
+      tau_field[]   = 0.;
+      ediss_field[] = 0.;
     }
   }
 
@@ -1179,18 +1203,25 @@ event movies_output_tau(i++)
     }
   }
 
-  // Two buffers per frame: f (for the bag/liquid mask) and tau_field (the
-  // quantity to visualize). Both interpolated on ALL ranks (interpolate()
-  // is collective); only rank 0 writes.
-  float *buf_f   = (float *)malloc(n * n * sizeof(float));
-  float *buf_tau = (float *)malloc(n * n * sizeof(float));
+  // Three buffers per frame: f (for the bag/liquid mask), tau_field, and
+  // ediss_field (2026-08-08 addition, for Fig. 8b/c histograms). All
+  // interpolated on ALL ranks (interpolate() is collective); only rank 0
+  // writes. NOTE: this is a FORMAT CHANGE from the original 2-buffer
+  // (f, tau) frames_tau/*.bin -- older recordings (e.g. l10_kim_tau_video,
+  // l10_kim_strict_mask_test, l10_kim_signed_test) are still 2-buffer and
+  // must be read with the old loader; anything recorded after this commit
+  // is 3-buffer.
+  float *buf_f     = (float *)malloc(n * n * sizeof(float));
+  float *buf_tau   = (float *)malloc(n * n * sizeof(float));
+  float *buf_ediss = (float *)malloc(n * n * sizeof(float));
   int idx = 0;
   for (int j = 0; j < n; j++) {
     double yj = Y0 + (j + 0.5) * dx;
     for (int i = 0; i < n; i++) {
       double xi = X0 + (i + 0.5) * dx;
-      buf_f[idx]   = (float)interpolate(f, xi, yj);
-      buf_tau[idx] = (float)interpolate(tau_field, xi, yj);
+      buf_f[idx]     = (float)interpolate(f, xi, yj);
+      buf_tau[idx]   = (float)interpolate(tau_field, xi, yj);
+      buf_ediss[idx] = (float)interpolate(ediss_field, xi, yj);
       idx++;
     }
   }
@@ -1203,12 +1234,13 @@ event movies_output_tau(i++)
     sprintf(fpath, "frames_tau/frame_%06d.bin", _vframe_tau);
     FILE *fp = fopen(fpath, "wb");
     if (fp) {
-      fwrite(&n,       sizeof(int),    1, fp);
-      fwrite(&t_nd,    sizeof(double), 1, fp);
-      fwrite(&Th,      sizeof(double), 1, fp);
-      fwrite(&xh_nd,   sizeof(double), 1, fp);
-      fwrite(buf_f,    sizeof(float), n * n, fp);
-      fwrite(buf_tau,  sizeof(float), n * n, fp);
+      fwrite(&n,         sizeof(int),    1, fp);
+      fwrite(&t_nd,      sizeof(double), 1, fp);
+      fwrite(&Th,        sizeof(double), 1, fp);
+      fwrite(&xh_nd,     sizeof(double), 1, fp);
+      fwrite(buf_f,      sizeof(float), n * n, fp);
+      fwrite(buf_tau,    sizeof(float), n * n, fp);
+      fwrite(buf_ediss,  sizeof(float), n * n, fp);
       fclose(fp);
     } else {
       fprintf(stderr, "movies_output_tau: cannot open %s\n", fpath);
@@ -1217,6 +1249,7 @@ event movies_output_tau(i++)
 
   free(buf_f);
   free(buf_tau);
+  free(buf_ediss);
   _vframe_tau++;
 }
 #endif

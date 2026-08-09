@@ -580,6 +580,7 @@ def _compute_tau98_kpis(run_dir: Path, params: dict) -> dict:
         "tau_mean_max": math.nan,
         "tau_100_max_strict": math.nan, "tau_mean_max_strict": math.nan,
         "tau_100_max_signed": math.nan,
+        "ediss_mean_qss": math.nan,
     }
     tau_path = run_dir / "shear_stress.dat"
     if not tau_path.exists():
@@ -606,6 +607,9 @@ def _compute_tau98_kpis(run_dir: Path, params: dict) -> dict:
     # quantity, not max(|tau|). max(signed) <= max(|signed|) always.
     has_signed = arr.shape[1] >= 9
     tau_100_signed = arr[:, 8] if has_signed else None
+    # ediss_mean (2026-08-08): domain-mean EDR, for Fig. 8a reproduction.
+    has_ediss = arr.shape[1] >= 10
+    ediss_mean_col = arr[:, 9] if has_ediss else None
 
     T_bio, T_per_nd = _t_scales(params)
     t_ramp = 3.0 * T_per_nd
@@ -635,18 +639,20 @@ def _compute_tau98_kpis(run_dir: Path, params: dict) -> dict:
     if qss_mask.sum() < 3:
         return nan_result
 
-    rho_w     = 1.0e3        # kg/m³
-    L         = params.get("geometry", {}).get("a", 0.25)
-    U_bio     = L / T_bio
-    tau_scale = rho_w * U_bio**2  # Pa  (BioReactor.c: rho1=1, mu1=1/Re → τ_nd = τ_dim/ρU²)
+    rho_w       = 1.0e3        # kg/m³
+    L           = params.get("geometry", {}).get("a", 0.25)
+    U_bio       = L / T_bio
+    tau_scale   = rho_w * U_bio**2      # Pa      (τ_nd = τ_dim/(ρU²))
+    ediss_scale = rho_w * U_bio**3 / L  # W/m³    (ε_nd = ε_dim*L/(ρU³), by the same
+                                         # nondim-gradient substitution used for τ)
 
-    def _qss_median(col):
-        return float(np.median(col[qss_mask]) * tau_scale)
+    def _qss_median(col, scale=tau_scale):
+        return float(np.median(col[qss_mask]) * scale)
 
-    def _qss_max(col):
+    def _qss_max(col, scale=tau_scale):
         # Restricted to the QSS window -- matches Kim et al.'s "over one
         # period" in the quasi-steady regime, excluding the startup transient.
-        return float(col[qss_mask].max() * tau_scale)
+        return float(col[qss_mask].max() * scale)
 
     return {
         "tau_95_qss":   _qss_median(tau_95),
@@ -659,6 +665,7 @@ def _compute_tau98_kpis(run_dir: Path, params: dict) -> dict:
         "tau_100_max_strict":  _qss_max(tau_100_strict) if has_strict else math.nan,
         "tau_mean_max_strict": _qss_max(tau_mean_strict) if has_strict else math.nan,
         "tau_100_max_signed":  _qss_max(tau_100_signed) if has_signed else math.nan,
+        "ediss_mean_qss": _qss_median(ediss_mean_col, ediss_scale) if has_ediss else math.nan,
     }
 
 
@@ -723,6 +730,7 @@ def main(run_dir: str, params: dict | None = None) -> dict:
         "tau_mean_max": math.nan,
         "tau_100_max_strict": math.nan, "tau_mean_max_strict": math.nan,
         "tau_100_max_signed": math.nan,
+        "ediss_mean_qss": math.nan,
     }
 
     try:
@@ -819,6 +827,7 @@ def _register_to_experiment_store(run_dir: Path, params: dict,
         "tau_mean_max",
         "tau_100_max_strict", "tau_mean_max_strict",
         "tau_100_max_signed",
+        "ediss_mean_qss",
     )}
 
     new_ed = ExperimentData(
