@@ -72,11 +72,12 @@ l1, = ax1.plot(t_over_Tp, tau_mean_pa, color="royalblue", lw=1.6, label=r"$\lang
 ax1.axhline(0, color="gray", lw=0.6, ls="-")
 ax1.set_xlabel(r"$t/T_p$", fontsize=13)
 ax1.set_ylabel(r"$\langle\tau_w'\rangle$ (Pa)", fontsize=13, color="royalblue")
+ax1.set_ylim(-3e-3, 3e-3)
 ax1.tick_params(axis="y", labelcolor="royalblue")
 
 ax2 = ax1.twinx()
 l2, = ax2.plot(t_over_Tp, ediss_mean_wm3, color="firebrick", lw=1.6, label=r"$\langle\epsilon_w'\rangle$")
-ax2.set_ylim(bottom=0)
+ax2.set_ylim(0.0, 0.4)
 ax2.set_ylabel(r"$\langle\epsilon_w'\rangle$ (W/m$^3$)", fontsize=13, color="firebrick")
 ax2.tick_params(axis="y", labelcolor="firebrick")
 
@@ -120,26 +121,42 @@ ediss_liquid = ediss_field[f_ediss > 0.5] * ediss_scale
 print(f"tau_liquid (signed) range at peak frame: [{tau_liquid.min():.6f}, {tau_liquid.max():.6f}] Pa")
 print(f"ediss_liquid range at peak frame: [{ediss_liquid.min():.6f}, {ediss_liquid.max():.6f}] W/m3")
 
+# Bins span Kim's OWN window, not our full data range -- binning over our
+# much wider range (tau tail reaches +-0.25 Pa) and then zooming into his
+# +-15e-3 window would leave only ~3 giant bins visible instead of a real
+# distribution shape. Counts still normalize by the TOTAL sample count
+# (not just the in-window subset), so the visible bars are not inflated by
+# excluding the tail -- the tail's share is reported separately below.
+def _hist_in_window(values, lo, hi, n_bins=30):
+    bins = np.linspace(lo, hi, n_bins + 1)
+    counts, edges = np.histogram(values, bins=bins)
+    counts_norm = counts / len(values)  # normalize by ALL samples, not just in-window
+    return counts_norm, edges
+
 fig, ax = plt.subplots(figsize=(5.0, 4.0))
-counts, bins = np.histogram(tau_liquid, bins=60)
-counts_norm = counts / counts.sum()
-ax.bar(bins[:-1], counts_norm, width=np.diff(bins), align="edge",
+counts_norm, edges = _hist_in_window(tau_liquid, -15e-3, 15e-3)
+ax.bar(edges[:-1], counts_norm, width=np.diff(edges), align="edge",
        color="royalblue", edgecolor="none", alpha=0.85)
+ax.set_xlim(-15e-3, 15e-3)
 ax.set_xlabel(r"$\tau_w'$ (Pa)", fontsize=13)
 ax.set_ylabel("Normalized frequency", fontsize=13)
 ax.text(-0.16, 1.02, r'$(b)$', transform=ax.transAxes, fontsize=16, style='italic')
 fig.tight_layout()
 fig.savefig(OUT_DIR / "fig8_b_v2.png", dpi=150)
 print("saved fig8_b_v2.png")
+frac_outside_b = float(((tau_liquid < -15e-3) | (tau_liquid > 15e-3)).mean())
+print(f"fraction of tau_liquid outside Kim's [-15e-3,15e-3] window: {frac_outside_b*100:.2f}%")
 
 fig, ax = plt.subplots(figsize=(5.0, 4.0))
-counts, bins = np.histogram(ediss_liquid, bins=60)
-counts_norm = counts / counts.sum()
-ax.bar(bins[:-1], counts_norm, width=np.diff(bins), align="edge",
+counts_norm, edges = _hist_in_window(ediss_liquid, 0.0, 1.0)
+ax.bar(edges[:-1], counts_norm, width=np.diff(edges), align="edge",
        color="firebrick", edgecolor="none", alpha=0.85)
+ax.set_xlim(0.0, 1.0)
 ax.set_xlabel(r"$\epsilon_w'$ (W/m$^3$)", fontsize=13)
 ax.set_ylabel("Normalized frequency", fontsize=13)
 ax.text(-0.16, 1.02, r'$(c)$', transform=ax.transAxes, fontsize=16, style='italic')
 fig.tight_layout()
 fig.savefig(OUT_DIR / "fig8_c_v2.png", dpi=150)
+frac_outside_c = float((ediss_liquid > 1.0).mean())
+print(f"fraction of ediss_liquid above Kim's 1.0 W/m3 window: {frac_outside_c*100:.2f}%")
 print("saved fig8_c_v2.png")
