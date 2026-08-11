@@ -8,6 +8,57 @@ why it was done, what it found, and what it does and doesn't prove.
 Convention: newest entries at the top. Link run_ids / job_ids / commit
 hashes exactly, not "the run from earlier."
 
+## 2026-08-11 — metric-correction sanity check abandoned after a self-
+inflicted bug and an unexplained slow restore; redirecting to the
+upstream L10 comparison instead.
+
+**Framing correction first:** was about to run "naive vs metric-corrected
+stencil" as if it might reveal which one matches Kim. User caught this
+directly: Kim's own `bio_stress.m` (already read, dev/postprocessing/)
+uses the same plain, uncorrected central-difference formula we use --
+no `fm`/`cm` weighting anywhere in it. So this test can only check
+whether OUR stencil is internally well-behaved near the embedded
+boundary, independent of the Kim-comparison question -- not "which
+formula is right for matching Kim." Recorded so this framing mistake
+doesn't get repeated.
+
+**Real bug in the test harness, not physics:** first attempt keyed the
+diagnostic event on `event metric_test (i = 1)`, intending "fire once,
+right after restore, before any real timestep." Wrong -- Basilisk's
+global iteration counter `i` resumes from its checkpointed value
+(~382945 here) after a restart; `i=1` already happened during the
+original cold start and can never recur. The job (4863838, then a retry
+4863838 with 1h walltime) just ran the normal, unconstrained production
+simulation for 26+ minutes (confirmed via `logstats.dat`: reached
+i=383628, t=22.5, ~683 real timesteps advanced) before being killed
+manually -- it was never going to stop or print anything on its own,
+since there's no time-bounded stop event in this minimal test file.
+Fixed by keying on `t = t_ramp_start` instead (a plain double set to
+`params.t_checkpoint` in `main()`), mirroring `dump_checkpoint`'s own
+(already-correct) time-based convention -- `restore()` sets `t` to
+exactly `t_checkpoint`, so this fires at the same initial pass as
+`event init`, before any timestep advances.
+
+**Still unexplained:** even with that fix, job 4864466 (16 ranks, same
+checkpoint, ~196MB dump file) produced zero output and zero
+`logstats.dat` entries after 18+ minutes -- meaning it's stuck somewhere
+in restore()/the embedded-boundary `solid()` reconstruction itself, not
+in timestepping (no real step should occur before the fixed trigger
+fires). No crash, no error, CPU actively used across all ranks (checked
+via `sstat`, min/max CPU time nearly identical -- not one stalled rank).
+Left running passively rather than continuing to debug -- decided with
+the user that this specific check isn't worth more time given (a) the
+framing problem above means it wouldn't answer the Kim-comparison
+question even if it worked, and (b) redirecting to the upstream L10 run
+(queued next) tests the actual question directly instead.
+
+**Time/compute accounting, stated plainly:** this "near-instant sanity
+check" ended up costing ~45+ minutes of wall-clock across three job
+attempts (4863536 killed by 15-min walltime, 4863838 ran 26+ min on the
+wrong trigger before manual kill, 4864466 still running past 18 min on
+the fixed trigger) without producing a single number. Recorded as a
+cost, not hidden.
+
 ## 2026-08-10 — chased the tau/EDR mean-amplitude gap (~3-4x low vs Kim,
 2026-08-09 entry) through ramp duration, AMR, and a static diff against
 the real vendored upstream driver. All ruled out except one untested
