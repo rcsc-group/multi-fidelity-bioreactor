@@ -54,6 +54,21 @@ fork-specific, not present here.
 
 Submitted as `/oscar/scratch/eaguerov/tmp/upstream_l10/rundir/run_upstream_l10.sh`,
 64 ranks, `--time=10:00:00`, `srun --mpi=pmix ... BioReactor_upstream_L10 0.25 7 32.5`.
+
+**First attempt (job 4868026) segfaulted immediately, root-caused not
+guessed:** stderr backtrace pointed at `out_files_initial()` ->
+`fwrite`. Read the fixture's own code: upstream's pre-existing
+`OUT_FILES=1`/`OUT_INTERFACE=1` events (unrelated to my 5 patches) write
+to `Data_all/Data_all_*.txt` every `dt_file=0.1519*7~=1.06` from t=0 --
+a directory upstream's own `BioReactor.sh` always `mkdir`s before
+running, which I never created in this scratch rundir. `fopen` on a
+missing directory returns NULL; the subsequent unchecked `fprintf`
+segfaults across nearly all ranks. Fixed by creating `Data_all/` and
+`Data_specific/` in the rundir (matching upstream's own expected usage
+exactly -- no source change). At `t_end=6.0` this only fires ~6 times
+before truncation, so left `OUT_FILES` enabled rather than disabling it.
+Resubmitted as **job 4868054**.
+
 **Next step once it completes:** parse `DumpEarly_*.txt` per rank,
 reconstruct the bulk `u.x`/`u.y`/`f` field, compare directly against our
 fork's own L10 field at a matching settled condition.
