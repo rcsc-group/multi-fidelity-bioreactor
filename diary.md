@@ -8,6 +8,79 @@ why it was done, what it found, and what it does and doesn't prove.
 Convention: newest entries at the top. Link run_ids / job_ids / commit
 hashes exactly, not "the run from earlier."
 
+## 2026-08-10 — chased the tau/EDR mean-amplitude gap (~3-4x low vs Kim,
+2026-08-09 entry) through ramp duration, AMR, and a static diff against
+the real vendored upstream driver. All ruled out except one untested
+lead. Diary was not updated live during this investigation -- user
+called this out directly; fixing now and going back to updating as I go.
+
+**Ramp duration (3 cycles ours vs Kim's ~30s/16.3 cycles at this
+condition): RULED OUT by direct test, not just the physical argument.**
+Built two L8 cold-start binaries differing only in `N_RAMP_CYCLES` (3 vs
+16, temporary edit, reverted after building -- `git status` confirmed
+clean before either job was submitted). Same condition, same t_end=22,
+jobs 4828913/4828914. Settled-window (t/Tp=[18,22]) `tau_mean_signed`
+peak: 8.945e-5 (ramp3) vs 8.836e-5 (ramp16), 1.2% apart. `ediss_mean`
+peak: 0.02038 vs 0.02033, 0.26% apart. Both differences are noise, not a
+trend -- ramp duration does not affect the settled periodic amplitude.
+
+**AMR: moot, not just unlikely.** User asked (rightly) to test statically
+against the real upstream code before hypothesizing AMR-related under-
+refinement. `tests/fixtures/kim_upstream/BioReactor.c` (Kim's own driver,
+vendored verbatim per its own README) has `init_grid(NN); // Initialize
+uniform grid if AMR is disabled` and defaults to `#define AMR 0`. Our own
+fork's comment (`src/BioReactor.c:222-228`) independently confirms the
+same: "Upstream itself runs with `#define AMR 0` (uniform grid) for its
+published results, same as this fork -- AMR was never actually exercised
+in either codebase's production runs." Neither simulation uses adaptive
+refinement at all; the question of whether Basilisk's AMR interacts badly
+with VOF interface tracking is real in general but doesn't apply here.
+
+**Systematic static diff against the vendored upstream driver: no
+differences found** in viscosity/density blending (`mu(f)` macro,
+`Re_w`/`Re_a`/`We_w`/`rho1`/`rho2`/`mu1`/`mu2` -- identical formulas,
+byte-for-byte on the lines that matter), boundary conditions (`u.n`/`u.t`
+Dirichlet setup on all six faces plus embed -- identical), `L0` (both use
+`1.[0]`, confirmed via the fixture's own README this is Kim's real value,
+not something we introduced), and the acceleration/forcing term (gravity
++ Coriolis + centrifugal + azimuthal -- our multi-harmonic generalization
+reduces to upstream's exact formula at n_harmonics=1, already verified
+algebraically on 2026-07-28; `omega_h=0` in every run this session so the
+one fork-added term is inactive anyway).
+
+**Re-discovered (not newly found -- already fixed, but worth recording
+why it doesn't explain the CURRENT gap) the H_bio/geometry.b bug's full
+writeup while reading the upstream fixture's README:** a 2026-07-30
+investigation found the fork's tank was being simulated at 2x its
+intended height (`H_bio=L_bio*Ly` treating `Ly` as full-height when the
+fork had redefined it as a half-height semi-axis), causing
+`ux_liq_rms/U_bio` to read ~0.39 vs upstream's own driver's ~0.68-0.77
+(matching Kim's ~0.8) at the SAME condition. This is the same bug fixed
+on 2026-08-03 (`H_bio=2*L_bio*Ly`, `geometry.b=0.03575`) that this entire
+session's work has already been using -- it explains historical velocity
+mismatches, not the current one. Confirmed today: our velocity field
+still matches Kim's Fig A.16 well (`ux'_rms/U_b` peak ~0.776) at both
+`t/Tp=[29,31]` and `[34,37]` -- consistent, not contradictory, with a
+persistent tau/EDR gap, since velocity is a primitive field and tau/EDR
+both require a spatial derivative of it.
+
+**User's key technical objection, not yet addressed with evidence:** a
+clean ~3-4x gap in a derivative quantity, when the underlying
+undifferentiated field (velocity) already matches Kim well, is not what
+mesh-convergence error looks like -- it smells like a wrong constant or a
+wrong stencil in the derivative itself, not resolution. Proposed test:
+restore an existing converged checkpoint and compute the domain-mean
+shear stress two ways on the IDENTICAL field -- current naive centered
+difference vs. a metric-corrected stencil matching Basilisk's own
+`vorticity()` (`basilisk/src/utils.h:286`, which weights by `fm.x`/`fm.y`/
+`cm` to correct for embedded-boundary cut cells; our stencil does not).
+Not yet run. Also queued: get an actual upstream-driver L10 run (existing
+upstream comparison was only ever done at upstream's hardcoded NN=64,
+fidelity 6) to check whether the raw, unmodified Kim code shows the same
+gap when its own field snapshots are postprocessed with the (already
+verified byte-identical) tau/EDR formula -- would distinguish "bug in our
+fork's derivative computation" from "something else entirely" cleanly.
+
 ## 2026-08-09 — Fig. 8a was plotting the WRONG statistic; found by actually
 rendering and viewing Kim et al.'s real figure instead of trusting the
 caption text.
