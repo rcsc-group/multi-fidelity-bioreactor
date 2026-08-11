@@ -8,6 +8,56 @@ why it was done, what it found, and what it does and doesn't prove.
 Convention: newest entries at the top. Link run_ids / job_ids / commit
 hashes exactly, not "the run from earlier."
 
+## 2026-08-11 (2) — upstream L10 comparison run submitted (job 4868026):
+Kim et al.'s own unmodified driver, run at our L10 resolution, to test
+"does the bulk look identical to ours" directly (user's explicit ask),
+sidestepping the abandoned metric-correction test's framing problem
+entirely -- no postprocessing formula in question here, just the raw
+field.
+
+**What's running:** a separate working copy of the vendored upstream
+fixture (`tests/fixtures/kim_upstream/BioReactor.c`), copied to
+`/oscar/scratch/eaguerov/tmp/upstream_l10/BioReactor_upstream_L10.c` --
+deliberately NOT the canonical fixture itself, so `test_kim_upstream_comparison.py`
+stays untouched. Patched with 5 changes on top of the fixture's own
+existing 4 documented compile-compatibility patches:
+1. `NN` 64 -> 1024 (matches our L10 grid resolution)
+2. `DUMP` 0 -> 1 (enable upstream's own per-rank ASCII dump mechanism)
+3. added `t_dump_early = T_per_st*8.;` in `main()` -- fires after ~8
+   settled rocking cycles (chosen over ~20 cycles after the
+   2026-08-10 ramp-duration test showed amplitude is already flat by
+   cycle 3, so 8 cycles is plenty for a settled-field snapshot at a
+   fraction of the compute cost: est. median ~4.4h / p90 ~8.7h at 64
+   ranks vs ~10h/~19.5h for 20 cycles, via `scripts/estimate_walltime.py
+   --fidelity 10 --ntasks 64`)
+4. added `event dump_early(t=t_dump_early)`, writing
+   `DumpEarly_%d_%g_%d.txt` (columns: `x y ux uy f c`) per rank --
+   distinct filename from upstream's own pre-existing `dump` event to
+   avoid collision
+5. added `event stop_run(t=t_end){return 1;}` -- upstream's own
+   `acceleration(i++)`/`normcal(i+=i_norm)` events are unconditioned, so
+   `run()` never terminates by itself; also truncated `t_end` 24.0 -> 6.0
+   (upstream's own fixture had already truncated it 250.0 -> 24.0 for
+   compile-testing, per its own README -- neither value was ever going
+   to let `t_dump=t_mix~=48.6` fire anyway, so no upstream behavior lost)
+
+Built via the project's own `make build-mpi` recipe pattern (CC99 wraps
+mpicc, absolute path resolved via `command -v mpicc` after
+`module load openmpi/5.0.8-q6yg` -- the plain module name alone put
+mpicc on THIS shell's PATH but qcc spawns its C99 preprocessing step in
+a subshell that does not inherit it when CC99 names `mpicc` unqualified;
+resolving to the absolute path before setting CC99 fixed it). Confirmed
+upstream's own `H_bio = L_bio*Ly` is correct for upstream's convention
+(their `Ly` is genuinely full-height, unlike our fork's redefined
+half-height semi-axis) -- the historical 2026-08-03 H_bio bug was
+fork-specific, not present here.
+
+Submitted as `/oscar/scratch/eaguerov/tmp/upstream_l10/rundir/run_upstream_l10.sh`,
+64 ranks, `--time=10:00:00`, `srun --mpi=pmix ... BioReactor_upstream_L10 0.25 7 32.5`.
+**Next step once it completes:** parse `DumpEarly_*.txt` per rank,
+reconstruct the bulk `u.x`/`u.y`/`f` field, compare directly against our
+fork's own L10 field at a matching settled condition.
+
 ## 2026-08-11 — metric-correction sanity check abandoned after a self-
 inflicted bug and an unexplained slow restore; redirecting to the
 upstream L10 comparison instead.
