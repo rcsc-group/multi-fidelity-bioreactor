@@ -84,9 +84,46 @@ job's unexplained 18+min stall). Decided with the user to treat as a
 one-off and resubmit rather than dig into harness internals for a
 one-off diagnostic run. Resubmitted unchanged as **job 4877551**.
 
-**Next step once it completes:** parse `DumpEarly_*.txt` per rank,
-reconstruct the bulk `u.x`/`u.y`/`f` field, compare directly against our
-fork's own L10 field at a matching settled condition.
+**Job 4877551 completed cleanly** (`sacct`: `COMPLETED 0:0`, 3h50m,
+faster than the first attempt's pace -- no anomaly recurrence). All 64
+`DumpEarly_1024_4.85863_*.txt` files present (`t=4.85863` = the
+requested ~8 cycles, `x y ux uy f c` columns, confirmed via `head`).
+This is the actual upstream bulk-field snapshot the user asked for.
+
+**Next step:** get a matched snapshot from our OWN fork to compare
+against. Two options considered: (a) restart our fork from an existing
+mid-run checkpoint (e.g. `l10_kim_fig8_signed`, t=22.47) and add a
+one-shot ASCII dump event -- risky, this exact restart-plus-added-event
+pattern is what stalled unexplained for 18+ min in the abandoned
+metric_test check (2026-08-11 (1) entry); or (b) a fresh cold-start of
+our own fork to ~8 cycles, mirroring the upstream protocol exactly (same
+startup transient, no restart-path uncertainty). (b) is the fairer
+apples-to-apples comparison and avoids the known-flaky restart path --
+proceeding with that next.
+
+**Matched fork L10 cold-start submitted (job 4883890):** copied
+`src/BioReactor.c` (+ headers) to
+`/oscar/scratch/eaguerov/tmp/fork_l10_coldstart/BioReactor_fork_L10.c`
+(scratch only, production file untouched). Added one event,
+`dump_bulk_early_fork (t = T_per_st*8.)`, writing
+`DumpEarlyFork_%d_%.12g_%d.txt` per rank with columns `x y ux uy f cs`
+-- same idiom as upstream's own dump events, `cs` (embedded solid
+indicator) swapped in for upstream's 6th column (their tracer field
+"c", uninteresting pre-`t_mix`). Fresh params.json:
+`t_checkpoint=0.0, t_end=6.0`, same condition as upstream
+(`fidelity=10, omega_b=3.403392, theta_max=[7,0,0]`) -- `T_per_st*8`
+lands at t=4.85863 in BOTH codebases (confirms consistent
+nondimensionalization end to end, not just asserted).
+
+**Smoke-tested before committing another 64-rank/multi-hour job** (own
+past feedback: never skip this for a long SLURM submission). Ran the
+new binary locally via `mpirun --oversubscribe -np 4` at fidelity=5,
+first at `t_end=0.05` (exit 0, confirms basic build/run), then again at
+`t_end=4.9` specifically to exercise the new event -- confirmed
+`DumpEarlyFork_32_4.85863329303_{0..3}.txt` were written with valid
+rows across all 4 ranks before submitting at full L10/64-rank scale.
+Submitted as
+`/oscar/scratch/eaguerov/tmp/fork_l10_coldstart/rundir/run_fork_l10.sh`.
 
 ## 2026-08-11 — metric-correction sanity check abandoned after a self-
 inflicted bug and an unexplained slow restore; redirecting to the
