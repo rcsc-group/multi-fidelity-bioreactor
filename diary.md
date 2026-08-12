@@ -125,6 +125,58 @@ rows across all 4 ranks before submitting at full L10/64-rank scale.
 Submitted as
 `/oscar/scratch/eaguerov/tmp/fork_l10_coldstart/rundir/run_fork_l10.sh`.
 
+**Job completed (5h01m, exit 0:0). Comparison result: velocity fields
+differ by ~2.17x, but liquid-fraction/interface field matches almost
+perfectly -- and the velocity difference is fully explained by a ramp-
+schedule confound, not a real bulk discrepancy.**
+
+Wrote `scripts/compare_upstream_l10_bulk.py`: loads both 64-rank dump
+sets, bins onto the shared N=1024 grid (both dumps share the same
+L0=1/origin convention, so no interpolation needed), computes per-field
+summary stats and a direct cell-by-cell diff. Results at t=4.85863
+(~8 cycles):
+
+| quantity              | upstream | fork    |
+|-----------------------|----------|---------|
+| liquid cells (f>0.5)  | 524177   | 524267  |
+| mean f                | 0.500003 | 0.499993|
+| mean \|u\| (liquid)   | 0.1471   | 0.3091  |
+| max \|u\|             | 0.8811   | 2.0418  |
+
+mean\|u\| ratio (fork/upstream) = **2.167**. Liquid-cell counts agree to
+<0.02% and mean_f to 5 decimal places -- the VOF/interface tracking is
+essentially identical between codebases. Only velocity magnitude
+differs, and by a large, suspicious-looking factor.
+
+**Root cause, not guessed -- computed directly from each codebase's own
+ramp constants:** upstream's ramp (`t_change=30s` literal, Main.tex's
+own criterion) converts to `t_change_st = t_change/T_bio = 9.869`,
+i.e. **16.25 cycles** at this condition (`python3` calc using the
+file's own `H_bio`/`V_bio`/`U_bio`/`T_bio` formulas, T_per_st=0.60733
+matches the value used everywhere else this session). At the dump time
+(8 cycles), upstream's own ramp function
+(`Th_max2 = Th_max*(t/t_change_st)`) gives a forcing amplitude at only
+**49.2%** of its final value -- upstream is still mid-ramp. Our fork's
+ramp is 3 cycles, so by cycle 8 it has been at 100% amplitude for 5
+cycles. Predicted velocity ratio from amplitude alone: `1/0.492 = 2.03`
+-- matches the measured 2.167 closely (residual difference plausibly
+nonlinear response / phase, not investigated further).
+
+**This does NOT resolve the original tau/EDR 3-4x gap** (that gap was
+measured well past both ramps, deep in the settled state) -- but it
+does mean *this specific comparison*, taken at face value, is not
+evidence of a real bulk-field discrepancy between codebases. Once the
+ramp-progress confound is accounted for, the two codebases' bulk fields
+are consistent with each other at this snapshot, not contradictory.
+
+**Open question for the user:** to get a comparison that actually
+speaks to the settled-state tau/EDR gap, both codebases would need to
+be dumped AFTER their own ramp completes (upstream needs >=16.25
+cycles, ours needs >=3) -- e.g. both at ~19-20 cycles, t~=11.5-12.1.
+That roughly doubles the wall-clock of each run (already ~4-5h each at
+8 cycles) since cost scales with t_end. Not yet run -- flagging cost
+before submitting another pair of multi-hour jobs.
+
 ## 2026-08-11 — metric-correction sanity check abandoned after a self-
 inflicted bug and an unexplained slow restore; redirecting to the
 upstream L10 comparison instead.
