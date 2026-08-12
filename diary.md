@@ -69,6 +69,21 @@ exactly -- no source change). At `t_end=6.0` this only fires ~6 times
 before truncation, so left `OUT_FILES` enabled rather than disabling it.
 Resubmitted as **job 4868054**.
 
+**Job 4868054 was progressing correctly then cancelled mid-run,
+unexplained:** `logstats.dat` showed clean linear progress (t=3.3/6.0
+at 4h35m wall-clock, ~294 CPU-hours, on pace). `sacct` shows
+`CANCELLED by 140696830` (my own uid) at 2026-08-11T17:31:45 -- an
+explicit `scancel`, not a crash, not a walltime kill (job had a 10h
+limit, only used 4.6h). No `scancel` was issued in this session's
+tracked command history. This coincides with a tool-level notification
+about a background monitor task losing its completion record around
+the same time, possibly from a session restart/teardown -- correlation
+only, not proven causation; recorded as an open infra anomaly, second
+one this investigation (see 2026-08-11 (1) entry re: the metric_test
+job's unexplained 18+min stall). Decided with the user to treat as a
+one-off and resubmit rather than dig into harness internals for a
+one-off diagnostic run. Resubmitted unchanged as **job 4877551**.
+
 **Next step once it completes:** parse `DumpEarly_*.txt` per rank,
 reconstruct the bulk `u.x`/`u.y`/`f` field, compare directly against our
 fork's own L10 field at a matching settled condition.
