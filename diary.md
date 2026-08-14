@@ -205,6 +205,26 @@ rather than a blocker -- if a job hits the walltime kill this time, the
 fix for next time is submitting with a longer `--time` up front, not
 retrying blind like the earlier unexplained-cancellation incident.
 
+**The walltime risk materialized as predicted; killed and resubmitted
+with margin.** Job 4951544 was genuinely healthy the whole time (steady
+progress, no errors) but consistently slow: t=6.0/13.3 at 8h05m
+elapsed, only ~1h55m of its 10h walltime left -- extrapolating the
+steady ~0.75 t-units/hour pace, it would only reach ~t=7.5 by the
+cutoff, well short of the t=12.15 dump target. This is node-speed
+variability, not a bug: the earlier successful 8-cycle upstream run
+(job 4877551) happened to land on a ~2x faster node (pace ~1.56
+t-units/hour) than the cancelled one before it (job 4868054, ~0.73/hour)
+-- this run drew a slow node again. Killed both 4951544 and the
+still-queued 4951563 rather than wait out an inevitable walltime kill
+(confirmed the pace was real via a live `logstats.dat`/`squeue` check
+before acting, not just the earlier extrapolation). Bumped `--time` to
+24:00:00 in both sbatch scripts (`run_upstream_l10.sh`,
+`run_fork_l10.sh`) -- at the observed slow pace, reaching t=13.3 needs
+~17.7h from scratch, so 24h gives real margin against another slow-node
+draw. Resubmitted as **upstream job 4961226, fork job 4961227** (fork
+will queue behind upstream again due to the account's
+`QOSMaxCpuPerUserLimit` -- only one 64-rank job runs at a time).
+
 ## 2026-08-11 — metric-correction sanity check abandoned after a self-
 inflicted bug and an unexplained slow restore; redirecting to the
 upstream L10 comparison instead.
