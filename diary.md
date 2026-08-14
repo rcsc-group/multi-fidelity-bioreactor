@@ -177,6 +177,21 @@ That roughly doubles the wall-clock of each run (already ~4-5h each at
 8 cycles) since cost scales with t_end. Not yet run -- flagging cost
 before submitting another pair of multi-hour jobs.
 
+**User approved -- extended dump submitted (upstream job 4951544, fork
+job 4951563).** Both binaries' dump time changed from `T_per_st*8.` to
+`T_per_st*20.` (t=12.1466, past upstream's own 16.25-cycle ramp for
+both codebases), `t_end` extended to 13.3 in both (same ~1.14 margin
+convention as the first attempt) to give the dump event room to fire
+before `dump_checkpoint`'s stop condition. Rebuilt both binaries with
+the same established `CC99`-wrapped-`mpicc` qcc recipe (build succeeded
+cleanly for both, same warnings as before -- harmless, pre-existing).
+Skipped a redundant smoke test this time: only a numeric time constant
+changed in an already-smoke-tested event mechanism (fork) / an
+already-production-validated dump event (upstream); the successful
+compile is the only new risk surface for a pure constant change.
+Expect roughly double the previous ~4-5h wall-clock per job (cost scales
+with `t_end`).
+
 ## 2026-08-11 — metric-correction sanity check abandoned after a self-
 inflicted bug and an unexplained slow restore; redirecting to the
 upstream L10 comparison instead.
