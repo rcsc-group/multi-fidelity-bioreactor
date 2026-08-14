@@ -192,6 +192,19 @@ compile is the only new risk surface for a pure constant change.
 Expect roughly double the previous ~4-5h wall-clock per job (cost scales
 with `t_end`).
 
+**Walltime risk noted, not yet a problem:** fork job 4951563 sat
+`PENDING (QOSMaxCpuPerUserLimit)` for the first ~3h -- the account's CPU
+quota only covers one 64-rank job at a time, so the two jobs run
+sequentially rather than in parallel (was assuming they'd overlap).
+Scaling upstream's prior clean run (job 4877551: 3h50m for t_end=6.0) to
+t_end=13.3 predicts ~8.5h, leaving only ~1.5h of margin under the
+10h `--time` limit -- tried `scontrol update ... TimeLimit=14:00:00` on
+both jobs as a safety margin, got `Access/permission denied` (not an
+admin on this account/QOS, as expected). Left as a monitored risk
+rather than a blocker -- if a job hits the walltime kill this time, the
+fix for next time is submitting with a longer `--time` up front, not
+retrying blind like the earlier unexplained-cancellation incident.
+
 ## 2026-08-11 — metric-correction sanity check abandoned after a self-
 inflicted bug and an unexplained slow restore; redirecting to the
 upstream L10 comparison instead.
