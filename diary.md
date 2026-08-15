@@ -51,6 +51,44 @@ reconstruction error via the standard exact-DMD algorithm (Tu et al.
 2014), both swept over 1-30 modes, reports modes needed for 10%/1%/0.1%
 relative Frobenius-norm error. Not yet run -- waiting on job 4979308.
 
+**Job completed (job 4979395, resubmitted under mbessa-condo per
+explicit one-off user permission -- see feedback memory
+`feedback_mbessa_condo_scope`; original job 4979308 under `normal` QOS
+was cancelled while still pending). 3m02s, 187 snapshots captured
+(t=2.43 to t=7.286, matching the requested 8-cycle settled window).**
+
+**Result: neither POD nor DMD, as tested, supports "near-lossless with
+a handful of modes" for the raw (u.x, u.y) state.**
+
+POD: rel. reconstruction error (Frobenius norm) falls slowly and
+smoothly -- 43.3% at 1 mode, only 15.7% at 30 modes. No sign of a sharp
+elbow; would plausibly need 50+ modes to reach a few percent. Consistent
+with the caveat raised before running this: the sharp VOF interface
+likely spreads real variance across many linear modes that a smooth
+bulk-flow field wouldn't need.
+
+DMD (exact-DMD, Tu et al. 2014, standard formulation): performed WORSE
+than POD at every mode count tested (e.g. 100%+ error at 1-2 modes) --
+a red flag, not a real result. Diagnosed by inspecting the eigenvalues
+directly (r=10): several dominant modes have `|lambda|` well below 1
+(0.65, 0.72, 0.83, 0.90, plus one at 0.147), i.e. decaying, while the
+true signal is confirmed periodic/non-decaying (settled amplitude flat,
+2026-08-10 entry). This script's reconstruction fits mode amplitudes
+`b` at t=0 only and extrapolates forward across all 187 snapshots
+(`Phi @ (b * lambda^k)`) -- with decaying eigenvalues this erodes badly
+over a long window regardless of mode count. This is an artifact of the
+t0-anchored extrapolation evaluation, not evidence DMD is unsuited to
+this flow. NOT YET FIXED -- the standard fix (least-squares amplitude
+fit across all snapshots, or a one-step-ahead prediction metric instead
+of long-horizon extrapolation) was identified but not implemented this
+session; flagged to the user as a real next step rather than silently
+reporting the flawed numbers as a verdict on DMD.
+
+**Net:** this first pass is inconclusive on DMD specifically (bad
+evaluation methodology) but does show POD alone, on the raw full-state
+field, is not a promising near-lossless ROM candidate at low mode
+counts for this flow.
+
 ## 2026-08-11 (2) — upstream L10 comparison run submitted (job 4868026):
 Kim et al.'s own unmodified driver, run at our L10 resolution, to test
 "does the bulk look identical to ours" directly (user's explicit ask),
