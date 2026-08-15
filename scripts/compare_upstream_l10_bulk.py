@@ -14,8 +14,8 @@ import sys
 
 import numpy as np
 
-UPSTREAM_GLOB = "/oscar/scratch/eaguerov/tmp/upstream_l10/rundir/DumpEarly_1024_4.85863_*.txt"
-FORK_GLOB = "/oscar/scratch/eaguerov/tmp/fork_l10_coldstart/rundir/DumpEarlyFork_1024_4.85863*_*.txt"
+UPSTREAM_GLOB = "/oscar/scratch/eaguerov/tmp/upstream_l10/rundir/DumpEarly_1024_12.14*_*.txt"
+FORK_GLOB = "/oscar/scratch/eaguerov/tmp/fork_l10_coldstart/rundir/DumpEarlyFork_1024_12.14*_*.txt"
 
 
 def load_dump(glob_pattern):

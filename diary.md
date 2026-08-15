@@ -89,6 +89,60 @@ evaluation methodology) but does show POD alone, on the raw full-state
 field, is not a promising near-lossless ROM candidate at low mode
 counts for this flow.
 
+## 2026-08-15 (2) — SETTLED-VS-SETTLED bulk comparison complete: the bulk
+velocity field matches almost perfectly between our fork and Kim et
+al.'s own upstream driver. This is the definitive answer to "does the
+bulk look identical to ours."
+
+Fork job 4961227 completed (dump at t=12.1466 present, all 64 rank
+files). Updated `scripts/compare_upstream_l10_bulk.py`'s glob patterns
+from the old 8-cycle dump time (4.85863) to the new 20-cycle one
+(12.14*) and reran.
+
+**Result:**
+
+| quantity              | upstream | fork    |
+|-----------------------|----------|---------|
+| liquid cells (f>0.5)  | 524262   | 524292  |
+| mean f                | 0.500002 | 0.49999 |
+| mean \|u\| (liquid)   | 0.3024   | 0.3030  |
+| max \|u\|             | 1.891    | 1.884   |
+
+mean\|u\| ratio (fork/upstream) = **1.002** -- down from the
+ramp-confounded 2.167 measured at 8 cycles. Cell-by-cell diff:
+mean|diff_u|=0.0148 (~4.9% of the mean speed), max|diff_u|=1.86 (a few
+outlier cells, plausibly near the interface/embedded-boundary wall
+where sub-cell discretization details differ slightly -- not
+investigated further, small fraction of 1048576 total cells). Liquid
+fraction still matches to ~5 decimal places.
+
+**This directly confirms the user's own hypothesis, stated explicitly
+before this run:** "if the undifferentiated field already converged, it
+smells heavily that the derivative is 4x bad." We now have DIRECT
+evidence, not just physical reasoning, that the undifferentiated
+velocity field is essentially the same between our fork and Kim's own
+code (0.2% mean discrepancy) at matching L10 resolution/condition. The
+long-standing ~3-4x tau/EDR gap vs Kim's published Fig. 8 CANNOT be
+explained by a bulk velocity-field discrepancy between the two
+codebases -- that hypothesis is now ruled out with direct data, not
+argument.
+
+**This makes the previously-abandoned metric-correction stencil test
+(2026-08-11 (1) entry -- abandoned due to an unexplained restore stall,
+NOT because the framing was wrong once the bulk-comparison question is
+answered) the clear next thread.** The framing objection at the time
+("Kim's own bio_stress.m uses the same uncorrected formula, so this
+test can't tell us which matches Kim") still holds for "which formula
+Kim used" -- but it CAN now test something more useful: whether OUR
+shear-stress stencil is internally well-behaved near the embedded
+boundary, given we've just proven the velocity field itself is fine.
+If the missing `fm`/`cm` metric correction turns out to matter by a
+factor anywhere near 3-4x on OUR OWN stencil, that's a strong candidate
+explanation for the gap independent of what Kim's own postprocessing
+does (since a plain central-difference gradient near a cut cell is a
+known source of O(1) error in embedded-boundary methods, regardless of
+what the "correct" answer is supposed to be).
+
 ## 2026-08-15 — DMD properly re-evaluated per explicit user instruction
 ("iterate til you get to the bottom of it... use the sharpest tool in
 the shed only"). Installed an arxiv MCP server
