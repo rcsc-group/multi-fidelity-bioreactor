@@ -8,6 +8,49 @@ why it was done, what it found, and what it does and doesn't prove.
 Convention: newest entries at the top. Link run_ids / job_ids / commit
 hashes exactly, not "the run from earlier."
 
+## 2026-08-14 — DMD/POD reduced-order-model prototype started (parallel
+side-track, not part of the tau/EDR gap investigation).
+
+User asked whether POD or DMD could give a near-lossless ROM of the flow
+for design-space exploration, while the L10 comparison jobs (4961226,
+4961227) run in the background. Recommended DMD as the more promising
+starting point over POD: the flow is periodically forced and already
+confirmed (2026-08-10 diary entry) to settle into a quasi-periodic
+attractor, which is exactly DMD's linear-modal-decomposition regime;
+POD's linear modes should struggle more with the VOF interface's sharp
+density/viscosity jump (classic failure mode for linear ROMs on
+free-surface flows) -- kept that caveat in mind but didn't exclude the
+interface from this first prototype (it's small relative to the bulk at
+f>0.5 masking used elsewhere, revisit if reconstruction error is
+dominated by interface cells).
+
+**Setup:** neither existing frame-dump event stores raw velocity
+(`movies_output` only interpolates `f`; `movies_output_tau` stores
+already-differentiated tau/ediss fields, not invertible back to u.x/u.y)
+-- added a new scratch-only event, `movies_output_dmd`, to
+`/oscar/scratch/eaguerov/tmp/dmd_experiment/BioReactor_dmd.c` (copy of
+`src/BioReactor.c`, production file untouched), mirroring
+`movies_output`'s interpolate()-onto-uniform-grid idiom but for
+`u.x`/`u.y` instead of `f`. Snapshot window: `t_dmd_start =
+t_change_st + T_per_st` (1 cycle margin after the 3-cycle ramp
+completes) through `t_dmd_start + 8*T_per_st` (8 settled cycles), at the
+same `dt_video` cadence as the other frame dumps (24 frames/period ->
+~192 snapshots).
+
+Ran at low fidelity (fidelity=7, NN=128) rather than L10 -- this is a
+methods prototype (does DMD/POD work at all, how many modes needed),
+not a resolution study, and L10 compute is already committed to the
+tau/EDR investigation. Submitted as job 4979308 (8 ranks, 2h walltime,
+`/oscar/scratch/eaguerov/tmp/dmd_experiment/rundir/run_dmd_experiment.sh`)
+-- queues behind the L10 jobs' 64-core usage under the account's
+`normal` QOS (64-cpu-per-user limit, confirmed via `sacctmgr show qos`).
+
+Wrote `scripts/dmd_pod_experiment.py`: loads the snapshot sequence,
+computes POD reconstruction error via truncated SVD and DMD
+reconstruction error via the standard exact-DMD algorithm (Tu et al.
+2014), both swept over 1-30 modes, reports modes needed for 10%/1%/0.1%
+relative Frobenius-norm error. Not yet run -- waiting on job 4979308.
+
 ## 2026-08-11 (2) — upstream L10 comparison run submitted (job 4868026):
 Kim et al.'s own unmodified driver, run at our L10 resolution, to test
 "does the bulk look identical to ours" directly (user's explicit ask),
