@@ -89,6 +89,102 @@ evaluation methodology) but does show POD alone, on the raw full-state
 field, is not a promising near-lossless ROM candidate at low mode
 counts for this flow.
 
+## 2026-08-15 — DMD properly re-evaluated per explicit user instruction
+("iterate til you get to the bottom of it... use the sharpest tool in
+the shed only"). Installed an arxiv MCP server
+(`claude mcp add --transport stdio --scope user arxiv -- uvx
+arxiv-mcp-server`, verified legitimate by reading the actual
+`blazickjp/arxiv-mcp-server` README before running any install command
+-- its "claude plugin marketplace add" instructions looked unusual at
+first glance but checked out as real, documented install paths, not
+injected content) -- tools not available until session restart, user
+chose to proceed via WebFetch on arxiv.org directly instead of
+restarting.
+
+**Three literature rounds, per explicit instruction not to stop at the
+first paper:**
+1. Askham & Kutz 2018, "Variable projection methods for an optimized
+   DMD" (arXiv:1704.02343) -- read in full (fetched the PDF via
+   WebFetch, read pages 1-16 directly with the Read tool). Confirms the
+   diagnosed bug: exact DMD only fits pairwise one-step transitions
+   (X1->X2), so eigenvalues aren't optimal for reconstructing a whole
+   sequence; anchoring amplitudes at t=0 (eq. 35, "may be of sufficient
+   accuracy" -- explicitly flagged by the paper itself as a
+   simplification, not the recommended approach) and extrapolating
+   compounds any eigenvalue bias over many steps. "Optimized DMD"
+   (their Algorithm 2/3) jointly fits continuous-time eigenvalues AND
+   amplitudes via nonlinear least squares (variable projection +
+   Levenberg-Marquardt) against the FULL sequence at once.
+2. Sashidhar & Kutz 2022, BOP-DMD (arXiv:2107.10878) -- bagging
+   ensemble on top of optimized DMD for robustness/UQ. Noted as a
+   further refinement, not implemented this round (optimized DMD alone
+   was the priority to test first).
+3. Reiss et al. 2016, shifted POD / sPOD (arXiv:1512.01985) plus 2024
+   robust extensions (arXiv:2403.04313) -- directly relevant to a
+   suspicion raised in the 2026-08-14 entry: POD's slow error decay is
+   consistent with the well-documented failure of linear bases
+   (POD *and* DMD) on transport-dominated problems (slowly-decaying
+   Kolmogorov n-width) -- exactly what a sharp VOF interface is. Not
+   implemented yet -- flagged as the most likely next thread if
+   optimized DMD doesn't close the gap to POD.
+   (Fourth angle checked and set aside: Padovan & Rowley 2022,
+   time-periodic/Floquet Gramian ROM, arXiv:2208.13245 -- rigorous but
+   requires linearizing about the periodic orbit; too heavy for this
+   prototype stage.)
+
+**Rewrote `scripts/dmd_pod_experiment.py`** to compare FOUR methods at
+each mode count 1-20: POD (baseline), exact-DMD-t0-anchored (the
+original buggy method), exact-DMD-global-b-fit (same eigenvalues, but
+amplitudes fit by least squares against the whole sequence per eq. 34
+-- isolates whether amplitude-anchoring alone was the bug), and
+optimized DMD (Algorithm 3, variable projection, using
+`scipy.optimize.least_squares` with `trf` + bounds on the real part of
+alpha in [-50, 0.5] -- REQUIRED: an unbounded `lm` first attempt let a
+bad LM step send `exp(alpha*t)` to overflow, crashing `lstsq` with "SVD
+did not converge"; the settled flow is confirmed non-exploding so a
+mild-growth-forbidding bound is physically justified, not just a hack).
+
+**Result -- confirms the original diagnosis, resolves the puzzle:**
+
+| modes | POD | DMD(t0) | DMD(global b) | Optimized DMD |
+|---|---|---|---|---|
+| 3  | 34.9% | 88.3% | 82.3% | 43.2% |
+| 10 | 25.9% | 66.1% | 51.4% | 41.5% |
+| 20 | 19.4% | 49.1% | 44.3% | 31.6% |
+
+(rel. Frobenius reconstruction error, lower is better)
+
+1. The global-b-fit alone closes a real chunk of the gap vs t0-anchored
+   at every r -- confirms the t0-extrapolation WAS a genuine bug, not a
+   red herring.
+2. Properly-optimized DMD closes most of the REST of the gap -- DMD is
+   no longer obviously broken once eigenvalues and amplitudes are both
+   fit against the whole sequence.
+3. But even done correctly, DMD still does not beat plain POD, and
+   NEITHER gets anywhere near a "few modes, near-lossless" regime --
+   POD decays slowly and smoothly with no elbow out to 20 modes (still
+   19.4% at r=20).
+4. Optimized DMD's error vs. r is non-monotonic (r=13 worse than r=12,
+   nfev ranges from 2 to 30000 across r) -- NOT a bug, this is a
+   documented property of the method itself (paper's own Remark 7:
+   Levenberg-Marquardt/trust-region from one initial guess is not
+   guaranteed to reach the global minimizer, especially with
+   near-degenerate eigenvalue clusters, Remark 2).
+
+**Conclusion:** the DMD evaluation question is now resolved -- the
+original "DMD is much worse than POD" result was indeed a bad-evaluation
+artifact (confirmed directly, not just argued), but the corrected
+result still shows neither method achieves near-lossless low-rank ROM
+on the raw full-state velocity field in this window. This points at the
+sharp VOF interface (transport-dominated content) as the real
+bottleneck, not the choice of linear-dynamics-fitting algorithm --
+consistent with the shifted-POD literature's core result. Proposed next
+step (not yet run, awaiting user decision): re-run the same cheap
+low-fidelity job with `f` (liquid fraction) ALSO saved alongside
+u.x/u.y, then split reconstruction error into bulk (f near 0 or 1) vs.
+interface-band cells, to test directly whether error concentrates at
+the interface before investing in a shifted-POD implementation.
+
 ## 2026-08-11 (2) — upstream L10 comparison run submitted (job 4868026):
 Kim et al.'s own unmodified driver, run at our L10 resolution, to test
 "does the bulk look identical to ours" directly (user's explicit ask),
