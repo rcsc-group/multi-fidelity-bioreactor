@@ -150,6 +150,44 @@ preceded the first retry, not just a different driver copy. Rebuilt
 cleanly, resubmitted as **job 5001397**, same tight 20-min walltime,
 monitoring every 60s specifically for the new `RESTART_TIMING` lines.
 
+**Job 5001397 result: restart branch confirmed instant (0.169s total),
+but STILL zero `METRIC_TEST` output at TIMEOUT.** This precisely
+localizes the stall to somewhere AFTER `event init` finishes and BEFORE
+my `metric_test` event's own first print (which happens before any
+real work in its body) -- ruling out restore()/solid()/rescale/
+attribute-reapply/tracer-reset as candidates entirely, a completely
+different (and much more specific) conclusion than either prior
+attempt reached.
+
+**Root cause, computed not guessed:** `event metric_test (t =
+t_ramp_start)` is a floating-point CROSSING condition -- Basilisk fires
+it when `t` ADVANCES past the target value, not when `t` already sits
+exactly on it (as it does immediately after `restore()`, before any
+timestep). With that trigger never satisfied, the ONLY remaining
+stopping condition is `dump_checkpoint (t = t_dump_checkpoint)`, and for
+this run's params (`t_checkpoint=13.36, t_end=0.02`) that computes to
+`t_dump_checkpoint=13.9686` -- **0.6086 further in simulation time**,
+needing `0.6086/5.86854e-5 ~= 10370 steps`. At the ~0.3s/step pace
+measured directly from `fork_l10_coldstart`'s own production logstats
+(520s / 1705 steps between t=13.2 and t=13.3), that's **~52 minutes** of
+completely ordinary, silent timestepping -- comfortably longer than the
+20-minute walltime, with zero additional output in between since no
+other instrumented event fires during normal stepping. Matches every
+observed symptom exactly: active CPU the whole time, no crash, flat
+memory (ordinary per-step footprint doesn't grow), no further prints.
+
+**Fix:** replaced the ambiguous floating-point trigger with an exact
+integer match on the just-restored iteration count (`i_restart_target =
+i;` captured immediately after `restore()`; event condition changed to
+`i = i_restart_target`) -- avoids the crossing-vs-already-there edge
+case entirely, integers compare exactly. Also added an unconditional
+`event rt_progress (i++)` safety net (prints every 100 iterations past
+the restart point) so that if this fix is somehow ALSO wrong, silent
+normal-stepping becomes immediately visible instead of looking
+identical to a genuine stall -- de-risks any future retry regardless of
+whether this specific fix is right. Rebuilt cleanly, resubmitted as
+**job 5001631**.
+
 ## 2026-08-15 (2) — SETTLED-VS-SETTLED bulk comparison complete: the bulk
 velocity field matches almost perfectly between our fork and Kim et
 al.'s own upstream driver. This is the definitive answer to "does the
