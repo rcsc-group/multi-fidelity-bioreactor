@@ -188,6 +188,42 @@ identical to a genuine stall -- de-risks any future retry regardless of
 whether this specific fix is right. Rebuilt cleanly, resubmitted as
 **job 5001631**.
 
+**Job 5001631 ALSO timed out with zero METRIC_TEST output -- but the new
+`RT_PROGRESS` safety net finally made the mechanism directly visible,
+and revealed the i-based fix had a DIFFERENT bug than the t-based one.**
+`RT_PROGRESS` showed `i` correctly restored near its original value
+(~229100+, matching `fork_l10_coldstart`'s own logstats at similar t --
+confirms `restore()` DOES properly restore `i`) and climbing completely
+normally (~0.3s/step, consistent with production pace) -- exactly the
+"silent ordinary timestepping toward the far-off `dump_checkpoint`
+target" mechanism predicted, just with a NEW reason the one-shot trigger
+never fired: `delta = i - i_restart_target` stayed pinned near `i`'s own
+absolute value the entire run, meaning `i_restart_target` never actually
+picked up the restored `i` -- most likely because Basilisk resolves a
+`i = EXPR` (or `t = EXPR`) one-shot event's target value once, at
+scheduler setup, and my assignment (`i_restart_target = i;`, done
+*inside* `event init`'s own body, i.e. during the very pass that would
+need to see it) came too late to be picked up by that pass's schedule.
+Note this does NOT undermine the original `t_ramp_start` diagnosis --
+`t_ramp_start` genuinely IS set correctly in `main()` before `run()`
+starts, the same timing as the already-working `t_dump_checkpoint` --
+so the ORIGINAL bug (crossing-vs-already-there) and this NEW one
+(same-pass value assignment too late for scheduler caching) are two
+distinct issues, both now identified with direct evidence rather than
+guessed.
+
+**Real fix: stop relying on Basilisk's exact-match/crossing event
+scheduling for this one-shot trigger entirely.** Replaced both prior
+attempts with an always-checked `event metric_test (i++)` containing a
+plain runtime guard (`if (metric_test_done || t < t_ramp_start) return
+0;`) plus a one-shot latch (`metric_test_done`) -- compares LIVE values
+of `t`/`t_ramp_start` as an ordinary C `if`, with no scheduler value-
+caching or crossing semantics involved at all. Since this event fires
+on literally every iteration and the guard is a trivial comparison, it
+correctly fires on the very FIRST post-restore check (t already >=
+t_ramp_start from the start) with negligible overhead on the iterations
+before that. Rebuilt cleanly, resubmitted as **job 5001908**.
+
 ## 2026-08-15 (2) — SETTLED-VS-SETTLED bulk comparison complete: the bulk
 velocity field matches almost perfectly between our fork and Kim et
 al.'s own upstream driver. This is the definitive answer to "does the
