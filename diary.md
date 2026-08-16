@@ -89,6 +89,38 @@ evaluation methodology) but does show POD alone, on the raw full-state
 field, is not a promising near-lossless ROM candidate at low mode
 counts for this flow.
 
+## 2026-08-15 (3) — metric-correction test retried (job 5001249), this
+time on the FULL production driver instead of the earlier minimal
+standalone one.
+
+Per user's explicit ask to retry, now much better motivated after the
+settled-vs-settled bulk-field match confirmed the undifferentiated
+velocity field is fine (previous entry). Root-cause hypothesis for the
+earlier 18+ minute unexplained restore stall (2026-08-11 (1) entry,
+never isolated): that attempt used a MINIMAL standalone driver (just
+`embed.h` + `navier-stokes/centered.h`, no `two-phase.h`/`henry_oxy2.h`/
+tracer scalars/rocking-geometry `solid()` setup) to restore a checkpoint
+DUMPED by the full production driver -- a field-declaration mismatch
+between the minimal driver and the full dump's field set is a very
+plausible stall cause that was never actually tested at the time.
+
+**Fix:** reused a scratch copy of the FULL `src/BioReactor.c` (same file
+already proven to restart/restore cleanly for `fork_l10_coldstart`'s own
+checkpoint this session) at
+`/oscar/scratch/eaguerov/tmp/metric_test2/BioReactor_metrictest2.c`,
+adding only ONE new diagnostic event (`metric_test`, same naive-vs-
+metric-corrected tau computation as the original abandoned test,
+triggered at `t = t_ramp_start` -- the already-correct, already-fixed
+time-based trigger from the first attempt, not the broken `i=1` one).
+Restores `fork_l10_coldstart`'s own fresh checkpoint (t=13.36, just
+produced by the settled-vs-settled comparison run, definitely valid and
+current). Built cleanly (same warnings as every other build this
+session, harmless). Submitted with a tight 20-minute walltime specifically
+to bound the cost if the stall recurs, and monitoring at 2-minute
+intervals (short-diagnostic cadence, not the multi-hour-job cadence) --
+the whole point of this run IS testing whether restore stalls, so no
+separate smoke test was meaningful here.
+
 ## 2026-08-15 (2) — SETTLED-VS-SETTLED bulk comparison complete: the bulk
 velocity field matches almost perfectly between our fork and Kim et
 al.'s own upstream driver. This is the definitive answer to "does the
