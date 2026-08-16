@@ -121,6 +121,35 @@ intervals (short-diagnostic cadence, not the multi-hour-job cadence) --
 the whole point of this run IS testing whether restore stalls, so no
 separate smoke test was meaningful here.
 
+**Job 5001249 confirmed the stall reproduces on the full driver too --
+TIMEOUT, zero METRIC_TEST output after the full 20-minute walltime.**
+`sstat` across three checks (6/8/10/12 min) showed AveCPU tracking wall
+time almost exactly (all ranks equally busy, MinCPU~=AveCPU -- not one
+stalled rank) but MaxRSS flat at 163976K the entire time, which does
+NOT look like "still reading a big checkpoint file" (should grow) --
+looks like a CPU-bound loop that isn't making the progress I'd expect.
+
+**Correction to my own earlier reasoning:** I had claimed this reused
+"the same restart path already proven to work for fork_l10_coldstart."
+That's wrong -- `fork_l10_coldstart` used `t_checkpoint=0.0` (a FRESH
+COLD START) the entire time; it never restored anything. Neither this
+session's earlier minimal-driver attempt nor this one had actually
+validated that restore() + the restart branch completes in reasonable
+time on this build/environment at L10 scale. This is genuinely the
+first real test of it this session.
+
+**Instrumented properly instead of guessing a 3rd time:** added wall-
+clock timing brackets (`gettimeofday()`, `RT_MARK()` macro, print+fflush
+on rank 0 only) around every distinct step of the restart branch inside
+`event init`: after `restore()`, after `solid()` re-solidify, after the
+velocity/pressure rescale block, after the prolongation/restriction
+attribute reapply, and after `reset(stracers,0.)`/`boundary(stracers)`/
+`restriction(stracers)`. This directly answers "where, not just
+whether" -- the correct Phase-1 evidence-gathering step that should have
+preceded the first retry, not just a different driver copy. Rebuilt
+cleanly, resubmitted as **job 5001397**, same tight 20-min walltime,
+monitoring every 60s specifically for the new `RESTART_TIMING` lines.
+
 ## 2026-08-15 (2) — SETTLED-VS-SETTLED bulk comparison complete: the bulk
 velocity field matches almost perfectly between our fork and Kim et
 al.'s own upstream driver. This is the definitive answer to "does the
