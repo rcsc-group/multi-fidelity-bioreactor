@@ -224,6 +224,47 @@ correctly fires on the very FIRST post-restore check (t already >=
 t_ramp_start from the start) with negligible overhead on the iterations
 before that. Rebuilt cleanly, resubmitted as **job 5001908**.
 
+**Job 5001908 SUCCEEDED -- completed in 5 seconds total (vs. two prior
+20-minute timeouts).** The runtime-guard fix worked exactly as reasoned:
+fired on the very first post-restore check, no scheduler ambiguity.
+
+```
+METRIC_TEST: event fired at t=13.3613 (i=229177)
+METRIC_TEST vol=0.49998093
+METRIC_TEST tau_mean_naive=-8.6508638e-05
+METRIC_TEST tau_mean_metric=-0.00010450541
+METRIC_TEST ratio_metric_over_naive=1.2080344
+```
+
+`vol~=0.49998` matches the expected 0.5 fill level -- sanity check
+passes, the restore genuinely worked correctly this time (not just
+"ran without crashing").
+
+**RESULT: the metric-corrected shear stress is ~21% larger in
+magnitude than our current naive stencil (ratio=1.208) -- real and
+non-negligible, but NOT the answer to the 3-4x tau/EDR gap.** A 21%
+correction is far short of the 300-400% needed to close the discrepancy
+vs. Kim's published Fig. 8. So the missing embedded-boundary metric
+correction (`fm`/`cm` weighting, matching Basilisk's own `vorticity()`)
+is a genuine, worth-fixing numerical issue in our shear-stress stencil,
+confirmed with direct evidence at last -- but it does not, by itself,
+explain the original mystery. Ruled out as a SOLE explanation; not
+ruled out as a real bug worth fixing on its own merits, and not yet
+determined whether it should be combined with some other still-unknown
+factor to close the remaining ~3x gap.
+
+**Process note for future debugging sessions:** this diagnostic took 4
+job submissions and ~1h20m of wall-clock to get right, entirely due to
+Basilisk's one-shot event-trigger semantics (crossing-based `t=VALUE`
+matching, and same-pass scheduler value caching for dynamically-set
+targets) being less forgiving than assumed for a "restore then act
+immediately" pattern. The working, robust idiom for this exact
+situation (fire once, at or after restore, regardless of whether the
+target is already reached or will be crossed): an always-checked
+`event NAME (i++)` with a plain runtime `if (done || condition) return
+0;` guard and a one-shot `done` latch -- comparing live values directly
+rather than relying on Basilisk's own `t=VALUE`/`i=VALUE` scheduling.
+
 ## 2026-08-15 (2) — SETTLED-VS-SETTLED bulk comparison complete: the bulk
 velocity field matches almost perfectly between our fork and Kim et
 al.'s own upstream driver. This is the definitive answer to "does the
