@@ -8,29 +8,56 @@ why it was done, what it found, and what it does and doesn't prove.
 Convention: newest entries at the top. Link run_ids / job_ids / commit
 hashes exactly, not "the run from earlier."
 
-## 2026-08-17 (2) — percentile-sensitivity figure built and embedded in
-the standing validation doc.
+## 2026-08-17 (3) — percentile-sensitivity figure revised per user
+feedback: dropped the ratio panel, switched to 99th/99.9th/100th, and
+overlaid ours vs. upstream directly (rather than just our own time
+series).
 
-Built `scripts/plot_tau_percentile_sensitivity.py`: two-panel figure
-from the same `fork_l10_coldstart/shear_stress.dat` window used for the
-percentile-spread finding earlier today. Top panel: tau_95/98/100 vs.
-time on a log scale -- the 100th percentile visually sits nearly two
-decades above the other two. Bottom panel: the 100th/98th and 98th/95th
-ratios on a linear scale -- one stays flat near 3, the other climbs from
-9 to 33. Followed the `dataviz` skill: 3 percentile levels are a
-discrete ORDINAL progression (not arbitrary categories), so colored with
-one hue (blue) stepped light->dark rather than 3 unrelated colors; two
-stacked single-axis panels instead of a dual-axis chart.
+`shear_stress.dat` only logs 95th/98th/100th (not 99th/99.9th) and has
+no upstream equivalent at all (Kim's own driver doesn't compute/log tau
+percentiles -- their postprocessing is the separate `bio_stress.m`
+script). So this version computes tau directly from the RAW per-cell
+velocity dumps already captured for the settled-vs-settled bulk
+comparison (`DumpEarly_*.txt` / `DumpEarlyFork_*.txt`, both codebases,
+t=12.1466, L10, matching condition) -- same naive central-difference
+formula both sides, `np.percentile` on the `f>0.5`-masked liquid cells.
 
-Saved to `docs_site/assets/img/tau-percentile-sensitivity.png`, embedded
-in `docs_site/explanation/kim-et-al-validation.md` directly after the
-existing `tau_100_max` resolution-non-convergence table, with a new
-subsection explaining that this pattern (flat 95->98, then a 9-33x jump
-at 98->100, worsening over time) is the signature of a single degenerate
-cut cell dominating the statistic, not a genuinely heavy tail -- ties
-together today's restart-sensitivity finding, the percentile-spread
-finding, and the pre-existing resolution-non-convergence note into one
-documented explanation, cross-referenced back to this diary.
+**Result -- the blowup is present in BOTH codebases, not just ours:**
+
+| percentile | ours | upstream | ours/upstream |
+|---|---|---|---|
+| 99th | 0.202 | 0.149 | 1.36x |
+| 99.9th | 2.29 | 1.50 | 1.53x |
+| 100th (max) | 96.0 | 24.6 | 3.91x |
+
+Both show the same qualitative pattern: modest 99th->99.9th rise
+(~10-11x), then another order-of-magnitude-plus jump to the 100th
+percentile. This is strong evidence the singularity is a property of the
+naive uncorrected stencil near ANY embedded boundary (present in Kim's
+own `bio_stress.m` formula too, per the 2026-08-11 framing correction),
+not something specific to our fork's implementation.
+
+**New open thread, not yet chased:** ours is consistently worse than
+upstream at the tail, and the gap GROWS the further into the tail you
+look (1.36x at the 99th -> 3.91x at the max). If both codebases used the
+literally identical formula on physically-equivalent fields, this
+asymmetry shouldn't grow monotonically like that. Candidate explanations
+not yet tested: a difference in how each embedded-boundary/solid()
+implementation shapes the geometry right at the sharpest degenerate cut
+cells (even if the FORMULA is identical, the underlying `cs`/`fs`
+fields feeding it could differ in cut-cell layout between the two
+`solid()` calls), or a difference in local mesh/grid alignment near the
+wall corner. Flagged for a future session.
+
+Rebuilt `scripts/plot_tau_percentile_sensitivity.py` (same filename,
+replaced content) as a single-panel log-scale line chart: x-axis =
+percentile level (99th/99.9th/100th, ordered categories), two lines
+colored via the dataviz skill's fixed CATEGORICAL order (blue=ours,
+orange=upstream -- a dataset-identity distinction now, not an ordinal
+progression, since percentile level moved to the x-axis). Updated the
+`kim-et-al-validation.md` embed and caption to match. Saved to the same
+`docs_site/assets/img/tau-percentile-sensitivity.png` path (redeploy,
+not a new file).
 
 ## 2026-08-14 — DMD/POD reduced-order-model prototype started (parallel
 side-track, not part of the tau/EDR gap investigation).

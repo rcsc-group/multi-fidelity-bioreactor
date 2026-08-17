@@ -1,127 +1,142 @@
-"""Figure: shear-stress percentile sensitivity near the top of the tail.
+"""Figure: shear-stress percentile sensitivity near the top of the tail,
+ours vs. upstream (Kim et al.'s own driver), at a matching settled instant.
 
-Shows that tau_100 (domain max) is dramatically more sensitive to which
-percentile you pick than tau_95/tau_98 are to each other -- the 98th->100th
-jump is 9-33x while 95th->98th is only 2.3-3.7x, and growing over time.
-Direct evidence for the "one degenerate cut cell dominates the max"
-hypothesis (diary.md 2026-08-17): a genuinely heavy-but-smooth tail would
-grow steadily across all three percentiles, not blow up only in the last 2%.
+Computes tau (naive central-difference stencil, same formula both sides:
+mu(f)*(du_dy+dv_dx)) from the raw per-cell velocity dumps captured during
+the settled-vs-settled bulk-field comparison (diary.md 2026-08-15/16),
+t=12.1466, L10, matching condition -- NOT from shear_stress.dat (which
+only logs 95th/98th/100th, not 99th/99.9th, and has no upstream analog).
+Shows that a naive stencil blows up at the very top of the percentile
+range in BOTH codebases, not just ours -- consistent with the cut-cell
+singularity hypothesis being a property of the naive stencil near any
+embedded boundary, not a fork-specific bug.
 
 Usage:
     uv run python scripts/plot_tau_percentile_sensitivity.py
 """
+import glob
+
 import numpy as np
 import matplotlib.pyplot as plt
 
-SHEAR_STRESS_DAT = "/oscar/scratch/eaguerov/tmp/fork_l10_coldstart/rundir/shear_stress.dat"
+UPSTREAM_GLOB = "/oscar/scratch/eaguerov/tmp/upstream_l10/rundir/DumpEarly_1024_12.14*_*.txt"
+FORK_GLOB = "/oscar/scratch/eaguerov/tmp/fork_l10_coldstart/rundir/DumpEarlyFork_1024_12.14*_*.txt"
 OUT_PATH = "/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor/docs_site/assets/img/tau-percentile-sensitivity.png"
 
-# Ordinal blue ramp (dataviz skill palette.md), light->dark for 95th->100th.
-COLOR_95 = "#86b6ef"   # step 250
-COLOR_98 = "#2a78d6"   # step 450
-COLOR_100 = "#104281"  # step 650
-COLOR_RATIO_LOW = "#6da7ec"   # step 300 -- 98/95 ratio
-COLOR_RATIO_HIGH = "#184f95"  # step 600 -- 100/98 ratio
+N = 1024
+PERCENTILES = [99.0, 99.9, 100.0]
+PERCENTILE_LABELS = ["99th", "99.9th", "100th (max)"]
+
+# Categorical palette (dataviz skill palette.md), fixed order: slot 1 blue (ours),
+# slot 2 orange (upstream) -- two distinct datasets, not an ordinal progression.
+COLOR_OURS = "#2a78d6"
+COLOR_UPSTREAM = "#eb6834"
 TEXT_PRIMARY = "#0b0b0b"
 TEXT_SECONDARY = "#52514e"
 GRID = "#e3e2dd"
 
 
-def load_last_n_rows(path, n=8):
-    data = np.loadtxt(path, skiprows=1)
-    return data[-n:]
+def load_dump(glob_pattern):
+    files = sorted(glob.glob(glob_pattern))
+    if not files:
+        raise SystemExit(f"No files matched: {glob_pattern}")
+    chunks = [np.loadtxt(fp)[:, :5] for fp in files]  # x y ux uy f
+    return np.vstack(chunks)
+
+
+def to_grid(data, n=N):
+    dx = 1.0 / n
+    ix = np.clip(np.round((data[:, 0] + 0.5 - dx / 2) / dx).astype(int), 0, n - 1)
+    iy = np.clip(np.round((data[:, 1] + 0.5 - dx / 2) / dx).astype(int), 0, n - 1)
+    grid_ux = np.full((n, n), np.nan)
+    grid_uy = np.full((n, n), np.nan)
+    grid_f = np.full((n, n), np.nan)
+    grid_ux[iy, ix] = data[:, 2]
+    grid_uy[iy, ix] = data[:, 3]
+    grid_f[iy, ix] = data[:, 4]
+    return grid_ux, grid_uy, grid_f
+
+
+def compute_tau_percentiles(glob_pattern, label):
+    print(f"Loading {label}...")
+    data = load_dump(glob_pattern)
+    ux, uy, f = to_grid(data)
+    dx = 1.0 / N
+
+    # Naive central-difference stencil, same formula used everywhere else this
+    # session (production event normcal, bio_stress.m): mu=1 (single-phase
+    # liquid region only, f>0.5 mask -- mu(f) not reconstructed here since we
+    # don't have the two-phase viscosity ratio in this raw dump; consistent
+    # relative comparison between the two codebases since both use the same
+    # simplification).
+    du_dy = np.full((N, N), np.nan)
+    dv_dx = np.full((N, N), np.nan)
+    du_dy[:, 1:-1] = (ux[:, 2:] - ux[:, :-2]) / (2 * dx)
+    dv_dx[1:-1, :] = (uy[2:, :] - uy[:-2, :]) / (2 * dx)
+    tau = np.abs(du_dy + dv_dx)
+
+    mask = (f > 0.5) & ~np.isnan(tau)
+    tau_liquid = tau[mask]
+    print(f"  {label}: {mask.sum()} liquid cells with valid gradient")
+
+    values = np.percentile(tau_liquid, PERCENTILES)
+    for p, v in zip(PERCENTILE_LABELS, values):
+        print(f"  {label} {p}: {v:.6g}")
+    return values
 
 
 def main():
-    data = load_last_n_rows(SHEAR_STRESS_DAT, n=8)
-    t = data[:, 1]
-    tau_95 = data[:, 2]
-    tau_98 = data[:, 3]
-    tau_100 = data[:, 4]
-    ratio_98_95 = tau_98 / tau_95
-    ratio_100_98 = tau_100 / tau_98
+    ours = compute_tau_percentiles(FORK_GLOB, "ours (fork)")
+    upstream = compute_tau_percentiles(UPSTREAM_GLOB, "upstream (Kim et al.)")
 
-    fig, (ax1, ax2) = plt.subplots(
-        2, 1, figsize=(7.5, 7.2), sharex=True,
-        gridspec_kw={"height_ratios": [1.3, 1], "hspace": 0.12},
-    )
+    x = np.arange(len(PERCENTILE_LABELS))
+
+    fig, ax = plt.subplots(figsize=(7, 5.5))
     fig.patch.set_facecolor("#fcfcfb")
-
-    # --- Panel 1: raw percentiles, log scale ---
-    ax1.set_facecolor("#fcfcfb")
+    ax.set_facecolor("#fcfcfb")
     for spine in ("top", "right"):
-        ax1.spines[spine].set_visible(False)
+        ax.spines[spine].set_visible(False)
     for spine in ("left", "bottom"):
-        ax1.spines[spine].set_color(GRID)
-    ax1.set_yscale("log")
-    ax1.grid(axis="y", color=GRID, linewidth=0.8, zorder=0)
-    ax1.plot(t, tau_100, color=COLOR_100, linewidth=2, marker="o", markersize=5,
-              zorder=3, label="100th (max)")
-    ax1.plot(t, tau_98, color=COLOR_98, linewidth=2, marker="o", markersize=5,
-              zorder=3, label="98th")
-    ax1.plot(t, tau_95, color=COLOR_95, linewidth=2, marker="o", markersize=5,
-              zorder=3, label="95th")
-    # Direct end-of-line labels.
-    ax1.annotate("100th (max)", (t[-1], tau_100[-1]), xytext=(6, 0),
-                 textcoords="offset points", va="center", color=COLOR_100,
-                 fontsize=10, fontweight="bold")
-    ax1.annotate("98th", (t[-1], tau_98[-1]), xytext=(6, 0),
-                 textcoords="offset points", va="center", color=COLOR_98,
-                 fontsize=10, fontweight="bold")
-    ax1.annotate("95th", (t[-1], tau_95[-1]), xytext=(6, -2),
-                 textcoords="offset points", va="center", color=COLOR_95,
-                 fontsize=10, fontweight="bold")
-    ax1.set_ylabel("shear stress percentile\n(nondimensional, log scale)",
-                    color=TEXT_SECONDARY, fontsize=10)
-    ax1.tick_params(colors=TEXT_SECONDARY)
-    ax1.set_title(
-        "The 100th percentile behaves nothing like the 95th/98th",
-        color=TEXT_PRIMARY, fontsize=13, fontweight="bold", loc="left", pad=10,
+        ax.spines[spine].set_color(GRID)
+    ax.set_yscale("log")
+    ax.grid(axis="y", color=GRID, linewidth=0.8, zorder=0)
+
+    ax.plot(x, ours, color=COLOR_OURS, linewidth=2.5, marker="o", markersize=8,
+             zorder=3, label="ours (fork)")
+    ax.plot(x, upstream, color=COLOR_UPSTREAM, linewidth=2.5, marker="o",
+             markersize=8, zorder=3, label="upstream (Kim et al.)")
+
+    ax.annotate("ours", (x[-1], ours[-1]), xytext=(8, 4), textcoords="offset points",
+                va="bottom", color=COLOR_OURS, fontsize=11, fontweight="bold")
+    ax.annotate("upstream", (x[-1], upstream[-1]), xytext=(8, -10),
+                textcoords="offset points", va="top", color=COLOR_UPSTREAM,
+                fontsize=11, fontweight="bold")
+
+    ax.set_xticks(x)
+    ax.set_xticklabels(PERCENTILE_LABELS, fontsize=11, color=TEXT_SECONDARY)
+    ax.set_xlim(-0.3, len(x) - 1 + 0.55)
+    ax.set_ylabel("shear stress |naive stencil|\n(nondimensional, log scale)",
+                   color=TEXT_SECONDARY, fontsize=10)
+    ax.tick_params(colors=TEXT_SECONDARY)
+    ax.set_title(
+        "Both codebases blow up at the top of\nthe percentile range",
+        color=TEXT_PRIMARY, fontsize=13, fontweight="bold", loc="left", pad=12,
     )
-
-    # --- Panel 2: ratios between consecutive percentiles, linear scale ---
-    ax2.set_facecolor("#fcfcfb")
-    for spine in ("top", "right"):
-        ax2.spines[spine].set_visible(False)
-    for spine in ("left", "bottom"):
-        ax2.spines[spine].set_color(GRID)
-    ax2.grid(axis="y", color=GRID, linewidth=0.8, zorder=0)
-    ax2.plot(t, ratio_100_98, color=COLOR_RATIO_HIGH, linewidth=2, marker="o",
-              markersize=5, zorder=3)
-    ax2.plot(t, ratio_98_95, color=COLOR_RATIO_LOW, linewidth=2, marker="o",
-              markersize=5, zorder=3)
-    ax2.annotate("100th / 98th ratio", (t[-1], ratio_100_98[-1]), xytext=(6, 0),
-                 textcoords="offset points", va="center", color=COLOR_RATIO_HIGH,
-                 fontsize=10, fontweight="bold")
-    ax2.annotate("98th / 95th ratio", (t[-1], ratio_98_95[-1]), xytext=(6, 0),
-                 textcoords="offset points", va="center", color=COLOR_RATIO_LOW,
-                 fontsize=10, fontweight="bold")
-    ax2.set_ylabel("ratio between\nconsecutive percentiles", color=TEXT_SECONDARY,
-                    fontsize=10)
-    ax2.set_xlabel("simulation time t (nondimensional)", color=TEXT_SECONDARY,
-                    fontsize=10)
-    ax2.tick_params(colors=TEXT_SECONDARY)
-    ax2.set_ylim(0, max(ratio_100_98) * 1.25)
-
     fig.text(
         0.5, 0.005,
-        "L10, θ=7°, 32.5 rpm, settled state -- 100th/98th jumps 9-33x (and growing) "
-        "while 98th/95th stays flat at 2.3-3.7x",
+        "L10, θ=7°, 32.5 rpm, settled state (t≈12.15) -- same naive central-difference\n"
+        "stencil applied to both codebases' own velocity field",
         ha="center", va="bottom", fontsize=9, color=TEXT_SECONDARY, style="italic",
     )
 
-    for ax in (ax1, ax2):
-        ax.set_xlim(t[0] - 0.005, t[-1] + 0.03)
-
-    fig.tight_layout(rect=(0, 0.03, 1, 1))
+    fig.tight_layout(rect=(0, 0.055, 1, 1))
     fig.savefig(OUT_PATH, dpi=200, facecolor=fig.get_facecolor())
-    print(f"Saved to {OUT_PATH}")
+    print(f"\nSaved to {OUT_PATH}")
 
     print("\n=== Table version ===")
-    print(f"{'t':>6} {'tau_95':>10} {'tau_98':>10} {'tau_100':>10} {'100/98':>8} {'98/95':>8}")
-    for i in range(len(t)):
-        print(f"{t[i]:>6.2f} {tau_95[i]:>10.6g} {tau_98[i]:>10.6g} {tau_100[i]:>10.6g} "
-              f"{ratio_100_98[i]:>8.1f} {ratio_98_95[i]:>8.2f}")
+    print(f"{'percentile':>12} {'ours':>12} {'upstream':>12} {'ours/upstream':>14}")
+    for label, o, u in zip(PERCENTILE_LABELS, ours, upstream):
+        print(f"{label:>12} {o:>12.6g} {u:>12.6g} {o/u:>14.3f}")
 
 
 if __name__ == "__main__":

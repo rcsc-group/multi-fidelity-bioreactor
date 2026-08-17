@@ -161,20 +161,34 @@ explains `tau_mean_max`'s persistent gap.
 
 ### Why `tau_100_max` specifically is untrustworthy: it isn't sampling a heavy tail, it's sampling one degenerate cell
 
-![Shear stress percentile sensitivity: the 100th percentile (dark line, top panel) sits nearly two orders of magnitude above the 98th and 95th on a log scale, and the 100th/98th ratio (bottom panel) climbs from 9x to 33x over this window while the 98th/95th ratio stays flat at 2.3-3.7x.](../assets/img/tau-percentile-sensitivity.png)
+![Shear stress percentile sensitivity, ours vs. upstream: both codebases' naive central-difference stencil, applied to their own settled-state velocity field (L10, θ=7°, 32.5 rpm, t≈12.15), blows up sharply between the 99th and 100th percentile -- ours rising from 0.20 to 96.0 (480x) and upstream from 0.15 to 24.6 (166x), while both are far more modest between 99th and 99.9th (~10-11x).](../assets/img/tau-percentile-sensitivity.png)
 
-Pulled directly from a settled-state `shear_stress.dat` window (L10,
-θ=7°, 32.5 rpm, no cherry-picking): going from the 95th to the 98th
-percentile barely moves the value (2.3-3.7x, an ordinary tail). Going
-from the 98th to the 100th percentile (i.e., to `tau_100_max` itself)
-blows up by 9-33x, and that ratio *grows* over time rather than settling.
-A genuinely heavy-but-smooth distribution would grow steadily across all
-three percentiles; this pattern — nothing happening until the very last
-point, then an order-of-magnitude jump — is the signature of the 100th
-percentile being dominated by a single (or a handful of) degenerate cut
-cell(s) at the embedded boundary, where a plain central-difference
-gradient can produce an arbitrarily large spurious value as the cut
-cell's area shrinks toward zero. That also explains why `tau_100_max`
+Computed directly from the raw per-cell velocity dumps captured during
+the settled-vs-settled bulk-field comparison above (not from
+`shear_stress.dat`, which only logs 95th/98th/100th and has no upstream
+equivalent) -- the exact same naive stencil formula applied to both
+codebases' own field at a matching instant:
+
+| percentile | ours | upstream | ours / upstream |
+|---|---|---|---|
+| 99th | 0.202 | 0.149 | 1.36x |
+| 99.9th | 2.29 | 1.50 | 1.53x |
+| 100th (max) | 96.0 | 24.6 | 3.91x |
+
+**Both codebases show the same qualitative blowup** — a modest, gradual
+rise from 99th to 99.9th, then an order-of-magnitude-or-more jump to the
+100th percentile. A genuinely heavy-but-smooth tail would grow steadily
+across all three; this pattern is the signature of the 100th percentile
+being dominated by a single (or a handful of) degenerate cut cell(s) at
+the embedded boundary, where a plain central-difference gradient can
+produce an arbitrarily large spurious value as the cut cell's area
+shrinks toward zero. Since the SAME uncorrected stencil is used in Kim
+et al.'s own `bio_stress.m` postprocessing, this is evidence the
+singularity is a property of the naive stencil near any embedded
+boundary, not a fork-specific bug — though ours is consistently worse at
+the very top (3.9x at the max vs. only 1.4x at the 99th, a gap that
+*grows* the further into the tail you look), an open, unexplained
+asymmetry worth chasing separately. This also explains why `tau_100_max`
 gets *worse*, not better, with resolution in the table above: finer
 grids produce smaller, more pathological cell fragments, not a better-
 resolved wall gradient. See diary.md 2026-08-17 for the full derivation,
