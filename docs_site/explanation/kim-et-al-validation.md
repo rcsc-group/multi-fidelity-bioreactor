@@ -159,6 +159,31 @@ still sitting 35-65% below Kim's value the whole time — proof that its
 gap is *not* a resolution problem. Something else, still unidentified,
 explains `tau_mean_max`'s persistent gap.
 
+### Why `tau_100_max` specifically is untrustworthy: it isn't sampling a heavy tail, it's sampling one degenerate cell
+
+![Shear stress percentile sensitivity: the 100th percentile (dark line, top panel) sits nearly two orders of magnitude above the 98th and 95th on a log scale, and the 100th/98th ratio (bottom panel) climbs from 9x to 33x over this window while the 98th/95th ratio stays flat at 2.3-3.7x.](../assets/img/tau-percentile-sensitivity.png)
+
+Pulled directly from a settled-state `shear_stress.dat` window (L10,
+θ=7°, 32.5 rpm, no cherry-picking): going from the 95th to the 98th
+percentile barely moves the value (2.3-3.7x, an ordinary tail). Going
+from the 98th to the 100th percentile (i.e., to `tau_100_max` itself)
+blows up by 9-33x, and that ratio *grows* over time rather than settling.
+A genuinely heavy-but-smooth distribution would grow steadily across all
+three percentiles; this pattern — nothing happening until the very last
+point, then an order-of-magnitude jump — is the signature of the 100th
+percentile being dominated by a single (or a handful of) degenerate cut
+cell(s) at the embedded boundary, where a plain central-difference
+gradient can produce an arbitrarily large spurious value as the cut
+cell's area shrinks toward zero. That also explains why `tau_100_max`
+gets *worse*, not better, with resolution in the table above: finer
+grids produce smaller, more pathological cell fragments, not a better-
+resolved wall gradient. See diary.md 2026-08-17 for the full derivation,
+including a direct restart-sensitivity check (13.7% shift in `tau_100`
+from a single dump/restore cycle, vs. 0.29% for `tau_mean` at the same
+instant) that independently points at the same conclusion: `tau_100` is
+exposed to a single-cell artifact that volume-averaging protects
+`tau_mean` from.
+
 ## What this means if you're using these numbers
 
 Don't treat either sweep's `tau_100_max`/`tau_mean_max` as validated against

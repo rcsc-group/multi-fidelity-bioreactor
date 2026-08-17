@@ -8,6 +8,30 @@ why it was done, what it found, and what it does and doesn't prove.
 Convention: newest entries at the top. Link run_ids / job_ids / commit
 hashes exactly, not "the run from earlier."
 
+## 2026-08-17 (2) — percentile-sensitivity figure built and embedded in
+the standing validation doc.
+
+Built `scripts/plot_tau_percentile_sensitivity.py`: two-panel figure
+from the same `fork_l10_coldstart/shear_stress.dat` window used for the
+percentile-spread finding earlier today. Top panel: tau_95/98/100 vs.
+time on a log scale -- the 100th percentile visually sits nearly two
+decades above the other two. Bottom panel: the 100th/98th and 98th/95th
+ratios on a linear scale -- one stays flat near 3, the other climbs from
+9 to 33. Followed the `dataviz` skill: 3 percentile levels are a
+discrete ORDINAL progression (not arbitrary categories), so colored with
+one hue (blue) stepped light->dark rather than 3 unrelated colors; two
+stacked single-axis panels instead of a dual-axis chart.
+
+Saved to `docs_site/assets/img/tau-percentile-sensitivity.png`, embedded
+in `docs_site/explanation/kim-et-al-validation.md` directly after the
+existing `tau_100_max` resolution-non-convergence table, with a new
+subsection explaining that this pattern (flat 95->98, then a 9-33x jump
+at 98->100, worsening over time) is the signature of a single degenerate
+cut cell dominating the statistic, not a genuinely heavy tail -- ties
+together today's restart-sensitivity finding, the percentile-spread
+finding, and the pre-existing resolution-non-convergence note into one
+documented explanation, cross-referenced back to this diary.
+
 ## 2026-08-14 — DMD/POD reduced-order-model prototype started (parallel
 side-track, not part of the tau/EDR gap investigation).
 
