@@ -107,6 +107,22 @@ job outputs in place under
 `/oscar/scratch/eaguerov/tmp/percentile_timeseries/` -- scratch only,
 not committed, no cleanup needed.
 
+**User feedback on the resulting figure, verbatim: "it looks bad... your
+x axis title, the title, the textbox at the bottom, they are all AI
+slop. Also, the data is too cluttered. I rather you pick three cycles
+than that unreadable figure."** Stripped the chart down hard: no title,
+no bottom caption/textbox, minimal single-letter axis labels (`t`, `τ`),
+no legend box (direct end-labels only), and dropped the "ours" single-
+point overlay entirely -- it was one point requiring several extra
+annotations to explain, adding clutter for very little information.
+Kept ONLY upstream's 3 real settled points, one line per percentile,
+using the ordinal blue ramp (light->dark = 99th->100th) from the
+dataviz skill. All the explanatory context (why only upstream has 3
+points, the ours-vs-upstream ratio table, the cut-cell-singularity
+interpretation) moved into the surrounding markdown prose/table in
+`kim-et-al-validation.md`, where it belongs -- explanation is prose's
+job, not the chart's. The chart now shows only the three lines.
+
 ## 2026-08-17 (3) — percentile-sensitivity figure revised per user
 feedback: dropped the ratio panel, switched to 99th/99.9th/100th, and
 overlaid ours vs. upstream directly (rather than just our own time

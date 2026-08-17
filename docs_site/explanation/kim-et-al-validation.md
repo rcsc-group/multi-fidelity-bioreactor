@@ -161,21 +161,19 @@ explains `tau_mean_max`'s persistent gap.
 
 ### Why `tau_100_max` specifically is untrustworthy: it isn't sampling a heavy tail, it's sampling one degenerate cell
 
-![Shear stress percentile sensitivity over time, ours vs. upstream at L10: three clearly separated bands (100th on top, 99.9th in the middle, 99th at the bottom), each spanning roughly an order of magnitude of separation, consistent across all three of upstream's settled snapshots -- our own single snapshot lands consistently with the same pattern, running higher at every level.](../assets/img/tau-percentile-sensitivity.png)
+![tau_95/98/100 percentiles over t at three settled instants (upstream, L10): three non-overlapping bands roughly an order of magnitude apart.](../assets/img/tau-percentile-sensitivity.png)
 
-Computed directly from raw per-cell velocity dumps -- the exact same
-naive stencil formula applied to both codebases' own field -- using ONLY
-data from the two L10 jobs already run for the settled-vs-settled bulk
-comparison above, at zero new compute. Upstream's own `OUT_FILES`
-mechanism (a pre-existing feature of Kim et al.'s driver, unrelated to
-this comparison) happened to dump full-field snapshots throughout its
-entire run "for free"; three of those land after upstream's own
-~16.25-cycle ramp (t=10.63, 11.70, 12.76), giving a real settled-state
-time series at no extra cost. Our own fork's L10 run was never set up
-with an equivalent periodic dump, so it only has the single snapshot
-(t=12.15) used earlier -- shown honestly as one point per percentile
-rather than a matching line, since extending it would cost the same
-per-step price as any other L10 continuation (hours, not free):
+Three real settled-state points from upstream's own driver, computed
+from raw per-cell velocity dumps with the same naive stencil used
+throughout this doc. No new compute: upstream's `OUT_FILES` (a
+pre-existing feature of Kim et al.'s driver, unrelated to this
+comparison) happened to dump full-field snapshots throughout its entire
+L10 run "for free"; three of those land after its own ~16.25-cycle ramp
+(t=10.63, 11.70, 12.76). Our own fork's L10 run has no equivalent
+periodic dump, only the single snapshot (t=12.15) used in the bulk
+comparison above — extending it would cost the same per-step price as
+any other L10 continuation, hours not free, so it's given as a table
+instead of a fabricated fourth line:
 
 | percentile | ours (t=12.15) | upstream (t=10.63 / 11.70 / 12.76) |
 |---|---|---|
