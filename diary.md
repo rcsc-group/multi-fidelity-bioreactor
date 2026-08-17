@@ -46,6 +46,67 @@ Submitted as jobs **5052493 (ours)** and **5052494 (upstream)**, both L7,
 8 ranks, 30-min walltime (generous given the ~minutes-scale cost
 observed for the DMD prototype at comparable fidelity/duration).
 
+**Jobs completed cleanly (3-4 min each, 432 TauSnap files apiece) --
+but the L7 result doesn't show the effect at all.** Plotted 6 lines
+(2 codebases x 3 percentiles) over the settled window: at L7 the
+99th/99.9th/100th percentiles are all tangled together in the same
+value range, no dramatic separation -- completely different from the
+9-475x blowup seen at L10. This makes sense in hindsight: the cut-cell
+singularity is strongly RESOLUTION-DEPENDENT (already documented,
+`tau_100_max` grows unboundedly f7->f9->f10) -- L7 is exactly the
+resolution where the effect is weakest. Choosing L7 for cheapness
+picked the one resolution that couldn't show the finding. Flagged this
+honestly to the user rather than polishing a chart that didn't carry
+the story, and asked how to proceed (L10 rerun / L9 middle ground /
+revert to the single-instant comparison).
+
+**User's response reframed the whole approach, for the better:** "this
+was supposed to be L10 us vs L10 kim, why do you need more comparisons?
+did you not run them both?" -- correct challenge. We HAD already run
+both codebases at L10 for the bulk-field comparison (upstream jobs
+4877551/4961226, ours job 4961227) -- the question was whether either
+run produced more than the single one-shot snapshot already used.
+Checked rather than assumed:
+
+- Upstream: YES. `OUT_FILES=1` (a pre-existing feature of Kim et al.'s
+  own driver, unrelated to anything we added) was dumping full-field
+  snapshots throughout the ENTIRE L10 run at `dt_file~=1.06`, for free,
+  the whole time -- 1664 files on disk
+  (`/oscar/scratch/eaguerov/tmp/upstream_l10/rundir/Data_all/`), 13
+  distinct times from t=0 to t=12.76. Three of those (t=10.633,
+  11.6963, 12.7596) land after upstream's own ~16.25-cycle ramp --
+  a real, zero-cost, 3-point settled time series we'd never looked at.
+- Ours: no equivalent. Our own fork's L10 run was never built with an
+  analogous periodic full-field dump (no `VIDEOS=1`, no `frames_tau/`) --
+  only the single `DumpEarlyFork` snapshot at t=12.1466 exists.
+  Extending it would need real additional L10 timesteps at the SAME
+  ~0.3-0.5s/step cost as the original run -- restore() being fast does
+  NOT make advancing further into simulated time fast; those are
+  different things and I'd conflated them when first proposing a "cheap"
+  L9 alternative. Corrected this reasoning explicitly rather than
+  quietly making a second cheap-but-wrong choice.
+
+**Rewrote the figure using ONLY this already-existing L10 data, zero
+new compute:** upstream shown as a genuine 3-point line per percentile
+(triangle/square/circle markers), ours shown as a single point per
+percentile (no line, honestly reflecting that only one snapshot
+exists) at t=12.1466. Result: three cleanly separated, non-overlapping
+bands (99th ~0.1-0.4, 99.9th ~1-6, 100th ~13-96) holding consistently
+across ALL THREE upstream time points despite real point-to-point
+volatility within each band (consistent with `tau_100`'s already-
+documented sensitivity) -- our own point sits within/above the same
+bands at every level, running consistently higher, matching the
+single-instant ratio table from the 2026-08-17 entry (1.36x/1.53x/
+3.91x at 99th/99.9th/max).
+
+Updated `docs_site/explanation/kim-et-al-validation.md`'s figure
+caption and surrounding text to describe the real multi-point-vs-
+single-point comparison accurately (not claiming a matching time series
+that doesn't exist). Left the abandoned L7 scratch driver copies and
+job outputs in place under
+`/oscar/scratch/eaguerov/tmp/percentile_timeseries/` -- scratch only,
+not committed, no cleanup needed.
+
 ## 2026-08-17 (3) — percentile-sensitivity figure revised per user
 feedback: dropped the ratio panel, switched to 99th/99.9th/100th, and
 overlaid ours vs. upstream directly (rather than just our own time

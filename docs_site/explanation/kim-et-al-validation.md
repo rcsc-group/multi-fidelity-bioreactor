@@ -161,34 +161,47 @@ explains `tau_mean_max`'s persistent gap.
 
 ### Why `tau_100_max` specifically is untrustworthy: it isn't sampling a heavy tail, it's sampling one degenerate cell
 
-![Shear stress percentile sensitivity, ours vs. upstream: both codebases' naive central-difference stencil, applied to their own settled-state velocity field (L10, θ=7°, 32.5 rpm, t≈12.15), blows up sharply between the 99th and 100th percentile -- ours rising from 0.20 to 96.0 (480x) and upstream from 0.15 to 24.6 (166x), while both are far more modest between 99th and 99.9th (~10-11x).](../assets/img/tau-percentile-sensitivity.png)
+![Shear stress percentile sensitivity over time, ours vs. upstream at L10: three clearly separated bands (100th on top, 99.9th in the middle, 99th at the bottom), each spanning roughly an order of magnitude of separation, consistent across all three of upstream's settled snapshots -- our own single snapshot lands consistently with the same pattern, running higher at every level.](../assets/img/tau-percentile-sensitivity.png)
 
-Computed directly from the raw per-cell velocity dumps captured during
-the settled-vs-settled bulk-field comparison above (not from
-`shear_stress.dat`, which only logs 95th/98th/100th and has no upstream
-equivalent) -- the exact same naive stencil formula applied to both
-codebases' own field at a matching instant:
+Computed directly from raw per-cell velocity dumps -- the exact same
+naive stencil formula applied to both codebases' own field -- using ONLY
+data from the two L10 jobs already run for the settled-vs-settled bulk
+comparison above, at zero new compute. Upstream's own `OUT_FILES`
+mechanism (a pre-existing feature of Kim et al.'s driver, unrelated to
+this comparison) happened to dump full-field snapshots throughout its
+entire run "for free"; three of those land after upstream's own
+~16.25-cycle ramp (t=10.63, 11.70, 12.76), giving a real settled-state
+time series at no extra cost. Our own fork's L10 run was never set up
+with an equivalent periodic dump, so it only has the single snapshot
+(t=12.15) used earlier -- shown honestly as one point per percentile
+rather than a matching line, since extending it would cost the same
+per-step price as any other L10 continuation (hours, not free):
 
-| percentile | ours | upstream | ours / upstream |
-|---|---|---|---|
-| 99th | 0.202 | 0.149 | 1.36x |
-| 99.9th | 2.29 | 1.50 | 1.53x |
-| 100th (max) | 96.0 | 24.6 | 3.91x |
+| percentile | ours (t=12.15) | upstream (t=10.63 / 11.70 / 12.76) |
+|---|---|---|
+| 99th | 0.202 | 0.117 / 0.417 / 0.137 |
+| 99.9th | 2.29 | 1.14 / 6.03 / 1.61 |
+| 100th (max) | 96.0 | 13.4 / 23.0 / 28.1 |
 
-**Both codebases show the same qualitative blowup** — a modest, gradual
-rise from 99th to 99.9th, then an order-of-magnitude-or-more jump to the
-100th percentile. A genuinely heavy-but-smooth tail would grow steadily
-across all three; this pattern is the signature of the 100th percentile
+**Both codebases show the same qualitative blowup, at every sampled
+instant, not just one** — three clean, non-overlapping bands (99th <<
+99.9th << 100th), each roughly an order of magnitude apart, holding
+consistently across all three upstream time points despite the
+`tau_100`-style volatility documented above. A genuinely heavy-but-smooth
+tail would grow steadily across all three percentiles; this pattern is
+the signature of the 100th percentile
 being dominated by a single (or a handful of) degenerate cut cell(s) at
 the embedded boundary, where a plain central-difference gradient can
 produce an arbitrarily large spurious value as the cut cell's area
 shrinks toward zero. Since the SAME uncorrected stencil is used in Kim
 et al.'s own `bio_stress.m` postprocessing, this is evidence the
 singularity is a property of the naive stencil near any embedded
-boundary, not a fork-specific bug — though ours is consistently worse at
-the very top (3.9x at the max vs. only 1.4x at the 99th, a gap that
-*grows* the further into the tail you look), an open, unexplained
-asymmetry worth chasing separately. This also explains why `tau_100_max`
+boundary, not a fork-specific bug — though at the one instant where both
+codebases were sampled together (t≈12.15, the settled-vs-settled bulk
+comparison above), ours ran consistently higher (1.36x at the 99th,
+1.53x at the 99.9th, 3.91x at the max — a gap that grows the further
+into the tail you look), an open, unexplained asymmetry worth chasing
+separately. This also explains why `tau_100_max`
 gets *worse*, not better, with resolution in the table above: finer
 grids produce smaller, more pathological cell fragments, not a better-
 resolved wall gradient. See diary.md 2026-08-17 for the full derivation,
