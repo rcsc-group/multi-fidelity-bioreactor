@@ -323,6 +323,72 @@ specifically.
   this same sampling convention -- next step before treating this as a
   live lead.
 
+**Fine-grained post-restore tracking (job 5049176, extended `metric_test2`
+to track `tau_max` every iteration for 40 steps post-restore instead of
+stopping immediately):** the post-restore trajectory itself is smooth
+(0.0471 -> bottoms at 0.0426 around step 28 -> recovers to ~0.0431 by
+step 37, no discontinuity, no crash) -- but this ~5-10% smooth swing is
+SMALLER than the 13.65% jump observed right at the restore boundary,
+and the pre-restore trend (climbing steeply, +23% over the preceding
+0.02 time units) does NOT continue smoothly into the post-restore
+trajectory -- it reverses instead. Suggestive of a real restore-boundary
+perturbation, but NOT conclusive: `tau_max` is an argmax-driven
+statistic already shown to swing non-monotonically by 5-44% during
+completely uninterrupted live simulation (see table above), so a trend
+reversal isn't inherently anomalous for this quantity. A fully
+apples-to-apples test (continue the ORIGINAL live run, no restore,
+past t=13.36) isn't available -- that run already stopped and wrote its
+final checkpoint; getting one would need a fresh ~20+ hour cold start.
+Left as an open, unresolved question rather than forced to a
+conclusion either way.
+
+**Percentile-spread finding (user's own recollection from earlier in
+this investigation, re-confirmed directly from `shear_stress.dat`) ties
+the whole max-statistic thread together into one coherent picture:**
+
+| t     | tau_95      | tau_98     | tau_100    | 100/98 ratio | 98/95 ratio |
+|-------|-------------|------------|------------|--------------|-------------|
+| 13.22 | 0.000538    | 0.00197    | 0.0179     | 9.1          | 3.67        |
+| 13.28 | 0.000523    | 0.00174    | 0.0349     | 20.0         | 3.33        |
+| 13.32 | 0.000489    | 0.00171    | 0.0489     | 28.6         | 3.50        |
+| 13.36 | 0.000545    | 0.00164    | 0.0545     | 33.3         | 3.00        |
+
+95th->98th grows modestly (2.3-3.7x, an ordinary tail). 98th->100th
+blows up by 9-33x, GROWING over time -- not a smoothly heavy tail, the
+signature of the top 1-2% being dominated by something categorically
+different from the rest of the domain (most likely a near-degenerate
+cut cell at the embedded boundary, where a plain central-difference
+gradient can produce an arbitrarily large spurious value as cell area
+-> 0).
+
+**This single mechanism (a numerical singularity at one or a handful of
+degenerate cut cells) coherently explains every max-related anomaly
+found so far, without needing separate explanations for each:**
+- Mean is well-behaved (0.29% restart sensitivity, matches Kim well in
+  gross terms) because volume-weighted averaging over ~500,000 liquid
+  cells dilutes a single outlier cell's contribution by ~1/500,000.
+- Max is fully exposed to that same outlier with nothing to dilute it
+  -- consistent with the 5-44% swings between ordinary consecutive
+  samples, the 13.65% restart-boundary sensitivity, AND the 9-33x
+  98th->100th percentile blowup, all in one story.
+- Consistent with the pre-existing standing-doc note
+  (`docs_site/explanation/kim-et-al-validation.md`) that `tau_100_max`
+  does NOT converge with resolution (grows unboundedly f7->f9->f10) --
+  a genuine cut-cell singularity should get WORSE, not better, as the
+  grid refines and produces even smaller/more pathological cell
+  fragments. This is a classic embedded-boundary pathology, not
+  ordinary mesh under-resolution.
+
+**Net effect on the roadmap:** strengthens the case that `tau_100`/
+domain-max is fundamentally unreliable as currently computed (one
+degenerate cut cell likely driving it) -- worth fixing on its own
+merits (candidate fix: the SAME `fm`/`cm` metric correction tested
+above, since it directly targets the cut-cell geometry weighting that's
+implicated here; not yet tested specifically against tau_100's
+percentile-blowup behavior). This remains a SEPARATE thread from Fig.
+8's mean-based quantity, where dump/restart sensitivity is negligible
+(0.29%) and the original 3-4x gap is still unexplained.
+
 **Process note for future debugging sessions:** this diagnostic took 4
 job submissions and ~1h20m of wall-clock to get right, entirely due to
 Basilisk's one-shot event-trigger semantics (crossing-based `t=VALUE`
