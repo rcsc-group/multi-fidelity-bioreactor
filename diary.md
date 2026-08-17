@@ -253,6 +253,76 @@ ruled out as a real bug worth fixing on its own merits, and not yet
 determined whether it should be combined with some other still-unknown
 factor to close the remaining ~3x gap.
 
+## 2026-08-17 — user corrected an overstated claim, asked about max
+stress specifically, and re-raised dump/restart -- this time with real
+evidence behind it.
+
+**Correction to my own summary:** I had described the settled-vs-settled
+bulk comparison (2026-08-15 (2) entry) as "3-4 significant digits
+pointwise" agreement. Wrong -- that 0.2% figure was the DOMAIN-AVERAGED
+mean|u| ratio. Recomputed the actual pointwise numbers from that same
+comparison: mean|diff_u| relative to mean speed = **4.9%**, max|diff_u|
+relative to max speed = **99%** (some cells, plausibly interface-
+adjacent, disagree almost completely). Aggregate mean agrees well;
+pointwise agreement is much weaker and worst exactly where wall shear
+stress is computed. This changes the interpretation of "how can the
+stencil be off by more than the field disagrees" -- it can't, if the
+real pointwise disagreement is ~5-99%, not ~0.01-0.1%.
+
+**Max-stress test (free, using existing data + the now-fixed metric_test2
+diagnostic):** extended `metric_test2`'s event to also track
+`reduction(max:...)` of `|tau_naive|`/`|tau_metric|`, matching
+production's own `tau_100` definition exactly (`f[]>0.5` mask, same
+naive stencil, `event normcal` in `src/BioReactor.c`). Reran (job
+5049117, 7s). Result: `tau_max_naive == tau_max_metric` EXACTLY (ratio =
+1.0) -- the cell achieving the current domain max is apparently NOT a
+cut/embedded-boundary cell (fm=1, cm=1 there, so the two stencils are
+algebraically identical), meaning the current numerical maximum is
+occurring in the bulk, not at the wall. Open question, not yet chased:
+is this always true, or specific to this one snapshot -- if a rocking
+bag's true physical shear maximum should occur AT the wall, a numerical
+max instead occurring in the bulk could itself be a symptom of the wall
+region being under-resolved/miscomputed.
+
+**Compared against `fork_l10_coldstart`'s own LIVE (no-restart)
+`shear_stress.dat` row at the same instant (t=13.36, i=229154 vs the
+restored run's i=229177 -- 23-iteration difference, negligible):**
+
+| statistic | live (no restart) | after ONE restore round-trip | rel. diff |
+|---|---|---|---|
+| mean tau (signed) | -8.67598e-05 | -8.6508638e-05 | **0.29%** |
+| max tau (tau_100)  | 0.054527     | 0.047082431    | **13.65%** |
+
+**This directly and substantially vindicates the user's dump/restart
+suspicion for the MAX statistic specifically** (~47x more sensitive
+than the mean to a single restore cycle) -- a real, previously
+undetected effect. Caveat stated plainly: a domain max over ~500k+
+cells is inherently noisier than a mean even without any restart
+involved (whichever single cell wins can shift for innocuous reasons),
+so 13.7% isn't yet proof the RESTORE MECHANISM itself is at fault
+versus ordinary extremum volatility -- next step to isolate: compare
+max tau under a different NON-restart perturbation (e.g. different rank
+count on the same live condition) to see if it shifts by a similar
+magnitude; if it doesn't, that isolates the effect to restart
+specifically.
+
+**Also checked, per Kim's own paper text (Main.tex), while investigating:**
+- Resolution: Kim's own baseline is `n_L=2^10=1024` (Main.tex line 432)
+  -- EXACTLY matches our L10 comparison (`fidelity=10` -> `NN=1024`).
+  Resolution mismatch is RULED OUT as an explanation; we've been
+  comparing at the right resolution all along.
+- Sampling methodology (Main.tex line 614, describing Fig. 13's
+  rpm/angle sweep, NOT yet confirmed to be the same methodology used
+  for Fig. 8 specifically): "these quantities are computed from 3,500
+  flow fields with a constant time gap of 0.05 simulation time...
+  approximately 13 simulation points per cycle but is intentionally
+  misaligned with the period to ensure convergence." A max/tail
+  statistic is exactly the kind of quantity that a coarser or
+  PERIOD-ALIGNED sampling grid could systematically undersample (missing
+  a brief, sharp true peak). Not yet verified whether Fig. 8 itself uses
+  this same sampling convention -- next step before treating this as a
+  live lead.
+
 **Process note for future debugging sessions:** this diagnostic took 4
 job submissions and ~1h20m of wall-clock to get right, entirely due to
 Basilisk's one-shot event-trigger semantics (crossing-based `t=VALUE`
