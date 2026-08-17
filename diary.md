@@ -8,6 +8,44 @@ why it was done, what it found, and what it does and doesn't prove.
 Convention: newest entries at the top. Link run_ids / job_ids / commit
 hashes exactly, not "the run from earlier."
 
+## 2026-08-18 — percentile figure reworked again per explicit user
+feedback: x-axis=time, 6 overlaid lines (2 codebases x 3 percentiles),
+not a single-instant snapshot comparison.
+
+Neither existing dataset supports this directly: `shear_stress.dat`
+only logs 95th/98th/100th (not 99th/99.9th) for our own fork, and
+upstream has NO time-series percentile logging at all (only the
+one-shot `DumpEarly` raw-field snapshot used for the bulk comparison).
+Mixing the two existing raw snapshots (t=4.86, ramp-confounded; t=12.15,
+valid) as a fake "time series" would silently reintroduce the exact
+ramp-schedule confound eliminated on 2026-08-15/16 -- not done.
+
+**Chose the cheap option instead of a new multi-hour L10 run:** patched
+BOTH drivers at L7 (NN=128, matching the DMD prototype's ~3min/7.9-time-
+unit pace, so this should cost minutes not hours) with a periodic
+per-cell `|tau|` snapshot event (`tau_percentile_dump`, always-checked
+`i++` + manual guard -- NOT `t+=dt_sample` directly in the trigger,
+since Basilisk's `t+=VALUE` event syntax needs a compile-time constant,
+this project's own established workaround per `movies_output`).
+Percentiles computed OFFLINE in Python from the raw per-cell dumps, not
+in C.
+
+Sampling window matched exactly across both codebases: starts at 17
+cycles (1 cycle past upstream's own longer ~16.25-cycle ramp), runs 9
+cycles to 26 cycles, sampled every 1/6 cycle (`dt_sample = T_per_st/6`)
+-- avoids the exact ramp-confound this whole rework was meant to fix.
+
+Scratch copies: `/oscar/scratch/eaguerov/tmp/percentile_timeseries/
+{ours,upstream}/`. Upstream copy needed the same `Data_all/`/
+`Data_specific/` directories pre-created as the original L10 comparison
+(2026-08-11 entry) -- OUT_FILES=1 is still enabled in the upstream
+driver and segfaults without them; created preemptively this time
+rather than rediscovering the same bug.
+
+Submitted as jobs **5052493 (ours)** and **5052494 (upstream)**, both L7,
+8 ranks, 30-min walltime (generous given the ~minutes-scale cost
+observed for the DMD prototype at comparable fidelity/duration).
+
 ## 2026-08-17 (3) — percentile-sensitivity figure revised per user
 feedback: dropped the ratio panel, switched to 99th/99.9th/100th, and
 overlaid ours vs. upstream directly (rather than just our own time
