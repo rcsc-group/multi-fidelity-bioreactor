@@ -4,6 +4,12 @@ experiments/results.csv
 experiment_data/
 logs/
 
+# Stray SLURM logs from sbatch calls run without --output/--error (should
+# go to logs/ instead) -- 16 of these accumulated at the repo root before
+# being cleaned up 2026-08-17.
+/slurm_*.out
+/slurm_*.err
+
 # Scratch dirs some tests write into the real experiments/ dir instead of tmp_path
 experiments/sweep_test/
 experiments/self_submit_test/
