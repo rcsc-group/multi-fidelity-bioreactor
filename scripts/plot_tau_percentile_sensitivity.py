@@ -92,7 +92,7 @@ def main():
     ax.set_xlabel("t", color=TEXT_SECONDARY, fontsize=10)
     ax.set_ylabel("τ", color=TEXT_SECONDARY, fontsize=10, rotation=0, labelpad=10)
     ax.tick_params(colors=TEXT_SECONDARY)
-    ax.set_xlim(t[0] - 0.15, t[-1] + 0.75)
+    ax.set_xlim(t[0] - 0.45, t[-1] + 2.25)
 
     fig.tight_layout()
     fig.savefig(OUT_PATH, dpi=200, facecolor=fig.get_facecolor())
