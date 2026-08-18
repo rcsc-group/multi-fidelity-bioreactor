@@ -8,6 +8,56 @@ why it was done, what it found, and what it does and doesn't prove.
 Convention: newest entries at the top. Link run_ids / job_ids / commit
 hashes exactly, not "the run from earlier."
 
+## 2026-08-18 (2) — extending our own fork's L10 checkpoint for a real
+multi-point percentile series, matching upstream's.
+
+User asked for the "3x" data literally, not just wider axis padding on
+the same 3 points ("lol but also the data too") -- correct catch, I'd
+only stretched whitespace around unchanged data the first time. Checked
+honestly: the 3 upstream points are ALL that exists on disk (its L10 run
+ended right after the 3rd one, `dt_file~=1.06` cadence, no 4th one
+hiding anywhere). Getting more requires running more simulated time, a
+real cost either way. Gave the user 3 options with honest cost framing
+(extend our own fork's real Basilisk checkpoint -- restart is free,
+forward-simulated time isn't; re-run upstream from scratch with denser
+dumps -- no restart mechanism exists for it, full ~4-8h re-run; cheap
+L9 -- same non-convergence risk that killed the L7 attempt). User chose
+extending our own fork's checkpoint.
+
+**Setup:** scratch copy of `src/BioReactor.c` (production driver,
+untouched) at
+`/oscar/scratch/eaguerov/tmp/percentile_l10_extend/BioReactor_pctl_l10.c`.
+Added the same `tau_percentile_dump` event as the L7 attempt (runtime-
+guard `i++` idiom, proven correct on 2026-08-17 -- NOT the earlier
+broken `t=VALUE`/`i=VALUE` scheduling-based triggers), sampling window
+set to `[params.t_checkpoint, t_end - T_per_st]` at upstream's own
+`dt_file=1.0633` cadence for direct comparability. Confirmed the
+restart-ramp interpolation (`alpha: 0->1` over `N_RAMP_CYCLES`, applied
+unconditionally on every restart) is a no-op here since
+`theta_max_prev == theta_max`, `omega_b_prev == omega_b` (continuing
+the SAME condition, not chaining to a different one) -- no re-introduced
+transient.
+
+Restarts from `fork_l10_coldstart/rundir/checkpoint.dump` (t=13.36, the
+same checkpoint already validated multiple times this session), params
+`t_checkpoint=13.36, t_end=9.6` (~9 more upstream-cadence samples).
+
+**Cost, stated plainly:** restart itself is near-instant (confirmed
+repeatedly this session, ~0.1-0.2s). Advancing 9.6 MORE simulated time
+units at L10 is NOT free -- same per-step cost as the original run,
+roughly the same order of total wall-clock (~14h estimated from the
+observed ~0.31s/step pace near t=13.3, `9.6/5.865e-5 steps *
+0.31s/step`). Told the user this explicitly before they chose it.
+
+**Smoke-tested before committing 24h of compute** (own past feedback:
+never skip this for a long SLURM job) -- but at FULL 64-rank scale, not
+a local oversubscribe: Basilisk's MPI dump/restore has not been tested
+this session for portability across different rank counts, and a local
+shell can't run 64 real ranks anyway. Submitted a tiny-`t_end=0.05`
+version as a short (~15 min budget) SLURM job (5056286) first, to
+validate restart + the new event fire correctly before the real 24h
+submission.
+
 ## 2026-08-18 — percentile figure reworked again per explicit user
 feedback: x-axis=time, 6 overlaid lines (2 codebases x 3 percentiles),
 not a single-instant snapshot comparison.
