@@ -8,6 +8,91 @@ why it was done, what it found, and what it does and doesn't prove.
 Convention: newest entries at the top. Link run_ids / job_ids / commit
 hashes exactly, not "the run from earlier."
 
+## 2026-08-18 (4) — pointwise shear-stress comparison at the single
+matching L10 instant: no real agreement, and a real data-coverage gap
+found (user's own instinct, correctly caught).
+
+**Bulk-mean tau, ours vs upstream, same instant (t~=12.15), computed
+freshly with the proper `mu(f)` viscosity weighting** (not previously
+computed directly this session -- earlier numbers were either restart-
+sensitivity of OUR OWN stencil, 0.29%, or naive-vs-metric-corrected on
+OUR OWN field, 21%; neither is an ours-vs-upstream bulk comparison):
+mean|tau| ours=4.41e-7, upstream=2.75e-7, **relative error ~60%**
+(60.54% with mu(f), 58.23% without -- confirms mu(f) doesn't materially
+change the comparison since the f fields already match closely between
+codebases). Notably OPPOSITE direction from the long-standing "our
+tau_mean_max is 35-65% LOW vs Kim's PUBLISHED figure" finding -- this is
+ours running HIGH vs a freshly-run upstream, at one instant. Not
+resolved, flagged as a new distinct puzzle.
+
+**Pointwise tau comparison, same instant, same grid:** computed the
+full |tau_ours - tau_upstream| distribution over ~522k overlapping
+liquid cells. P50=0 (many cells genuinely match, likely near-stagnant
+regions), P75 still small (0.8% of bulk scale), but P90=35%, P95=73%,
+P99=2060%, P100=1.6 MILLION percent of the bulk scale. Pearson
+correlation between the two tau FIELDS pointwise: **-0.011** --
+essentially zero, not "somewhat correlated with a fat tail." Only
+**86.2%** of liquid cells even agree on the SIGN of tau (1 in 7 cells
+has opposite-signed shear stress at the same location/instant).
+Interpretation: consistent with (not a new separate failure from) the
+already-established velocity-field pointwise scatter (up to 415% at the
+tail, 2026-08-18 earlier finding) -- tau is a spatial DERIVATIVE, so a
+small phase/spatial misalignment between two independently-run
+chaotic-but-similar flows gets massively amplified into near-total
+pointwise decorrelation, even while the underlying bulk flow pattern
+looks the same in aggregate.
+
+**User's sharp follow-up: "is this agreement a snapshot or across all
+snapshots?"** -- correctly caught that I was generalizing from ONE
+instant without saying so clearly. Answer: single snapshot only. We
+have zero data on whether this holds at other times.
+
+**User's next instinct: "This smells. I believed we had a lot of
+snapshots in multiple L10 simulations."** -- checked the filesystem
+directly rather than reasoning from memory (`find` across ALL L10
+scratch dirs for both codebases). Confirmed the user's suspicion
+exactly: **our fork has exactly ONE raw per-cell snapshot, ever, across
+every L10 job run this session** (`DumpEarlyFork_1024_12.1465832326`).
+Upstream has 13 (`Data_all_*`, from its own pre-existing `OUT_FILES`
+mechanism, unrelated to anything we added -- free, by construction of
+its own driver). This is a REAL, repeated oversight on my part across
+multiple separate job setups this session: I kept adding ONE-SHOT
+snapshot events to our fork's driver instead of ever giving it a
+periodic dump equivalent to upstream's own native mechanism. Not a
+compute limitation -- a genuine instrumentation gap.
+
+**Why this can't be fixed cheaply via restart:** our fork's only
+checkpoint is at t=13.36, already PAST the end of upstream's existing
+data range (0-12.76) -- restarting forward wouldn't produce time-
+overlapping snapshots. No earlier checkpoint exists either (the 8-cycle
+attempt was a separate cold start from t=0, not a continuation, and its
+checkpoint was overwritten when the same rundir was reused for the
+20-cycle extension). Real fix requires a fresh L10 cold start from t=0
+with a periodic dump added -- same order of cost (~20h) as the original
+run, not a restart shortcut. Presented this plainly to the user with
+the cost tradeoff; they chose to run it.
+
+**Setup:** new scratch copy `/oscar/scratch/eaguerov/tmp/fork_l10_periodic/
+BioReactor_fork_periodic.c` (production `src/BioReactor.c`, untouched).
+Added `event out_files_ours(t=0; t+=1.0633; t<=t_end)` -- the LITERAL
+`1.0633` (not a runtime variable) sidesteps the known qcc restriction
+on `t+=VALUE` needing a compile-time constant (2026-07-30 note re:
+`dt_video`); matches upstream's own `dt_file` cadence EXACTLY so
+resulting snapshots land at genuinely matching times. Dumps `x y ux uy
+f` per rank, same 5 columns as upstream's `Data_all` (upstream's 6th
+column, tracer `c`, was never used in this session's analyses anyway).
+
+**Smoke-tested locally first** (own established convention) at
+fidelity=5, `t_end=3.5`, 4 oversubscribed ranks: confirmed
+`DataOurs_32_0_*.txt`, `DataOurs_32_1.0633_*.txt`,
+`DataOurs_32_2.1266_*.txt` all fired at the exact expected times before
+committing to the real L10 job. Cold-start params: `t_checkpoint=0.0,
+t_end=13.3` (rounds to `t_end_final~=13.36` per this fork's own
+period-alignment convention, giving 13 dump points at t=0, 1.06, ...,
+12.76 -- exactly matching upstream's own 13 snapshot times). Submitted
+as **job 5073228**, 64 ranks, 24h walltime (matching the original
+coldstart's cost order and this session's learned slow-node margin).
+
 ## 2026-08-18 (2) — extending our own fork's L10 checkpoint for a real
 multi-point percentile series, matching upstream's.
 
