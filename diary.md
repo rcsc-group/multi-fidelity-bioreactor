@@ -58,6 +58,30 @@ version as a short (~15 min budget) SLURM job (5056286) first, to
 validate restart + the new event fire correctly before the real 24h
 submission.
 
+**Job 5056286 (t_end=0.05) TIMED OUT with zero `TauSnap` output --
+root-caused as a smoke-test design bug, not a real problem with the
+mechanism.** Restart itself clearly succeeded (logstats/shear_stress.dat
+present, `i` correctly resumed near the checkpoint's own value, no
+crash) -- but this project's OWN established convention always rounds
+`t_end` UP to the next full-period boundary after a checkpoint
+restart (`n_per = (int)(t_end_abs/T_per_st)+1; t_dump_checkpoint =
+n_per*T_per_st;`, same logic already used for `dump_checkpoint`
+elsewhere). `t_checkpoint=13.36` happens to sit almost EXACTLY on a
+period boundary already, so `t_end_rel=0.05`'s rounding barely moved
+anything: computed sampling window
+`[t_sample_start, t_sample_end]=[13.360, 13.3612]`, only 0.0012 time
+units wide -- smaller than a SINGLE adaptive timestep (`dt~5.865e-5` at
+this settled state, but not necessarily fixed post-restart). Any one
+step bigger than 0.0012 skips the entire window outright. This is a
+flaw in my chosen smoke-test PARAMETER (didn't account for the
+period-rounding collapsing a "tiny t_end" into a near-zero sampling
+window), not evidence the `tau_percentile_dump` event itself is broken.
+Computed the rounding behavior explicitly in Python for several
+candidate `t_end_rel` values to find one with a safely wide window
+(`t_end_rel=0.7` -> window width 0.6086, ~10,000x a single timestep) --
+fixed and resubmitted as **job 5064851**, walltime bumped to 3h to
+allow for the ~1.2 additional simulated time units needed.
+
 ## 2026-08-18 — percentile figure reworked again per explicit user
 feedback: x-axis=time, 6 overlaid lines (2 codebases x 3 percentiles),
 not a single-instant snapshot comparison.
