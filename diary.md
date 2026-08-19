@@ -8,6 +8,78 @@ why it was done, what it found, and what it does and doesn't prove.
 Convention: newest entries at the top. Link run_ids / job_ids / commit
 hashes exactly, not "the run from earlier."
 
+## 2026-08-19 — multi-snapshot pointwise tau comparison (job 5073228
+completed, 7h46m, faster than the ~20h estimate): confirms the
+near-zero correlation is persistent, and reframes the "bulk mean
+relative error" finding as essentially meaningless noise, not a stable
+number.
+
+Computed tau (signed, proper `mu(f)` weighting) at all 13 matching
+snapshot times (t=0, 1.06, ..., 12.76) for BOTH codebases, using
+`DataOurs_*.txt` (new, from job 5073228) and upstream's existing
+`Data_all_*.txt` (free, from job 4961226's own `OUT_FILES`). Per-instant
+bulk mean |tau|, relative error, pointwise Pearson correlation, and
+sign-agreement fraction:
+
+| t | settled? | mean\|ours\| | mean\|up\| | relerr% | corr | sign% |
+|---|---|---|---|---|---|---|
+| 0.00 | no | 0 | 0 | -- | -- | 100.0 |
+| 1.06 | no | 1.84e-6 | 3.41e-7 | 440.0 | -0.0015 | 86.5 |
+| 2.13 | no | 1.15e-6 | 5.50e-8 | 1989.1 | 0.0204 | 84.9 |
+| 3.19 | no | 1.27e-6 | 9.54e-7 | 32.9 | -0.0203 | 86.4 |
+| 4.25 | no | 7.03e-7 | 7.90e-8 | 789.5 | 0.0195 | 85.3 |
+| 5.32 | no | 1.00e-6 | 1.19e-6 | -15.6 | -0.0205 | 86.2 |
+| 6.38 | no | 6.99e-7 | 9.41e-8 | 643.0 | 0.0060 | 83.3 |
+| 7.44 | no | 8.82e-7 | 1.13e-6 | -22.2 | -0.0121 | 86.1 |
+| 8.51 | no | 6.30e-7 | 1.37e-7 | 359.4 | 0.0245 | 85.9 |
+| 9.57 | no | 8.72e-7 | 1.01e-6 | -13.9 | -0.1456 | 86.3 |
+| 10.63 | YES | 5.54e-7 | 2.08e-7 | 166.7 | 0.0383 | 85.1 |
+| 11.70 | YES | 9.30e-7 | 9.20e-7 | 1.1 | 0.0880 | 85.3 |
+| 12.76 | YES | 4.23e-7 | 2.81e-7 | 50.3 | -0.0022 | 86.1 |
+
+("settled?" = past upstream's own ~16.25-cycle ramp completion at
+t=9.869; t=0 trivially agrees, both fields identical initial condition,
+not informative.)
+
+**Finding 1 -- CONFIRMED, not a fluke: pointwise correlation is
+essentially zero (never exceeds |0.15|) and sign agreement is stable
+at ~83-86%, across EVERY snapshot, in BOTH the pre-ramp window and the
+genuinely settled window.** Directly answers the "is this a snapshot or
+across all snapshots" question from earlier today: it holds across all
+of them. This rules out "the single instant we checked was unlucky" --
+the tau fields are persistently spatially uncorrelated between the two
+codebases throughout the entire run, not just at one moment.
+
+**Finding 2 -- the "bulk mean relative error" is NOT a stable number and
+should not be quoted as one.** It ranges from -22% to +1989% across
+just these 13 snapshots, flipping which codebase runs higher, with no
+visible trend -- even restricted to ONLY the 3 genuinely settled points
+(166.7%, 1.1%, 50.3%), it's wildly inconsistent. The earlier "~60% at
+one instant" finding (2026-08-18 (4) entry) wasn't wrong, but reporting
+it alone implied a stable bias that this data shows does not exist.
+
+**These are the same underlying phenomenon, not two separate findings:**
+since the tau fields are spatially uncorrelated, the domain mean of
+|tau| at any instant is dominated by wherever the (uncorrelated) large
+local gradients happen to sit at that moment -- so the bulk-mean ratio
+between two uncorrelated random-looking fields SHOULD swing wildly and
+unpredictably snapshot to snapshot. There is no fixed "bulk shear
+stress offset" between the codebases to quote as a single number; the
+honest description is that the shear-stress FIELDS do not spatially
+agree with each other at any point in this run, and any single-instant
+summary statistic (mean, max, a percentile, a ratio) built on top of
+that inherits the same instability.
+
+**Not yet investigated:** WHY the tau fields are spatially uncorrelated
+while velocity's bulk/aggregate behavior matches well (mean|u| ratio
+1.002 at the one previously-checked settled instant) -- the leading
+hypothesis remains a small phase/spatial misalignment between two
+independently-run, chaotic-but-similar simulations, amplified by
+differentiation, but this has not been directly tested (e.g., by
+checking whether a small time-shift or spatial cross-correlation-based
+alignment between the two velocity fields recovers a meaningful tau
+correlation). Flagged as the natural next step if this thread continues.
+
 ## 2026-08-18 (4) — pointwise shear-stress comparison at the single
 matching L10 instant: no real agreement, and a real data-coverage gap
 found (user's own instinct, correctly caught).
