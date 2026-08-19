@@ -8,6 +8,75 @@ why it was done, what it found, and what it does and doesn't prove.
 Convention: newest entries at the top. Link run_ids / job_ids / commit
 hashes exactly, not "the run from earlier."
 
+## 2026-08-19 (3) — MAJOR CORRECTION: the "liquid" mask (`f>0.5`) used
+for EVERY ours-vs-upstream comparison this session included ~71% dead
+solid-region cells, contaminating every statistic reported.
+
+User's advisor flagged "grey inert space" visible in the comparison
+video/gif as suspicious. Root-caused directly, not assumed: initial
+condition sets `fraction(f, y_fill - y)` -- a PLAIN HALF-SPACE fill
+(f=1 for all y<y_fill=0, f=0 for y>0), completely independent of the
+embedded bag boundary (`solid(cs, fs, intersection(a_nd-fabs(x),
+b_nd-fabs(y)))`, which only constrains velocity/the ACTUAL fluid
+domain to `fabs(y) < b_nd = 0.143`). Since VOF advection can't move
+fluid into/out of a solid cell (velocity is zero there by the embedded-
+boundary constraint), f=1 stays FROZEN at its initial value in all
+solid cells with y<0, for the ENTIRE run -- an inert, always-zero-
+velocity artifact that a naive `f>0.5` mask cannot distinguish from
+real liquid.
+
+**Verified directly using upstream's own real `cs` (solid indicator)
+column** (Data_all's 7th column, "solid") at t=12.7596: of 524,301
+cells with f>0.5, only 149,517 (28.5%) are inside the true fluid domain
+(cs>0.5); the other 374,784 (71.4%) are solid, frozen artifacts. True
+fluid domain y-range: [-0.142, 0.142], matching the analytic `b_nd`
+prediction almost exactly. Reconstructed an equivalent analytic mask
+for OUR fork (`fabs(x)<a_nd & fabs(y)<b_nd`, since our own periodic
+dump never captured `cs` -- see "not yet fixed" below) and got 149,493
+cells -- matching upstream's real count to within 0.02%, confirming the
+analytic reconstruction is correct.
+
+**Recomputed the key comparison numbers with the corrected mask, same
+snapshot (t=12.7596):**
+
+| statistic | naive mask (contaminated) | corrected mask (true fluid domain) |
+|---|---|---|
+| mean speed relative error | ~0.2-4% (varied by check) | **0.19%** |
+| tau pointwise correlation | -0.011 | **-0.015** (unchanged) |
+| tau sign agreement | 83-86% | **51.4%** (= coin flip) |
+
+**Interpretation:** velocity agreement is REAL and, if anything,
+slightly BETTER once the dead-cell dilution is removed (0.19% is a
+clean, meaningful number now, not diluted by trivially-matching
+zero-velocity cells on both sides). Shear stress agreement is WORSE
+than previously reported, not better: the 83-86% sign-agreement figure
+reported in the 2026-08-19 (earlier) entry was substantially inflated
+by contamination -- true sign agreement in the actual fluid domain is
+statistically indistinguishable from random (51.4% vs 50% expected by
+chance). The near-zero correlation finding is UNCHANGED by this
+correction (was already computed on distinct enough fields that the
+dead-cell contamination didn't swing it much) -- but the sign-agreement
+number, which had looked like a modest partial-agreement signal, was
+almost entirely a masking artifact.
+
+**NOT YET DONE (explicitly flagged, not silently skipped):**
+- Redo this correction across all 13 snapshots (only t=12.7596 checked
+  so far) to confirm the pattern holds throughout, the same way the
+  naive-mask numbers were checked across all 13 previously.
+- Re-render the comparison video/heatmap with the corrected mask --
+  the "grey inert space" the user's advisor flagged is still present
+  in `02_ours_vs_upstream_13snapshot_comparison.mp4` and
+  `03_ours_vs_upstream_single_instant_heatmap.png` as committed.
+- Add a `cs` column to our own fork's periodic dump event
+  (`out_files_ours` in `fork_l10_periodic/BioReactor_fork_periodic.c`)
+  so future checks don't need to rely on the analytic reconstruction.
+- Re-examine whether this same contamination affected the EARLIER
+  single-instant findings from the 2026-08-18 entries (the t=12.15
+  bulk-mean-tau/pointwise-tau work used the SAME naive `f>0.5` mask
+  pattern throughout `compare_upstream_l10_bulk.py` and the ad-hoc
+  check scripts) -- likely yes, given the mechanism is generic to any
+  script using `f>0.5` alone as "liquid."
+
 ## 2026-08-19 (2) — organized presentation deliverables into
 `docs/kimetal2024/ours_vs_upstream_study/`; user spotted a suspicious
 stationary vortex in our own tau field while reviewing the comparison
