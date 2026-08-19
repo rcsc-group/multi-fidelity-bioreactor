@@ -8,6 +8,40 @@ why it was done, what it found, and what it does and doesn't prove.
 Convention: newest entries at the top. Link run_ids / job_ids / commit
 hashes exactly, not "the run from earlier."
 
+## 2026-08-19 (2) — organized presentation deliverables into
+`docs/kimetal2024/ours_vs_upstream_study/`; user spotted a suspicious
+stationary vortex in our own tau field while reviewing the comparison
+video, ahead of a meeting.
+
+Built `05_summary_numbers_table.png` collecting every quantitative
+finding from this investigation (velocity pointwise stats, tau
+pointwise correlation/sign-agreement across all 13 snapshots, percentile
+sensitivity ratios, metric-correction/restart-sensitivity checks) into
+one table image. Copied the existing star-tracking video, the 13-
+snapshot comparison video, the static heatmap, and the percentile chart
+into the same folder with numbered, descriptive filenames + a README
+index, for a single place to find every presentation-ready asset.
+Confirmed none of these are caught by `.gitignore` (the existing
+`!docs/**/*.mp4`/`!docs/**/*.png` exceptions already cover this new
+subfolder).
+
+**User's own observation, not yet investigated:** watching
+`02_ours_vs_upstream_13snapshot_comparison.mp4`, noticed a vortex
+visible in OUR OWN tau field that appears to NOT move across snapshots,
+despite the underlying flow clearly evolving. User is heading into a
+meeting and will investigate further themselves -- flagged here so it
+isn't lost. Worth checking directly next: is this a genuine stationary
+feature (e.g. a persistent cut-cell artifact anchored to a fixed mesh
+location -- consistent with the already-established cut-cell-
+singularity hypothesis for tau's tail behavior) or a rendering/
+cropping artifact in the comparison script (e.g. the domain crop box
+being computed once from a global mask rather than per-frame, which
+could visually "pin" a bright spot if it happens to sit at a boundary
+of the crop). The crop IS computed once globally
+(`render_us_vs_upstream_video.py`, `global_mask` built by OR-ing all
+13 snapshots' masks together) -- worth ruling this out specifically
+before concluding it's physical.
+
 ## 2026-08-19 — multi-snapshot pointwise tau comparison (job 5073228
 completed, 7h46m, faster than the ~20h estimate): confirms the
 near-zero correlation is persistent, and reframes the "bulk mean
