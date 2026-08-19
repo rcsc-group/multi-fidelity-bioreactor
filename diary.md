@@ -1,5 +1,74 @@
 # Experiment diary
 
+## 2026-08-19 (5) — apples-to-apples fix: patched fork's ramp to match
+upstream exactly, submitted rerun (job 5083032).
+
+Per user's direct instruction ("we should do more of an apples to
+apples... any reason not to do bubble removal?"): patched
+`fork_l10_periodic/BioReactor_fork_periodic.c` (scratch, not
+production `src/BioReactor.c`) so the rocking-motion forcing is
+textually identical to upstream's for this comparison:
+- `t_change_st` overridden from `N_RAMP_CYCLES*T_per_st` to `30.0/T_bio`
+  (upstream's literal 30s, non-dimensionalized with this fork's own
+  T_bio -- verified equal to upstream's to <0.1% per the earlier
+  nondimensionalization check).
+- Acceleration event's Th/Th_d/Th_2d replaced with upstream's exact
+  single-harmonic linear-amplitude-ramp formula (phase unramped),
+  removing the smooth-step/multi-harmonic machinery for this run
+  (dead code for horizontal forcing, which depended on the removed
+  `alpha`, deleted too -- `omega_h=0` in params.json makes it inert
+  either way).
+- Added `cs` as a 6th column to the `out_files_ours` periodic dump so
+  the vortex/mask check no longer needs the analytic reconstruction.
+
+**Smoke-testing found a real, PRE-EXISTING, unrelated issue**: low-
+fidelity smoke tests (fidelity 5 and 7, `t_end=3`) diverge (pressure/
+tracer-solver residuals blow up within seconds -- `res` for the tracer
+scalar `c` growing from ~1e4 to ~1e9 within ~20 timesteps). Isolated
+via a controlled A/B: reverted ONLY the ramp patch (kept the `cs`
+column) and reran the identical smoke test -- it diverged too, *worse*
+(res ~6.8e6 vs ~8.5e4 for `c`), proving this is NOT caused by the ramp
+patch. The actual completed fidelity-10 production run (job 5073228)
+has ZERO such warnings in its log. Working explanation: the bag is
+only ~9 cells tall at fidelity 5 (0.286*32) vs ~293 at fidelity 10
+(0.286*1024) -- likely a cut-cell degeneracy in the embedded-boundary
+treatment at coarse resolution for this thin-aspect-ratio geometry.
+**Not yet root-caused further** (out of scope for this fix) but flagged
+as a real gap in this project's "low-fidelity smoke test" convention:
+fidelity 5-7 is NOT a safe smoke-test proxy for this specific driver/
+geometry, contrary to the Makefile's "LEVEL 4-5 for quick tests" default
+guidance.
+
+**Correct smoke test**: ran the actual patched binary at the real
+target fidelity (10) with a short `t_end=1.5` via a 45-min SLURM job
+(5082432, 64 ranks) instead. Timed out before reaching `t_end=1.5`
+(45 min budget was too short at this fidelity -- ~35 min/non-dim-time-
+unit based on job 5073228's 7h46m/13.3), but ran perfectly cleanly:
+zero convergence warnings, two periodic dumps written (`t=0`,
+`t=1.0633`) with no NaN, `f` and `cs` both correctly bounded in [0,1],
+velocity fields small and smoothly growing exactly as expected for a
+ramp only ~9% complete at `t=1.0633` (`t_change_st=11.61`) -- confirms
+the patch is correct and stable at production fidelity.
+
+**Submitted the real run**: job 5083032, `fork_l10_rampmatch`
+(fidelity=10, `t_end=13.3`, `t_checkpoint=0.0`, same 64 ranks/24h
+budget as 5073228). Once complete, redo
+`compute_us_vs_upstream_stats_corrected.py` against this data instead
+of `fork_l10_periodic`'s (which still has the old, unmatched ramp) --
+this should be the first genuinely apples-to-apples comparison of the
+whole investigation, both in liquid mask (real `cs` on both sides) and
+in forcing history (identical ramp).
+
+**On bubble removal (user's second question)**: no principled reason
+not to test it, but enabling it only on our fork would make the
+comparison LESS apples-to-apples given the strong evidence upstream's
+own runs kept it off (diary 2026-08-19 (4), point 3). Decision: hold
+off on a REMOVE_DROP=1 ablation (in both codes) until this ramp-matched
+run's result is in -- if the ramp fix alone resolves most of the
+disagreement, bubble removal probably isn't the driver; if not, it
+becomes the next isolated variable to test.
+
+
 ## 2026-08-19 (4) — advisor follow-up: ramp mechanism was mischaracterized
 (our fork has ZERO ramp, not a 3-cycle one); corrected-mask 13-snapshot
 redo shows "settled" agreement was largely a sampling-phase artifact;
