@@ -1,5 +1,121 @@
 # Experiment diary
 
+## 2026-08-19 (4) — advisor follow-up: ramp mechanism was mischaracterized
+(our fork has ZERO ramp, not a 3-cycle one); corrected-mask 13-snapshot
+redo shows "settled" agreement was largely a sampling-phase artifact;
+bubble-removal and dump/restart-vortex hypotheses checked.
+
+**1. Ramp mismatch, corrected.** Previously documented as "ours ramps
+over N_RAMP_CYCLES=3 cycles vs upstream's ~16.25-cycle (30s) linear
+ramp." That is WRONG for the actual comparison run (`fork_l10_periodic`,
+job 5073228): its `params.json` has `theta_max_prev == theta_max`
+(both `[7.0,0,0]`) for a genuine cold start of one condition. Our
+fork's ramp formula is `Ak = (1-alpha)*theta_max_prev + alpha*theta_max`
+-- when prev==current this is a no-op REGARDLESS of alpha. **Our fork
+therefore applies full `Th_max*sin(w_bio_st*t)` amplitude from t=0,
+with NO ramp at all**, in this dataset. The N_RAMP_CYCLES smooth-step
+mechanism only does something when a checkpoint restart changes
+condition (prev != current) -- it was never exercised here. Upstream
+genuinely ramps: `Th_max2 = (Th_max/t_change_st)*t` for `t<t_change_st`,
+literal `t_change=30s` physical, giving `t_change_st = 30/T_bio =
+11.6132` non-dim (recomputed directly from `T_bio=L_bio/U_bio`;
+corrects an earlier ~9.869 estimate used in prior entries and in
+`04_percentile_sensitivity_upstream.png`'s 3-snapshot selection --
+`t=10.633` was NOT actually past upstream's ramp, contrary to that
+figure's caption). This is a mismatch in the STARTUP TRANSIENT
+schedule of each driver's own rocking-motion forcing (how quickly Th(t)
+is spun up from rest) -- not a boundary-condition difference in the PDE
+sense; both codes use identical embedded-boundary/wall conditions.
+
+**2. Redid the 13-snapshot ours-vs-upstream stats with the corrected
+liquid mask** (`scripts/compute_us_vs_upstream_stats_corrected.py`;
+mask = `f>0.5 & cs>0.5` for upstream, `f>0.5 & |y|<0.143` for ours,
+per the 2026-08-19 (3) MAJOR CORRECTION entry). Using the CORRECT ramp
+cutoff (`t_change_st=11.6132`), only 2 of the 13 snapshots are actually
+past both codes' transients: `t=11.6963` and `t=12.7596`.
+
+| t | speed relerr | tau corr | tau sign agree |
+|---|---|---|---|
+| 11.6963 | 67.8% | +0.085 | 48.7% |
+| 12.7596 | 4.1% | -0.015 | 51.4% |
+
+Both are nominally "settled" (past upstream's own ramp), yet swing
+between 4% and 68% velocity relative error one snapshot apart (0.71
+non-dim time = 1 rocking period later), and tau correlation flips
+sign. **This retracts the earlier headline** ("velocity aggregate
+matches well, ~0.2-4%") -- that was based on cherry-picking whichever
+snapshot happened to look good, not a stable property. Sign agreement
+is a coin flip (48-51%) at every single one of the 13 snapshots, ramp
+window or not.
+
+**Working hypothesis, not yet confirmed:** this is consistent with a
+persistent PHASE LAG in the fluid's oscillatory RESPONSE (not the
+forcing signal itself, which is identically `Th_max*sin(w_bio_st*t)`
+in both codes post-ramp, so it can't drift) -- our fork's flow starts
+its transient from an unramped, instant-full-amplitude kick, while
+upstream's starts from a 16.25-cycle gentle ramp; these are different
+initial conditions for the same forced-oscillator problem and need not
+converge to the same phase point on the limit cycle, especially with
+slowly-decaying vortical memory. A small response-phase offset would
+produce ~0 relative error near a velocity peak and huge relative error
+near a zero-crossing -- exactly the alternating pattern seen. **Not
+yet tested**: cross-correlating a bulk scalar (e.g. mean |u| in the
+bag) between the two codes over a continuously-sampled window (the
+current 13 snapshots are spaced 1.4878 periods apart -- not dense
+enough to measure a phase lag, only enough to alias across it) would
+directly confirm or refute this. This is a candidate mechanism for
+the session's core mystery (tau/EDR decorrelation) that doesn't require
+either code to have a physics bug: instantaneous snapshot comparison
+between two differently-started oscillators is not a valid comparison
+method regardless of correctness, if their responses are phase-offset.
+
+**Decision: paused re-rendering `02_...mp4`/`03_...png` and the
+proposed ~8h cs-dump job** (both previously approved) until this is
+checked, since both would still be comparisons of a handful of
+essentially-randomly-phased snapshots and wouldn't resolve or avoid
+the problem -- would just produce a differently-misleading video.
+
+**3. Bubble/droplet removal (`REMOVE_DROP`), re-examined per advisor's
+concern that "disabled in the driver we have" != "disabled in the runs
+that made Fig 8."** Traced provenance: our "upstream" driver is NOT an
+anonymous scratch copy -- `BasiliskContactTest` repo has Minki Kim's
+own git commits (`mkkim400@gmail.com`) from 2025-03-31 through
+2025-05-07, authored directly, not third-hand. `REMOVE_DROP` is
+defined and set to `0` in EVERY commit of the embedded-boundary driver
+across that span (`32967e6` through `f0811e8`; our `upstream_l10`
+scratch driver is closest to `f0811e8`, 64 diff lines, all our own
+documented L10-comparison/sampling patches). This is materially
+stronger evidence than "one file says 0" -- it's consistent across
+6+ weeks of the author's own revisions. **Still cannot fully rule out**
+the advisor's concern: there is no record tying a specific commit to
+the exact run that generated the published Fig 8, and Main.tex's
+methods section does not mention bubble/droplet removal at all
+(silent either way). **New, unrelated lead surfaced during this check**:
+Minki's OWN repo later abandoned the embedded-boundary formulation
+entirely (`54e7533`, "no embed, new contact, no oxygen, no tracers",
+2025-05-07) in favor of a contact-angle method (`contact-embed.h`) --
+undocumented why. Worth understanding, since it suggests the embedded
+approach may have had a known limitation serious enough to move away
+from, though there's no evidence yet connecting that to our specific
+artifact.
+
+**4. Dump/restart as the vortex's cause: directly ruled out for the
+existing video's data.** The advisor's chain-of-reasoning was: if
+ramp mismatch traces to dump/restart, restart artifacts could also
+explain the vortex. Checked `fork_l10_periodic/rundir/params.json`
+(the source of `02_ours_vs_upstream_13snapshot_comparison.mp4`,
+where the vortex was observed): `t_checkpoint: 0.0` -- job 5073228 was
+a COLD START, never restored from a checkpoint at any point in its
+13.3 non-dim time. Dump/restart mechanics cannot be the source of the
+vortex in that specific video since no restart occurred. (The ramp
+finding above (#1) is unrelated to dump/restart -- it's about the
+`theta_max_prev`/`theta_max` interpolation being a no-op for identical
+values, which happens on cold starts too, not specifically a
+restart-induced bug.) The vortex's cause remains open; still worth the
+cs-dump investment to check against a real `cs` field rather than the
+analytic reconstruction, once snapshot comparability is sorted out.
+
+
 A lab notebook for numerical experiments on this project. Entries are
 written as the work happens, not reconstructed afterward. Each entry
 should let someone else (or future-us) reproduce the run and understand

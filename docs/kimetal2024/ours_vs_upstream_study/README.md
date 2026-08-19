@@ -15,20 +15,31 @@ presentation-ready outputs.
 | `04_percentile_sensitivity_upstream.png` | Upstream's 99th/99.9th/100th percentile of \|τ\| across its 3 real settled snapshots -- shows the sharp blowup at the top of the tail. |
 | `05_summary_numbers_table.png` | All key quantitative findings in one table. |
 
-## Headline finding
+## Headline finding (retracted 2026-08-19, see diary)
 
-Velocity's *aggregate* behavior (mean speed, bulk mean) matches well
-between codebases (~0.2-4% relative error). Shear stress does not:
-pointwise correlation between the two τ fields is essentially zero
-(-0.15 to +0.09) at **every one of the 13 checked snapshots** spanning
-the whole run, with 14-17% of cells disagreeing on the sign of τ. Any
-single "bulk mean τ error" number is unstable (ranges -22% to +1989%
-across snapshots) and should not be quoted as a fixed bias -- the real
-finding is the decorrelation itself, not a stable offset.
+**The earlier "velocity matches well" claim below does not hold up.**
+Every prior statistic here was computed with a contaminated liquid
+mask (~71% dead solid cells) and with 3 of the 13 snapshots
+mislabeled as "ramp-settled" when they were not (upstream's real ramp
+completes at `t=11.6132`, not `~9.87`). Once corrected, only 2 of the
+13 snapshots are valid ours-vs-upstream comparison points at all
+(`t=11.6963`, `t=12.7596`), and between those two, velocity relative
+error swings 4%->68% and τ correlation flips sign. Shear-stress sign
+agreement is a coin flip (48-51%) at every snapshot checked, settled
+or not. Working hypothesis: a persistent phase lag in the fluid's
+oscillatory *response* (not the forcing, which is identical in both
+codes) between our fork (zero ramp -- see diary, `theta_max_prev`
+equals `theta_max` for this run, making the ramp mechanism a no-op)
+and upstream (genuine 16.25-cycle ramp) -- not yet confirmed. See
+`diary.md`, 2026-08-19 (4).
 
-**Open thread (2026-08-19):** a vortex visible in our own τ field
-appears NOT to move across snapshots where the underlying flow clearly
-does -- flagged as suspicious, not yet investigated.
+**Open thread:** a vortex visible in our own τ field appears NOT to
+move across snapshots where the underlying flow clearly does --
+flagged as suspicious, not yet investigated. Ruled out dump/restart as
+its cause (the source run never restarted). Cannot yet rule out that
+it's a rendering artifact of the analytic liquid-mask reconstruction
+our fork's dumps require (we don't carry a `cs` column like upstream
+does) rather than a genuine flow feature.
 
 See `diary.md` entries dated 2026-08-15 through 2026-08-19 for full
 derivations, job IDs, and the mechanism checks that were ruled out
