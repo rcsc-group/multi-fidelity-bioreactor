@@ -1,5 +1,51 @@
 # Experiment diary
 
+## 2026-08-19 (6) — upgraded to full-video cadence on BOTH codes; cancelled
+5083032, resubmitted as 5083674 (fork) + 5083678 (upstream).
+
+User asked for a full video comparison, not just 13 sparse snapshots.
+That requires BOTH codes to dump densely, not just ours -- upstream's
+own OUT_FILES was still at the old 13-snapshot cadence (`dt_file=
+0.1519*7=1.0633`), so a "full video" of just our side against
+upstream's existing sparse data wouldn't actually be denser on the
+upstream side. Cancelled 5083032 (only 52min in, ~1% of an 8h run,
+negligible loss) and patched cadence to 12 frames/rocking-cycle
+(`T_per_st/12 = 0.059554860271402186`, literal since `dt_file` is a
+compile-time const evaluated before `T_per_st` exists) on BOTH:
+- `fork_l10_rampmatch/BioReactor_fork_periodic.c`: `out_files_ours`
+  event, same file.
+- `upstream_l10/BioReactor_upstream_L10.c` (copied to a new
+  `upstream_l10_video/` scratch dir to keep the original 13-snapshot
+  run's data intact): `dt_file` constant, feeds both `out_files` and
+  `out_files_initial` (the one that actually fires in our t_end=13.3
+  window, since `out_files`/`movies_output` are gated behind
+  `t=t_mix`~357, never reached).
+
+Over `t_end=13.3` this is ~224 dumps/side x 64 ranks = ~14,300 files
+per side, ~28,600 total -- noted as a real file-count cost, not hidden.
+Did not re-smoke-test at short duration before submitting (the dump
+*mechanism* is unchanged and already validated at f10 in job 5082432;
+only the cadence changed) -- risk is I/O overhead extending wall-clock,
+not correctness; will check early files once each job is a few hours in.
+
+Submitted: **5083674** (fork, ramp-matched + video cadence, replaces
+5083032) and **5083678** (upstream, video cadence, new
+`upstream_l10_video/` dir so the original `upstream_l10/` 13-snapshot
+data used for the corrected-mask stats stays untouched). Both 64
+ranks/24h budget.
+
+**Clarifying the "divergence" from entry (5)** (user asked, didn't
+follow it): that was a LOW-FIDELITY (5, 7) *smoke test* -- a cheap
+pre-flight check at a small grid, run BEFORE committing to the real
+8-hour fidelity-10 job, specifically to catch bugs cheaply. That cheap
+check's own numerics blew up (pressure/tracer solver residuals growing
+without bound) for reasons unrelated to the ramp patch (confirmed via
+a controlled A/B, and confirmed absent in the real fidelity-10 runs).
+It was a pre-flight test failure, not something wrong with any of the
+actual comparison data -- just meant the low-fidelity shortcut wasn't
+usable, so validation was done directly at full fidelity instead.
+
+
 ## 2026-08-19 (5) — apples-to-apples fix: patched fork's ramp to match
 upstream exactly, submitted rerun (job 5083032).
 
