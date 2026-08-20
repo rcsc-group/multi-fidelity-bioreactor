@@ -1,5 +1,71 @@
 # Experiment diary
 
+## 2026-08-20 (9) — MPI x checkpoint matrix at L8: submitted after finding
+upstream's own build convention is OpenMP (not MPI, contradicting how
+every upstream run this session was actually built) and fixing a real
+segfault bug.
+
+**User's proxy check confirmed a real methodological gap**: grepped
+every commit of Minki Kim's driver (`BasiliskContactTest`) for
+`_MPI`/`MPI_`/`mpi.h` -- zero hits, ever. His own `BioReactor.sh`
+compiles with plain `qcc -fopenmp` (`OMP_NUM_THREADS=2`), never
+`mpicc`/`-D_MPI=1`. Every upstream run this session (including the one
+behind the breakthrough L10 result) used MPI (64 ranks) -- that never
+matched Kim's own build. Confirmed our own project's default (non-MPI)
+build already uses `-fopenmp` via `Makefile`'s `CFLAGS`, so "MPI off"
+on our side already means OpenMP, no separate serial variant needed.
+User: uninterested in an upstream-MPI variant at all -- one upstream
+reference (OpenMP, matching Kim exactly) is enough.
+
+**Matrix finalized** (L8, not L10, per user -- cheaper first pass; 6
+logical configurations, 7 job submissions since "ours vanilla" and
+cell {MPI=off, restart=off} are the same configuration, confirmed with
+user rather than assumed, since the code is deterministic and running
+identical settings twice would waste compute for zero new information):
+1. upstream, OpenMP, fresh, θ=7°/32.5rpm
+2/3.3. ours, OpenMP (no MPI), fresh, θ=7° -- "ours vanilla"
+3.1. ours, MPI (16 ranks), fresh, θ=7°
+3.2. ours, MPI, restart (θ=3°→7°, 2 segments)
+3.4. ours, OpenMP, restart (θ=3°→7°, 2 segments)
+
+Also added the per-cell field dump (x y ux uy f cs, same convention as
+`fork_l10_rampmatch`) to a scratch copy of `src/BioReactor.c`
+(`BioReactor_restart_dump.c`) so a heatmap/video comparison of the
+checkpoint mechanism is possible from this matrix's own data, per the
+user's earlier ask -- compiled both an MPI and an OpenMP variant.
+Needed the per-timestep-check workaround (not `t+=dt`) for the dump
+event's cadence, same Basilisk limitation already documented above
+`movies_output`'s `dt_video` (repeat interval must be a compile-time
+constant; `T_per_st` is runtime).
+
+**Found and fixed a real bug before wasting a full run on it**: the
+upstream OpenMP build segfaulted immediately. Root cause: the driver
+has NO `mkdir`/`system()` calls for its output directories
+(`Data_all`, `Data_specific`, `Fig_vor/vol/tr/oxy`) -- it silently
+assumes they already exist, matching Kim's own `BioReactor.sh` (which
+explicitly `mkdir`s them before running). Our own `upstream_l10`
+scratch dir happened to have them already from earlier session work;
+this fresh L8 directory didn't. Fixed by pre-creating them. Also
+chased a false alarm: an initial "pathologically slow" reading (10min
+without finishing t_end=1.5) turned out to be from testing on my own
+1-CPU interactive shell allocation with OMP_NUM_THREADS=4-8 --
+massive oversubscription, not a real problem. Rechecked via a proper
+SLURM submission with a real dedicated 8-CPU allocation: reached
+t=6.43 in 45 wall-clock minutes (SLURM walltime hit, not a crash) --
+slower than MPI but perfectly reasonable, no convergence warnings, no
+NaN, physically sane oscillating values throughout.
+
+**Submitted** (walltime bumped to 4h after the above): 5114621
+(upstream openmp), 5114622 (ours fresh MPI), 5114623 (ours fresh
+openmp), 5114624/5114626 (ours MPI restart chain, seg0/seg1,
+`afterok` dependency), 5114625/5114627 (ours openmp restart chain,
+seg0/seg1, `afterok` dependency). Once complete: build the
+heatmap/video comparison for the checkpoint mechanism (user's earlier
+ask) using the new per-cell dumps, and compare KPIs across all 5
+distinct configurations to isolate the effect of MPI vs OpenMP and
+restart vs fresh, independently.
+
+
 ## 2026-08-20 (8) — phase-mismatch check on the restart-recovery test,
 per user's explicit prompt ("remember there might be a phase mismatch
 because of different initial conditions"). Refines entry (7): no real
