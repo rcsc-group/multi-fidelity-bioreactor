@@ -1,5 +1,33 @@
 # Experiment diary
 
+## 2026-08-20 (5) — restart-recovery smoke test passed; noted a filesystem
+oddity, not investigated further (out of scope, non-blocking).
+
+Job 5105243 (θ=3°, fidelity 7, n_mix_cycles=5) completed cleanly in
+1m19s: zero convergence warnings, sensible `results.json`
+(tau_95/98/100_qss all small and physically reasonable for a
+partially-ramped low-amplitude case), `checkpoint.dump` written.
+Confirms fidelity 7 is safe for Kim's exact thin-bag geometry
+(b=0.03575) -- the earlier scratch-driver divergence at low fidelity
+was NOT a general property of this geometry at any low fidelity, or
+this run would have shown it too. Proceeding with the real θ=3°→7°
+restart chain + fresh θ=7° baseline.
+
+**Odd, unexplained, not chased further**: the run's output
+(`params.json`, `normf.dat`, `results.json`, `checkpoint.dump`, byte-
+identical) landed in BOTH `multi-fidelity-bioreactor/runs/30e4ca65/`
+(expected) AND `BioReactor3D/dev/rocking-bioreactor-2d/runs/30e4ca65/`
+(not expected -- a different repo entirely). Neither directory is a
+symlink to the other (`readlink -f` on both resolves to themselves;
+`ls -id` on the two `runs/` dirs gives different inode numbers).
+Likely an NFS/auto-mount path-aliasing quirk in how `/oscar/data/
+dharri15/eaguerov/Github/` is mounted, surfaced by `Path.resolve()` in
+`simulate.py`'s `submit_slurm()` -- not investigated further since the
+data is identical in both locations and correct, and the two repos
+being connected somehow isn't relevant to today's question. Flagging
+for whoever next touches `scripts/simulate.py`'s path handling.
+
+
 ## 2026-08-20 (4) — nondim diff plots (by U0/rho*U0^2, not instantaneous
 mean) + set up a checkpoint-restart quasi-steady-state recovery test
 using the REAL production pipeline (chain.py) this time.
