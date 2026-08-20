@@ -6,7 +6,8 @@ frames/rocking-cycle (was 13 sparse snapshots at ~1.5 cycles apart).
 
 Streams frame-by-frame (never holds more than one timestep's fields in
 memory) since there are ~225 snapshots x 2 codes x 1024^2 cells. Writes:
-  - a full video (all matched frames)
+  - fields video: |u| and tau, ours vs upstream (2x2, colorbar per row)
+  - relerr video: relative error of |u|, of tau (1x2, own colorbar each)
   - a per-snapshot stats CSV (for checking whether "settled" agreement
     is stable now, and for the phase-lag diagnostic diary.md flagged)
 
@@ -30,6 +31,7 @@ T_CHANGE_ST = 11.6132  # upstream's real ramp-completion time (30/T_bio); see di
 OURS_DIR = "/oscar/scratch/eaguerov/tmp/fork_l10_rampmatch/rundir"
 UPSTREAM_DIR = "/oscar/scratch/eaguerov/tmp/upstream_l10_video/rundir/Data_all"
 OUT_VIDEO = "/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor/docs/kimetal2024/ours_vs_upstream_study/04_ours_vs_upstream_rampmatched_video.mp4"
+OUT_VIDEO_RELERR = "/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor/docs/kimetal2024/ours_vs_upstream_study/07_ours_vs_upstream_rampmatched_relerr_video.mp4"
 OUT_CSV = "/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor/experiments/docs/rampmatched_comparison_stats.csv"
 
 rho_w, mu_w = 1.0e3, 1.0e-3
@@ -133,25 +135,47 @@ def crop(a):
 # ── Color scale from a handful of settled frames (cheap, avoids a full pass) ──
 sample_ts = [t for t, _ in pairs if t >= T_CHANGE_ST][:4]
 speed_scale_vals, tau_scale_vals = [], []
+diff_speed_samples, diff_tau_samples = [], []
 for t1 in sample_ts:
     t2 = dict(pairs)[t1]
+    s1, tau1, m1 = fields_and_mask(t1, is_upstream=False)
     s2, tau2, m2 = fields_and_mask(t2, is_upstream=True)
     speed_scale_vals.append(np.nanmean(s2[m2]))
     tau_scale_vals.append(np.nanmean(np.abs(tau2[m2])))
+    valid = m1 & m2
+    diff_speed_samples.append(np.abs(s1[valid] - s2[valid]) / np.nanmean(s2[m2]))
+    diff_tau_samples.append(np.abs(tau1[valid] - tau2[valid]) / np.nanmean(np.abs(tau2[m2])))
 speed_scale = np.mean(speed_scale_vals)
 tau_scale = np.mean(tau_scale_vals)
 speed_max = 2.0 * speed_scale
 tau_lim = 1.5 * tau_scale
+diff_speed_max = np.percentile(np.concatenate(diff_speed_samples), 99)
+diff_tau_max = np.percentile(np.concatenate(diff_tau_samples), 99)
 print(f"speed_scale={speed_scale:.4g} tau_scale={tau_scale:.4g}")
+print(f"diff_speed_max={diff_speed_max:.4g} diff_tau_max={diff_tau_max:.4g}")
 
 # ── Stream: compute stats + render a frame for every matched pair ──
 BG = "#fcfcfb"
+TEXT = "#0b0b0b"
 CMAP_FIELD = "cividis"
 CMAP_TAU = "RdBu_r"
+CMAP_ERR = "magma"
 BOX_COLOR = "#0b0b0b"
 
+
+def style_ax(ax, h, w):
+    ax.set_facecolor(BG)
+    ax.add_patch(plt.Rectangle((-0.5, -0.5), w - 1, h - 1, fill=False,
+                                 edgecolor=BOX_COLOR, linewidth=1.2))
+    ax.set_xticks([]); ax.set_yticks([])
+    for spine in ax.spines.values():
+        spine.set_visible(False)
+    ax.set_xlim(-2, w + 1)
+    ax.set_ylim(-2, h + 1)
+
+
 tmpdir = Path(tempfile.mkdtemp(prefix="rampmatched_frames_"))
-frame_paths = []
+tmpdir_err = Path(tempfile.mkdtemp(prefix="rampmatched_relerr_frames_"))
 rows_out = ["t,n_valid,speed_relerr,tau_corr,tau_sign_agree,tau_bulk_mean_relerr,ramp_confounded"]
 
 for i, (t1, t2) in enumerate(pairs):
@@ -159,8 +183,12 @@ for i, (t1, t2) in enumerate(pairs):
     s2, tau2, m2 = fields_and_mask(t2, is_upstream=True)
     valid = m1 & m2
     n_valid = int(valid.sum())
+    diff_speed = np.full((N, N), np.nan)
+    diff_tau = np.full((N, N), np.nan)
     if n_valid > 0:
-        speed_relerr = np.mean(np.abs(s1[valid] - s2[valid])) / speed_scale
+        diff_speed[valid] = np.abs(s1[valid] - s2[valid]) / speed_scale
+        diff_tau[valid] = np.abs(tau1[valid] - tau2[valid]) / tau_scale
+        speed_relerr = np.mean(diff_speed[valid])
         a, b = tau1[valid], tau2[valid]
         corr = np.corrcoef(a, b)[0, 1]
         sign_agree = np.mean(np.sign(a) == np.sign(b))
@@ -172,33 +200,49 @@ for i, (t1, t2) in enumerate(pairs):
 
     s1c, s2c, tau1c, tau2c = crop(s1), crop(s2), crop(tau1), crop(tau2)
     h, w = s1c.shape
-    fig, axes = plt.subplots(2, 2, figsize=(9, 3.4))
+
+    # -- fields frame (2x2, colorbar per row) --
+    fig, axes = plt.subplots(2, 2, figsize=(9.6, 3.4))
     fig.patch.set_facecolor(BG)
-    panels = [
-        (s1c, CMAP_FIELD, dict(vmin=0, vmax=speed_max)),
-        (s2c, CMAP_FIELD, dict(vmin=0, vmax=speed_max)),
-        (tau1c, CMAP_TAU, dict(vmin=-tau_lim, vmax=tau_lim)),
-        (tau2c, CMAP_TAU, dict(vmin=-tau_lim, vmax=tau_lim)),
+    row_specs = [
+        ("|u|", [s1c, s2c], CMAP_FIELD, dict(vmin=0, vmax=speed_max)),
+        ("τ", [tau1c, tau2c], CMAP_TAU, dict(vmin=-tau_lim, vmax=tau_lim)),
     ]
-    for ax, (field, cmap, kw) in zip(axes.flat, panels):
-        ax.set_facecolor(BG)
-        ax.imshow(field, origin="lower", cmap=cmap, aspect="equal", **kw)
-        ax.add_patch(plt.Rectangle((-0.5, -0.5), w - 1, h - 1, fill=False,
-                                     edgecolor=BOX_COLOR, linewidth=1.2))
-        ax.set_xticks([]); ax.set_yticks([])
-        for spine in ax.spines.values():
-            spine.set_visible(False)
-        ax.set_xlim(-2, w + 1)
-        ax.set_ylim(-2, h + 1)
-    axes[0, 0].set_title("ours", fontsize=10, color="#52514e")
-    axes[0, 1].set_title("upstream", fontsize=10, color="#52514e")
-    axes[0, 0].set_ylabel("|u|", fontsize=12, color="#0b0b0b", rotation=0, labelpad=16, va="center")
-    axes[1, 0].set_ylabel("τ", fontsize=12, color="#0b0b0b", rotation=0, labelpad=16, va="center")
-    fig.tight_layout()
+    for r, (ylabel, (f1, f2), cmap, kw) in enumerate(row_specs):
+        im = None
+        for c, field in enumerate([f1, f2]):
+            ax = axes[r, c]
+            style_ax(ax, h, w)
+            im = ax.imshow(field, origin="lower", cmap=cmap, aspect="equal", **kw)
+            if r == 0:
+                ax.set_title(["ours", "upstream"][c], fontsize=10, color="#52514e")
+        axes[r, 0].set_ylabel(ylabel, fontsize=12, color=TEXT, rotation=0, labelpad=16, va="center")
+        cbar = fig.colorbar(im, ax=list(axes[r, :]), fraction=0.035, pad=0.02)
+        cbar.ax.tick_params(labelsize=7, color=TEXT, labelcolor=TEXT)
+        cbar.outline.set_visible(False)
     frame_path = tmpdir / f"frame_{i:04d}.png"
     fig.savefig(frame_path, dpi=140, facecolor=fig.get_facecolor())
     plt.close(fig)
-    frame_paths.append(frame_path)
+
+    # -- relerr frame (1x2, own colorbar each) --
+    diff_speed_c, diff_tau_c = crop(diff_speed), crop(diff_tau)
+    fige, axese = plt.subplots(1, 2, figsize=(9.6, 2.6))
+    fige.patch.set_facecolor(BG)
+    err_specs = [
+        ("rel. error |u|", diff_speed_c, dict(vmin=0, vmax=diff_speed_max)),
+        ("rel. error τ", diff_tau_c, dict(vmin=0, vmax=diff_tau_max)),
+    ]
+    for ax, (label, field, kw) in zip(axese, err_specs):
+        style_ax(ax, h, w)
+        im = ax.imshow(field, origin="lower", cmap=CMAP_ERR, aspect="equal", **kw)
+        ax.set_title(label, fontsize=10, color="#52514e")
+        cbar = fige.colorbar(im, ax=ax, fraction=0.04, pad=0.02)
+        cbar.ax.tick_params(labelsize=7, color=TEXT, labelcolor=TEXT)
+        cbar.outline.set_visible(False)
+    frame_path_err = tmpdir_err / f"frame_{i:04d}.png"
+    fige.savefig(frame_path_err, dpi=140, facecolor=fige.get_facecolor())
+    plt.close(fige)
+
     if i % 20 == 0:
         print(f"[{i+1}/{len(pairs)}] t={t1:.4f} speed_relerr={speed_relerr*100:.1f}% tau_corr={corr:+.3f} sign_agree={sign_agree*100:.1f}%")
 
@@ -214,3 +258,12 @@ subprocess.run([
     OUT_VIDEO,
 ], check=True)
 print(f"Saved video to {OUT_VIDEO}")
+
+subprocess.run([
+    "ffmpeg", "-y", "-framerate", "12",
+    "-i", str(tmpdir_err / "frame_%04d.png"),
+    "-vf", "pad=ceil(iw/2)*2:ceil(ih/2)*2",
+    "-c:v", "libx264", "-pix_fmt", "yuv420p",
+    OUT_VIDEO_RELERR,
+], check=True)
+print(f"Saved video to {OUT_VIDEO_RELERR}")

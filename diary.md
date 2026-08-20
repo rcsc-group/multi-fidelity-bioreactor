@@ -1,5 +1,28 @@
 # Experiment diary
 
+## 2026-08-20 (2) — user wanted videos, not just static figures; added
+colorbars to both and a new relerr video (07).
+
+Two rounds of figure feedback after the breakthrough: first "two
+figures of 2x2, with colorbars" (fields 2x2 + relerr 1x2, both static
+-- built as `05`/`06`), then "two figures? i wanted two videos" --
+the static request was a miscommunication; what was actually wanted
+was the fields video (already existed as `04`) PLUS an animated
+relerr counterpart, both with colorbars now that ranges matter to the
+user ("i dont know the ranges" -- this reverses the much earlier
+"no colorbar" instruction, but that was specifically about the video
+when it was still just a qualitative sanity check; now that the video
+is the actual evidence being presented, ranges matter).
+
+Re-rendered `04` with a colorbar per row (fixed scale across all 224
+frames, computed the same way as the static heatmap) and added `07`
+(new relerr video, 1x2, own colorbar each, same fixed-scale approach).
+Kept `05`/`06` as single-frame stills of the same data rather than
+deleting them -- useful for slides/print where a video doesn't work,
+not a stale artifact this time since they show the identical data as
+the videos.
+
+
 ## 2026-08-20 — BREAKTHROUGH: apples-to-apples run (jobs 5083674/5083678)
 shows near-perfect ours-vs-upstream agreement in both velocity and
 shear stress. The "vortex" was confirmed a mask artifact, not physics.

@@ -12,9 +12,10 @@ presentation-ready outputs.
 | `01_star_max_shear_stress_ours_L10.mp4` | Our own fork, L10, τ field with a star marking the per-frame argmax(τ) location. No upstream equivalent exists at this time window (t=20.65-22.45). |
 | `02_percentile_sensitivity_upstream.png` | Upstream's 99th/99.9th/100th percentile of \|τ\| across its 3 real settled snapshots -- shows the sharp blowup at the top of the tail. |
 | `03_summary_numbers_table.png` | Pointwise |u|/τ diff by percentile, apples-to-apples data. P100's τ column (~2e3%) is the known cut-cell singularity (grows unboundedly with resolution, documented separately in `diary.md`), not a residual disagreement -- P50/P90/P99 are the numbers that matter. |
-| `04_ours_vs_upstream_rampmatched_video.mp4` | The real answer: ours vs upstream, \|u\| and τ, both using their own real liquid mask, ramp forcing identical on both sides, 224 frames across the full run (t=0 to 13.3). |
-| `05_ours_vs_upstream_rampmatched_heatmap.png` | Static version at one settled instant (t=12.7447): \|u\| and τ, ours vs upstream, 2x2 with a colorbar per row -- same apples-to-apples data as `04`. |
-| `06_ours_vs_upstream_rampmatched_relerr.png` | Relative error of \|u\| and of τ at the same instant, each with its own colorbar. |
+| `04_ours_vs_upstream_rampmatched_video.mp4` | The real answer: ours vs upstream, \|u\| and τ, both using their own real liquid mask, ramp forcing identical on both sides, 2x2 with a colorbar per row, 224 frames across the full run (t=0 to 13.3). |
+| `05_ours_vs_upstream_rampmatched_heatmap.png` | Single-frame still of `04`'s data (t=12.7447) -- same layout/colorbars, for contexts where a video doesn't work (slides, print). |
+| `06_ours_vs_upstream_rampmatched_relerr.png` | Single-frame still of `07`'s data (t=12.7447). |
+| `07_ours_vs_upstream_rampmatched_relerr_video.mp4` | Relative error of \|u\| and of τ, animated across the same 224 frames as `04`, each with its own fixed colorbar. |
 
 **Removed, superseded (2026-08-20):** the old 13-snapshot video and
 single-instant heatmap used the mismatched ramp and a contaminated
