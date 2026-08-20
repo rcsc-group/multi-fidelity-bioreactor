@@ -1,5 +1,49 @@
 # Experiment diary
 
+## 2026-08-20 (8) — phase-mismatch check on the restart-recovery test,
+per user's explicit prompt ("remember there might be a phase mismatch
+because of different initial conditions"). Refines entry (7): no real
+phase mismatch, but a genuine ~6% amplitude gap (smaller than the
+noisy 17% "_qss" figure suggested).
+
+Caught my own methodological error mid-check: first attempt
+(`check_restart_recovery_phase_lag.py`, early version) cross-correlated
+the two tails aligned by "time since each run's OWN ramp start" and
+found a poor zero-lag correlation (-0.14) with a best match only at a
+~1.45-cycle shift. That's the WRONG clock: the forcing is
+`Th_max*sin(w_bio_st*t)` in ABSOLUTE simulation time, and the two
+ramps start at different absolute times (baseline t=0, restart
+t=t_checkpoint~11.46) that aren't an integer number of periods apart
+-- comparing by "time since ramp start" bakes in that arithmetic
+offset and looks exactly like a dynamical phase lag without being one.
+
+**Redone correctly**: phase-binned (16 bins) MEAN tau_95 over each
+run's settled tail, folded by ABSOLUTE t mod T_per_nd (matching
+`compare_restart_recovery.py`'s convention, T_per_nd=0.6073 at
+theta=7). Result: **correlation between the two phase-binned profiles
+is already maximal at zero shift (0.766, best shift searched = 0
+bins)** -- no phase mismatch once compared on the correct clock. The
+two profiles track the same shape (same peaks/dips across phase, see
+`experiments/figures/restart_recovery_phase_profile.png`) with the
+restart-recovered run sitting a small, roughly uniform ~6.3% above the
+fresh baseline at nearly every phase bin -- an amplitude offset, not a
+phase-shift artifact.
+
+**This also revises entry (7)'s number**: averaging tau_95 within
+phase bins (~15 samples/bin) is far less noisy than the single-window
+median `results.json` reports (`tau_95_qss`, which showed a ~17% gap)
+-- the true gap, once averaged properly, looks closer to ~6%. Both the
+transient-overshoot finding (raw settling plot, entry 7) and this
+phase-locked ~6% residual offset stand together: restart-recovery
+converges to the SAME limit cycle in shape and phase, with a small
+persistent amplitude difference that could be genuine (finite restart
+transient not fully decayed even after ~9 cycles) or within this
+system's inherent cycle-to-cycle noise floor (the error bars in the
+phase profile are much larger than the mean-to-mean gap) -- not
+resolved further, would need more cycles or more repeat runs to tell
+apart definitively.
+
+
 ## 2026-08-20 (6) — self-caught bug: H_bio missing its factor of 2 in
 EVERY postprocessing script written this session. Fixed; core findings
 unaffected, absolute scale values (U0/P0, colorbar numbers) corrected.
