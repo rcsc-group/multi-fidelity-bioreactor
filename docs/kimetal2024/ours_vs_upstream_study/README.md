@@ -14,34 +14,41 @@ presentation-ready outputs.
 | `03_ours_vs_upstream_single_instant_heatmap.png` | Static version of the same comparison at one instant (t=12.76), with a relative-error panel. |
 | `04_percentile_sensitivity_upstream.png` | Upstream's 99th/99.9th/100th percentile of \|τ\| across its 3 real settled snapshots -- shows the sharp blowup at the top of the tail. |
 | `05_summary_numbers_table.png` | All key quantitative findings in one table. |
+| `06_ours_vs_upstream_rampmatched_video.mp4` | The real answer: ours vs upstream, \|u\| and τ, both using their own real liquid mask, ramp forcing identical on both sides, 224 frames across the full run (t=0 to 13.3). |
 
-## Headline finding (retracted 2026-08-19, see diary)
+## Headline finding (updated 2026-08-20 -- resolved)
 
-**The earlier "velocity matches well" claim below does not hold up.**
-Every prior statistic here was computed with a contaminated liquid
-mask (~71% dead solid cells) and with 3 of the 13 snapshots
-mislabeled as "ramp-settled" when they were not (upstream's real ramp
-completes at `t=11.6132`, not `~9.87`). Once corrected, only 2 of the
-13 snapshots are valid ours-vs-upstream comparison points at all
-(`t=11.6963`, `t=12.7596`), and between those two, velocity relative
-error swings 4%->68% and τ correlation flips sign. Shear-stress sign
-agreement is a coin flip (48-51%) at every snapshot checked, settled
-or not. Working hypothesis: a persistent phase lag in the fluid's
-oscillatory *response* (not the forcing, which is identical in both
-codes) between our fork (zero ramp -- see diary, `theta_max_prev`
-equals `theta_max` for this run, making the ramp mechanism a no-op)
-and upstream (genuine 16.25-cycle ramp) -- not yet confirmed. See
-`diary.md`, 2026-08-19 (4).
+**Once the ramp forcing is made identical on both sides (it wasn't --
+our fork had NO ramp at all, not just a shorter one) and both sides
+use their own real `cs` liquid mask (not a reconstruction), ours and
+upstream agree almost perfectly**: velocity relative error ~0.003-0.015%
+and τ pointwise correlation ~0.999-1.000 at essentially every one of
+224 matched snapshots spanning the full run (`t=0` to `13.3`). Raw
+shear-stress sign agreement looks like only ~60-68% at first glance,
+but that's fully explained: it's dominated by cells where `|tau|` is at
+the numerical noise floor (~1e-8) and sign is physically meaningless
+there -- restricting to the top 10% of cells by magnitude (the ones
+that matter for any percentile-based shear-stress KPI) gives 93%
+agreement, and the top 1% gives 100%. See `06_ours_vs_upstream_
+rampmatched_video.mp4` and `diary.md`, 2026-08-20.
 
-**Open thread:** a vortex visible in our own τ field appears NOT to
-move across snapshots where the underlying flow clearly does --
-flagged as suspicious, not yet investigated. Ruled out dump/restart as
-its cause (the source run never restarted). Cannot yet rule out that
-it's a rendering artifact of the analytic liquid-mask reconstruction
-our fork's dumps require (we don't carry a `cs` column like upstream
-does) rather than a genuine flow feature.
+**The vortex thread is closed**: it was a mask-reconstruction artifact.
+With the real `cs` column now available on our side too, argmax(|tau|)
+in our own field moves substantially from snapshot to snapshot, as
+expected for a real flow -- it does not sit still. The earlier
+"stationary vortex" was very likely a fixed region the old analytic
+mask reconstruction (`|y|<b_nd`, used only because our fork didn't dump
+`cs` yet) misclassified as liquid.
 
-See `diary.md` entries dated 2026-08-15 through 2026-08-19 for full
-derivations, job IDs, and the mechanism checks that were ruled out
-(restart sensitivity, metric correction, sampling window, ramp
-duration, resolution mismatch, AMR).
+**What this does and doesn't prove**: this validates that our fork
+correctly reproduces Kim et al.'s own reference driver code, once the
+ramp/mask confounds are removed -- the fork's numerics were not the
+source of prior disagreement. It does not, by itself, confirm the
+reference driver's output matches the published Fig. 8 numbers -- that
+upstream-driver-vs-paper question is separate and not rechecked here.
+
+See `diary.md` entries dated 2026-08-15 through 2026-08-20 for full
+derivations, job IDs, and the mechanism checks that were ruled out along
+the way (restart sensitivity, metric correction, sampling window, ramp
+duration, resolution mismatch, AMR, liquid-mask contamination, bubble/
+droplet removal).

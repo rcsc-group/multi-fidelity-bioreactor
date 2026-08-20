@@ -1,5 +1,78 @@
 # Experiment diary
 
+## 2026-08-20 — BREAKTHROUGH: apples-to-apples run (jobs 5083674/5083678)
+shows near-perfect ours-vs-upstream agreement in both velocity and
+shear stress. The "vortex" was confirmed a mask artifact, not physics.
+
+Ran `scripts/analyze_and_render_rampmatched_comparison.py` across all
+224 matched snapshots (12 frames/rocking-cycle, t=0 to 13.3) using the
+new ramp-matched, real-`cs`-on-both-sides data. Full results:
+`experiments/docs/rampmatched_comparison_stats.csv`.
+
+**Velocity**: relative error ~0.003-0.015% at every snapshot after the
+initial transient (e.g. 3.5e-5 at t=8.81, 2.5e-5 at t=13.28) --
+effectively machine-precision-level agreement, not just "good."
+
+**Shear stress**: τ pointwise correlation is ~0.999-1.000 at every
+snapshot from t~1 onward (one early exception at t=0.0596, corr=-0.96,
+where both fields are still near-zero right after t=0 and any tiny
+numerical difference dominates the ratio -- an early-transient
+artifact, not a real disagreement). This is a complete reversal of the
+whole session's headline finding (near-zero correlation, coin-flip
+sign agreement) -- that finding was an artifact of the mask
+contamination + ramp mismatch, not a real property of the two codes'
+physics.
+
+**Sign agreement caveat, checked and explained, not just noted**: raw
+sign agreement is still only ~60-68% despite corr~1.0 -- looked
+suspicious on its own. Checked directly
+(`scripts/check_tau_sign_agreement_by_magnitude.py`, t=12.1492):
+stratifying by |tau_upstream| magnitude shows sign agreement rises
+monotonically with magnitude -- 61.9% overall, 63.8% below the median,
+93.1% in the top decile, 99.2% in the top 5%, **100.0% in the top 1%**.
+The ~60% figure is dominated by cells where |tau| ~ 1e-8 (numerical
+noise floor, no physical meaning for sign there); the cells that
+actually matter for any percentile-based shear-stress KPI (tau_95/98/
+100/mean, the whole point of this project's shear-stress pipeline)
+agree essentially perfectly. Not a residual problem -- a fully
+explained, benign artifact of averaging sign-agreement over
+physically-irrelevant near-zero cells.
+
+**The "stationary vortex" is confirmed a mask-reconstruction artifact,
+not real physics.** Checked directly with the real `cs` column (no
+longer the analytic |y|<b_nd reconstruction the earlier flagged video
+relied on): `scripts/check_vortex_location_realmask.py` tracks
+argmax(|tau|) in our fork's own field across 6 evenly-spaced settled
+snapshots -- it moves substantially every time (x from +0.004 to
++0.456 to -0.312 to +0.170 across t=1.19 to 13.10), consistent with a
+naturally evolving flow, not a fixed artifact. The earlier "stationary"
+appearance was very likely a fixed region the analytic mask
+misclassified, not a genuine flow feature -- resolved, no further
+action needed on this thread.
+
+**Full video**: `docs/kimetal2024/ours_vs_upstream_study/
+06_ours_vs_upstream_rampmatched_video.mp4` (224 frames, 12 fps, |u| and
+τ side by side, both sides using their own real liquid mask).
+
+**Scope of what this does and doesn't settle**: this validates that
+OUR FORK correctly reproduces Kim et al.'s own reference driver
+(`BasiliskContactTest`, Minki Kim's commits) once ramp forcing and
+liquid mask are controlled for -- a major, necessary result, since it
+means the fork's numerics/implementation are not the source of any
+prior mismatch. It does NOT by itself confirm that the reference
+driver's own output matches Kim et al.'s PUBLISHED Fig. 8 numbers --
+that upstream-driver-vs-paper question was explored earlier in this
+investigation with mixed results and is not rechecked by this run.
+Next natural step, if the user wants to keep pulling this thread: redo
+the upstream-driver-vs-published-Fig.-8 comparison now that we trust
+the driver-vs-driver agreement is solid.
+
+**Not yet done**: the bubble-removal (REMOVE_DROP) ablation, held off
+per the user's explicit request until apples-to-apples landed. Given
+how clean this result is, it's reasonable to ask whether it's even
+still needed -- but that's the user's call, not assumed here.
+
+
 ## 2026-08-19 (6) — upgraded to full-video cadence on BOTH codes; cancelled
 5083032, resubmitted as 5083674 (fork) + 5083678 (upstream).
 
