@@ -6,7 +6,18 @@ the old mismatched ramp and a contaminated f>0.5-only mask.
 
 Writes two figures (each with colorbars):
   - fields (2x2): |u| and tau, ours vs upstream
-  - relerr (1x2): relative error of |u|, relative error of tau
+  - diff (1x2): |u_ours - u_upstream| / U0, |tau_ours - tau_upstream| / (rho1*U0^2)
+
+Nondimensionalized by U0 (the driver's own "initial rotational
+velocity" scale, U0 = w_bio_st*Th_max -- already expressed in the
+code's native U_bio-based nondim units, so no extra conversion factor
+is needed) rather than by the instantaneous field's own mean: the
+mean-based relative error is unstable/not comparable across time when
+the field itself is near zero (e.g. during the ramp), whereas a fixed
+external scale is stable and physically meaningful throughout.
+rho1=1 in the code's nondim units, so the stress scale is just U0^2
+(dynamic-pressure convention, consistent with how the code's own
+momentum equation is nondimensionalized -- see diary.md 2026-08-20).
 
 Usage:
     uv run python scripts/plot_rampmatched_heatmap.py
@@ -40,6 +51,11 @@ Re_w = rho_w*U_bio*L_bio/mu_w
 mur = mu_a/mu_w
 mu1 = 1.0/Re_w
 mu2 = mur*mu1
+T_bio = L_bio / U_bio
+w_bio = 2 * math.pi / T_per
+w_bio_st = w_bio * T_bio
+U0 = w_bio_st * Th_max  # driver's own characteristic velocity scale; already in code-native nondim (U_bio-based) units
+P0 = U0 ** 2  # rho1=1 in code units -> dynamic-pressure stress scale
 
 
 def mu_of_f(f):
@@ -99,12 +115,13 @@ speed_scale = np.nanmean(speed_up[valid_speed])
 tau_scale = np.nanmean(np.abs(tau_up[valid_tau]))
 
 diff_speed = np.full((N, N), np.nan)
-diff_speed[valid_speed] = np.abs(speed_ours[valid_speed] - speed_up[valid_speed]) / speed_scale
+diff_speed[valid_speed] = np.abs(speed_ours[valid_speed] - speed_up[valid_speed]) / U0
 
 diff_tau = np.full((N, N), np.nan)
-diff_tau[valid_tau] = np.abs(tau_ours[valid_tau] - tau_up[valid_tau]) / tau_scale
+diff_tau[valid_tau] = np.abs(tau_ours[valid_tau] - tau_up[valid_tau]) / P0
 
-print(f"mean rel err speed: {np.nanmean(diff_speed)*100:.4f}%   mean rel err tau: {np.nanmean(diff_tau)*100:.4f}%")
+print(f"U0={U0:.4g}  P0={P0:.4g}")
+print(f"mean |du|/U0: {np.nanmean(diff_speed):.6g}   mean |dtau|/P0: {np.nanmean(diff_tau):.6g}")
 print(f"tau corr: {np.corrcoef(tau_ours[valid_tau], tau_up[valid_tau])[0,1]:.4f}")
 
 # Crop to the true fluid domain (geometry-derived, same for both -- see diary.md).
@@ -162,13 +179,13 @@ for r, (ylabel, (a_ours, a_up), cmap, kw) in enumerate(row_specs):
 fig1.savefig(OUT_PATH_FIELDS, dpi=180, facecolor=fig1.get_facecolor(), bbox_inches="tight")
 print(f"Saved to {OUT_PATH_FIELDS}")
 
-# ── Figure 2: relative error of |u| and tau (1x2, each with its own colorbar) ──
+# ── Figure 2: nondimensionalized diff of |u| and tau (1x2, each with its own colorbar) ──
 fig2, axes2 = plt.subplots(1, 2, figsize=(8, 3.2))
 fig2.patch.set_facecolor(BG)
 
 err_specs = [
-    ("rel. error |u|", diff_speed, dict(vmin=0, vmax=np.nanpercentile(diff_speed, 99))),
-    ("rel. error τ", diff_tau, dict(vmin=0, vmax=np.nanpercentile(diff_tau, 99))),
+    ("|Δu| / U0", diff_speed, dict(vmin=0, vmax=np.nanpercentile(diff_speed, 99))),
+    ("|Δτ| / (ρU0²)", diff_tau, dict(vmin=0, vmax=np.nanpercentile(diff_tau, 99))),
 ]
 for ax, (label, field, kw) in zip(axes2, err_specs):
     style_ax(ax)

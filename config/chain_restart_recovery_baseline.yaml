@@ -1,0 +1,33 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Ground-truth baseline for the checkpoint-restart recovery test
+# (chain_restart_recovery_test.yaml): a genuine FRESH cold start directly at
+# the target condition (theta=7deg, 32.5rpm), same fidelity/geometry/timing.
+# Single segment -- no restart at all. See diary.md 2026-08-20.
+#
+# Run with: python scripts/chain.py config/chain_restart_recovery_baseline.yaml
+# ─────────────────────────────────────────────────────────────────────────────
+
+fidelity: 7
+geometry: {a: 0.25, b: 0.03575, n: 8.0}
+fill_level: 0.5
+
+n_mix_cycles: 15
+n_transition_cycles: 15   # unused (single segment, never a restart) but required by chain.py's schema
+t_buffer: 3
+
+sweep:
+  parameter: theta_max_0
+  values: [7.0]
+
+motion:
+  n_harmonics: 1
+  theta_max: [7.0, 0.0, 0.0]
+  phi_angular: [0.0, 0.0, 0.0]
+  omega_b: 3.403392
+  omega_h: 0.0
+  amplitude_h: [0.0, 0.0, 0.0]
+  phi_horizontal: [0.0, 0.0, 0.0]
+
+submit: true
+mpi: false
+walltime: "00:30:00"

@@ -1,5 +1,156 @@
 # Experiment diary
 
+## 2026-08-20 (4) — nondim diff plots (by U0/rho*U0^2, not instantaneous
+mean) + set up a checkpoint-restart quasi-steady-state recovery test
+using the REAL production pipeline (chain.py) this time.
+
+**Nondim diff plots**: user wanted the relerr panels replaced with an
+absolute diff nondimensionalized by U0 (driver's own "initial
+rotational velocity", `U0=w_bio_st*Th_max`, already in the code's
+native U_bio-based nondim units so no conversion factor needed) and a
+characteristic pressure/stress `rho1*U0^2` (rho1=1 in code units;
+dynamic-pressure convention, consistent with how the momentum equation
+is already nondimensionalized). Reasoning: the old relerr (diff /
+instantaneous field mean) is unstable and not comparable across time
+when the field itself is near zero (e.g. during the ramp) -- a fixed
+external scale doesn't have that problem. Updated
+`plot_rampmatched_heatmap.py` and `analyze_and_render_rampmatched_comparison.py`
+(`06`/`07`); `04`/`05` (raw fields) unaffected. U0=1.074, P0=1.154 for
+this case -- mean |Δu|/U0 ~1.3e-5, mean |Δτ|/(ρU0²) ~5e-8 at the
+t=12.7447 instant.
+
+**Checkpoint-restart recovery test, user's genuine question**: does
+restarting from a DIFFERENT condition's settled state and ramping into
+our target (θ=7°, 32.5rpm) reach the SAME limit cycle as a genuine
+fresh cold start at the target? User specifically flagged (correctly,
+see entry (3) above) that the checkpointing mechanism itself needed
+re-examining given the ramp-convention mixup. Used `scripts/chain.py`
+this time -- the actual production orchestration tool -- instead of a
+hand-built params.json, specifically to avoid repeating the same
+mistake.
+
+Design: θ=3°→7° restart chain (`config/chain_restart_recovery_test.yaml`,
+2 segments: fresh θ=3° then restart-ramp to θ=7°, same 32.5rpm
+throughout so only the amplitude-ramp interpolation is exercised, not
+the separate omega_b velocity-rescaling path) vs. a genuine fresh θ=7°
+baseline (`config/chain_restart_recovery_baseline.yaml`, 1 segment).
+Fidelity 7 (cheap dynamical-systems check, not a field-resolution
+comparison -- confirmed with user this is about compute budget, not a
+different *kind* of checkpointing; fidelity-based coarse-to-fine warm
+starting is a distinct, separately-interesting idea, not what this
+tests).
+
+**Found and fixed a real bug in `chain.py` while setting this up**: the
+per-segment submission log line crashes for ANY vector-indexed sweep
+parameter (`theta_max_0` etc. -- exactly what the module's own
+docstring lists as supported) because it calls `params.get(sweep_param,
+...)` where `sweep_param="theta_max_0"` is never an actual top-level
+key (`_apply_sweep_param` writes it to `params["theta_max"][0]`, not
+`params["theta_max_0"]`). This means vector-param sweeps have
+apparently never been exercised end-to-end via `submit_chain()` before
+-- fixed by resolving through the existing `_VECTOR_PARAMS` table
+before formatting, verified by rerunning the dry build.
+
+**Also found: `geometry.b=0.03575` (Kim et al.'s own published value,
+verified extensively this session) is OUTSIDE
+`config/param_space.yaml`'s `[0.05, 0.15]` sweep bound, so
+`chain.py`'s `validate_params()` call rejects it.** That bound is the
+optimization problem's own design-space choice (what geometries are
+worth exploring for the project's real objective), not a numerical-
+validity guard -- Kim's case is a validation anchor outside that
+space, not a sweep candidate, so the bound correctly doesn't apply
+here. Did NOT weaken `param_space.yaml` (would silently loosen
+guardrails for real future sweeps). Wrote
+`scripts/_submit_restart_recovery_chains.py`, a one-off that reuses
+`chain.py`'s `build_chain()` (so the fresh-vs-restart params.json
+convention is exactly right) and calls `simulate.submit_slurm()`
+directly, skipping just the validation call, scoped to this one
+experiment.
+
+**Also found: `chain.py` computes `T_per_nd` ONCE from segment 0's
+`theta_max`, but `T_per_nd` genuinely depends on `theta_max` (via
+`V_bio`'s `tan(Th_max)` term)** -- confirmed numerically: T_per_nd(3°)
+=0.546 vs T_per_nd(7°)=0.607, an 11% difference. This only matters for
+THETA-valued sweeps (the module's own `_t_period_nd` docstring assumes
+theta_max fixed, which holds for the omega_b sweeps chain.py is
+normally used for) and doesn't affect correctness of the physics
+(each segment's C driver computes its own T_bio internally from its
+own params, correctly) -- it only means segment 1's nominal
+"n_transition_cycles" cycles convert to ~0.90x that many ACTUAL θ=7
+cycles. Compensated by bumping `n_transition_cycles` 15->17 rather
+than fixing chain.py's per-segment timing (a deeper design question,
+out of scope here, noted for later).
+
+**Smoke-tested first** (job 5105243, θ=3° segment only, n_mix_cycles=5,
+fidelity 7) given my own earlier scratch-driver smoke tests diverged
+at low fidelity with this EXACT thin-bag geometry (b=0.03575) --
+did not assume fidelity 7 is safe here just because other production
+sweeps use it (those use the wider example geometry, b=0.071, not
+Kim's). Result pending.
+
+
+## 2026-08-20 (3) — CORRECTION: the "our fork had no ramp mechanism"
+framing was wrong. The mechanism was never lost; my ad hoc validation
+params.json just didn't follow the established convention.
+
+User pushed back hard (correctly) on the 2026-08-19 (4)/(5) framing
+that "our fork had NO ramp at all" for the `fork_l10_periodic`/
+`fork_l10_rampmatch` comparison runs, describing the codebase's actual
+intended design from memory: fresh/cold starts should still ramp
+linearly from rest, just like upstream, via a documented mechanism --
+not be a special "instant full amplitude" case. Investigated properly
+rather than re-asserting the prior claim.
+
+**Confirmed: the user's mental model is exactly the intended design,
+and it is NOT what I implemented.** Evidence:
+- `src/params_read.h`, right above the `*_prev` fields: "For fresh
+  runs these stay 0, reproducing the original cold-start amplitude
+  ramp." The struct is zero-initialized (`BioreactorParams p = {0};`).
+- `scripts/chain.py` and `scripts/sweep.py` only ever WRITE
+  `theta_max_prev` inside a restart/warm-start branch. For a fresh
+  segment, the key is omitted from `params.json` entirely -- it is
+  never written as `theta_max_prev = theta_max`.
+- `docs_site/reference/params.md`: `theta_max_prev` is documented as
+  "set automatically by chain.py and sweep.py ... do not set these
+  manually" -- a restart-only concept.
+- Every real production fresh-start `params.json` found in
+  `experiments/` (e.g. `l9_l10_short_window_test_30rpm/
+  params_f10_short.json`) OMITS `theta_max_prev` entirely.
+- The commit that introduced this mechanism (`8ab1d1e`) says in its
+  own comment: "For fresh runs, *_prev fields are 0 -> reproduces the
+  original cold-start ramp."
+
+**So: the N_RAMP_CYCLES smooth-step mechanism DOES correctly ramp from
+rest on a genuine fresh start, exactly as designed, exactly as the user
+remembered upstream doing it (just a different ramp shape/duration --
+3-cycle smooth-step vs upstream's 16.25-cycle linear).** The feature
+was never lost from this project's codebase. What actually happened:
+the validation `params.json` I built by hand for this investigation's
+L10 comparison runs (going back to `fork_l10_periodic`, before this
+session even started drilling into ramps) set `theta_max_prev ==
+theta_max` -- a value no real chain.py/sweep.py-generated file would
+ever produce -- which defeated the smooth-step interpolation (a linear
+interpolation between two identical values is constant regardless of
+the interpolation parameter). This was an error in how I built an ad
+hoc scratch harness outside the normal pipeline, not a regression or
+missing feature in `src/BioReactor.c`.
+
+**Does this change the 2026-08-20 breakthrough result?** No, but it
+changes what should be claimed about *why* the ramp mismatch existed.
+The apples-to-apples fix (hardcoding upstream's exact ramp formula
+into the `fork_l10_rampmatch` scratch driver) was a valid way to get
+IDENTICAL forcing on both sides for a strict comparison, and the
+near-perfect agreement result stands. But the diary/README framing
+that our fork "had no ramp mechanism" as a property of the codebase
+was wrong and is corrected here. The more accurate statement: this
+project's own ramp-from-rest mechanism is intact and correctly
+designed; my hand-built validation harness just didn't invoke it
+correctly, and the fix chosen (matching upstream's exact formula)
+was a stronger fix than strictly necessary (it also would have been
+fixed by simply setting `theta_max_prev` correctly, at the cost of
+still having a different ramp SHAPE/DURATION than upstream's).
+
+
 ## 2026-08-20 (2) — user wanted videos, not just static figures; added
 colorbars to both and a new relerr video (07).
 

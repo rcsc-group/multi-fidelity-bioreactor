@@ -218,9 +218,18 @@ def submit_chain(cfg: dict) -> list[str]:
             checkpoint = None
         dependency = f"afterok:{job_ids[k-1]}" if k > 0 and not use_mpi else None
 
+        # sweep_param may be a vector-indexed alias (e.g. "theta_max_0" ->
+        # params["theta_max"][0]) rather than a literal top-level key.
+        sweep_param = cfg["sweep"]["parameter"]
+        if sweep_param in _VECTOR_PARAMS:
+            field, idx = _VECTOR_PARAMS[sweep_param]
+            sweep_val_display = params[field][idx]
+        else:
+            sweep_val_display = params.get(sweep_param, "?")
+
         print(
             f"  [seg {k}] run={params['run_id']}  "
-            f"{cfg['sweep']['parameter']}={params.get(cfg['sweep']['parameter'], '?'):.3g}  "
+            f"{sweep_param}={sweep_val_display:.3g}  "
             f"n_mix={params['n_mix_cycles']}  t_end≈{params['t_end']:.1f}"
             f"{'  [video]' if videos else ''}",
             end="",

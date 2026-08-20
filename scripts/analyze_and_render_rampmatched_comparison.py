@@ -7,7 +7,12 @@ frames/rocking-cycle (was 13 sparse snapshots at ~1.5 cycles apart).
 Streams frame-by-frame (never holds more than one timestep's fields in
 memory) since there are ~225 snapshots x 2 codes x 1024^2 cells. Writes:
   - fields video: |u| and tau, ours vs upstream (2x2, colorbar per row)
-  - relerr video: relative error of |u|, of tau (1x2, own colorbar each)
+  - diff video: |Δu|/U0, |Δτ|/(rho1*U0^2) (1x2, own fixed colorbar each)
+    -- nondimensionalized by the driver's own U0 (not by the
+    instantaneous field's own mean), so the scale is stable and
+    comparable across the whole video, including during the ramp when
+    the raw fields are near zero (see plot_rampmatched_heatmap.py for
+    the same convention and diary.md 2026-08-20 for the derivation).
   - a per-snapshot stats CSV (for checking whether "settled" agreement
     is stable now, and for the phase-lag diagnostic diary.md flagged)
 
@@ -48,6 +53,11 @@ Re_w = rho_w * U_bio * L_bio / mu_w
 mur = mu_a / mu_w
 mu1 = 1.0 / Re_w
 mu2 = mur * mu1
+T_bio = L_bio / U_bio
+w_bio = 2 * math.pi / T_per
+w_bio_st = w_bio * T_bio
+U0 = w_bio_st * Th_max  # driver's own characteristic velocity scale, already code-native nondim
+P0 = U0 ** 2  # rho1=1 in code units
 
 
 def mu_of_f(f):
@@ -143,15 +153,15 @@ for t1 in sample_ts:
     speed_scale_vals.append(np.nanmean(s2[m2]))
     tau_scale_vals.append(np.nanmean(np.abs(tau2[m2])))
     valid = m1 & m2
-    diff_speed_samples.append(np.abs(s1[valid] - s2[valid]) / np.nanmean(s2[m2]))
-    diff_tau_samples.append(np.abs(tau1[valid] - tau2[valid]) / np.nanmean(np.abs(tau2[m2])))
+    diff_speed_samples.append(np.abs(s1[valid] - s2[valid]) / U0)
+    diff_tau_samples.append(np.abs(tau1[valid] - tau2[valid]) / P0)
 speed_scale = np.mean(speed_scale_vals)
 tau_scale = np.mean(tau_scale_vals)
 speed_max = 2.0 * speed_scale
 tau_lim = 1.5 * tau_scale
 diff_speed_max = np.percentile(np.concatenate(diff_speed_samples), 99)
 diff_tau_max = np.percentile(np.concatenate(diff_tau_samples), 99)
-print(f"speed_scale={speed_scale:.4g} tau_scale={tau_scale:.4g}")
+print(f"speed_scale={speed_scale:.4g} tau_scale={tau_scale:.4g} U0={U0:.4g} P0={P0:.4g}")
 print(f"diff_speed_max={diff_speed_max:.4g} diff_tau_max={diff_tau_max:.4g}")
 
 # ── Stream: compute stats + render a frame for every matched pair ──
@@ -186,9 +196,11 @@ for i, (t1, t2) in enumerate(pairs):
     diff_speed = np.full((N, N), np.nan)
     diff_tau = np.full((N, N), np.nan)
     if n_valid > 0:
-        diff_speed[valid] = np.abs(s1[valid] - s2[valid]) / speed_scale
-        diff_tau[valid] = np.abs(tau1[valid] - tau2[valid]) / tau_scale
-        speed_relerr = np.mean(diff_speed[valid])
+        # nondim by U0/P0 for the plots (stable, comparable across all frames)
+        diff_speed[valid] = np.abs(s1[valid] - s2[valid]) / U0
+        diff_tau[valid] = np.abs(tau1[valid] - tau2[valid]) / P0
+        # relative-error stats (self-referential, for the settling/stability CSV -- unaffected by the plot's normalization choice)
+        speed_relerr = np.mean(np.abs(s1[valid] - s2[valid])) / speed_scale
         a, b = tau1[valid], tau2[valid]
         corr = np.corrcoef(a, b)[0, 1]
         sign_agree = np.mean(np.sign(a) == np.sign(b))
@@ -229,8 +241,8 @@ for i, (t1, t2) in enumerate(pairs):
     fige, axese = plt.subplots(1, 2, figsize=(9.6, 2.6))
     fige.patch.set_facecolor(BG)
     err_specs = [
-        ("rel. error |u|", diff_speed_c, dict(vmin=0, vmax=diff_speed_max)),
-        ("rel. error τ", diff_tau_c, dict(vmin=0, vmax=diff_tau_max)),
+        ("|Δu| / U0", diff_speed_c, dict(vmin=0, vmax=diff_speed_max)),
+        ("|Δτ| / (ρU0²)", diff_tau_c, dict(vmin=0, vmax=diff_tau_max)),
     ]
     for ax, (label, field, kw) in zip(axese, err_specs):
         style_ax(ax, h, w)
