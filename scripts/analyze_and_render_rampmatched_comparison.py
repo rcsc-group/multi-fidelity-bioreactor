@@ -29,7 +29,7 @@ T_CHANGE_ST = 11.6132  # upstream's real ramp-completion time (30/T_bio); see di
 
 OURS_DIR = "/oscar/scratch/eaguerov/tmp/fork_l10_rampmatch/rundir"
 UPSTREAM_DIR = "/oscar/scratch/eaguerov/tmp/upstream_l10_video/rundir/Data_all"
-OUT_VIDEO = "/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor/docs/kimetal2024/ours_vs_upstream_study/06_ours_vs_upstream_rampmatched_video.mp4"
+OUT_VIDEO = "/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor/docs/kimetal2024/ours_vs_upstream_study/04_ours_vs_upstream_rampmatched_video.mp4"
 OUT_CSV = "/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor/experiments/docs/rampmatched_comparison_stats.csv"
 
 rho_w, mu_w = 1.0e3, 1.0e-3

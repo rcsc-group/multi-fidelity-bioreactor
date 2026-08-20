@@ -10,11 +10,16 @@ presentation-ready outputs.
 | File | What it shows |
 |---|---|
 | `01_star_max_shear_stress_ours_L10.mp4` | Our own fork, L10, τ field with a star marking the per-frame argmax(τ) location. No upstream equivalent exists at this time window (t=20.65-22.45). |
-| `02_ours_vs_upstream_13snapshot_comparison.mp4` | Ours vs upstream, \|u\| and τ side by side, animated across all 13 matching L10 snapshots (t=0 to 12.76). Domain boxed, no colorbar. |
-| `03_ours_vs_upstream_single_instant_heatmap.png` | Static version of the same comparison at one instant (t=12.76), with a relative-error panel. |
-| `04_percentile_sensitivity_upstream.png` | Upstream's 99th/99.9th/100th percentile of \|τ\| across its 3 real settled snapshots -- shows the sharp blowup at the top of the tail. |
-| `05_summary_numbers_table.png` | All key quantitative findings in one table. |
-| `06_ours_vs_upstream_rampmatched_video.mp4` | The real answer: ours vs upstream, \|u\| and τ, both using their own real liquid mask, ramp forcing identical on both sides, 224 frames across the full run (t=0 to 13.3). |
+| `02_percentile_sensitivity_upstream.png` | Upstream's 99th/99.9th/100th percentile of \|τ\| across its 3 real settled snapshots -- shows the sharp blowup at the top of the tail. |
+| `03_summary_numbers_table.png` | Pointwise |u|/τ diff by percentile, apples-to-apples data. P100's τ column (~2e3%) is the known cut-cell singularity (grows unboundedly with resolution, documented separately in `diary.md`), not a residual disagreement -- P50/P90/P99 are the numbers that matter. |
+| `04_ours_vs_upstream_rampmatched_video.mp4` | The real answer: ours vs upstream, \|u\| and τ, both using their own real liquid mask, ramp forcing identical on both sides, 224 frames across the full run (t=0 to 13.3). |
+| `05_ours_vs_upstream_rampmatched_heatmap.png` | Static version at one settled instant (t=12.7447), with a relative-error panel -- same apples-to-apples data as `04`. |
+
+**Removed, superseded (2026-08-20):** the old 13-snapshot video and
+single-instant heatmap used the mismatched ramp and a contaminated
+`f>0.5`-only mask; both are fully replaced by `04`/`05` above, which
+use the corrected data. Deleted rather than kept alongside, per project
+convention (stale figures don't stay in presentation folders).
 
 ## Headline finding (updated 2026-08-20 -- resolved)
 

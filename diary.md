@@ -51,8 +51,20 @@ misclassified, not a genuine flow feature -- resolved, no further
 action needed on this thread.
 
 **Full video**: `docs/kimetal2024/ours_vs_upstream_study/
-06_ours_vs_upstream_rampmatched_video.mp4` (224 frames, 12 fps, |u| and
-τ side by side, both sides using their own real liquid mask).
+04_ours_vs_upstream_rampmatched_video.mp4` (224 frames, 12 fps, |u| and
+τ side by side, both sides using their own real liquid mask). Also
+added a matching static heatmap (`05_..._heatmap.png`, one settled
+instant, `t=12.7447`) and regenerated the percentile-diff summary
+table (`03_summary_numbers_table.png`) with this corrected data --
+the old table's P99/P100 numbers (2060%/1.6e6%) were from the same
+contaminated-mask/mismatched-ramp data as everything else this
+session; redone they're P50/P90/P99 = 0.0007-0.013% (|u|) and
+1.9-25% (τ), with only P100's τ column still huge (~2e3%, the known
+cut-cell singularity, not a residual disagreement). Deleted the two
+fully-superseded old artifacts (13-snapshot video, single-instant
+heatmap) and renumbered the folder (01 unchanged; 02=percentile
+sensitivity, 03=summary table, 04=rampmatched video, 05=rampmatched
+heatmap) rather than leave numbering gaps.
 
 **Scope of what this does and doesn't settle**: this validates that
 OUR FORK correctly reproduces Kim et al.'s own reference driver
