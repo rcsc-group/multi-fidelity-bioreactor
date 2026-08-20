@@ -4,6 +4,10 @@ real cs liquid mask on BOTH sides -- jobs 5083674/5083678, diary.md
 2026-08-20). Supersedes the earlier single-instant heatmap, which used
 the old mismatched ramp and a contaminated f>0.5-only mask.
 
+Writes two figures (each with colorbars):
+  - fields (2x2): |u| and tau, ours vs upstream
+  - relerr (1x2): relative error of |u|, relative error of tau
+
 Usage:
     uv run python scripts/plot_rampmatched_heatmap.py
 """
@@ -20,7 +24,8 @@ T_UPSTREAM = 12.7447400981  # nearest upstream snapshot to T_OURS (matched withi
 
 OURS_GLOB = f"/oscar/scratch/eaguerov/tmp/fork_l10_rampmatch/rundir/DataOurs_1024_{T_OURS:.6g}_*.txt"
 UPSTREAM_GLOB_PATTERN = "/oscar/scratch/eaguerov/tmp/upstream_l10_video/rundir/Data_all/Data_all_1024_{t:.12g}_*.txt"
-OUT_PATH = "/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor/docs/kimetal2024/ours_vs_upstream_study/05_ours_vs_upstream_rampmatched_heatmap.png"
+OUT_PATH_FIELDS = "/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor/docs/kimetal2024/ours_vs_upstream_study/05_ours_vs_upstream_rampmatched_heatmap.png"
+OUT_PATH_RELERR = "/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor/docs/kimetal2024/ours_vs_upstream_study/06_ours_vs_upstream_rampmatched_relerr.png"
 
 rho_w, mu_w = 1.0e3, 1.0e-3
 mu_a = 1.81e-5
@@ -118,35 +123,60 @@ speed_ours, speed_up, diff_speed = crop(speed_ours), crop(speed_up), crop(diff_s
 tau_ours, tau_up, diff_tau = crop(tau_ours), crop(tau_up), crop(diff_tau)
 
 BG = "#fcfcfb"
+TEXT = "#0b0b0b"
 CMAP_FIELD = "cividis"
 CMAP_TAU = "RdBu_r"
 CMAP_ERR = "magma"
 
 tau_lim = 1.5 * tau_scale
 
-fig, axes = plt.subplots(2, 3, figsize=(11, 4.6))
-fig.patch.set_facecolor(BG)
 
-panels = [
-    (speed_ours, "ours", CMAP_FIELD, dict(vmin=0)),
-    (speed_up, "upstream", CMAP_FIELD, dict(vmin=0)),
-    (diff_speed, "rel. error", CMAP_ERR, dict(vmin=0, vmax=np.nanpercentile(diff_speed, 99))),
-    (tau_ours, "ours", CMAP_TAU, dict(vmin=-tau_lim, vmax=tau_lim)),
-    (tau_up, "upstream", CMAP_TAU, dict(vmin=-tau_lim, vmax=tau_lim)),
-    (diff_tau, "rel. error", CMAP_ERR, dict(vmin=0, vmax=np.nanpercentile(diff_tau, 99))),
-]
-
-for ax, (field, label, cmap, kw) in zip(axes.flat, panels):
+def style_ax(ax):
     ax.set_facecolor(BG)
-    ax.imshow(field, origin="lower", cmap=cmap, aspect="equal", **kw)
     ax.set_xticks([]); ax.set_yticks([])
     for spine in ax.spines.values():
         spine.set_visible(False)
+
+
+# ── Figure 1: |u| and tau, ours vs upstream (2x2, one colorbar per row) ──
+fig1, axes1 = plt.subplots(2, 2, figsize=(8, 4.8))
+fig1.patch.set_facecolor(BG)
+
+row_specs = [
+    ("|u|", [speed_ours, speed_up], CMAP_FIELD, dict(vmin=0, vmax=max(np.nanmax(speed_ours), np.nanmax(speed_up)))),
+    ("τ", [tau_ours, tau_up], CMAP_TAU, dict(vmin=-tau_lim, vmax=tau_lim)),
+]
+for r, (ylabel, (a_ours, a_up), cmap, kw) in enumerate(row_specs):
+    im = None
+    for c, (field, label) in enumerate([(a_ours, "ours"), (a_up, "upstream")]):
+        ax = axes1[r, c]
+        style_ax(ax)
+        im = ax.imshow(field, origin="lower", cmap=cmap, aspect="equal", **kw)
+        if r == 0:
+            ax.set_title(label, fontsize=10, color="#52514e", pad=6)
+    axes1[r, 0].set_ylabel(ylabel, fontsize=13, color=TEXT, rotation=0, labelpad=20, va="center")
+    cbar = fig1.colorbar(im, ax=list(axes1[r, :]), fraction=0.035, pad=0.02)
+    cbar.ax.tick_params(labelsize=8, color=TEXT, labelcolor=TEXT)
+    cbar.outline.set_visible(False)
+
+fig1.savefig(OUT_PATH_FIELDS, dpi=180, facecolor=fig1.get_facecolor(), bbox_inches="tight")
+print(f"Saved to {OUT_PATH_FIELDS}")
+
+# ── Figure 2: relative error of |u| and tau (1x2, each with its own colorbar) ──
+fig2, axes2 = plt.subplots(1, 2, figsize=(8, 3.2))
+fig2.patch.set_facecolor(BG)
+
+err_specs = [
+    ("rel. error |u|", diff_speed, dict(vmin=0, vmax=np.nanpercentile(diff_speed, 99))),
+    ("rel. error τ", diff_tau, dict(vmin=0, vmax=np.nanpercentile(diff_tau, 99))),
+]
+for ax, (label, field, kw) in zip(axes2, err_specs):
+    style_ax(ax)
+    im = ax.imshow(field, origin="lower", cmap=CMAP_ERR, aspect="equal", **kw)
     ax.set_title(label, fontsize=10, color="#52514e", pad=6)
+    cbar = fig2.colorbar(im, ax=ax, fraction=0.04, pad=0.02)
+    cbar.ax.tick_params(labelsize=8, color=TEXT, labelcolor=TEXT)
+    cbar.outline.set_visible(False)
 
-axes[0, 0].set_ylabel("|u|", fontsize=13, color="#0b0b0b", rotation=0, labelpad=20, va="center")
-axes[1, 0].set_ylabel("τ", fontsize=13, color="#0b0b0b", rotation=0, labelpad=20, va="center")
-
-fig.tight_layout()
-fig.savefig(OUT_PATH, dpi=180, facecolor=fig.get_facecolor())
-print(f"Saved to {OUT_PATH}")
+fig2.savefig(OUT_PATH_RELERR, dpi=180, facecolor=fig2.get_facecolor(), bbox_inches="tight")
+print(f"Saved to {OUT_PATH_RELERR}")

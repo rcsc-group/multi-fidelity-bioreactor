@@ -13,7 +13,8 @@ presentation-ready outputs.
 | `02_percentile_sensitivity_upstream.png` | Upstream's 99th/99.9th/100th percentile of \|τ\| across its 3 real settled snapshots -- shows the sharp blowup at the top of the tail. |
 | `03_summary_numbers_table.png` | Pointwise |u|/τ diff by percentile, apples-to-apples data. P100's τ column (~2e3%) is the known cut-cell singularity (grows unboundedly with resolution, documented separately in `diary.md`), not a residual disagreement -- P50/P90/P99 are the numbers that matter. |
 | `04_ours_vs_upstream_rampmatched_video.mp4` | The real answer: ours vs upstream, \|u\| and τ, both using their own real liquid mask, ramp forcing identical on both sides, 224 frames across the full run (t=0 to 13.3). |
-| `05_ours_vs_upstream_rampmatched_heatmap.png` | Static version at one settled instant (t=12.7447), with a relative-error panel -- same apples-to-apples data as `04`. |
+| `05_ours_vs_upstream_rampmatched_heatmap.png` | Static version at one settled instant (t=12.7447): \|u\| and τ, ours vs upstream, 2x2 with a colorbar per row -- same apples-to-apples data as `04`. |
+| `06_ours_vs_upstream_rampmatched_relerr.png` | Relative error of \|u\| and of τ at the same instant, each with its own colorbar. |
 
 **Removed, superseded (2026-08-20):** the old 13-snapshot video and
 single-instant heatmap used the mismatched ramp and a contaminated
@@ -34,7 +35,7 @@ but that's fully explained: it's dominated by cells where `|tau|` is at
 the numerical noise floor (~1e-8) and sign is physically meaningless
 there -- restricting to the top 10% of cells by magnitude (the ones
 that matter for any percentile-based shear-stress KPI) gives 93%
-agreement, and the top 1% gives 100%. See `06_ours_vs_upstream_
+agreement, and the top 1% gives 100%. See `04_ours_vs_upstream_
 rampmatched_video.mp4` and `diary.md`, 2026-08-20.
 
 **The vortex thread is closed**: it was a mask-reconstruction artifact.
