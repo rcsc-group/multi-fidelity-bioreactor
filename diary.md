@@ -1,5 +1,83 @@
 # Experiment diary
 
+## 2026-08-20 (6) — self-caught bug: H_bio missing its factor of 2 in
+EVERY postprocessing script written this session. Fixed; core findings
+unaffected, absolute scale values (U0/P0, colorbar numbers) corrected.
+
+While building the restart-recovery phase-fold script, `T_per_nd`
+computed out at 0.7147 -- didn't match hand-verified 0.6073 from
+earlier in this session. Root cause: `scripts/plot_rampmatched_heatmap.py`,
+`analyze_and_render_rampmatched_comparison.py`,
+`compute_us_vs_upstream_stats_corrected.py`, and
+`build_rampmatched_summary_table.py` all had `H_bio = L_bio * Ly`
+instead of `H_bio = 2.*L_bio*Ly` -- exactly the bug already fixed in
+the PRODUCTION driver on 2026-08-03 (`H_bio` must be the full bag
+height; `Ly` is a half-height ratio), reintroduced by me across every
+analysis script this session since I was hand-deriving the
+nondimensionalization each time instead of reusing one shared,
+already-correct source.
+
+**Impact assessed, not assumed**: this scales `U_bio` (hence `mu1`,
+`U0`, `P0`) by a consistent factor applied IDENTICALLY to both codes
+in every comparison -- correlation, sign agreement, and relative-error
+(self-normalized) findings are mathematically scale-invariant and
+provably UNAFFECTED (verified: rerunning `compute_us_vs_upstream_stats_corrected.py`
+and `build_rampmatched_summary_table.py` after the fix reproduces
+identical corr/sign-agree/percentile numbers to before, as expected).
+What WAS wrong: the ABSOLUTE colorbar values in `04`/`05` (raw τ
+magnitude, computed via the buggy `mu1`) and the `U0`/`P0` normalization
+constants in `06`/`07` (~9-20% off) -- exactly the figures the user
+asked for colorbars on "so I know the ranges." Corrected: U0 1.074->
+1.264, P0 1.154->1.598. Regenerated `03`/`05`/`06` (fast); `04`/`07`
+(video, ~20min) regenerating.
+
+## 2026-08-20 (7) — restart-recovery test result: YES, it converges to
+the same quasi-steady state, but only after a transient OVERSHOOT
+longer than the nominal ramp duration.
+
+Comparing `runs/c7e9eca7` (θ=3°→7° restart) against `runs/d054ff02`
+(fresh θ=7°) via `scripts/plot_restart_recovery_settling.py` (raw
+τ₉₅(t) since each run's own ramp start, not phase-folded): both curves
+grow together through the 3-cycle ramp (t=0 to ~1.8), then the
+restart-recovered curve visibly OVERSHOOTS -- a bump peaking ~2.4x the
+eventual steady range around t≈2.3, decaying back down through t≈6-7
+-- before the two curves become visually indistinguishable, tracking
+each other closely in the same envelope (~0.0007-0.0015) for the rest
+of the run (t=7 to 13). See
+`experiments/figures/restart_recovery_transient_settling.png`.
+
+**Answer to the user's question: yes, the checkpoint-restart mechanism
+recovers the same limit cycle as a fresh start** -- but takes roughly
+8-9 cycles (from restart start) to fully settle, not the nominal
+`N_RAMP_CYCLES=3`. The extra settling time makes physical sense: a
+restart carries over real vorticity/momentum from the previous
+condition (θ=3°'s already-developed flow) that a fresh start (from
+rest) doesn't have, so pushing the amplitude up to θ=7° over-drives
+the already-moving flow before it re-equilibrates.
+
+This also explains the ~10-20% gap in `results.json`'s single-number
+`tau_95_qss`/`vel_rms_qss` stats (computed via `postprocess.py`'s
+`_qss_median` over the tail window): phase-folding the SAME tail
+window (`scripts/compare_restart_recovery.py`) shows substantial
+cycle-to-cycle scatter in BOTH runs (τ₉₅ ranges ~2x within a single
+phase bin) -- an 8-cycle median over that much scatter can easily
+differ by 10-20% between two runs from pure sampling noise, without
+needing a different underlying state. Not chased further (would need
+many more cycles to pin down whether this scatter reflects genuine
+low-dimensional chaos/quasi-periodicity in this thin-bag geometry, or
+finite-window noise around a strict periodic orbit) -- out of scope
+for the question asked, but worth knowing this system isn't perfectly
+clean period-1 even 17+ cycles post-ramp.
+
+**Actionable finding for the broader project**: `n_transition_cycles`
+in `chain.py`'s sweep configs (commonly set to 10, e.g. the example
+`config/chain_config.yaml`) may be too short to reach the SAME
+quasi-steady state a fresh run would show, if the restart overshoot
+observed here generalizes to other condition changes -- worth a wider
+check before trusting post-restart statistics in the production sweeps
+that rely on this margin for cost savings.
+
+
 ## 2026-08-20 (5) — restart-recovery smoke test passed; noted a filesystem
 oddity, not investigated further (out of scope, non-blocking).
 
