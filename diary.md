@@ -1,5 +1,41 @@
 # Experiment diary
 
+## 2026-08-21 (4) — clarified I never touched the ramp mechanism (user's
+concern), built the nondim relative-error heatmap for the L8 matrix.
+
+**User's concern, checked not just answered from memory**: `git log
+--all -- src/BioReactor.c` and `git show a648ca2 -- src/BioReactor.c`
+confirm the only commit I made to this file this session touches
+exclusively the `normcal` event's tau histogram (the OpenMP race fix,
+entry (1)) -- zero references to `event acceleration` in that diff.
+The smooth-step ramp is unmodified, pre-dates this session (`8ab1d1e`).
+I verified its shape earlier (entry 3); I did not change it.
+
+**09_l8_matrix_relerr_heatmap.png**: nondim `|Δu|/U0`, `|Δτ|/(ρU0²)`
+for 4 pairwise comparisons, each factor of the 2x2 design checked
+twice: row1=fresh MPI-vs-OpenMP, row2=restart MPI-vs-OpenMP (both
+trivial same-t alignment), row3=MPI fresh-vs-restart, row4=OpenMP
+fresh-vs-restart (both phase-matched, `t mod T_per`).
+
+**Caught a real methodological trap while building rows 3/4** ("good
+luck with the checkpoint ones" -- warranted): an unrestricted nearest-
+phase search over the ENTIRE restart trajectory picked `t=11.51`,
+right next to `t_checkpoint=11.46` -- still mid-ramp, not settled.
+That gave a nonsensical `|Δu|/U0=0.73` (comparing a settled fresh flow
+against a barely-restarted, still-ramping one is not a fair "restart
+vs fresh" comparison at all). Fixed by restricting the phase-search
+candidate pool to the settled tail only (`t >= t_checkpoint + ramp_dur
++ 3 more cycles of margin`) -- corrected match landed at `t=15.17`,
+giving `|Δu|/U0=0.20`, a real but far more sensible number.
+
+**Result**: rows 1-2 (MPI vs OpenMP) are visually and numerically
+near-zero across the whole field. Rows 3-4 (fresh vs restart) show a
+real, substantial `|Δu|` signal concentrated in the bulk flow, and
+rows 3 and 4 are visually near-identical to each other -- confirming
+the restart-vs-fresh effect is real and independent of MPI/OpenMP,
+consistent with every other check this session (entries 7-9).
+
+
 ## 2026-08-21 (3) — user caught two real issues with the L8 matrix video:
 restart rows silently started on a different absolute clock than fresh
 rows, and asked to verify the ramp is genuinely non-linear.
