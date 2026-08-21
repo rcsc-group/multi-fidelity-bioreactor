@@ -120,7 +120,8 @@ for fi in range(n_frames):
     fig.patch.set_facecolor(BG)
     im_u = im_tau = None
     for i, ((label, run_dir), times) in enumerate(zip(RUNS, times_per_run)):
-        s, tau = fields(run_dir, times[fi])
+        t_here = times[fi]
+        s, tau = fields(run_dir, t_here)
         s, tau = crop(s), crop(tau)
         ax_u, ax_tau = axes[i, 0], axes[i, 1]
         for ax in (ax_u, ax_tau):
@@ -130,7 +131,13 @@ for fi in range(n_frames):
                 spine.set_visible(False)
         im_u = ax_u.imshow(s, origin="lower", cmap=CMAP_FIELD, aspect="equal", vmin=0, vmax=speed_vmax)
         im_tau = ax_tau.imshow(tau, origin="lower", cmap=CMAP_TAU, aspect="equal", vmin=-tau_vlim, vmax=tau_vlim)
-        ax_u.set_ylabel(label, fontsize=9, color=TEXT, rotation=0, labelpad=8, ha="right", va="center")
+        # Per-row time marker: fresh and restart-recovered rows are on
+        # DIFFERENT absolute clocks at the same frame index (fresh starts at
+        # t=0, restart starts at t=t_checkpoint~11.46) -- a single shared
+        # time label would be wrong for half the rows, so each row gets its
+        # own actual t (user's direct ask, diary.md 2026-08-21).
+        ax_u.set_ylabel(f"{label}\nt={t_here:.2f}", fontsize=9, color=TEXT, rotation=0,
+                         labelpad=8, ha="right", va="center")
     axes[0, 0].set_title("|u|", fontsize=12, color=TEXT)
     axes[0, 1].set_title("τ", fontsize=12, color=TEXT)
     fig.tight_layout(rect=[0.02, 0, 0.94, 1])

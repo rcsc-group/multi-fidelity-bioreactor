@@ -1,5 +1,38 @@
 # Experiment diary
 
+## 2026-08-21 (3) — user caught two real issues with the L8 matrix video:
+restart rows silently started on a different absolute clock than fresh
+rows, and asked to verify the ramp is genuinely non-linear.
+
+**Restart rows do NOT start at t=0.** `ours_chain_mpi_seg1/params.json`:
+`t_checkpoint=11.462`, so frame 0 of the restart rows is t=11.46, not
+t=0 -- the video aligned rows by FRAME INDEX (deliberately, since fresh
+and restart cover different absolute-t spans), but had no time label at
+all, so this wasn't visible. Fixed: each row now gets its OWN `t=X.XX`
+label per frame (`scripts/render_l8_matrix_video.py`) -- a single
+shared time label would have been wrong for half the rows.
+
+**Ramp shape verified directly from source + this run's own params,
+not from memory**: computed `theta_max2(t)` using the exact smooth-step
+formula (`alpha = 3x²-2x³`, `x = (t-t_checkpoint)/(N_RAMP_CYCLES*T_per_st)`)
+with `t_checkpoint=11.462`, `T_per_st=0.6073`, `N_RAMP_CYCLES=3`,
+`theta_max_prev=3`, `theta_max=7`. Confirmed non-linear: at 10% through
+the ramp window, smooth-step gives 3.11°, a linear ramp would give
+3.40°; at 90%, smooth-step gives 6.89° vs linear's 6.60° -- the classic
+S-curve (slow-fast-slow), not linear. See
+`experiments/figures/restart_ramp_shape_check.png`. **This is the
+production driver's actual, by-design ramp mechanism** -- already
+established on 2026-08-20 (3) (fresh/restart interpolation is always
+smooth-step, `N_RAMP_CYCLES=3`), just not previously visualized. Not a
+bug: this L8 matrix intentionally runs the vanilla/production ramp
+(unlike the L10 ours-vs-upstream comparison, which hardcoded a literal
+linear ramp into a scratch copy specifically to match upstream's own
+formula -- diary.md 2026-08-19/20). The visible "transient" the user
+noticed in the video is this genuine ramp non-linearity plus the
+overshoot-then-settle behavior already documented in entry (7)
+(2026-08-20), not an artifact.
+
+
 ## 2026-08-21 (2) — L8 matrix results, with the bug-fixed data: MPI vs
 OpenMP effect is negligible; restart-vs-fresh effect is real and
 larger than the (unreliable) f7 analysis suggested.
