@@ -1,5 +1,61 @@
 # Experiment diary
 
+## 2026-08-21 (2) — L8 matrix results, with the bug-fixed data: MPI vs
+OpenMP effect is negligible; restart-vs-fresh effect is real and
+larger than the (unreliable) f7 analysis suggested.
+
+Reran the three OpenMP-side configurations with the fixed binary
+(`BioReactor_restart_dump_openmp_fixed`) -- see entry (1) above. Full
+corrected comparison (`results.json` from all 6):
+
+| config | vel_rms_qss | tau_95_qss | tau_98_qss | tau_100_qss |
+|---|---|---|---|---|
+| fresh, MPI (3.1) | 0.5131 | 0.003317 | 0.01299 | 0.05757 |
+| fresh, OpenMP (3.3/vanilla) | 0.5131 | 0.00332 | 0.01298 | 0.05757 |
+| restart seg0 (θ=3, MPI) | 0.2375 | 0.001656 | 0.006296 | 0.04331 |
+| restart seg0 (θ=3, OpenMP) | 0.2375 | 0.001649 | 0.006217 | 0.04403 |
+| restart seg1 (→7, MPI, 3.2) | 0.5385 | 0.004719 | 0.01563 | 0.08181 |
+| restart seg1 (→7, OpenMP, 3.4) | 0.5386 | 0.004736 | 0.01564 | 0.0819 |
+
+**MPI vs OpenMP: no meaningful effect.** Every MPI/OpenMP pair above
+agrees to within ~0.1-1.6% -- squarely in ordinary floating-point
+reduction-order noise, not a systematic difference. This directly
+answers the user's axis 1: once the histogram race (entry 1) is
+fixed, the choice of parallelization paradigm does not change the
+physics or the KPIs, at L8, for either fresh or restarted runs.
+
+**Restart vs fresh: a real, non-trivial effect** -- comparing fresh
+θ=7° (3.1) against the restart-recovered θ=3°→7° (3.2/seg1), same
+MPI build so this isolates the restart variable cleanly: vel_rms_qss
++5.0%, tau_95_qss +42%, tau_98_qss +20%, tau_100_qss +42%. This is
+LARGER than the ~6% amplitude gap the fidelity-7 analysis found
+(diary.md 2026-08-20 (7)/(8)) -- but that analysis used the buggy
+OpenMP tau_95, so the two numbers aren't directly comparable; this L8
+result, using bug-fixed data throughout, is the one to trust. Consistent
+with entry (7)'s qualitative finding (restart carries a transient
+overshoot that takes longer than the nominal ramp to settle) but the
+gap looks bigger once measured correctly. **Not yet resolved**: is
+this residual difference fully explained by insufficient post-ramp
+settling time (same open question as before, now on firmer footing),
+or a genuine, persistent property of restarting from a different
+condition? Would need either more post-ramp cycles or the same phase-
+binned analysis from entry (8), redone on this L8 bug-fixed data, to
+settle.
+
+Upstream (OpenMP, Kim's own build convention) completed cleanly to its
+full `t_end=13.3` in 1h23m -- no shear-stress KPI to compare directly
+(Kim's driver computes no percentile statistics), but velocity is in
+the same physical range (ux_liq_rms~0.38, uy_liq_rms~0.16 at the final
+timestep) -- no evidence of anything wrong, and not chased further
+since this matrix's purpose was isolating MPI/restart effects on OUR
+code, not re-doing the full L10 ours-vs-upstream comparison at L8.
+
+**Field dump (per-cell x/y/ux/uy/f/cs) is available for all 6
+configurations** -- the heatmap/video comparison of the checkpoint
+mechanism the user asked for earlier is still outstanding and can now
+be built from this (bug-fixed) data.
+
+
 ## 2026-08-21 — MAJOR BUG FOUND AND FIXED: tau_95/tau_98 were computed
 via a genuinely unprotected data race under OpenMP, affecting every
 non-MPI run this project has ever done (chain.py's own DEFAULT, not
