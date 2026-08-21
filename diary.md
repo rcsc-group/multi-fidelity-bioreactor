@@ -1,5 +1,40 @@
 # Experiment diary
 
+## 2026-08-21 (6) — fixed two usability issues in the 09 relerr video that
+entry (5)'s render still had: (a) colormap, (b) frame count.
+
+(a) User: "the colormap is not good, because everything looks black when
+error is zero." Correct -- `magma` (and other typical sequential maps
+used for diff/error plots) render the LOW end near-black, which reads
+visually as "no data" rather than "measured, confirmed small." For this
+plot zero is the GOOD/expected outcome in half the rows (rows 1-2, MPI
+vs OpenMP), so a black zero actively undersells the finding. Switched
+`CMAP_ERR` from `"magma"` to `"YlOrRd"` (pale yellow at zero, dark red at
+the high end) in all three scripts that still had it: `plot_
+rampmatched_heatmap.py` (06), `plot_l8_matrix_relerr_heatmap.py` (09
+static), `analyze_and_render_rampmatched_comparison.py` (07 video).
+Verified by extracting frame 80 of the re-rendered 09 video directly
+(not by re-reading the source) -- rows 1-2 now render as clearly pale
+yellow, rows 3-4 show real orange/red structure, colorbars readable.
+
+(b) User: "why only 12 snapshots as opposed to the other videos you
+sent?" Entry (5)'s video compressed everything to 12 phase bins across
+one representative cycle, while `08_l8_matrix_mpi_vs_openmp_vs_restart_
+video.mp4` uses 240 frames across each run's full dump sequence -- an
+inconsistent level of detail between two videos in the same comparison
+set, not a deliberate choice, just left over from adapting the static
+heatmap script directly. Rewrote `render_l8_matrix_relerr_video.py` to
+drive the frame index off fresh-MPI's own FULL settled tail (every dump
+timestamp after ramp completion, not a subsampled cycle) -- 168 frames,
+comparable richness to 08's 240. Partner times per frame still follow
+entry (5)'s clock-aware matching rule: nearest-TIME for same-clock pairs
+(fresh-MPI/fresh-OpenMP, restart-MPI/restart-OpenMP), nearest-PHASE
+(restricted to the settled tail) only for the genuinely-different-clock
+pair (fresh vs restart). Re-rendered `09_l8_matrix_relerr_video.mp4`;
+confirmed via `ffmpeg`-extracted frame that output looks sane before
+sending.
+
+
 ## 2026-08-21 (5) — animated the relerr heatmap (09), caught a real bug
 in the first version: independent per-run phase-matching let MPI and
 OpenMP land on ADJACENT cycles at the same phase, manufacturing a fake

@@ -164,7 +164,7 @@ tau_vmax = max(np.nanpercentile(d[~np.isnan(d)], 99) for d in diff_tau_list)
 
 BG = "#fcfcfb"
 TEXT = "#0b0b0b"
-CMAP_ERR = "magma"
+CMAP_ERR = "YlOrRd"  # low end is pale, not black -- magma reads as "no data" at zero (user feedback, diary.md 2026-08-21)
 
 fig, axes = plt.subplots(4, 2, figsize=(9, 8.5))
 fig.patch.set_facecolor(BG)

@@ -143,7 +143,7 @@ BG = "#fcfcfb"
 TEXT = "#0b0b0b"
 CMAP_FIELD = "cividis"
 CMAP_TAU = "RdBu_r"
-CMAP_ERR = "magma"
+CMAP_ERR = "YlOrRd"  # low end is pale, not black -- magma reads as "no data" at zero (user feedback, diary.md 2026-08-21)
 
 tau_lim = 1.5 * tau_scale
 

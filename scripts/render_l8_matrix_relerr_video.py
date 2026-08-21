@@ -1,17 +1,24 @@
 """Animated version of plot_l8_matrix_relerr_heatmap.py (diary.md
-2026-08-21): same 4 pairwise comparisons, but animated through ONE
-full rocking cycle in PHASE (not absolute t -- fresh and restart don't
-share a clock, so all 4 rows are built the same way for consistency:
-at each phase bin, pick each run's nearest-phase snapshot from its own
-SETTLED tail (t >= its own ramp completion + 3 cycles margin), never
-searching the full unrestricted history (that trap already caught
-once building the static version -- an unrestricted search can land
-mid-ramp).
+2026-08-21): same 4 pairwise comparisons (MPI/OpenMP x fresh/restart,
+each factor isolated twice), animated across fresh's FULL settled tail
+(168 frames -- matches the temporal richness of the other L8-matrix
+videos, not compressed to one representative cycle).
 
-Rows: fresh MPI-vs-OpenMP, restart MPI-vs-OpenMP, MPI fresh-vs-restart,
-OpenMP fresh-vs-restart. 12 phase bins (matches the native dump
-cadence, 12 frames/rocking-cycle -- finer bins would just repeat the
-same underlying snapshots).
+Frame index is driven by fresh-MPI's own settled-tail time sequence
+(its natural cadence, ~14 cycles). Per frame:
+  - fresh-OpenMP's partner time: nearest TIME to fresh-MPI's (same
+    clock, no phase-matching needed or wanted -- see diary.md 2026-08-21
+    (5), independent phase-matching drifted MPI/OpenMP onto adjacent
+    cycles and manufactured a fake difference).
+  - restart-MPI's partner time: nearest PHASE to fresh-MPI's, within
+    restart-MPI's settled tail only (genuinely different clock).
+  - restart-OpenMP's partner time: nearest TIME to THAT restart-MPI
+    time (same clock as restart-MPI).
+
+Colormap: YlOrRd, not magma -- magma's zero end is black, which reads
+as "no data" rather than "measured, confirmed small" for a metric
+where zero is the good/expected outcome in half the rows (user's
+direct feedback).
 
 Usage:
     uv run python scripts/render_l8_matrix_relerr_video.py
@@ -35,7 +42,6 @@ RAMP_DUR = N_RAMP_CYCLES * T_PER_ND
 T_CHECKPOINT = 11.46203091341247
 SETTLE_FRESH = RAMP_DUR + 3 * T_PER_ND
 SETTLE_RESTART = T_CHECKPOINT + RAMP_DUR + 3 * T_PER_ND
-N_PHASE_BINS = 12
 
 FRESH_MPI = "/oscar/scratch/eaguerov/tmp/l8_matrix/ours_fresh_mpi"
 FRESH_OPENMP = "/oscar/scratch/eaguerov/tmp/l8_matrix/ours_fresh_openmp"
@@ -97,41 +103,24 @@ def fields(run_dir, t):
     return np.where(mask, speed, np.nan), np.where(mask, tau, np.nan)
 
 
-def phase_bin_times(run_dir, settle_after, n_bins):
-    times = [t for t in list_times(run_dir) if t >= settle_after]
-    out = []
-    for k in range(n_bins):
-        target_phase = k / n_bins
-        best = min(times, key=lambda t: min(abs((t % T_PER_ND) / T_PER_ND - target_phase),
-                                              1 - abs((t % T_PER_ND) / T_PER_ND - target_phase)))
-        out.append(best)
-    return out
-
-
 def nearest_time(run_dir, settle_after, t_ref):
     times = [t for t in list_times(run_dir) if t >= settle_after]
     return min(times, key=lambda t: abs(t - t_ref))
 
 
-# MPI and OpenMP share the EXACT same absolute clock (same t_checkpoint,
-# same cadence) -- matching each side's phase INDEPENDENTLY can drift to
-# adjacent cycles at the same phase (confirmed empirically: 11/12 bins
-# landed exactly ~1 period apart, T_PER_ND=0.6073, not the same instant --
-# comparing cycle N against cycle N+1 manufactures a fake "MPI vs OpenMP"
-# diff out of ordinary cycle-to-cycle variability). Fixed: derive ONE
-# reference time series (from the MPI side) and match OpenMP to it by
-# nearest TIME, not nearest phase.
-fresh_mpi_times = phase_bin_times(FRESH_MPI, SETTLE_FRESH, N_PHASE_BINS)
-fresh_openmp_times = [nearest_time(FRESH_OPENMP, SETTLE_FRESH, t) for t in fresh_mpi_times]
-restart_mpi_times = phase_bin_times(RESTART_MPI, SETTLE_RESTART, N_PHASE_BINS)
-restart_openmp_times = [nearest_time(RESTART_OPENMP, SETTLE_RESTART, t) for t in restart_mpi_times]
+def nearest_phase(run_dir, settle_after, t_ref):
+    times = [t for t in list_times(run_dir) if t >= settle_after]
+    phase_ref = t_ref % T_PER_ND
+    return min(times, key=lambda t: min(abs((t % T_PER_ND) - phase_ref),
+                                          T_PER_ND - abs((t % T_PER_ND) - phase_ref)))
 
-ROW_DIRS = [
-    ("fresh: MPI vs OpenMP", FRESH_MPI, FRESH_OPENMP, fresh_mpi_times, fresh_openmp_times),
-    ("restart: MPI vs OpenMP", RESTART_MPI, RESTART_OPENMP, restart_mpi_times, restart_openmp_times),
-    ("MPI: fresh vs restart", FRESH_MPI, RESTART_MPI, fresh_mpi_times, restart_mpi_times),
-    ("OpenMP: fresh vs restart", FRESH_OPENMP, RESTART_OPENMP, fresh_openmp_times, restart_openmp_times),
-]
+
+fresh_mpi_times = [t for t in list_times(FRESH_MPI) if t >= SETTLE_FRESH]
+n_frames = len(fresh_mpi_times)
+print(f"n_frames = {n_frames} (fresh-MPI's full settled tail)")
+
+ROW_LABELS = ["fresh: MPI vs OpenMP", "restart: MPI vs OpenMP",
+              "MPI: fresh vs restart", "OpenMP: fresh vs restart"]
 
 yy = (np.arange(N) + 0.5) / N - 0.5
 rows_idx = np.where(np.abs(yy) < B_ND)[0]
@@ -143,7 +132,7 @@ def crop(a):
     return a[r0:r1, :]
 
 
-def diff_at_phase(dir_a, dir_b, t_a, t_b):
+def diff_fields(dir_a, t_a, dir_b, t_b):
     s_a, tau_a = fields(dir_a, t_a)
     s_b, tau_b = fields(dir_b, t_b)
     valid_s = ~np.isnan(s_a) & ~np.isnan(s_b)
@@ -155,13 +144,23 @@ def diff_at_phase(dir_a, dir_b, t_a, t_b):
     return crop(diff_speed), crop(diff_tau)
 
 
-# ── color scale from all phase bins, all rows (cheap: only 12 bins) ──
+def per_frame_diffs(t_fresh_mpi):
+    t_fresh_openmp = nearest_time(FRESH_OPENMP, SETTLE_FRESH, t_fresh_mpi)
+    t_restart_mpi = nearest_phase(RESTART_MPI, SETTLE_RESTART, t_fresh_mpi)
+    t_restart_openmp = nearest_time(RESTART_OPENMP, SETTLE_RESTART, t_restart_mpi)
+    return [
+        diff_fields(FRESH_MPI, t_fresh_mpi, FRESH_OPENMP, t_fresh_openmp),
+        diff_fields(RESTART_MPI, t_restart_mpi, RESTART_OPENMP, t_restart_openmp),
+        diff_fields(FRESH_MPI, t_fresh_mpi, RESTART_MPI, t_restart_mpi),
+        diff_fields(FRESH_OPENMP, t_fresh_openmp, RESTART_OPENMP, t_restart_openmp),
+    ]
+
+
+# ── color scale from a sample of frames ──
+sample_idx = np.linspace(0, n_frames - 1, 8).astype(int)
 all_ds, all_dt = [], []
-per_bin_diffs = [[None] * len(ROW_DIRS) for _ in range(N_PHASE_BINS)]
-for k in range(N_PHASE_BINS):
-    for r, (_, dir_a, dir_b, times_a, times_b) in enumerate(ROW_DIRS):
-        ds, dt = diff_at_phase(dir_a, dir_b, times_a[k], times_b[k])
-        per_bin_diffs[k][r] = (ds, dt)
+for i in sample_idx:
+    for ds, dt in per_frame_diffs(fresh_mpi_times[i]):
         all_ds.append(np.nanpercentile(ds[~np.isnan(ds)], 99))
         all_dt.append(np.nanpercentile(dt[~np.isnan(dt)], 99))
 speed_vmax = max(all_ds)
@@ -170,15 +169,16 @@ print(f"speed_vmax={speed_vmax:.4g} tau_vmax={tau_vmax:.4g}")
 
 BG = "#fcfcfb"
 TEXT = "#0b0b0b"
-CMAP_ERR = "magma"
+CMAP_ERR = "YlOrRd"  # low end is pale, not black -- see module docstring
 
 tmpdir = Path(tempfile.mkdtemp(prefix="l8matrix_relerr_frames_"))
-for k in range(N_PHASE_BINS):
+for fi, t_fresh_mpi in enumerate(fresh_mpi_times):
+    row_diffs = per_frame_diffs(t_fresh_mpi)
     fig, axes = plt.subplots(4, 2, figsize=(9, 8.5))
     fig.patch.set_facecolor(BG)
     im_u = im_tau = None
-    for r, (label, *_ ) in enumerate(ROW_DIRS):
-        ds, dt = per_bin_diffs[k][r]
+    for r, label in enumerate(ROW_LABELS):
+        ds, dt = row_diffs[r]
         ax_u, ax_tau = axes[r, 0], axes[r, 1]
         for ax in (ax_u, ax_tau):
             ax.set_facecolor(BG)
@@ -190,7 +190,7 @@ for k in range(N_PHASE_BINS):
         ax_u.set_ylabel(label, fontsize=8.5, color=TEXT, rotation=0, labelpad=8, ha="right", va="center")
     axes[0, 0].set_title("|Δu| / U0", fontsize=11, color=TEXT)
     axes[0, 1].set_title("|Δτ| / (ρU0²)", fontsize=11, color=TEXT)
-    fig.suptitle(f"phase = {k/N_PHASE_BINS:.2f} (one rocking cycle, settled tail)", fontsize=9, color="#52514e", y=0.99)
+    fig.suptitle(f"t (fresh-MPI clock) = {t_fresh_mpi:.2f}", fontsize=9, color="#52514e", y=0.99)
     fig.tight_layout(rect=[0.02, 0, 0.94, 0.97])
     cbar_u_ax = fig.add_axes([0.955, 0.55, 0.018, 0.35])
     cbar_tau_ax = fig.add_axes([0.955, 0.10, 0.018, 0.35])
@@ -201,13 +201,14 @@ for k in range(N_PHASE_BINS):
     for cb in (cb1, cb2):
         cb.ax.tick_params(labelsize=7, color=TEXT, labelcolor=TEXT)
         cb.outline.set_visible(False)
-    frame_path = tmpdir / f"frame_{k:04d}.png"
-    fig.savefig(frame_path, dpi=140, facecolor=fig.get_facecolor())
+    frame_path = tmpdir / f"frame_{fi:04d}.png"
+    fig.savefig(frame_path, dpi=130, facecolor=fig.get_facecolor())
     plt.close(fig)
-    print(f"[{k+1}/{N_PHASE_BINS}]")
+    if fi % 20 == 0:
+        print(f"[{fi+1}/{n_frames}]")
 
 subprocess.run([
-    "ffmpeg", "-y", "-framerate", "4", "-stream_loop", "2",
+    "ffmpeg", "-y", "-framerate", "12",
     "-i", str(tmpdir / "frame_%04d.png"),
     "-vf", "pad=ceil(iw/2)*2:ceil(ih/2)*2",
     "-c:v", "libx264", "-pix_fmt", "yuv420p",
