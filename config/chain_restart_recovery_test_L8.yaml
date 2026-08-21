@@ -1,0 +1,56 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Checkpoint-restart quasi-steady-state recovery test (diary.md 2026-08-20).
+#
+# Question: does restarting from a DIFFERENT condition's settled state and
+# ramping into our target (theta=7deg, 32.5rpm) converge to the SAME limit
+# cycle as a genuine fresh cold start at the target? Segment 0 = theta=3deg
+# (fresh, ramps 0->3deg), segment 1 = theta=7deg (restart from segment 0,
+# ramps 3deg->7deg). Compare segment 1's settled tail against
+# chain_restart_recovery_baseline.yaml's single fresh segment at theta=7deg.
+#
+# Fidelity 7 (not the L10 used for the main ours-vs-upstream comparison) --
+# this is a dynamical-systems sanity check on the checkpointing mechanism
+# itself, not a field-resolution comparison. RPM held constant at 32.5 across
+# both segments so only the amplitude-ramp interpolation is exercised (not
+# the separate omega_b velocity-rescaling code path).
+#
+# Run with: python scripts/chain.py config/chain_restart_recovery_test.yaml
+# ─────────────────────────────────────────────────────────────────────────────
+
+fidelity: 8
+geometry: {a: 0.25, b: 0.03575, n: 8.0}
+fill_level: 0.5
+
+# n_mix_cycles/n_transition_cycles here just need to cover ramp (3 cycles) +
+# enough settling + a comparison tail -- not tuned for oxygen kLa (unlike the
+# example config's 80/10).
+n_mix_cycles: 15
+# [NOTE, 2026-08-20] chain.py computes T_per_nd ONCE from segment 0's theta_max
+# (3deg here) and reuses it for every segment's t_end, but T_per_nd actually
+# depends on theta_max (via V_bio's tan(Th_max) term) -- segment 1's target
+# theta=7deg has a ~11% LARGER T_per_nd (0.607 vs 0.546), so its nominal
+# "n_transition_cycles" cycles are really ~0.90x that many ACTUAL theta=7
+# cycles once the segment's own (correct) T_bio is used inside the C driver.
+# Bumped from 15 to 17 to compensate (~15.3 actual cycles) rather than fixing
+# chain.py's per-segment T_per_nd computation, which is a separate, deeper
+# design question (only matters for theta_max sweeps, not omega_b sweeps --
+# see chain.py's _t_period_nd docstring, which assumes theta_max fixed).
+n_transition_cycles: 17
+t_buffer: 3
+
+sweep:
+  parameter: theta_max_0
+  values: [3.0, 7.0]
+
+motion:
+  n_harmonics: 1
+  theta_max: [7.0, 0.0, 0.0]   # overridden per-segment by the sweep
+  phi_angular: [0.0, 0.0, 0.0]
+  omega_b: 3.403392            # 32.5 rpm, constant across both segments
+  omega_h: 0.0
+  amplitude_h: [0.0, 0.0, 0.0]
+  phi_horizontal: [0.0, 0.0, 0.0]
+
+submit: true
+mpi: false
+walltime: "00:30:00"
