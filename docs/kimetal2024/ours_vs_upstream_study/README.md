@@ -16,6 +16,7 @@ presentation-ready outputs.
 | `05_ours_vs_upstream_rampmatched_heatmap.png` | Single-frame still of `04`'s data (t=12.7447) -- same layout/colorbars, for contexts where a video doesn't work (slides, print). |
 | `06_ours_vs_upstream_rampmatched_relerr.png` | Single-frame still of `07`'s data (t=12.7447). |
 | `07_ours_vs_upstream_rampmatched_relerr_video.mp4` | Relative error of \|u\| and of τ, animated across the same 224 frames as `04`, each with its own fixed colorbar. |
+| `08_l8_matrix_mpi_vs_openmp_vs_restart.png` | Our own 4 L8-matrix binaries (fresh MPI/OpenMP, restart-recovered MPI/OpenMP), final settled snapshot, \|u\| and τ with one shared colorbar per column. Visual confirmation of diary.md 2026-08-21: MPI vs OpenMP rows are indistinguishable; restart-recovered rows show a visibly thicker/darker τ band near the top surface than fresh. |
 
 **Removed, superseded (2026-08-20):** the old 13-snapshot video and
 single-instant heatmap used the mismatched ramp and a contaminated
