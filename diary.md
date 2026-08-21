@@ -1,5 +1,36 @@
 # Experiment diary
 
+## 2026-08-21 (5) — animated the relerr heatmap (09), caught a real bug
+in the first version: independent per-run phase-matching let MPI and
+OpenMP land on ADJACENT cycles at the same phase, manufacturing a fake
+"MPI vs OpenMP" difference out of ordinary cycle-to-cycle variability.
+
+User wanted 09 as a video (12 phase bins, one full rocking cycle,
+settled tail only, same 4 row-comparisons as the static version).
+First render's "restart: MPI vs OpenMP" row looked implausibly large
+given entry (2)'s finding that MPI/OpenMP agree to <2%. Checked
+directly rather than trusting the plot: printed the actual (t_mpi,
+t_openmp) pairs picked per phase bin -- 11 of 12 differed by ~0.6074,
+almost exactly one full period (T_per_nd=0.6073). Root cause:
+`phase_bin_times()` searches each run's OWN available times
+independently for the nearest phase match; since MPI's and OpenMP's
+settled tails don't end at exactly the same last timestamp, the
+independent searches frequently locked onto DIFFERENT cycles that
+happen to share a phase, not the same instant. Comparing MPI's cycle N
+against OpenMP's cycle N+1 at the same phase isn't testing "does MPI
+vs OpenMP matter" -- it's testing ordinary cycle-to-cycle scatter
+(already established as real and non-trivial, entry (8)), mislabeled.
+
+**Fix**: MPI and OpenMP share the exact same absolute clock (same
+`t_checkpoint`, same cadence), so there's no reason to phase-match them
+independently at all -- derive one reference time series (from MPI)
+and match OpenMP to it by nearest TIME. Only the genuinely-different-
+clock comparison (fresh vs restart, rows 3/4) still needs phase
+matching. Re-rendered: "restart: MPI vs OpenMP" is now properly faint,
+consistent with the <2% figure from entry (2); rows 3-4 (fresh vs
+restart) still clearly dominate. See `09_l8_matrix_relerr_video.mp4`.
+
+
 ## 2026-08-21 (4) — clarified I never touched the ramp mechanism (user's
 concern), built the nondim relative-error heatmap for the L8 matrix.
 
