@@ -1,5 +1,91 @@
 # Experiment diary
 
+## 2026-08-21 — MAJOR BUG FOUND AND FIXED: tau_95/tau_98 were computed
+via a genuinely unprotected data race under OpenMP, affecting every
+non-MPI run this project has ever done (chain.py's own DEFAULT, not
+an edge case). Confirmed via direct reproducibility test, fixed,
+re-verified, rebuilt all production binaries.
+
+**How this surfaced**: comparing the L8 matrix's results.json values
+(diary.md 2026-08-20 (9)), `vel_rms_qss` matched to <0.05% between the
+MPI and OpenMP builds of the identical fresh θ=7° condition, and even
+`tau_100_max`/`tau_mean_max` matched to <1% -- but `tau_95_qss`/
+`tau_98_qss` were 2.5-3.3x apart, consistently, across every fresh and
+restart configuration. That inconsistency (some KPIs agree tightly,
+others don't, same run) was the signal something structural was wrong
+with specifically those two statistics, not general MPI-vs-OpenMP
+imprecision.
+
+**Root cause, `src/BioReactor.c`'s `normcal` event (tau_95/98 two-pass
+histogram)**: `bins[b]++` is a manual C array increment with a
+runtime-computed index `b`. Basilisk's `foreach()` DOES auto-add an
+OpenMP reduction clause for the plain scalar max/sum accumulators
+elsewhere in the same function (`tau_max_val`, `tau_sum`, etc.) -- but
+a manually-indexed array write isn't a pattern its auto-reduction
+recognizes. Under `-fopenmp` with >1 thread, this is a textbook
+unprotected data race: two threads can both read `bins[b]`, both
+compute `+1`, both write back, and one increment is silently lost.
+MPI builds never hit this: qcc auto-disables OpenMP under `-D_MPI=1`
+(its own printed warning, "OpenMP cannot be used with MPI (yet):
+switching it off" -- seen on every MPI compile this whole project),
+so each MPI rank is single-threaded and the same code is race-free
+there. **Only OpenMP-only builds are affected -- and per `chain.py`'s
+own `submit_chain()` (`use_mpi = bool(cfg.get("mpi", False))`), OpenMP
+is the DEFAULT for any sweep config that doesn't explicitly set
+`mpi: true`.** This is not a corner case exercised only by today's
+matrix -- it is the historical default for any chain.py-driven run
+that didn't opt into MPI.
+
+**Confirmed empirically, not just by code inspection** (systematic-
+debugging: root cause before fix): ran the IDENTICAL params.json twice
+through the same OpenMP binary. tau_95 differed by 38% between the two
+runs; tau_98 by 6.3%; tau_100/tau_mean/ediss_mean (the auto-reduced
+accumulators) differed by <1% -- consistent with ordinary floating-
+point reduction-order noise, not a bug. A genuinely deterministic
+solver run twice with identical inputs should not differ at all
+except at the level of that ordinary noise; 38%/6.3% is not that.
+
+**Fix attempts, in order** (recorded because two natural fixes failed
+for a Basilisk-specific reason worth knowing next time): `#pragma omp
+atomic` on the increment -- fails to compile ("expected expression
+before '}' token"): qcc's stencil-analysis AST walk chokes on a raw
+pragma at that position inside a `foreach()` body. Tried Basilisk's
+own `OMP(omp atomic)` pragma-insertion macro (`grid/config.h`,
+`@define OMP(x) Pragma(#x)`) instead -- same failure, same position.
+**Working fix**: per-thread-local histogram bins (flat 1D array sized
+`omp_get_max_threads() * TAU_BINS`, indexed by `omp_get_thread_num()`
+-- a plain function call, not a pragma, so qcc's parser has no
+trouble with it), merged into the final histogram in a plain loop
+after `foreach()` completes. Under MPI (`_OPENMP` undefined),
+`_tau_nthreads=1` and this reduces to the original single-array
+behavior with zero overhead.
+
+**Re-verified the fix directly**: reran the identical two-run
+reproducibility test with the fixed binary. tau_95/98 now differ by
+~0.87% between the two runs -- matching tau_100/mean's own ordinary
+noise level. The race is gone.
+
+**Applied to `src/BioReactor.c` and rebuilt all four production
+binaries** (`build/BioReactor`, `-video`, `-mpi`, `-mpi-video`) --
+all compile cleanly.
+
+**Consequence for work already done this session**: the L8 matrix's
+three OpenMP-side runs (`ours_fresh_openmp`, `ours_chain_openmp_seg0`,
+`ours_chain_openmp_seg1`) have unreliable tau_95/98/qss values and are
+being rerun now with the fixed binary before any comparison is
+trusted. The MPI-side runs (`ours_fresh_mpi`, `ours_chain_mpi_seg0/1`)
+were never affected (single-threaded per rank) and stand as-is.
+**Also flagged, not yet chased**: the earlier fidelity-7 restart-
+recovery analysis (diary.md 2026-08-20 (7)/(8), the transient-overshoot
+finding and the ~6% phase-locked amplitude gap) was built entirely on
+`tau_95` from `chain.py`'s DEFAULT (OpenMP) template, before this bug
+was known -- that analysis needs to be treated with real skepticism
+and probably redone, since a meaningful fraction (or all) of the
+observed gap could be this race condition rather than a genuine
+restart-vs-fresh physical difference. Not redone yet; flagging clearly
+rather than letting the earlier conclusion stand unqualified.
+
+
 ## 2026-08-20 (9) — MPI x checkpoint matrix at L8: submitted after finding
 upstream's own build convention is OpenMP (not MPI, contradicting how
 every upstream run this session was actually built) and fixing a real

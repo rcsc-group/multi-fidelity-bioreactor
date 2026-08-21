@@ -1001,9 +1001,38 @@ event normcal (t+=t_out; t<=t_end){
     if (tau_max_strict < 1e-14) tau_max_strict = 1e-14;
 
     // Pass 2: 200-bin histogram — recomputes tau inline, no scalar needed
+    // [FIX, 2026-08-20, diary.md] `bins[b]++` used to be a manual array
+    // increment with no protection -- not a pattern Basilisk's foreach()/
+    // OpenMP auto-reduction recognizes (unlike the scalar max/sum
+    // accumulators above, which DO get an automatic reduction clause), so
+    // under -fopenmp with >1 thread it was a genuine, unprotected data
+    // race: concurrent non-atomic read-modify-write to the same bins[b]
+    // silently loses increments. MPI builds never hit this (qcc disables
+    // OpenMP under -D_MPI=1, confirmed by its own "OpenMP cannot be used
+    // with MPI (yet)" warning, so each MPI rank is single-threaded here)
+    // -- only OpenMP-only builds (the DEFAULT for chain.py sweeps that
+    // don't explicitly set mpi:true) were affected. Confirmed empirically,
+    // not just by inspection: two identical OpenMP runs (same params, same
+    // binary) gave tau_95 values 38% apart and tau_98 values 6.3% apart,
+    // while tau_100/tau_mean/ediss_mean (computed via the auto-reduced
+    // accumulators) differed by <1% (ordinary floating-point reduction-
+    // order noise, not a bug). Both `#pragma omp atomic` and Basilisk's own
+    // OMP(omp atomic) pragma-insertion macro (grid/config.h) fail to
+    // compile at this exact position -- qcc's stencil-analysis AST walk
+    // chokes on a pragma inside this foreach() body (confirmed: same
+    // "expected expression before '}' token" error from both). Worked
+    // around with per-thread-local bins (flat 1D array, indexed by
+    // omp_get_thread_num() -- a plain function call, not a pragma, so qcc
+    // parses it fine) merged into the final histogram after the loop.
+    // Re-verified after this fix: the same reproducibility test now gives
+    // tau_95/98 differing by ~0.87% between identical runs, matching
+    // tau_100/mean's ordinary noise level -- the race is gone.
     #define TAU_BINS 200
-    long bins[TAU_BINS];
-    for (int k = 0; k < TAU_BINS; k++) bins[k] = 0;
+    int _tau_nthreads = 1;
+    #if _OPENMP
+      _tau_nthreads = omp_get_max_threads();
+    #endif
+    long *_tau_tbins = (long *) calloc(_tau_nthreads * TAU_BINS, sizeof(long));
     foreach() {
       if (f[] > 0.5) {
         double du_dy = (u.x[0,1] - u.x[0,-1]) / (2.*Delta);
@@ -1012,9 +1041,20 @@ event normcal (t+=t_out; t<=t_end){
         int b = (int)(tau / tau_max_val * (TAU_BINS - 1));
         if (b < 0)         b = 0;
         if (b >= TAU_BINS) b = TAU_BINS - 1;
-        bins[b]++;
+        int _tid = 0;
+        #if _OPENMP
+          _tid = omp_get_thread_num();
+        #endif
+        _tau_tbins[_tid * TAU_BINS + b]++;
       }
     }
+    long bins[TAU_BINS];
+    for (int k = 0; k < TAU_BINS; k++) {
+      bins[k] = 0;
+      for (int th = 0; th < _tau_nthreads; th++)
+        bins[k] += _tau_tbins[th * TAU_BINS + k];
+    }
+    free(_tau_tbins);
     #if _MPI
     {
       long gbins[TAU_BINS];
