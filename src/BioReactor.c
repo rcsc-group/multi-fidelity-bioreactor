@@ -43,6 +43,16 @@
 #include "view3.h"
 #include "utils2.h"
 
+// [PROJECT ADDED] Reinstates upstream's REMOVE_DROP feature (droplet/bubble
+// removal via tag()), deleted during an earlier cleanup because the
+// validated baseline (theta=7deg/32.5rpm) doesn't need it -- see the
+// [PROJECT REMOVED] note below. Brought back as a runtime params.json
+// toggle (params.remove_drop) rather than the original compile-time
+// #define, so the sweep pipeline can test it on/off from the same binary.
+// remove_droplets() signature verified against the canonical Basilisk
+// install (tag.h) -- unchanged from what upstream called.
+#include "tag.h"
+
 // Mathematical constants (e.g., M_PI from math.h)
 #define _USE_MATH_DEFINES
 #include <math.h>
@@ -65,10 +75,12 @@
 //   VERTICAL_MIXDOWN (downward tracer mixing variant), AMR (adaptive mesh
 //   refinement — see MINLEVEL/MAXLEVEL note above; upstream itself ran with
 //   AMR=0 for its own published results, so this is not a discrepancy vs.
-//   Kim's actual runs), REMOVE_DROP (droplet/bubble removal), CFL_COND
-//   (custom CFL override), DUMP (upstream's own dump mechanism — this fork
-//   has its own checkpoint-restart dump/restore, added separately, see
-//   event dump_checkpoint below).
+//   Kim's actual runs), CFL_COND (custom CFL override), DUMP (upstream's
+//   own dump mechanism — this fork has its own checkpoint-restart
+//   dump/restore, added separately, see event dump_checkpoint below).
+//   REMOVE_DROP (droplet/bubble removal) was also removed here, but later
+//   reinstated as a runtime params.remove_drop toggle -- see the tag.h
+//   include and remove_drop event below.
 // Flags to control the inclusion of features (set to 1 = enable, 0 = disable)
 #define EMBED            1   // Enable embedded boundary for solid geometry
 #define OXYGEN           1   // Enable oxygen concentration simulation
@@ -118,6 +130,9 @@ int NN;  // Grid resolution: set from params.fidelity as 1<<fidelity in main()
 // forcing profile itself. Still open.
 #define N_RAMP_CYCLES 3            // Ramp duration in rocking cycles; t_change_st = N_RAMP_CYCLES * T_per_st
 const double th_cont = 90;        // Contact angle for wetting conditions (degrees)
+// Upstream's REMOVE_DROP constants, unchanged (see remove_drop event below).
+const int    remove_minsize   = 20;      // minimum number of cells for a region to survive removal
+const double remove_threshold = 1.0e-4;  // threshold for identifying disconnected fluid elements
 double t_mix,t_dump;              // Time at which tracer is released, and dump file is saved (computed later)
 const double nMix_cycle = 80;     // Number of cycles for tracer release (used to compute t_mix)
 double t_end;                      // Final simulation time (simulation time unit); set from params.t_end in main()
@@ -767,6 +782,17 @@ event acceleration(i++)
 }
 #endif
 
+// [PROJECT ADDED] Reinstated upstream event (see REMOVE_DROP note near the
+// tag.h include above). Runtime-gated on params.remove_drop instead of a
+// compile-time #if, so a single binary can run both arms of the on/off
+// matrix. Upstream ran this unconditionally once enabled, every step
+// (i++); logic unchanged from upstream's remove_drop event.
+event remove_drop(i++) {
+  if (!params.remove_drop)
+    return;
+  remove_droplets(f, remove_minsize, remove_threshold, false);  // remove droplets
+  remove_droplets(f, remove_minsize, remove_threshold, true);   // remove bubbles
+}
 
 // Write a Basilisk checkpoint at the first complete period boundary after t_end.
 // The checkpoint is always at θ=0 (zero-crossing) — clean phase alignment for

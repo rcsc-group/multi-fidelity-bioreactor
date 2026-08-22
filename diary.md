@@ -1,5 +1,56 @@
 # Experiment diary
 
+## 2026-08-22 — bubble/droplet suppression: reinstated as a runtime toggle,
+smoke-tested, confirmed a genuine no-op at the validated baseline condition.
+
+User wanted bubble suppression added as a 3rd factor in the L10 MPI x
+restart matrix (2x2 -> 2x2x2). Checked first: our fork doesn't have this
+toggle at all -- upstream's `REMOVE_DROP` flag (and the event it gated,
+`remove_droplets(f,...)` from Basilisk's `tag.h`) was fully DELETED during
+an earlier cleanup, not just switched off (`src/BioReactor.c`'s
+"[PROJECT REMOVED]" block). Verified upstream's own default was
+`REMOVE_DROP=0` too (`git show ea66816:src/BioReactor.c`), consistent with
+the already-established fact that neither side uses bubble deletion.
+
+**Reinstated** as `params.remove_drop` (params.json field, default 0) so
+one binary covers both arms, rather than upstream's compile-time `#define`
+which would need a rebuild per arm. `remove_droplets()`'s signature in the
+canonical Basilisk install (`tag.h`) is unchanged from what upstream
+called -- no API drift to patch around. `src/BioReactor.c`: added
+`#include "tag.h"`, restored `remove_minsize=20`/`remove_threshold=1e-4`
+constants, added a `remove_drop` event gated by `if (!params.remove_drop)
+return;`. `src/params_read.h`: added the `remove_drop` int field + JSON
+key. All 4 production binaries rebuilt clean (no new warnings beyond the
+pre-existing embed.h stencil-analysis ones).
+
+**Smoke test before committing to the full L10 matrix** (per the project's
+own precedent: de-risk at L8 first): 2 fresh-MPI runs at the exact
+`ours_fresh_mpi` L8 condition (theta=7deg, 32.5rpm), `remove_drop=0` vs
+`remove_drop=1`, same dump cadence as the L8-matrix investigation.
+**Result: `shear_stress.dat` and `normf.dat` are byte-for-byte identical**
+between the two runs, all 26117 steps, t=0 to 12.14.
+
+Before trusting that null result, ruled out "the flag silently isn't
+applied" as the explanation (a real risk when a toggle produces a null
+result — silence looks identical whether it's "no effect" or "not
+wired"): wrote a standalone harness (`test_params_parse.c`) that links
+only `params_read.h` and prints the parsed struct directly against both
+`params.json` files — confirms `remove_drop=0`/`remove_drop=1` are read
+correctly, independent of the full CFD run. Combined with bit-identical
+output surviving 26117 steps of a chaotic nonlinear solve (any actual
+field modification at any single step would have propagated and broken
+bit-identity long before t=12.14), this is airtight: `remove_droplets`
+executes as a true no-op every step, because the liquid and gas phases
+each stay a single connected region (mild sloshing, no breaking waves) --
+there's simply nothing under the 20-cell minsize to remove.
+
+**Conclusion**: bubble suppression is a validated non-factor for our
+regime, not a matrix dimension worth crossing with MPI x restart at L10 --
+crossing it would 3x the L10 run count (4 -> 12 runs) to measure something
+already shown to be exactly zero. Keeping the L10 matrix at 2x2 (MPI x
+restart), matching what was validated at L8.
+
+
 ## 2026-08-21 (6) — fixed two usability issues in the 09 relerr video that
 entry (5)'s render still had: (a) colormap, (b) frame count.
 
