@@ -63,7 +63,29 @@ def _measured_period(run_dir, params) -> float:
     dt = np.mean(np.diff(t[mask]))
     freqs = np.fft.rfftfreq(len(signal), d=dt)[1:]
     power = np.abs(np.fft.rfft(signal))[1:] ** 2
-    dominant_freq = freqs[np.argmax(power)]
+
+    # [FIX, 2026-08-24, diary.md] A blind argmax(power) occasionally locks
+    # onto a real secondary sloshing mode instead of the forced response.
+    # At b=0.10, a near-resonant intermodulation triplet exists
+    # (freq ~2.75, ~3.71, ~6.46 -- note 2.75+3.71=6.46): under OpenMP's
+    # run-to-run floating-point reduction-order nondeterminism (confirmed:
+    # single-threaded reruns are bit-identical and always correct; threads>1
+    # flip unpredictably between reps at the SAME thread count -- not
+    # thread-count- or hardware-deterministic), the 6.46 peak sometimes
+    # out-powers the true ~3.71 peak, which otherwise matches theory to
+    # <0.1%. Restrict the search to a window around the theoretically
+    # expected frequency: wide enough (+/-30%) to still catch a real scale
+    # bug in H_bio (which would shift the true peak by a large, unambiguous
+    # amount -- see the 2x error this test's docstring references), narrow
+    # enough to exclude the observed spurious mode (~74% off).
+    expected_freq = 2 / t_per_st_guess
+    window = (freqs > 0.7 * expected_freq) & (freqs < 1.3 * expected_freq)
+    assert window.any(), (
+        f"No FFT power within 30% of the theoretically expected frequency "
+        f"({expected_freq:.4f}) -- likely a real regression, not the known "
+        "near-resonance flake (diary.md 2026-08-24)."
+    )
+    dominant_freq = freqs[window][np.argmax(power[window])]
     return 2 / dominant_freq  # span oscillates at 2*omega_b -> period/2
 
 
@@ -98,4 +120,31 @@ def test_doubling_geometry_b_shifts_period_as_theory_predicts(tmp_path):
         f"theory predicts {theory_ratio:.3f} — off by {rel_err:.1%}. "
         "A scale error in H_bio/geometry.b's contribution to T_per_st "
         "would show up here even if it looked fine at a single geometry."
+    )
+
+
+FIXTURE_DIR = pathlib.Path(__file__).parents[1] / "fixtures" / "geometry_b_flake"
+
+
+def test_measured_period_robust_to_near_resonant_flake():
+    """Regression test for the CI flake (diary.md 2026-08-24).
+
+    tests/fixtures/geometry_b_flake/b010_flaky/vol_frac_interf.dat is a
+    REAL captured run (b=0.10, OMP_NUM_THREADS=2) that hit a near-resonant
+    intermodulation mode: FFT power at freq~=6.464 briefly out-powered the
+    true forced-response peak at freq~=3.715 (matching theory to <0.1%).
+    A blind argmax(power) picks freq=6.464 -> wrong period -> the CI flake.
+    Confirmed via 9 local reruns (diag_fft.py, 1/2/4 OMP threads x 3 reps):
+    single-threaded runs are bit-identical and always correct; threads>1
+    flip unpredictably between reps at the SAME thread count, pointing to
+    OpenMP reduction-order nondeterminism, not a hardware- or thread-count-
+    deterministic cause.
+    """
+    params_large = {**CANONICAL_PARAMS, "geometry": {"a": 0.25, "b": 0.10, "n": 8.0}, "t_end": 15.0}
+    measured = _measured_period(FIXTURE_DIR / "b010_flaky", params_large)
+    theory = _t_per_st_theory(params_large)
+    rel_err = abs(measured - theory) / theory
+    assert rel_err < 0.05, (
+        f"measured_period={measured:.5f} theory={theory:.5f} rel_err={rel_err:.1%} "
+        "-- _measured_period picked the wrong FFT peak on the captured flaky run."
     )

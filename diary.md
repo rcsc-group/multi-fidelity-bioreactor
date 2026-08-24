@@ -1,5 +1,106 @@
 # Experiment diary
 
+## 2026-08-23/24 — L10 MPI x restart matrix: real HPC-scheduling lessons,
+CI flakiness turns out NOT to be random noise.
+
+**L10 matrix progress.** Sent the 2x2 (MPI x restart) matrix at L10,
+matching what was validated at L8 (bubble suppression excluded -- see
+2026-08-22 entry, confirmed no-op). Mistakes made and corrected along the
+way, worth recording so they aren't repeated:
+- Didn't check QOS headroom before submitting all 4 jobs at once. Our
+  `normal` QOS caps at 64 CPUs/user TOTAL -- one 64-task MPI job uses the
+  entire allowance, so `fresh_openmp`/`chain_openmp_seg0` (32 CPUs each)
+  sat PENDING behind `QOSMaxCpuPerUserLimit`, not raw cluster contention.
+  These jobs can only run one at a time, or in combinations <=64 CPUs.
+- `fresh_mpi`'s first attempt (job 5150988) TIMED OUT at its 16h cap,
+  reaching t=9.97/12.11 (82%) -- extrapolated it needed ~18h. Resubmitted
+  with 24h. `chain_mpi_seg0` (resubmitted before it started running, so
+  no wasted compute) got the same fix pre-emptively (16h->30h) and
+  COMPLETED cleanly in 19:07:00, matching the extrapolation. Lesson:
+  L10's actual per-run cost (~18-19h at t_end~12, 64 MPI tasks) is way
+  outside L8's cost (22-38 min) -- always extrapolate from partial
+  progress before trusting a walltime guess at a new fidelity.
+- User's call once this was surfaced: let it queue serially rather than
+  requesting more QOS headroom or dropping the OpenMP arm. No L10 OpenMP
+  data point exists yet, so that arm's ETA is a wide, L8-derived guess
+  (2-4x MPI's time by the L8 ratio) until the first one actually runs.
+
+**CI flakiness: NOT random.** User asked why CI's been going red. Pulled
+the last 50 CI runs (2026-08-15 to 2026-08-22): 4 failures, ALL the same
+test (`test_geometry_b_scales_period.py::test_doubling_geometry_b_shifts_
+period_as_theory_predicts`), and all four report the EXACT SAME wrong
+number -- measured period ratio 0.537 vs theory 0.933 (42.5% off),
+bit-identical across runs a week apart. That rules out ordinary
+float/race noise (which would give slightly different wrong values each
+time, like the tau-histogram bug did) -- this is a discrete fork: either
+the exact right answer or the exact same wrong one, nothing in between.
+
+Traced the mechanism: the test does FFT dominant-frequency detection on
+the interface-span signal and takes a blind `argmax(power)`. Checked the
+field computation feeding it (`posY` via Basilisk's own `position()`,
+reduced via `statsf()`) -- canonical Basilisk, not our custom code, so
+this is NOT a repeat of the already-fixed tau-histogram race. Leading
+hypothesis: for one of the two geometries, the span signal has two
+frequency bins with close-to-tied power (fundamental vs its harmonic),
+and tiny hardware-dependent floating-point rounding differences across
+GitHub's heterogeneous `ubuntu-latest` runner fleet (same vCPU count,
+different underlying CPU silicon per run) are enough to flip which bin
+wins the naive argmax.
+
+User granted mbessa-condo QOS access for THIS investigation only (not for
+L10, which must stay off condo without separate explicit permission), and
+pointed at low fidelity to investigate -- which matches the test's own
+design (fidelity=3, ~2 min/run). Wrote a diagnostic
+(`/oscar/scratch/eaguerov/tmp/ci_flake_investigation/diag_fft.py`) that
+reproduces the exact two configs and prints the top-5 FFT peaks by power
+(not just the argmax) for each, across OMP_NUM_THREADS in {1,2,4} x 3
+reps, to directly test whether (a) the top-2 candidates are actually
+close in power, and (b) thread count changes which one wins. Submitted
+as job 5189092.
+
+**Results confirm the hypothesis, and sharpen it.** 9 reruns (OMP_NUM_THREADS
+in {1,2,4}, 3 reps each) of the exact two CI configs (b=0.05, b=0.10),
+printing the FFT's top-5 peaks by power (not just argmax):
+- b=0.05: one dominant peak (freq=3.4682) in all 9 runs, next-closest
+  competitor always <=3% of its power. Never at risk.
+- b=0.10: the TRUE forced-response peak (freq=3.7147, matching theory's
+  expected 3.71492 to 4 sig figs) competes with a genuine secondary mode
+  at freq=6.4636 -- and 2.7489+3.7147=6.4636, an intermodulation triplet,
+  a real physical feature of this geometry, not noise.
+- At OMP_NUM_THREADS=1, all 3 reps gave BIT-IDENTICAL correct output
+  (power values matched to the last printed digit) -- single-threaded is
+  fully deterministic and always right.
+- At threads=2 and threads=4, results were NOT thread-count-deterministic:
+  same thread count, different reps gave different outcomes (t2_r1 FAILED,
+  t2_r2/r3 passed; t4_r2 FAILED, t4_r1/r3 passed), with the competing
+  peak's power ratio ranging 0.51-0.90 even among PASSING reps. This is
+  OpenMP run-to-run floating-point reduction-order nondeterminism
+  (different from the earlier tau-histogram bug, which was an unprotected
+  accumulator in OUR code -- this test's fields (`posY`, `statsf`) are
+  canonical Basilisk, so the nondeterminism lives somewhere in Basilisk's
+  own internals, e.g. the Poisson solve or VOF advection reduction order),
+  occasionally tipping a genuinely-near-tied resonance competition.
+
+**Fix (TDD)**: saved the actual failing run's `vol_frac_interf.dat` (from
+rep t2_r1) as a permanent fixture
+(`tests/fixtures/geometry_b_flake/{b005,b010_flaky}/vol_frac_interf.dat`)
+and added `test_measured_period_robust_to_near_resonant_flake`, which
+calls `_measured_period` directly on the captured flaky data -- confirmed
+RED against the original blind-argmax code (measured 42.5% off, exactly
+reproducing the CI failure from cached data, no CFD run needed). Fixed
+`_measured_period` to restrict the FFT peak search to a window around the
+theoretically expected frequency (+/-30%): comfortably contains the true
+peak (0.03% off) and comfortably excludes the spurious one (~74% off),
+while still wide enough to catch a real H_bio scale bug (the kind this
+test was written to catch) if one were ever reintroduced. Confirmed GREEN
+after the fix, and re-verified the full original ratio check against the
+same captured flaky data end-to-end: rel_err dropped from 42.5% to 0.02%.
+Full fast suite (`pytest tests/ -m "not medium"`) still 153/154 passing
+(+1 for the new regression test) -- the one remaining failure is the
+already-diagnosed, unrelated `test_sweep_slurm_produces_finite_kla`
+checkpoint-staging-timing bug (2026-08-23 entry), not touched here.
+
+
 ## 2026-08-22 — bubble/droplet suppression: reinstated as a runtime toggle,
 smoke-tested, confirmed a genuine no-op at the validated baseline condition.
 
