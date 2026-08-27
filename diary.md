@@ -1,5 +1,38 @@
 # Experiment diary
 
+## 2026-08-26 — L10 matrix: MPI arm fully complete, OpenMP arm's first
+walltime guess was wrong (again), fixed before wasting the full 48h.
+
+**MPI arm done.** `fresh_mpi` (17:44:11), `chain_mpi_seg0` (19:07:00),
+`chain_mpi_seg1` (19:24:55) all COMPLETED cleanly -- the restart-vs-fresh
+finding from L8 is now confirmed at full L10 resolution too (per-run
+comparison pending postprocessing, not yet done as of this entry).
+
+**OpenMP arm's 48h guess (2026-08-24 entry) was too tight.** Checked
+actual progress instead of trusting the extrapolation blindly: at 40h48m
+elapsed, `fresh_openmp` was only at t=6.73/12.11 (56%) -- extrapolated
+total ~73h, not ~48h. `chain_openmp_seg0` similarly: 37h36m elapsed,
+t=5.55/11.19 (50%), extrapolated total ~76h. Both would have hit the 48h
+cap at ~50% progress with NOTHING salvageable (no periodic checkpoint for
+non-final-segment runs, only the final `dump_checkpoint` near t_end) --
+unlike `fresh_mpi`'s earlier near-miss (93% done when caught), these were
+still only half done, so continuing to let them run would have wasted a
+full 48h each for zero usable result. User's call: cancelled both
+immediately (minimizes further sunk cost vs. riding to a guaranteed
+timeout) and resubmitted with 96h caps (comfortably covers the ~73-76h
+extrapolation). Also bumped the not-yet-submitted `chain_openmp_seg1`
+script to 96h pre-emptively, same lesson as `chain_mpi_seg0`->`seg1` on
+2026-08-24.
+
+**Running lesson across this whole matrix**: L10's actual OpenMP cost
+looks close to 4x MPI's (~73-76h vs ~18-19h, same t_end~11-12), the high
+end of the L8-derived 2-4x guess, not the middle. Always check ACTUAL
+progress via the periodic field dumps before trusting an extrapolated
+walltime a second time -- the first miss (fresh_mpi) could be chalked up
+to "no L10 precedent yet"; this one had no such excuse and was still
+initially under-provisioned.
+
+
 ## 2026-08-23/24 — L10 MPI x restart matrix: real HPC-scheduling lessons,
 CI flakiness turns out NOT to be random noise.
 
