@@ -1,5 +1,65 @@
 # Experiment diary
 
+## 2026-08-28 — L10 hero video, docs staleness sweep, and a real harness bug
+that silently ran the wrong binary once.
+
+**Hero video.** User wanted a real L10 lab-frame video for the README/docs
+homepage, upgrading the existing `hero-rocking-l9-lab.mp4`. Rather than
+queue a new native-video SLURM run (would compete with the already-running
+L10 OpenMP jobs for the 64-CPU quota), reconstructed it from `fresh_mpi`'s
+already-completed per-cell dumps: rotate the body-frame field by Th(t)
+(exact driver formula) about the domain origin, matching Basilisk's own
+`quat={0,0,sin(Th/2),cos(Th/2)}` lab-frame camera convention (commit
+251951c). First version colored by the flat VOF split (water/air, matching
+L9's style) -- user's reaction: "That looks bad... much, much more
+astonishing" compared to this session's earlier science plots. Tried
+vorticity next (matching Kim et al.'s Fig_vor_all convention) -- washed
+out, vorticity in this laminar regime concentrates in thin near-wall
+boundary layers, mostly flat everywhere else in a full loop. Landed on
+velocity magnitude (turbo colormap): varies richly across the whole bulk
+flow at every instant, reads as genuinely dynamic throughout. Saved as
+`scripts/render_hero_video.py`; old L9 hero deleted per project convention
+(stale presentation assets don't stay alongside their replacement).
+
+**Docs staleness sweep** (subagent audit, run in parallel with the video
+work): 5 confirmed stale items fixed --
+`docs_site/reference/scripts.md` was missing the `scripts/` prefix on
+every command (none would have run); "19 KPIs" was wrong in 3 places
+(`postprocess.py` writes 23 now, +4 since 2026-08-07/08:
+`tau_100_max_strict`, `tau_mean_max_strict`, `tau_100_max_signed`,
+`ediss_mean_qss`); `params.md` claimed only 3 explicit defaults
+(`frames_per_period`=5 is a 4th) and was missing `frames_per_period` and
+`remove_drop` (2026-08-22) from the field table entirely;
+`project-structure.md`'s `scripts/` catch-all description hadn't kept up
+with ~27 scripts added during the ours-vs-upstream investigation.
+Re-ran the tutorial's own fidelity-3 demo to get real, current
+`results.json` numbers rather than leave the stale 19-key example in
+place. **Not fixed, flagged only**: `testing.md`'s "known open issue"
+section describes a since-removed CI mechanism and pre-fix numbers; the
+`kim-et-al-validation.md` vs. 2026-08-20 "no ramp forcing at all" timing
+question. Both need someone with fuller context to resolve properly.
+
+**A real, concerning harness bug, caught by accident.** Re-verifying the
+tutorial's demo output, the exact same params.json run via
+`cd runs/X; ../../build/BioReactor params.json` (relative paths) gave a
+shear_stress.dat with only 6 columns (missing the 4 newer fields) --
+but the SAME binary, run via fully-qualified absolute paths from the
+same directory, correctly gave all 10. Ruled out a stale/cached binary
+(force `make clean && make build`, same result) and a wrong-directory
+mixup (confirmed via `ls`/`find` that both runs' directories and the
+binary were exactly where expected, and the old `BioReactor3D/build/
+BioReactor` doesn't even exist to have been silently invoked instead).
+The most likely explanation, given this session's own recurring
+"Shell cwd was reset to .../BioReactor3D" notices appearing after
+unrelated commands throughout the session: whatever underlying shell
+state those resets touch can affect a LATER command's relative-path
+resolution in a way that produces a real, silently-wrong numerical
+result -- not just a cosmetic surprise. Filed as product feedback
+(Claude Code harness). Practical takeaway for this project: prefer
+absolute paths when invoking the actual solver binary, especially in
+anything meant to produce a real result, not just directory listings.
+
+
 ## 2026-08-26 — L10 matrix: MPI arm fully complete, OpenMP arm's first
 walltime guess was wrong (again), fixed before wasting the full 48h.
 

@@ -1,5 +1,11 @@
 # Rocking Bioreactor 2D — Simulation Suite
 
+<video src="assets/img/hero-rocking-l10-lab.mp4" controls muted loop playsinline width="600">
+  Rocking bioreactor simulation at fidelity 10 (1024x1024 cells), θ=7°, 32.5rpm, lab-frame view.
+</video>
+
+*Fidelity-10 simulation of the rocking bioreactor (θ=7°, 32.5rpm, lab frame — tank rocks, water finds its level), colored by velocity magnitude.*
+
 Two-phase CFD solver for a rocking bioreactor, implemented in [Basilisk](http://basilisk.fr/).
 Developed at the Harris Lab (Brown University) in collaboration with the Cimpeanu group (Warwick).
 

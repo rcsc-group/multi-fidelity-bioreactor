@@ -11,7 +11,7 @@ multi-fidelity-bioreactor/
 │
 ├── scripts/
 │   ├── simulate.py           # Core API: run_local() / submit_slurm() / wait_for_result()
-│   ├── postprocess.py        # 19 KPIs from run output files → results.json (see Reference → Output files)
+│   ├── postprocess.py        # 23 KPIs from run output files → results.json (see Reference → Output files)
 │   ├── collect_results.py    # Aggregate all results.json across runs → CSV
 │   ├── plot_heatmaps.py      # KPI heatmaps from sweep results → experiments/figures/
 │   ├── plot_kim_overlay_tau.py  # Overlay our tau/RPM results on Kim et al. Fig. 13a
@@ -28,8 +28,10 @@ multi-fidelity-bioreactor/
 │   │                         # predecessor segment has a genuine results.json)
 │   ├── tau_chain_watchdog.py, theta_chain_watchdog.py  # Self-healing chain watchdogs
 │   ├── health_report.py, check_restart_run.py  # Numerical-health / restart-correctness checks
-│   └── (assorted one-off mpi_*/submit_*/benchmark_*/_postprocess_*/_l9_l10_* scripts —
-│         diagnostic tools kept for reproducibility of specific past debugging sessions,
+│   └── (assorted one-off diagnostic/plotting/rendering scripts from specific past
+│         debugging and validation sessions -- e.g. mpi_*/submit_*/benchmark_*/
+│         _postprocess_*/_l9_l10_* and the "ours vs upstream" comparison study's
+│         analyze_*/plot_*/render_*/compare_* scripts -- kept for reproducibility,
 │         not part of the documented workflows above)
 │
 ├── config/
@@ -60,6 +62,7 @@ multi-fidelity-bioreactor/
 │   ├── test_stage_segment.py     # stage_segment.py checkpoint-staging safety tests
 │   ├── test_postprocess.py       # postprocessing unit tests
 │   ├── test_shear_stress.py      # shear-stress percentile KPI pipeline tests
+│   ├── test_health_report.py     # health_report.py numerical-health-check tests
 │   ├── integration/
 │   │   └── test_bioreactor_runs.py  # end-to-end output file checks (real binary, `medium`)
 │   └── verification/

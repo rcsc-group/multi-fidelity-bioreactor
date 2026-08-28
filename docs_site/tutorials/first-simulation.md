@@ -77,17 +77,21 @@ cd ../..
 uv run python scripts/postprocess.py runs/tutorial_demo/
 ```
 
-This writes `runs/tutorial_demo/results.json`. Ours came out to:
+This writes `runs/tutorial_demo/results.json`. Ours came out to (re-verified
+2026-08-28 against the current binary -- 23 keys, not 19; four
+`tau_*_strict`/`_signed`/`ediss_mean_qss` keys were added 2026-08-07/08):
 
 ```json
 {
-  "kLa_10": 3448.06, "kLa_25": 1762.12, "kLa_50": 552.84,
-  "kLa_inst_10": 3928.23, "kLa_inst_25": 1396.43, "kLa_inst_50": 1076.45,
-  "dtmix_0.50": 0.210, "dtmix_0.75": 0.263, "dtmix_0.95": 5.469,
-  "vor_mean": 1.763, "vel_rms_qss": 0.772, "kla_fit_rmse_25": 0.0077,
-  "tau_95_qss": 0.00283, "tau_98_qss": 0.00327, "tau_100_qss": 0.00394,
-  "tau_95_max": 0.00405, "tau_98_max": 0.00462, "tau_100_max": 0.00575,
-  "tau_mean_max": 0.00194
+  "kLa_10": 18468.49, "kLa_25": 22405.20, "kLa_50": 17993.96,
+  "kLa_inst_10": 20324.58, "kLa_inst_25": 25167.45, "kLa_inst_50": 26011.25,
+  "dtmix_0.50": 0.158, "dtmix_0.75": 0.158, "dtmix_0.95": 0.263,
+  "vor_mean": 5.118, "vel_rms_qss": 1.310, "kla_fit_rmse_25": 0.0493,
+  "tau_95_qss": 0.00565, "tau_98_qss": 0.00613, "tau_100_qss": 0.00800,
+  "tau_95_max": 0.00750, "tau_98_max": 0.00885, "tau_100_max": 0.01194,
+  "tau_mean_max": 0.00226,
+  "tau_100_max_strict": 0.01194, "tau_mean_max_strict": 0.00278,
+  "tau_100_max_signed": 0.01194, "ediss_mean_qss": 0.0331
 }
 ```
 
