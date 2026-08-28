@@ -1,25 +1,27 @@
 # Experiment diary
 
-## 2026-08-28 — L10 hero video, docs staleness sweep, and a real harness bug
-that silently ran the wrong binary once.
+## 2026-08-28 — L10 hero video attempt reverted; docs staleness sweep; a real
+harness bug that silently ran the wrong binary once.
 
-**Hero video.** User wanted a real L10 lab-frame video for the README/docs
-homepage, upgrading the existing `hero-rocking-l9-lab.mp4`. Rather than
-queue a new native-video SLURM run (would compete with the already-running
-L10 OpenMP jobs for the 64-CPU quota), reconstructed it from `fresh_mpi`'s
-already-completed per-cell dumps: rotate the body-frame field by Th(t)
-(exact driver formula) about the domain origin, matching Basilisk's own
-`quat={0,0,sin(Th/2),cos(Th/2)}` lab-frame camera convention (commit
-251951c). First version colored by the flat VOF split (water/air, matching
-L9's style) -- user's reaction: "That looks bad... much, much more
-astonishing" compared to this session's earlier science plots. Tried
-vorticity next (matching Kim et al.'s Fig_vor_all convention) -- washed
-out, vorticity in this laminar regime concentrates in thin near-wall
-boundary layers, mostly flat everywhere else in a full loop. Landed on
-velocity magnitude (turbo colormap): varies richly across the whole bulk
-flow at every instant, reads as genuinely dynamic throughout. Saved as
-`scripts/render_hero_video.py`; old L9 hero deleted per project convention
-(stale presentation assets don't stay alongside their replacement).
+**Hero video: reverted, not merged.** Attempted an L10 lab-frame replacement
+for `hero-rocking-l9-lab.mp4`, reconstructed from `fresh_mpi`'s per-cell
+dumps by rotating the body-frame field by Th(t) about the domain origin
+(same convention as the driver's native `quat={0,0,sin(Th/2),cos(Th/2)}`
+rendering, commit 251951c) rather than queuing a new video SLURM run.
+Tried a flat VOF two-tone render, then vorticity coloring; user rejected
+both as low quality and pointed out the video and its caption were pushed
+to `main` without review. Reverted: restored `hero-rocking-l9-lab.mp4`,
+removed the L10 attempt and its script. Any future hero video goes through
+review before merging, not after.
+
+**Real problem found in the process**: the README/index.md intro sat the
+Kim et al. publication citation directly next to the hero video with no
+disclaimer, reading as if this repo were that paper's own code. It isn't
+-- this is a fork of Kim/Harris/Cimpeanu's original driver
+(rcsc-group/BioReactor), since diverged (checkpoint-restart chaining,
+multi-harmonic/horizontal forcing, the BO suite), and matching the paper's
+own numbers is a separate, unresolved effort (see kim-et-al-validation.md).
+Added an explicit fork disclaimer to both README.md and docs_site/index.md.
 
 **Docs staleness sweep** (subagent audit, run in parallel with the video
 work): 5 confirmed stale items fixed --

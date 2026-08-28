@@ -5,15 +5,19 @@
 
 **📖 Documentation: [rcsc-group.github.io/multi-fidelity-bioreactor](https://rcsc-group.github.io/multi-fidelity-bioreactor/)**
 
-<video src="docs_site/assets/img/hero-rocking-l10-lab.mp4" controls muted loop playsinline width="600">
-  Rocking bioreactor simulation at fidelity 10 (1024x1024 cells), θ=7°, 32.5rpm, lab-frame view.
+<video src="docs_site/assets/img/hero-rocking-l9-lab.mp4" controls muted loop playsinline width="600">
+  Rocking bioreactor simulation at fidelity 9 (512x512 cells), θ=7°, 32.5rpm, lab-frame view.
 </video>
 
-*Fidelity-10 simulation of the rocking bioreactor (θ=7°, 32.5rpm, lab frame — tank rocks, water finds its level), colored by velocity magnitude (turbo colormap) in the liquid. Reconstructed from the real fresh L10 run's per-cell dumps by rotating the body-frame velocity field by Th(t) (diary.md 2026-08-28) -- same lab-frame convention as the driver's own native rendering (commit 251951c), not yet re-run through the native OpenGL video pipeline at L10.*
+*Fidelity-9 simulation of the rocking bioreactor (θ=7°, 32.5rpm, lab frame — tank rocks, water finds its level).*
 
-Two-phase CFD solver for a rocking bioreactor, implemented in [Basilisk](http://basilisk.fr/).
-Developed at the Harris Lab (Brown University) in collaboration with the Cimpeanu group (Warwick).
-Publication: [doi: 10.1016/j.ijmultiphaseflow.2025.105375](https://www.sciencedirect.com/science/article/pii/S0301932225002538) | preprint: [arXiv: 2504.05421](https://arxiv.org/abs/2504.05421)
+Two-phase CFD solver for a rocking bioreactor, implemented in [Basilisk](http://basilisk.fr/) and
+forked from Kim, Harris, and Cimpeanu's original driver code
+([rcsc-group/BioReactor](https://github.com/rcsc-group/BioReactor)). This is not the code behind
+the paper cited below — it has since diverged with checkpoint-restart chaining, multi-harmonic
+and horizontal forcing, and a multi-fidelity Bayesian optimization suite, and matching the
+paper's own published numbers is a separate, ongoing effort (see
+[validating against Kim et al.](https://rcsc-group.github.io/multi-fidelity-bioreactor/explanation/kim-et-al-validation/)).
 
 The solver resolves two-phase (VOF) hydrodynamics and dissolved-oxygen transport
 (Henry's law), producing kLa (volumetric oxygen mass-transfer coefficient) and
