@@ -5,11 +5,11 @@
 
 **📖 Documentation: [rcsc-group.github.io/multi-fidelity-bioreactor](https://rcsc-group.github.io/multi-fidelity-bioreactor/)**
 
-<video src="docs_site/assets/img/hero-rocking-l9-lab.mp4" controls muted loop playsinline width="600">
-  Rocking bioreactor simulation at fidelity 9 (512x512 cells), θ=7°, 32.5rpm, lab-frame view.
+<video src="docs_site/assets/img/hero-rocking-l10-lab.mp4" controls muted loop playsinline width="600">
+  Rocking bioreactor simulation at fidelity 10 (1024x1024 cells), θ=7°, 32.5rpm, lab-frame view, colored by velocity magnitude.
 </video>
 
-*Fidelity-9 simulation of the rocking bioreactor (θ=7°, 32.5rpm, lab frame — tank rocks, water finds its level).*
+*Fidelity-10 simulation of the rocking bioreactor (θ=7°, 32.5rpm, lab frame — tank rocks, water finds its level), colored by |u|.*
 
 Two-phase CFD solver for a rocking bioreactor, implemented in [Basilisk](http://basilisk.fr/) and
 forked from Kim, Harris, and Cimpeanu's original driver code

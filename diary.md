@@ -3,16 +3,20 @@
 ## 2026-08-28 — L10 hero video attempt reverted; docs staleness sweep; a real
 harness bug that silently ran the wrong binary once.
 
-**Hero video: reverted, not merged.** Attempted an L10 lab-frame replacement
-for `hero-rocking-l9-lab.mp4`, reconstructed from `fresh_mpi`'s per-cell
-dumps by rotating the body-frame field by Th(t) about the domain origin
-(same convention as the driver's native `quat={0,0,sin(Th/2),cos(Th/2)}`
-rendering, commit 251951c) rather than queuing a new video SLURM run.
-Tried a flat VOF two-tone render, then vorticity coloring; user rejected
-both as low quality and pointed out the video and its caption were pushed
-to `main` without review. Reverted: restored `hero-rocking-l9-lab.mp4`,
-removed the L10 attempt and its script. Any future hero video goes through
-review before merging, not after.
+**Hero video: reverted once, approved on the second round.** Reconstructed
+an L10 lab-frame replacement for `hero-rocking-l9-lab.mp4` from
+`fresh_mpi`'s per-cell dumps (rotate the body-frame velocity field by
+Th(t) about the domain origin, matching the driver's own native
+`quat={0,0,sin(Th/2),cos(Th/2)}` lab-frame camera convention, commit
+251951c) rather than queuing a new video SLURM run. First attempt (flat
+VOF two-tone, then vorticity coloring, then velocity magnitude with a
+"turbo" colormap) was pushed to `main` without review -- user rejected it
+on quality and process grounds; reverted, restored the L9 hero, and
+switched to sending drafts here before merging. Second attempt: velocity
+magnitude with a "winter" colormap and an explicit "|u|" label on the
+frame -- approved. Merged as `hero-rocking-l10-lab.mp4`;
+`scripts/render_hero_video.py` documents the method and its known
+limitation (source data lives on scratch, not guaranteed to persist).
 
 **Real problem found in the process**: the README/index.md intro sat the
 Kim et al. publication citation directly next to the hero video with no
