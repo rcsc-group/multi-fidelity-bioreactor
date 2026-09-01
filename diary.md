@@ -57,6 +57,22 @@ bug-fixed but also better-converged than the original attempt.
 9 jobs submitted (5569144-5569152), 16 MPI ranks each, queuing under the
 same 64-CPU/user cap as everything else. Results pending.
 
+**Update, same day**: user granted explicit mbessa-condo permission for
+this simulation specifically (their standing rule: never a default,
+always per-job). `submit_slurm()` has no account/QOS override, so left
+the one already-RUNNING job (rpm17.5, 5569144) on `normal` and cancelled
++ resubmitted the other 8 as raw `sbatch` calls reusing their
+already-staged scratch params.json (from the original `submit_slurm()`
+call -- avoids re-deriving the MPI staging logic, just swaps
+`--account`/`--qos`). New job IDs: 5569428-5569435. mbessa-condo's
+`GrpTRES=cpu=320,mem=2T` is a GROUP-wide cap, not per-user -- checked
+`squeue --qos=mbessa-condo` and found another lab member (`bribeiro2`)
+running dozens of concurrent 8-cpu array jobs against the same pool, so
+only 2 of the 8 resubmitted jobs started immediately; the rest queue
+behind that real, legitimate other usage. Faster than `normal`'s 64-cpu
+cap would have been, but not the instant full-parallel run a naive read
+of the 320-cpu limit would suggest.
+
 
 ## 2026-08-28 — L10 hero video attempt reverted; docs staleness sweep; a real
 harness bug that silently ran the wrong binary once.
