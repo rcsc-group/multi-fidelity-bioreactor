@@ -1,5 +1,53 @@
 # Experiment diary
 
+## 2026-09-01 (2) — fig13a_redo had a real, user-caught regression: wrong
+ramp mechanism. Results, and the resolution question this surfaces.
+
+**The 9-point fig13a_redo results came back systematically low** (~0.4-0.77x
+Kim's published tau_max, worse at high RPM; tau_mean_max closer, 0.62-0.90x --
+a resolution-sensitivity signature, since tau_max is the pointwise rare-event
+statistic and tau_mean_max the smooth bulk one). User's reaction, correctly
+skeptical: "this is a huuuuuuge smell... I believed we had to change some
+numerical parameters. Are you 100% you did not roll back that?"
+
+**Checked, and no, not 100% -- found the actual regression.** fig13a_redo
+used plain mainline params.json (no theta_max_prev), which triggers our
+fork's OWN default ramp: a 3-rocking-cycle smooth-step. The near-perfect
+ours-vs-upstream agreement (2026-08-19/20 entries) specifically required
+matching upstream's ramp instead -- a fixed 30-PHYSICAL-second linear ramp
+on amplitude only (`fork_l10_rampmatch`'s validation patch). Those are
+genuinely different startup transients, and I used the wrong one for a
+comparison against Kim's own published numbers. Not a git-history rollback,
+but the same practical effect: the specific setup that gave near-perfect
+agreement wasn't what I actually ran. User: "I warned you and you ignored
+me: we need to match their ramps first."
+
+**Fix**: reused `fork_l10_rampmatch`'s exact validated patch (verbatim
+formula, re-applied to the CURRENT bug-fixed source, not the old L10
+scratch copy) -- `t_change_st = 30.0/T_bio` (condition-dependent, not a
+fixed cycle count) and the acceleration event replaced with upstream's
+literal single-harmonic linear-ramp formula. Verified with a cheap
+fidelity-3 smoke test before resubmitting all 9 (t_end=2.0, well inside
+the ~11.6 non-dim-time ramp window at 32.5rpm -- small, smoothly growing
+tau values, no NaN, matches expectation for "still ramping"). Resubmitted
+the full 9-point sweep as `fig13a_rampmatch_rpm*` (jobs 5571841-5571849),
+mbessa-condo per standing per-simulation permission. Results pending.
+
+**Also user-caught: I only discussed tau_max, not tau_mean_max**, despite
+already having computed both. Real oversight, not intentional -- fixed by
+reporting both from now on. The tau_max/tau_mean_max divergence pattern
+(bigger, noisier gap on the pointwise statistic) independently pointed to
+a SEPARATE, likely co-occurring explanation: Kim et al.'s published figures
+use `n_L=2^10` resolution (confirmed directly in Main.tex, "requires 120
+cores and 120 CPU core hours... under theta=7deg, f_b=32.5rpm"), while
+fig13a_redo ran at L8 -- a quarter of the 2D grid cells, and their own
+grid-convergence appendix explicitly flags n_L=2^5-2^7 as "vary[ing]
+significantly," implying L8 may not even be fully converged. Ramp and
+resolution are two independent, both-plausible, both-untested-until-now
+candidates -- fixing the ramp first (this entry) before spending on L9/L10
+reruns to test resolution, per the user's explicit prioritization.
+
+
 ## 2026-09-01 — redoing the Fig 13a(a) replica (tau/EDR vs RPM, theta=7deg,
 L8) with the current bug-fixed driver -- never actually done since the
 ramp/tau-race/Fig8a-sign fixes landed.
