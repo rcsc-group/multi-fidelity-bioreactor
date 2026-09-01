@@ -47,6 +47,45 @@ resolution are two independent, both-plausible, both-untested-until-now
 candidates -- fixing the ramp first (this entry) before spending on L9/L10
 reruns to test resolution, per the user's explicit prioritization.
 
+**Result, all 9 points, ramp-matched vs. wrong-ramp vs. Kim:**
+
+| rpm | tau_max (rampmatch) | tau_max (wrong-ramp) | tau_max (Kim) | ratio (rampmatch/Kim) |
+|---|---|---|---|---|
+| 17.5 | 0.06002 | 0.05611 | 0.09546 | 0.629 |
+| 20.0 | 0.06257 | 0.06036 | 0.09139 | 0.685 |
+| 22.5 | 0.11324 | 0.12759 | 0.22988 | 0.493 |
+| 25.0 | 0.06851 | 0.06266 | 0.12564 | 0.545 |
+| 27.5 | 0.06976 | 0.06627 | 0.14668 | 0.476 |
+| 30.0 | 0.08716 | 0.09665 | 0.17352 | 0.502 |
+| 32.5 | 0.08706 | 0.09447 | 0.20605 | 0.423 |
+| 35.0 | 0.18786 | 0.21209 | 0.27530 | 0.682 |
+| 37.5 | 0.38283 | 0.45139 | 1.14189 | 0.335 |
+
+**Clean negative result: the ramp fix changed essentially nothing** (ratio
+range 0.42-0.68 now vs. 0.40-0.77 before -- same order, arguably marginally
+worse at a few points, not better). This is real signal, not a null
+experiment: it RULES OUT ramp mechanism/duration as the explanation for
+the gap vs. Kim's published tau_max, via direct comparison rather than
+argument. Makes sense in hindsight -- for a stable, non-chaotic limit
+cycle, the transient path to quasi-steady state shouldn't affect the
+final periodic attractor once you're far enough past it, and t_end=20
+(~33 cycles) was already well past BOTH ramps' completion (3 cycles for
+ours, ~9-19 cycles for upstream's fixed-30s ramp depending on RPM) either
+way.
+
+**Resolution (L8 vs. Kim's confirmed L10) is now the sole remaining,
+untested candidate** -- not a guess, the only hypothesis left standing
+after actually checking the other one. tau_mean_max ratios (0.62-0.90,
+essentially unchanged by the ramp fix too) staying much closer to 1 than
+tau_max (0.34-0.68) continues to point the same direction: the gap is
+concentrated in the pointwise rare-event statistic, not the smooth bulk
+one, which is the resolution-sensitivity signature this project's own
+diary already flagged in the Aug 3-4 entries. Testing this properly
+means an L9 (cheaper) or L10 (matches Kim exactly, expensive) rerun of
+at least the worst points (22.5, 32.5, 37.5) -- not yet done, awaiting
+direction given the L10 MPI-vs-OpenMP matrix is already using real
+compute (chain_openmp_seg0/seg1, still running as of this entry).
+
 
 ## 2026-09-01 — redoing the Fig 13a(a) replica (tau/EDR vs RPM, theta=7deg,
 L8) with the current bug-fixed driver -- never actually done since the
