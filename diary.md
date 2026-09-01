@@ -1,5 +1,63 @@
 # Experiment diary
 
+## 2026-09-01 — redoing the Fig 13a(a) replica (tau/EDR vs RPM, theta=7deg,
+L8) with the current bug-fixed driver -- never actually done since the
+ramp/tau-race/Fig8a-sign fixes landed.
+
+User's precise framing, worth recording verbatim: "we used to compare the
+L10 of our simulations vs upstream, and got horrible results. Now the
+relative error... look very nice, almost identical. We never simulated L8
+or L9 after fixing that us vs upstream. So we did not do any re-sweeps to
+replicate kim et al figures." Correct, and it resolves an open question
+flagged in the 2026-08-28 docs-staleness audit (whether kim-et-al-
+validation.md's numbers were regenerated after the ramp fix -- they
+weren't). Two genuinely different questions this whole investigation has
+been conflating: "does our fork match Kim's own driver" (fixed, confirmed,
+L10 only) vs. "does our fork match Kim's *published* figures" (the
+original Aug 3-4 replica question, never rechecked with the current
+driver).
+
+**Scope, deliberately narrow**: just the 9-point RPM sweep from
+`replicated_Fig13.png` (17.5-37.5rpm in 2.5rpm steps, theta=7deg fixed,
+L8) -- not the unrelated 60-condition `sweep_fb_theta_l8.json` grid, which
+was built for this project's own heatmap figures, not the Kim-et-al
+comparison. Confirmed the 9 RPM values directly from the existing replica
+PNG (no saved config for the original sweep survived -- it was built via
+individual one-off submissions, not a sweep.py config).
+
+**Deliberately did NOT use `sweep.py`**: it checkpoint-chains any
+simulations sharing the same (fidelity, geometry), which all 9 RPM points
+do -- that would warm-start each point from the previous one's end state,
+reintroducing the exact restart-transient confound this session spent
+real effort characterizing (2026-08-26/2026-08-31 entries). Kim et al.'s
+own sweep almost certainly used independent cold starts per point,
+and that's what a fair comparison needs. Built 9 independent
+`submit_slurm()` calls instead (through the real pipeline, not a raw
+`sbatch` call -- avoiding the exact staging bug documented 2026-08-04).
+
+**Two real bugs caught before submitting, not after:**
+1. The MPI template's default binary (`/oscar/scratch/eaguerov/
+   BioReactor-mpi-video`) was dated Aug 9 -- stale, predating the
+   tau-histogram race fix, the Fig 8a sign fix, and bubble-suppression.
+   Rebuilt `build/BioReactor-mpi` fresh from current source, staged it to
+   scratch under a new name, and passed it via `params["_binary"]`
+   override rather than trusting the template's default.
+2. `submit_slurm(cpus=..., ntasks=16)` -- omitting `cpus` silently kept
+   its default of 4, giving `NumCPUs=64` (16 tasks x 4 cpus/task) and
+   `mem=256G` instead of the intended 16x1/4G. Caught via `scontrol show
+   job` on a single test submission before submitting all 9, not after.
+
+**t_end=20.0 non-dim** (~33 rocking cycles) rather than whatever window
+the original replica used -- comfortably past Kim et al.'s own ~30-cycle
+convergence threshold (2026-08-31 finding), so this redo is not just
+bug-fixed but also better-converged than the original attempt.
+`n_mix_cycles=80` left at Kim's real default even though t_end<t_mix
+(oxygen never injects) -- harmless, only shear-stress KPIs matter here.
+
+9 jobs submitted (5569144-5569152), 16 MPI ranks each, queuing under the
+same 64-CPU/user cap as everything else. Results pending.
+
+
 ## 2026-08-28 — L10 hero video attempt reverted; docs staleness sweep; a real
 harness bug that silently ran the wrong binary once.
 
