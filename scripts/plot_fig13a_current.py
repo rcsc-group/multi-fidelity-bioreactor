@@ -47,19 +47,19 @@ ours = pd.DataFrame(rows).sort_values("rpm")
 fig, ax = plt.subplots(figsize=(6, 4.3))
 
 ax.plot(kim["RPM"], kim["tau_liq_max"], color="royalblue", marker="o", ms=7, lw=1.3,
-        label=r"Kim $\tau_\mathrm{max}$ (published)")
+        label=r"Kim $\tau_\mathrm{max}$")
 ax.plot(kim["RPM"], kim["tau_liq_mean"], color="royalblue", marker="o", ms=7, lw=1.3, ls="--",
-        markerfacecolor="white", label=r"Kim $\langle\tau\rangle_\mathrm{max}$ (published)")
+        markerfacecolor="white", label=r"Kim $\langle\tau\rangle_\mathrm{max}$")
 
 ax.plot(ours["rpm"], ours["tau_max"], color="darkred", marker="^", ms=8, lw=1.3,
-        label=r"Our fork $\tau_\mathrm{max}$ (L8, ramp-matched, current driver)")
+        label=r"Our fork $\tau_\mathrm{max}$ (L8)")
 ax.plot(ours["rpm"], ours["tau_mean_max"], color="darkred", marker="^", ms=8, lw=1.3, ls="--",
-        markerfacecolor="white", label=r"Our fork $\langle\tau\rangle_\mathrm{max}$ (L8, ramp-matched, current driver)")
+        markerfacecolor="white", label=r"Our fork $\langle\tau\rangle_\mathrm{max}$ (L8)")
 
 ax.set_xlabel(r"Rocking frequency $f_b$ (rpm)", fontsize=11)
 ax.set_ylabel("Shear stress (Pa)", fontsize=11)
 ax.set_yscale("log")
-ax.set_title(r"Fig. 13a replica, $\theta=7°$ (2026-09-02) -- L6/L10 pending rerun", fontsize=10)
+ax.set_title(r"$\theta=7°$", fontsize=10)
 ax.tick_params(which="both", direction="in", top=True, right=True)
 ax.grid(True, which="major", ls=":", alpha=0.4)
 ax.legend(fontsize=8, framealpha=0.9, loc="lower left")
