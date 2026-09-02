@@ -1,5 +1,25 @@
 # Experiment diary
 
+## 2026-09-02 (2) — L6 arm of the Fig 13a replica, on mbessa-condo (explicit
+per-job permission), added back into the figure.
+
+Same 9-point theta=7deg sweep, same driver/ramp-matching as `fig13a_rampmatch`
+(L8), fidelity=6 instead of 8 (`scripts/submit_fig13a_l6.py`). ntasks=4
+instead of 16 -- L6's grid is small enough that 16 MPI ranks would mostly
+add domain-decomposition overhead. Smoke-tested one point (32.5rpm, job
+5631538) first per the verify-before-long-jobs rule: completed clean in
+1:44, finite/sane tau values, then submitted the other 8 (jobs 5631641-
+5631657), all COMPLETED.
+
+Results (tau_100_max, tau_mean_max): 17.5: 0.0368/0.00096; 20: 0.0339/
+0.00097; 22.5: 0.0345/0.00146; 25: 0.0292/0.00109; 27.5: 0.0351/0.00114;
+30: 0.0367/0.00124; 32.5: 0.0320/0.00136; 35: 0.0305/0.00155; 37.5: 0.0413/
+0.00207. Notably flat vs. RPM compared to L8's more RPM-dependent shape
+(0.06-0.45 range) -- consistent with a coarser grid smoothing out the
+frequency-dependence, another resolution-sensitivity signature alongside
+tau_max vs tau_mean_max. Added to `replicated_Fig13.png` via
+`scripts/plot_fig13a_current.py`.
+
 ## 2026-09-02 — the pushed `replicated_Fig13.png` (GitHub, commit 7f87e46,
 2026-08-05) was stale; regenerated from currently-valid data only.
 

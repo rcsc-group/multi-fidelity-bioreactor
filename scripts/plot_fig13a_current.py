@@ -16,9 +16,11 @@ This script plots only what is currently valid:
   - Our L8 fig13a_rampmatch sweep (2026-09-01): current bug-fixed driver,
     upstream's own ramp matched, 9 independent cold starts. Supersedes the
     old L8 series outright, zero new compute.
+  - Our L6 fig13a_l6 sweep (2026-09-02): same driver/ramp/methodology,
+    fidelity=6 instead of 8.
 
-L6 and L10 are omitted rather than shown stale -- neither has a rerun on
-the current driver yet. See diary.md 2026-09-02.
+L10 is omitted rather than shown stale -- no rerun on the current driver
+yet. See diary.md 2026-09-02.
 """
 import json
 import math
@@ -38,11 +40,17 @@ kim = pd.read_csv(KIM_CSV, skiprows=[1])  # row 1 is a units/label row, not data
 kim["RPM"] = pd.to_numeric(kim["RPM"])
 kim = kim.sort_values("RPM")
 
-rows = []
-for rpm in RPMS:
-    d = json.loads((RUNS_DIR / f"fig13a_rampmatch_rpm{rpm:g}" / "results.json").read_text())
-    rows.append({"rpm": rpm, "tau_max": d["tau_100_max"], "tau_mean_max": d["tau_mean_max"]})
-ours = pd.DataFrame(rows).sort_values("rpm")
+
+def _load(run_id_fmt):
+    rows = []
+    for rpm in RPMS:
+        d = json.loads((RUNS_DIR / run_id_fmt.format(rpm=rpm) / "results.json").read_text())
+        rows.append({"rpm": rpm, "tau_max": d["tau_100_max"], "tau_mean_max": d["tau_mean_max"]})
+    return pd.DataFrame(rows).sort_values("rpm")
+
+
+l8 = _load("fig13a_rampmatch_rpm{rpm:g}")
+l6 = _load("fig13a_l6_rpm{rpm:g}")
 
 fig, ax = plt.subplots(figsize=(6, 4.3))
 
@@ -51,10 +59,15 @@ ax.plot(kim["RPM"], kim["tau_liq_max"], color="royalblue", marker="o", ms=7, lw=
 ax.plot(kim["RPM"], kim["tau_liq_mean"], color="royalblue", marker="o", ms=7, lw=1.3, ls="--",
         markerfacecolor="white", label=r"Kim $\langle\tau\rangle_\mathrm{max}$")
 
-ax.plot(ours["rpm"], ours["tau_max"], color="darkred", marker="^", ms=8, lw=1.3,
+ax.plot(l8["rpm"], l8["tau_max"], color="darkred", marker="^", ms=8, lw=1.3,
         label=r"Our fork $\tau_\mathrm{max}$ (L8)")
-ax.plot(ours["rpm"], ours["tau_mean_max"], color="darkred", marker="^", ms=8, lw=1.3, ls="--",
+ax.plot(l8["rpm"], l8["tau_mean_max"], color="darkred", marker="^", ms=8, lw=1.3, ls="--",
         markerfacecolor="white", label=r"Our fork $\langle\tau\rangle_\mathrm{max}$ (L8)")
+
+ax.plot(l6["rpm"], l6["tau_max"], color="darkorange", marker="s", ms=7, lw=1.3,
+        label=r"Our fork $\tau_\mathrm{max}$ (L6)")
+ax.plot(l6["rpm"], l6["tau_mean_max"], color="darkorange", marker="s", ms=7, lw=1.3, ls="--",
+        markerfacecolor="white", label=r"Our fork $\langle\tau\rangle_\mathrm{max}$ (L6)")
 
 ax.set_xlabel(r"Rocking frequency $f_b$ (rpm)", fontsize=11)
 ax.set_ylabel("Shear stress (Pa)", fontsize=11)
