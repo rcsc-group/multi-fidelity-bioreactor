@@ -1,5 +1,21 @@
 # Experiment diary
 
+## 2026-09-02 (3) — decided against L9 for now; L10 remains the real test
+of the resolution hypothesis.
+
+Asked how long L9 would take before committing compute. No clean empirical
+number survives (the one genuine single-shot L9 baseline from the earlier
+checkpoint-isolation test, `488db14b`, has no scratch data left), but the
+driver's own comment (`BioReactor_rampmatch.c`, near `main()`) groups L9
+with L10 as needing "days per condition, longer than one SLURM job's
+walltime allows" -- i.e. multi-segment checkpoint chaining, not a
+single-job smoke-testable run like L6/L8. Across 9 conditions that's a
+real multi-day commitment competing with the already-running L10 MPI/
+OpenMP matrix on shared mbessa-condo allocation. User chose to hold off:
+L9 was always the cheaper-but-inexact middle ground, and L10 matches
+Kim's own resolution exactly -- once the running L10 matrix frees up,
+that's the real test of the resolution hypothesis, not L9.
+
 ## 2026-09-02 (2) — L6 arm of the Fig 13a replica, on mbessa-condo (explicit
 per-job permission), added back into the figure.
 
