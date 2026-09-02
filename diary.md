@@ -1,5 +1,34 @@
 # Experiment diary
 
+## 2026-09-02 — the pushed `replicated_Fig13.png` (GitHub, commit 7f87e46,
+2026-08-05) was stale; regenerated from currently-valid data only.
+
+User asked to verify the remote copy of `docs/kimetal2024/figure_replicas/
+replicated_Fig13.png` (L6/L8/L10 scatter overlay) was up to date. It wasn't:
+
+- Last regenerated 2026-08-05 (7f87e46), which predates the H_bio nondim
+  factor-of-2 fix (052e9e4, 2026-08-20), the tau-histogram OpenMP data-race
+  fix (a648ca2, 2026-08-21), and this week's ramp-methodology investigation
+  -- all of which change tau/EDR postprocessing.
+- Its single L10 point (RPM=32.5) was recovered from `l10_kim_seg2`, one
+  segment of a checkpoint chain explicitly documented at the time as
+  PARTIAL/transient, "not yet quasi-steady-periodic" -- exactly the
+  restart-transient-biased class of run this project later characterized
+  as unreliable.
+- No committed script produces this exact composite PNG (`replicate_plots.py`
+  only plots Kim's own curve; `plot_kim_overlay_tau.py` writes a different
+  file, `experiments/figures/overlay_tau_rpm.{pdf,png}`). Whatever script
+  wrote the L6/L8/L10 overlay directly to `figure_replicas/replicated_Fig13.
+  png` was never committed and isn't recoverable from scratch.
+
+**Fix: added `scripts/plot_fig13a_current.py`** (committed, reproducible)
+and regenerated the figure using only currently-valid data: Kim's published
+curve, plus our fresh `fig13a_rampmatch_rpm*` L8 sweep (2026-09-01, current
+bug-fixed driver, upstream's ramp matched, 9 independent cold starts) --
+zero new compute, just reused what was already validated this week. L6 and
+L10 are omitted rather than shown stale; neither has a rerun on the current
+driver yet, matching the 09-01(2) entry's open question below.
+
 ## 2026-09-01 (2) — fig13a_redo had a real, user-caught regression: wrong
 ramp mechanism. Results, and the resolution question this surfaces.
 
