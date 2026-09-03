@@ -166,8 +166,12 @@ def build_chain(cfg: dict) -> list[dict]:
     return chain
 
 
-def submit_chain(cfg: dict) -> list[str]:
-    """Build and submit the chain.  Returns list of SLURM job IDs.
+def submit_chain(cfg: dict) -> list[tuple[str, str]]:
+    """Build and submit the chain.  Returns [(run_id, job_id), ...] --
+    run_id is needed by callers since build_chain() assigns it internally
+    (uuid4-based), not something the caller can predict or re-derive by
+    calling build_chain(cfg) again separately (a fresh call reseeds the
+    uuids).
 
     Set ``videos: true`` in the config to use the video binary
     (BioReactor-video + render_videos.py) for every segment.
@@ -241,7 +245,7 @@ def submit_chain(cfg: dict) -> list[str]:
         # template self-submits subsequent segments after each run completes.
         if use_mpi and k > 0:
             print(f"  → queued (self-submit after seg {k-1})")
-            job_ids.append(f"pending-{params['run_id']}")
+            job_ids.append((params["run_id"], f"pending-{params['run_id']}"))
             prev_run_id = params["run_id"]
             continue
 
@@ -257,7 +261,7 @@ def submit_chain(cfg: dict) -> list[str]:
                 dependency=dependency,
                 cpus=1 if use_mpi else 4,
             )
-            job_ids.append(job_id)
+            job_ids.append((params["run_id"], job_id))
             print(f"  → job {job_id}")
         else:
             run_dir = runs_root / params["run_id"]
@@ -266,7 +270,7 @@ def submit_chain(cfg: dict) -> list[str]:
             if checkpoint:
                 (run_dir / "checkpoint_path.txt").write_text(checkpoint)
             print("  → params written (not submitted)")
-            job_ids.append(f"dry-run-{k}")
+            job_ids.append((params["run_id"], f"dry-run-{k}"))
 
         prev_run_id = params["run_id"]
 

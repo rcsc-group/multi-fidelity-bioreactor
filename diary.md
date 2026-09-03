@@ -1,5 +1,63 @@
 # Experiment diary
 
+## 2026-09-03 (3) — restart-bias result does NOT generalize: 32.5rpm was
+the best case, not representative. tau_100_max diverges 3-16% depending
+on RPM; tau_mean_max stays robust everywhere.
+
+User's question: does the -4%/+0.1% (tau_100_max/tau_mean_max) restart-
+bias conclusion from 32.5rpm hold at other conditions, or was it a fluke
+of that one point? Repeated the exact same fresh-vs-4x6-cycle-chain
+design (`scripts/submit_restart_bias_multi.py`) at 17.5, 25, and 37.5rpm
+(32.5 reused from the existing run), each compared over its own genuine
+QSS window (`scripts/compare_restart_bias_multi.py`).
+
+Along the way, changed `chain.py`'s `submit_chain()` to return
+`[(run_id, job_id), ...]` instead of a bare job_id list -- needed the
+run_ids to read results back, and `build_chain(cfg)` assigns them via
+uuid4 internally, unpredictable and not re-derivable by calling it again
+(reseeds). No test exercised the old return format (`test_chain.py` only
+tests `build_chain`), confirmed via `pytest tests/test_chain.py` (20/20
+still pass).
+
+**Result:**
+```
+ rpm   t_ramp  t_common  n_qss   tau_mean reldiff   tau_100 reldiff   peak_t fresh/chain
+17.5    5.314    17.000    585        -0.02%           +16.07%        14.82/14.84
+  25    7.592    17.000    471        +0.71%           +10.62%        10.88/15.44
+32.5    9.869    17.000    357        +0.12%            -4.02%        15.72/11.46
+37.5   11.387    17.000    281        +0.17%            +3.07%        12.14/12.14
+```
+
+**tau_mean_max holds up everywhere** (-0.02% to +0.71%, no trend with
+RPM) -- the bulk-statistic conclusion is robust, not a fluke.
+
+**tau_100_max does NOT hold up.** 32.5rpm's -4% was the SMALLEST gap of
+the four, not representative -- 17.5rpm shows +16%, 25rpm +11%. No
+monotonic trend with RPM (17.5 > 25 > 37.5 > 32.5), and peak-time
+agreement is inconsistent (37.5rpm's fresh/chain peaks coincide exactly,
+12.14/12.14, while 25rpm's differ by 4.56 non-dim time). n_qss shrinks
+with RPM (585->281) since the ramp-matched ramp lasts longer at higher
+RPM, eating into the fixed t_common=17.0 window -- the 37.5rpm point in
+particular is working with a fairly thin QSS window (~9 cycles), so some
+of this condition-to-condition variability could itself be a
+small-sample effect rather than a real physical difference between
+conditions.
+
+**Revised conclusion:** same-condition restart chaining measurably
+perturbs the pointwise/rare-event statistic (tau_100_max) by a real,
+condition-dependent amount, sometimes double-digit percent -- 32.5rpm's
+"-4%, close enough" result was not representative and should not be
+generalized. The bulk statistic (tau_mean_max) is robust across every
+condition tested. For Fig 8 (l10_kim_fig8_signed, chained through
+multiple segments at 32.5rpm specifically): panel (a)'s domain-mean
+quantities remain on firm ground; panels (b)/(c)'s per-cell histograms
+carry a real restart-transient risk that this multi-condition test does
+NOT rule out at 32.5rpm's own magnitude (-4%) or bound at some other
+condition's larger one -- the honest state is "restart chaining is a
+real, RPM-dependent bias on the pointwise statistic, of unknown sign and
+magnitude at any specific untested condition," not "roughly 4%, safe to
+ignore."
+
 ## 2026-09-03 (2) — user question ("are we removing the transients?")
 caught a real bug: postprocess.py's QSS window was wrong for every
 ramp-matched run this session. Fixed, reprocessed, restart-bias result

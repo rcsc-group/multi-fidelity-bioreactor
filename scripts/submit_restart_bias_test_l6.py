@@ -150,5 +150,5 @@ else:
     print(f"Arm A (fresh, {FRESH_CYCLES_NOMINAL} nominal cycles): job {fresh_job}")
 
 # ── Arm B: chained, 4 same-condition restart segments ───────────────────────
-chain_job_ids = submit_chain(chain_cfg)
-print(f"Arm B (chained, {N_SEGMENTS}x{CYCLES_PER_SEGMENT} cycles): jobs {chain_job_ids}")
+chain_run_job_ids = submit_chain(chain_cfg)
+print(f"Arm B (chained, {N_SEGMENTS}x{CYCLES_PER_SEGMENT} cycles): {chain_run_job_ids}")
