@@ -111,15 +111,18 @@ except:
 " "$PARAMS" 2>/dev/null)
 
 if [ -n "$NEXT_RUN" ]; then
-    # Derive canon runs/ dir from _experiment_dir in params (fallback: dirname of CANON_RUN)
-    RUNS_ROOT=$(python3 -c "
-import json, sys, os
-p = json.load(open(sys.argv[1]))
-exp = p.get('_experiment_dir', '')
-if exp:
-    print(os.path.join(os.path.dirname(os.path.dirname(exp)), 'runs'))
-" "$PARAMS" 2>/dev/null)
-    [ -z "$RUNS_ROOT" ] && [ -n "$CANON_RUN" ] && RUNS_ROOT="$(dirname "$CANON_RUN")"
+    # RUNS_ROOT used to be derived from _experiment_dir/CANON_RUN, which is
+    # empty for any self-submitted segment (only Python's submit_slurm()
+    # stamps _canonical_run_dir, and only for segment 0 -- every later
+    # segment's params.json is a plain `cp` of the pre-written canonical
+    # copy, never annotated). That silently no-op'd this whole block from
+    # segment 1 onward: NEXT_CANON became a bogus root-level path like
+    # "/$NEXT_RUN", the `-f` check below failed, and the chain died with no
+    # error (2026-09-03, diary.md -- same fragile-derivation bug the
+    # 2026-08-05 PROJECT_ROOT fix addressed at the OTHER call site in this
+    # file, never propagated here). PROJECT_ROOT is a single fixed path
+    # (CLAUDE.md) -- just use it directly, no derivation needed.
+    RUNS_ROOT="$PROJECT_ROOT/runs"
     NEXT_CANON="$RUNS_ROOT/$NEXT_RUN"
     NEXT_PARAMS_CANON="$NEXT_CANON/params.json"
     if [ -f "$NEXT_PARAMS_CANON" ]; then
@@ -129,7 +132,16 @@ if exp:
         CURR_CKPT="${CANON_RUN:+$CANON_RUN/checkpoint.dump}"
         [ -z "$CURR_CKPT" ] && CURR_CKPT="$SCRATCH_RUN/checkpoint.dump"
         cp "$CURR_CKPT" "$NEXT_SCRATCH/checkpoint.dump" 2>/dev/null || true
-        cp "$NEXT_PARAMS_CANON" "$NEXT_SCRATCH/params.json"
+        # Stamp _canonical_run_dir into the copy so THIS segment's own
+        # results-copy-back (top of this script, next time it runs) and its
+        # own self-submission of the segment after it both work too --
+        # otherwise the bug just recurs one hop later.
+        python3 -c "
+import json, sys
+p = json.load(open(sys.argv[1]))
+p['_canonical_run_dir'] = sys.argv[3]
+json.dump(p, open(sys.argv[2], 'w'), indent=2)
+" "$NEXT_PARAMS_CANON" "$NEXT_SCRATCH/params.json" "$NEXT_CANON"
         WALLTIME=$(python3 -c "import json,sys; p=json.load(open(sys.argv[1])); print(p.get('_walltime','04:00:00'))" "$NEXT_PARAMS_CANON" 2>/dev/null)
         MEM=$(python3 -c "import json,sys; p=json.load(open(sys.argv[1])); print(p.get('_mem','4G'))" "$NEXT_PARAMS_CANON" 2>/dev/null)
         NTASKS=$(python3 -c "import json,sys; p=json.load(open(sys.argv[1])); print(p.get('_ntasks',16))" "$NEXT_PARAMS_CANON" 2>/dev/null)

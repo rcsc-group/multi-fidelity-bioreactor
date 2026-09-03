@@ -141,6 +141,8 @@ def build_chain(cfg: dict) -> list[dict]:
             "t_end":        t_end,
             **base,
         }
+        if cfg.get("binary"):
+            params["_binary"] = cfg["binary"]
         if is_restart:
             # Restart segment: checkpoint time, omega_b rescaling, and full
             # prev-motion params for smooth-step parameter interpolation in C.

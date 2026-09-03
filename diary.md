@@ -1,5 +1,74 @@
 # Experiment diary
 
+## 2026-09-03 — same-condition restart-chain bias, tested cheaply at L6:
+bulk statistic unaffected, pointwise statistic genuinely perturbed. Also
+found and fixed a real latent bug in chain.py's MPI self-submission.
+
+**Question:** does same-condition checkpoint-restart chaining bias the
+result vs. a single continuous cold start? This is the L10 fresh_mpi-vs-
+chain_mpi comparison this project set up earlier but never concluded
+(non-overlapping cycle counts), and it's the open question behind
+`runs/l10_kim_fig8_signed` (Fig 8's data source, itself chained through
+l10_kim_seg0->seg1->seg2). Tested cheaply at L6 instead of L10 (days/
+condition) since the checkpoint-write/restart-read mechanism under
+suspicion doesn't care about grid resolution.
+
+**Setup** (`scripts/submit_restart_bias_test_l6.py`): same condition
+(32.5rpm/theta=7deg, Kim's baseline, matching Fig 8), same driver
+(BioReactor-mpi-rampmatch), two arms: (A) one continuous cold start;
+(B) 4 segments of nominally 6 cycles each, same omega_b/theta_max
+throughout (chain.py's `sweep.values` set to 4 identical values -- it
+chains via checkpoint restart regardless of whether the value actually
+changes), mimicking the seg0/seg1/seg2/fig8_signed hop count. Bypassed
+chain.py's `validate_params()` (Kim's literal geometry.b=0.03575 sits
+outside `config/param_space.yaml`'s BO search bounds [0.05,0.15] by
+design -- same reason every other Kim-replication script this session
+calls `submit_slurm()` directly instead of going through chain.py).
+
+**Bug found and fixed en route** (`config/slurm_mpi_template.sh`): segment
+1 completed cleanly per `sacct` but the chain died silently -- no segment
+2 ever got submitted. Root cause: the self-submission block derived its
+target `runs/` directory from `_canonical_run_dir`/`_experiment_dir`, but
+neither is ever set for a self-submitted segment (only Python's
+`submit_slurm()` stamps `_canonical_run_dir`, and only for segment 0) --
+so `RUNS_ROOT` came back empty, `NEXT_CANON` became a bogus root-level
+path, the file-existence check silently failed, and the whole block
+no-op'd. This is the exact same fragile-derivation bug the 2026-08-05
+PROJECT_ROOT fix addressed at the OTHER call site in this file, never
+propagated to this one -- and very likely why `l10_kim_seg2` needed a
+2026-08-05 manual recovery (hand-rolled pipeline, same symptom). Fixed by
+using the already-hardcoded `PROJECT_ROOT/runs` directly instead of
+deriving it, and by stamping `_canonical_run_dir` into every self-
+submitted segment's params so the fix doesn't just recur one hop later.
+Recovered segment 1's stranded scratch results by hand, manually staged
+and submitted segment 2 with the fix applied, and segment 2 correctly
+self-submitted segment 3 automatically -- confirms the fix. Also added a
+`binary:` config key to `chain.py` (previously no way to point a chain
+at anything but the two hardcoded default binaries).
+
+**Result** (`scripts/compare_restart_bias_l6.py`, comparing both arms
+over their true common elapsed-time window, t=0..17.0 -- not assumed
+cycle counts, the same mistake that stalled the L10 comparison):
+- `tau_mean_max` (bulk, spatially-averaged): fresh=0.000201,
+  chain=0.000201, **+0.12%** -- unaffected, within ordinary noise.
+- `tau_100_max` (pointwise rare-event max): fresh=0.004735,
+  chain=0.004167, **-12.0%**, and the peak occurs at a DIFFERENT time in
+  each (fresh t=6.30 vs. chain t=2.42) -- not just numerical jitter
+  around the same event, a genuinely different local extremum. Both arms
+  are MPI (deterministic, no OpenMP-race noise source), so this isn't
+  explained by any previously-characterized noise floor.
+
+**Interpretation:** same-condition restart chaining measurably perturbs
+the pointwise/rare-event statistic but not the bulk one, at L6. For Fig
+8: panel (a) plots domain-mean quantities (`<tau>`, `<eps>`) -- the
+statistic this test says restart chaining doesn't bias. Panels (b)/(c)
+are full per-cell histograms at a peak instant -- much closer in kind to
+the statistic this test says restart CAN perturb. So Fig 8a is on firmer
+ground than previously argued; 8b/c remain the weaker panels, now for a
+more specific, evidenced reason (restart-transient contamination of the
+pointwise distribution, not just a short post-restart window). Caveat:
+this is L6 evidence: extrapolating to L10 is plausible, not proven.
+
 ## 2026-09-02 (3) — decided against L9 for now; L10 remains the real test
 of the resolution hypothesis.
 
