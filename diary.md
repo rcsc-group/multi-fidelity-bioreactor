@@ -1,5 +1,67 @@
 # Experiment diary
 
+## 2026-09-03 (2) — user question ("are we removing the transients?")
+caught a real bug: postprocess.py's QSS window was wrong for every
+ramp-matched run this session. Fixed, reprocessed, restart-bias result
+corrected (was overstated).
+
+**The bug:** `_compute_tau98_kpis`/`_compute_vor_mean`/`_compute_vel_rms_qss`
+all hardcoded `t_ramp = 3.0 * T_per_nd` -- correct for the fork's own
+default smooth-step ramp (`N_RAMP_CYCLES=3`), but every ramp-matched run
+this session (`fig13a_rampmatch`, `fig13a_l6`, `restart_bias_test_l6`)
+uses `BioReactor-mpi-rampmatch`, whose ramp is upstream's own: 30
+PHYSICAL seconds, `t_change_st = 30/T_bio` non-dimensionalized -- at
+32.5rpm that's t=9.87 (16.2 cycles), not t=1.82 (3 cycles). Quantified
+across all 9 fig13a RPM points (t_end=20.0 fixed): the claimed QSS
+window was 19% contaminated by genuine ramp transient at 17.5rpm, up to
+**53% at 37.5rpm** -- worse at higher RPM, which is notably the same
+direction as the persistent gap vs. Kim's published tau_max.
+
+**Fix:** added `_ramp_end_nd(params)` (`scripts/postprocess.py`), which
+returns `30/T_bio` when `params["_binary"]` contains "rampmatch" and
+`3*T_per_nd` otherwise -- the only marker available of which ramp
+mechanism a given run used. Replaced all three hardcoded call sites.
+`tests/test_postprocess.py` still passes (11/11, no test exercised a
+rampmatch `_binary`, so purely additive). Reprocessed all 23 affected
+run dirs (`scripts/reprocess_rampmatch_runs.py`).
+
+**Effect on fig13a_rampmatch/fig13a_l6 (the committed Fig 13a replica):**
+smaller than the contamination fraction suggested -- `tau_100_max`/
+`tau_mean_max` are both MAX statistics, so trimming the window's front
+only changes the reported value if the true global peak actually fell in
+the now-excluded region. Most RPM points' peaks already occurred after
+the true ramp end, so several values are literally unchanged
+(22.5/30/32.5/35/37.5rpm); a few shifted down modestly (17.5rpm:
+0.0600->0.0571, 25rpm: 0.0685->0.0586, 27.5rpm: 0.0698->0.0634).
+Regenerated `replicated_Fig13.png` -- visually near-identical, not the
+dramatic re-explanation of the Kim gap the contamination fraction alone
+would have suggested. Resolution (L8 vs. Kim's L10) remains the leading
+open candidate for that gap, not this.
+
+**Effect on the restart-bias result (2026-09-03 (1) below): corrected,
+was overstated.** That comparison used the raw concatenated series with
+no ramp exclusion at all -- both arms' "peaks" (fresh t=6.30, chain
+t=2.42) were sitting INSIDE the true ramp region (ramp ends at t=9.87),
+so the reported -12% gap was comparing two different points on the
+transient, not genuine QSS behavior. Restricted to the correct QSS
+window (t=9.87..17.0, both arms, 357 samples each):
+- `tau_mean_max`: fresh=0.000201, chain=0.000201, **+0.12%** -- unchanged
+  from before, still unaffected by restart chaining.
+- `tau_100_max`: fresh=0.003402, chain=0.003265, **-4.0%** (down from the
+  previously reported -12%), peak times fresh t=15.72 vs chain t=11.46 --
+  still not identical, but a much smaller, more plausible-as-noise gap
+  than the contaminated comparison suggested.
+
+**Revised interpretation:** same-condition restart chaining's effect on
+the pointwise statistic is smaller than first reported once the
+comparison is restricted to genuine QSS -- still nonzero (-4%, vs 0%
+for the bulk statistic), so not fully ruled out, but the earlier "-12%,
+clearly different regime" framing was an artifact of comparing
+ramp-contaminated data, not a real restart-transient signature. Fig 8a's
+bulk quantities remain on firm ground; Fig 8b/c's per-cell histograms are
+still the weaker panels, but the specific magnitude of restart risk to
+them is now smaller than 2026-09-03 (1) claimed.
+
 ## 2026-09-03 — same-condition restart-chain bias, tested cheaply at L6:
 bulk statistic unaffected, pointwise statistic genuinely perturbed. Also
 found and fixed a real latent bug in chain.py's MPI self-submission.

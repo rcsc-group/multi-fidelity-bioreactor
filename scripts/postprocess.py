@@ -181,6 +181,32 @@ def _t_scales(params: dict) -> tuple[float, float]:
     return T_bio, T_per_nd
 
 
+def _ramp_end_nd(params: dict) -> float:
+    """Non-dim time at which the startup ramp finishes -- i.e. the start of
+    the QSS window.
+
+    [FIX 2026-09-03, diary.md] This used to be hardcoded to 3.0*T_per_nd
+    everywhere -- correct for the fork's OWN default smooth-step ramp
+    (N_RAMP_CYCLES=3 rocking cycles), but the ramp-matched binary
+    (BioReactor-mpi-rampmatch, used by every fig13a_rampmatch/fig13a_l6/
+    restart_bias_test run) replaces that with upstream's own ramp:
+    30 PHYSICAL seconds, i.e. t_change_st = 30/T_bio in non-dim time --
+    condition-dependent, and at every RPM tested (17.5-37.5) it lasts far
+    longer than 3 cycles (8.8-18.7 cycles, see diary.md). Treating those
+    runs' QSS window as starting at 3 cycles left 19-53% of the "QSS"
+    data still inside the linear ramp-up, worse at higher RPM -- the same
+    direction as the persistent gap vs. Kim's published tau_max.
+
+    Detected via params["_binary"] containing "rampmatch" -- every one of
+    this session's ramp-matched runs sets that override explicitly; there
+    is no other marker of which ramp mechanism a given run used.
+    """
+    T_bio, T_per_nd = _t_scales(params)
+    if "rampmatch" in str(params.get("_binary", "")):
+        return 30.0 / T_bio
+    return 3.0 * T_per_nd
+
+
 def _load_params(run_dir: Path) -> dict:
     """Load params.json from run_dir, return empty dict if absent."""
     p = run_dir / "params.json"
@@ -436,7 +462,7 @@ def _compute_vor_mean(run_dir: Path, params: dict) -> float:
     omega_avg = np.abs(arr[:, _COL_OMEGA_AVG])   # Omega_liq_avg (non-dimensional)
 
     T_bio, T_per_nd = _t_scales(params)
-    t_ramp = 3.0 * T_per_nd         # skip the soft-start ramp (3 rocking cycles)
+    t_ramp = _ramp_end_nd(params)
     mask   = t > t_ramp
     if mask.sum() < 5:
         return math.nan
@@ -477,8 +503,7 @@ def _compute_vel_rms_qss(run_dir: Path, params: dict) -> float:
     t    = arr[:, _COL_T]
     vel  = np.sqrt(arr[:, _COL_UX_RMS] ** 2 + arr[:, _COL_UY_RMS] ** 2)   # u_x,rms + u_y,rms
 
-    _, T_per_nd = _t_scales(params)
-    t_ramp = 3.0 * T_per_nd
+    t_ramp = _ramp_end_nd(params)
 
     # Upper bound: injection time (start of oxygen/tracer phase)
     t_inject = float("nan")
@@ -612,7 +637,7 @@ def _compute_tau98_kpis(run_dir: Path, params: dict) -> dict:
     ediss_mean_col = arr[:, 9] if has_ediss else None
 
     T_bio, T_per_nd = _t_scales(params)
-    t_ramp = 3.0 * T_per_nd
+    t_ramp = _ramp_end_nd(params)
 
     # Determine t_inject from tr_oxy.dat
     t_inject: float | None = None
