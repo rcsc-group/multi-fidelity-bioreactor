@@ -44,7 +44,7 @@ L10_RUN_IDS = {rid for chain in L10_MANIFEST.values() for rid in chain}
 PILOT_RUN_ID = "44133566"  # 17.5 rpm, biggest omega jump from the 22.5 rpm seed
 OTHER_L9_RUN_IDS = [rid for rid in L9_META["run_ids"] if rid != "8994c04a"]  # 22.5 already done
 
-KIM_TAU = {  # RPM -> (tau_liq_max, tau_liq_mean), from docs/kimetal2024
+KIM_TAU = {  # RPM -> (tau_liq_max, tau_liq_mean), from experiments/kimetal2024
     17.5: (0.0955, 0.00077), 20.0: (0.0914, 0.00086), 22.5: (0.2299, 0.00190),
     25.0: (0.1256, 0.00125), 27.5: (0.1467, 0.00139), 30.0: (0.1735, 0.00161),
     32.5: (0.2060, 0.00180), 35.0: (0.2753, 0.00221), 37.5: (1.1419, 0.00314),

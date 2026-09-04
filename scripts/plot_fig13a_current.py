@@ -1,4 +1,4 @@
-"""Regenerate docs/kimetal2024/figure_replicas/replicated_Fig13.png from
+"""Regenerate experiments/kimetal2024/figure_replicas/replicated_Fig13.png from
 currently-valid data only (diary.md 2026-09-02).
 
 The version pushed 2026-08-05 (commit 7f87e46) baked in:
@@ -30,9 +30,9 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 HERE = Path(__file__).parent.parent
-KIM_CSV = HERE / "docs/kimetal2024/csv_raw/shear_ediss_vs_frequency.csv"
+KIM_CSV = HERE / "experiments/kimetal2024/csv_raw/shear_ediss_vs_frequency.csv"
 RUNS_DIR = HERE / "runs"
-OUT_PATH = HERE / "docs/kimetal2024/figure_replicas/replicated_Fig13.png"
+OUT_PATH = HERE / "experiments/kimetal2024/figure_replicas/replicated_Fig13.png"
 
 RPMS = [17.5, 20.0, 22.5, 25.0, 27.5, 30.0, 32.5, 35.0, 37.5]
 

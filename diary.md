@@ -1,5 +1,40 @@
 # Experiment diary
 
+## 2026-09-04 (3) — moved docs/kimetal2024/ and docs/canonical_case/ into
+experiments/; docs/ no longer exists.
+
+User's framing: everything under `docs/kimetal2024/` -- Kim et al.'s own
+paper source (`Main.tex`, `.bib`/`.bbl`, `Figures/*.pdf`) included -- only
+exists because replicating their published figures against our own
+simulation output *is* an experiment; keeping it in a `docs/` tree
+alongside the mkdocs site (`docs_site/`) was confusing, and `experiments/`
+is already this project's convention for exactly this kind of thing.
+Same reasoning for `docs/canonical_case/` (a committed reference-case
+run's video/KPIs).
+
+`git mv docs/kimetal2024 experiments/kimetal2024`, `git mv docs/canonical_case
+experiments/canonical_case` -- history preserved via rename detection.
+Updated every functional path reference: 12 scripts (`OUT_PATH`/`KIM_CSV`
+constants, docstrings), `scripts/commit_canonical.py`'s `DOCS_DIR`
+construction, and the one `docs_site/` page that pointed at a file here
+(`kim-et-al-validation.md` -> `Fig_append1.pdf`). Left diary.md's own
+historical prose (many old entries say "docs/kimetal2024/...") as
+originally written -- those paths were true at the time; a lab notebook
+records what happened, it doesn't get retroactively rewritten when
+something later moves.
+
+Also updated `.gitignore`: the blanket `*.png`/`*.mp4` exclusion had a
+carve-out for `docs/**/*.png`/`*.mp4` (added 2026-08-04 specifically so
+these figures could be tracked) -- moved the carve-out to
+`experiments/kimetal2024/**` and `experiments/canonical_case/**`.
+Verified via `git check-ignore` that a new PNG dropped into
+`experiments/kimetal2024/figure_replicas/` is correctly NOT ignored
+before this fix, it would have been silently dropped by `git add`.
+
+`docs/` is now an empty directory (git doesn't track empty dirs, so it
+simply disappears once committed). Full test suite still green (150
+passed) -- nothing in tests/ referenced either path.
+
 ## 2026-09-04 (2) — FigA16 L10 point added, at zero new compute: L6/L8/L10
 all converge, matching Kim closely.
 

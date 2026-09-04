@@ -1,4 +1,4 @@
-"""Regenerate docs/kimetal2024/figure_replicas/replicated_FigA16_{a,b}.png
+"""Regenerate experiments/kimetal2024/figure_replicas/replicated_FigA16_{a,b}.png
 (grid convergence, u'_x,rms and u'_y,rms vs t/T_p) from a genuinely
 correct L6 point (diary.md 2026-09-04).
 
@@ -42,7 +42,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 RUNS = Path(__file__).parent.parent / "runs"
-OUT_DIR = Path(__file__).parent.parent / "docs/kimetal2024/figure_replicas"
+OUT_DIR = Path(__file__).parent.parent / "experiments/kimetal2024/figure_replicas"
 
 L6_RUN = "fig13a_l6_rpm32.5"
 L8_RUN = "fig_a16_l8_rpm32p5"

@@ -47,7 +47,7 @@ FRESH_MPI = "/oscar/scratch/eaguerov/tmp/l8_matrix/ours_fresh_mpi"
 FRESH_OPENMP = "/oscar/scratch/eaguerov/tmp/l8_matrix/ours_fresh_openmp"
 RESTART_MPI = "/oscar/scratch/eaguerov/tmp/l8_matrix/ours_chain_mpi_seg1"
 RESTART_OPENMP = "/oscar/scratch/eaguerov/tmp/l8_matrix/ours_chain_openmp_seg1"
-OUT_PATH = "/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor/docs/kimetal2024/ours_vs_upstream_study/09_l8_matrix_relerr_video.mp4"
+OUT_PATH = "/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor/experiments/kimetal2024/ours_vs_upstream_study/09_l8_matrix_relerr_video.mp4"
 
 rho_w, mu_w = 1.0e3, 1.0e-3
 mu_a = 1.81e-5

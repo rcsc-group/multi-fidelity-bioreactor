@@ -35,8 +35,8 @@ T_UPSTREAM = 12.7447400981  # nearest upstream snapshot to T_OURS (matched withi
 
 OURS_GLOB = f"/oscar/scratch/eaguerov/tmp/fork_l10_rampmatch/rundir/DataOurs_1024_{T_OURS:.6g}_*.txt"
 UPSTREAM_GLOB_PATTERN = "/oscar/scratch/eaguerov/tmp/upstream_l10_video/rundir/Data_all/Data_all_1024_{t:.12g}_*.txt"
-OUT_PATH_FIELDS = "/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor/docs/kimetal2024/ours_vs_upstream_study/05_ours_vs_upstream_rampmatched_heatmap.png"
-OUT_PATH_RELERR = "/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor/docs/kimetal2024/ours_vs_upstream_study/06_ours_vs_upstream_rampmatched_relerr.png"
+OUT_PATH_FIELDS = "/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor/experiments/kimetal2024/ours_vs_upstream_study/05_ours_vs_upstream_rampmatched_heatmap.png"
+OUT_PATH_RELERR = "/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor/experiments/kimetal2024/ours_vs_upstream_study/06_ours_vs_upstream_rampmatched_relerr.png"
 
 rho_w, mu_w = 1.0e3, 1.0e-3
 mu_a = 1.81e-5

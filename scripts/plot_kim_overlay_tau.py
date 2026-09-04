@@ -43,7 +43,7 @@ import pandas as pd
 
 # ── paths ─────────────────────────────────────────────────────────────────────
 HERE       = Path(__file__).parent.parent          # project root
-KIM_CSV    = HERE / "docs/kimetal2024/csv_raw/shear_ediss_vs_frequency.csv"
+KIM_CSV    = HERE / "experiments/kimetal2024/csv_raw/shear_ediss_vs_frequency.csv"
 EXP_DIR    = HERE / "experiments/sweep_fb_theta_l8_mpi_ckpt/experiment_data"
 L9_META    = HERE / "experiments/sweep_tau_theta7_l9/_sweep_metadata.json"
 L10_MANIFEST = HERE / "experiments/sweep_tau_theta7_l10/_chain_manifest.json"

@@ -1,7 +1,7 @@
 """Render and commit the canonical Kim et al. 2024 bioreactor case.
 
 Waits for canonical_kim2024 run to complete, renders the VOF video,
-copies all outputs to docs/canonical_case/, and prints the git commands
+copies all outputs to experiments/canonical_case/, and prints the git commands
 to commit.
 
 Usage:
@@ -13,7 +13,7 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).parents[1]
 RUN_DIR      = PROJECT_ROOT / "runs" / "canonical_kim2024"
 SCRATCH_DIR  = Path("/oscar/scratch/eaguerov/mpi_runs/canonical_kim2024")
-DOCS_DIR     = PROJECT_ROOT / "docs" / "canonical_case"
+DOCS_DIR     = PROJECT_ROOT / "experiments" / "canonical_case"
 DOCS_DIR.mkdir(parents=True, exist_ok=True)
 
 print("Waiting for canonical_kim2024 to complete...")
@@ -35,7 +35,7 @@ subprocess.run(
     cwd=PROJECT_ROOT, check=True
 )
 
-# Copy outputs to docs/canonical_case/
+# Copy outputs to experiments/canonical_case/
 for fname in ["volume_fraction.mp4", "volume_fraction_lab.mp4",
               "results.json", "params.json",
               "logstats.dat", "tr_oxy.dat", "normf.dat"]:
@@ -53,5 +53,5 @@ for k in ["kLa_25", "kLa_50", "vel_rms_qss", "kla_fit_rmse_25", "dtmix_0.50"]:
     print(f"  {k}: {res.get(k)}")
 
 print("\nTo commit, run:")
-print("  git add docs/canonical_case/")
+print("  git add experiments/canonical_case/")
 print("  git commit -m 'docs: canonical Kim et al. 2024 case video and KPIs'")

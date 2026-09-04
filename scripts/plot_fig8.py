@@ -1,5 +1,5 @@
 """Replica of Kim et al. (2024) Fig. 8 (tau_Ediss_evol), v2 -- corrected
-after actually viewing docs/kimetal2024/Figures/Fig_tau_Ediss.pdf:
+after actually viewing experiments/kimetal2024/Figures/Fig_tau_Ediss.pdf:
 
   (a) domain-mean SIGNED shear stress <tau_w'> (blue) and EDR <eps_w'>
       (red), dual y-axis, LINEAR scale, matching Kim's style. v1 plotted

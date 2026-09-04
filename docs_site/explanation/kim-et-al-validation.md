@@ -132,7 +132,7 @@ not checkpointing, not something else specific to L10's pipeline — is no
 longer speculative.
 
 **Is fidelity 10 itself converged, though?** Kim et al.'s own
-grid-convergence appendix (`docs/kimetal2024/Figures/Fig_append1.pdf`)
+grid-convergence appendix (`experiments/kimetal2024/Figures/Fig_append1.pdf`)
 checks *velocity*, not shear stress, and shows velocity is already
 converged by `n_L=2^10` — their `2^10` and `2^11` curves overlap, so their
 choice of that resolution for the production sweep is legitimate, not

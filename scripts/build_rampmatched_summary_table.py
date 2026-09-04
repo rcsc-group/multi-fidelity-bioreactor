@@ -19,7 +19,7 @@ T_UPSTREAM = 12.7447400981
 
 OURS_GLOB = f"/oscar/scratch/eaguerov/tmp/fork_l10_rampmatch/rundir/DataOurs_1024_{T_OURS:.6g}_*.txt"
 UPSTREAM_GLOB = f"/oscar/scratch/eaguerov/tmp/upstream_l10_video/rundir/Data_all/Data_all_1024_{T_UPSTREAM:.12g}_*.txt"
-OUT_PATH = "/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor/docs/kimetal2024/ours_vs_upstream_study/03_summary_numbers_table.png"
+OUT_PATH = "/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor/experiments/kimetal2024/ours_vs_upstream_study/03_summary_numbers_table.png"
 
 rho_w, mu_w = 1.0e3, 1.0e-3
 mu_a = 1.81e-5

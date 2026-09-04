@@ -29,7 +29,7 @@ RUNS = [
     ("restart-recovered, MPI (3.2)", "/oscar/scratch/eaguerov/tmp/l8_matrix/ours_chain_mpi_seg1"),
     ("restart-recovered, OpenMP (3.4)", "/oscar/scratch/eaguerov/tmp/l8_matrix/ours_chain_openmp_seg1"),
 ]
-OUT_PATH = "/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor/docs/kimetal2024/ours_vs_upstream_study/08_l8_matrix_mpi_vs_openmp_vs_restart.png"
+OUT_PATH = "/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor/experiments/kimetal2024/ours_vs_upstream_study/08_l8_matrix_mpi_vs_openmp_vs_restart.png"
 
 # Same nondimensionalization as the rest of this session's analysis
 # (H_bio corrected 2026-08-20 -- see diary.md, was missing its factor of 2).
