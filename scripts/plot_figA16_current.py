@@ -31,6 +31,15 @@ this agreement is not proof the restart is bias-free here, just that if
 there is a bias, it isn't large enough to break convergence at this
 particular quantity/window.
 
+Colors/axes matched directly against Kim's own Fig. A.16
+(experiments/kimetal2024/Figures/Fig_append1.pdf, not Fig_resol_vel.pdf --
+a different figure with the same axis labels but a different window/
+scale, easy to mix up): n_L=2^10 is GREY in Kim's own legend, not the
+navy this script used until 2026-09-04 (2); panel (b)'s y-axis is
+0-0.4, not 0-1.2 (only panel (a) uses 0-1.2) -- both caught by the user
+comparing this script's output against the actual PDF, not just against
+memory of what the original replica looked like.
+
 Usage:
     uv run python scripts/plot_figA16_current.py
 """
@@ -73,14 +82,16 @@ t6, ux6, uy6 = load(L6_RUN)
 t8, ux8, uy8 = load(L8_RUN)
 t10, ux10, uy10 = load(L10_RUN)
 
+PANEL_YLIM = {"a": (0.0, 1.2), "b": (0.0, 0.4)}  # matches Kim's Fig. A.16 exactly (Fig_append1.pdf)
+
 for comp, u6, u8, u10, letter in [("x", ux6, ux8, ux10, "a"), ("y", uy6, uy8, uy10, "b")]:
     fig, ax = plt.subplots(figsize=(5.0, 4.5))
     ax.plot(t6, u6, color="crimson", lw=2.2, ls="--", label=r"$n_L=2^6$")
     ax.plot(t8, u8, color="mediumorchid", lw=1.6, ls="--", label=r"$n_L=2^8$")
-    ax.plot(t10, u10, color="navy", lw=1.2, ls="--", label=r"$n_L=2^{10}$")
+    ax.plot(t10, u10, color="gray", lw=1.2, ls="--", label=r"$n_L=2^{10}$")
     ax.set_xlabel(r"$t/T_p$", fontsize=13)
     ax.set_ylabel(rf"$\langle u'_{{{comp},rms}}\rangle/U_b$", fontsize=13)
-    ax.set_ylim(0.0, 1.2)
+    ax.set_ylim(*PANEL_YLIM[letter])
     ax.legend(fontsize=11, loc="upper right")
     ax.text(-0.18, 1.02, rf"$({letter})$", transform=ax.transAxes, fontsize=15, style="italic")
     fig.tight_layout()
