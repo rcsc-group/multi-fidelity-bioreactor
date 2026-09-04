@@ -19,6 +19,18 @@ the [29,31] window). Gives ux_rms=0.774, uy_rms=0.212, matching both
 Kim (~0.80/~0.21) and the L8 point (0.771/0.210) closely -- a genuine
 grid-convergence result, unlike the old figure.
 
+Added a third series, L10 (n_L=2^10, matching Kim's own published
+resolution): runs/l10_kim_seg2, which already exists (it's the run
+Fig 8's data chains from) and already covers t/Tp=[29,31] --
+ux_rms=0.776, uy_rms=0.212, agreeing with L6/L8/Kim just as closely.
+Zero new compute. Caveat: unlike L6/L8, this is a same-condition
+checkpoint-restart segment (t_checkpoint=10.32, not a cold start) --
+the 2026-09-03 restart-bias test found that mechanism CAN perturb
+tau_100_max by a condition-dependent, sometimes double-digit amount, so
+this agreement is not proof the restart is bias-free here, just that if
+there is a bias, it isn't large enough to break convergence at this
+particular quantity/window.
+
 Usage:
     uv run python scripts/plot_figA16_current.py
 """
@@ -34,6 +46,7 @@ OUT_DIR = Path(__file__).parent.parent / "docs/kimetal2024/figure_replicas"
 
 L6_RUN = "fig13a_l6_rpm32.5"
 L8_RUN = "fig_a16_l8_rpm32p5"
+L10_RUN = "l10_kim_seg2"
 
 
 def t_per_st(params):
@@ -58,11 +71,13 @@ def load(run_id):
 
 t6, ux6, uy6 = load(L6_RUN)
 t8, ux8, uy8 = load(L8_RUN)
+t10, ux10, uy10 = load(L10_RUN)
 
-for comp, u6, u8, letter in [("x", ux6, ux8, "a"), ("y", uy6, uy8, "b")]:
+for comp, u6, u8, u10, letter in [("x", ux6, ux8, ux10, "a"), ("y", uy6, uy8, uy10, "b")]:
     fig, ax = plt.subplots(figsize=(5.0, 4.5))
     ax.plot(t6, u6, color="crimson", lw=2.2, ls="--", label=r"$n_L=2^6$")
     ax.plot(t8, u8, color="mediumorchid", lw=1.6, ls="--", label=r"$n_L=2^8$")
+    ax.plot(t10, u10, color="navy", lw=1.2, ls="--", label=r"$n_L=2^{10}$")
     ax.set_xlabel(r"$t/T_p$", fontsize=13)
     ax.set_ylabel(rf"$\langle u'_{{{comp},rms}}\rangle/U_b$", fontsize=13)
     ax.set_ylim(0.0, 1.2)

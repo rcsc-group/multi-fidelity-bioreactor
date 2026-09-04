@@ -31,7 +31,8 @@ def t_per_st(params):
 
 import json
 
-for run_id in ["health_l6", "fig_a16_l8_rpm32p5", "fig13a_l6_rpm32.5"]:
+for run_id in ["health_l6", "fig_a16_l8_rpm32p5", "fig13a_l6_rpm32.5",
+               "l10_kim_seg2", "l10_kim_fig8_signed"]:
     params = json.loads((RUNS / run_id / "params.json").read_text())
     rpm = params["omega_b"] * 60 / (2 * math.pi)
     T_per_st = t_per_st(params)

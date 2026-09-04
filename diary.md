@@ -1,5 +1,31 @@
 # Experiment diary
 
+## 2026-09-04 (2) — FigA16 L10 point added, at zero new compute: L6/L8/L10
+all converge, matching Kim closely.
+
+User asked which resolutions FigA16 needs redoing at, planning to start
+with L6/L8 and "think about L10" as a separate, presumably costly, step.
+Checked whether any existing L10 run already covers the required
+condition/window before treating L10 as new-compute work: `runs/
+l10_kim_seg2` (the run Fig 8's data chains from) is at 32.5rpm, correct
+geometry (0.03575), and already reaches t/Tp=[29,31] -- exactly FigA16's
+window. `ux_rms=0.776`, `uy_rms=0.212`, matching Kim (~0.80/~0.21), L6
+(0.774/0.212), and L8 (0.771/0.210) closely. Zero new compute needed.
+
+Caveat stated in `scripts/plot_figA16_current.py`: unlike the L6/L8
+points, `l10_kim_seg2` is a same-condition checkpoint-restart segment
+(`t_checkpoint=10.32`), not a cold start -- the 2026-09-03 restart-bias
+test found that mechanism can perturb `tau_100_max` by a condition-
+dependent, sometimes double-digit percentage. This close 3-way agreement
+doesn't prove the restart is bias-free here; it shows that if there is
+one, it isn't large enough to break convergence for this particular
+quantity/window. Regenerated both panels with all three resolutions --
+L8/L10 nearly overlap, L6 shows the expected slightly-larger trough
+excursions of a coarser grid. FigA16 is now complete at L6, L8, and
+Kim's own published resolution (n_L=2^10), with nothing further to redo
+unless a genuinely independent (non-chained) L10 cold start is wanted
+later.
+
 ## 2026-09-04 — user pushed back on "not stale" (correctly): FigA16 WAS
 stale, comparing two different physical conditions, not a genuine
 grid-convergence check. Fixed. Fig9-12 and the cross-binary-chain
