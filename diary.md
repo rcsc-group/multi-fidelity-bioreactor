@@ -1,5 +1,72 @@
 # Experiment diary
 
+## 2026-09-04 — user pushed back on "not stale" (correctly): FigA16 WAS
+stale, comparing two different physical conditions, not a genuine
+grid-convergence check. Fixed. Fig9-12 and the cross-binary-chain
+concern for Fig8 both independently confirmed clean, with evidence.
+
+User's challenge, verbatim: "are you sure, beyond reasonable doubt... not
+just from what we did, but also from things we might not have
+considered yet?" Correct to push -- the previous "not stale" verdicts
+for Fig9-12/FigA16/Fig8a rested partly on trusting old commit messages
+and my own reasoning, not on independently re-deriving each claim.
+Re-checked all of them properly:
+
+**Fig 9-12: confirmed clean, with evidence this time.** Actually ran
+`replicate_plots.py` and diffed the output against the committed PNGs
+(`git status` after) -- byte-identical. Combined with zero revisions
+ever to the underlying Kim CSVs, this is now a verified fact, not an
+inference from reading the script.
+
+**Fig 8's cross-binary chain risk: a real gap I hadn't checked, now
+closed with evidence.** `l10_kim_seg2` (checkpoint feeding
+`l10_kim_fig8_signed`) was written 2026-08-04; `fig8_signed` itself ran
+2026-08-09 -- FIVE DAYS and 5 commits to `src/BioReactor.c` apart
+(31dbd78, 7e89dba, 44446da, f865e49, 1e9dc35 -- video export, 3 new KPI
+columns, EDR, a sign fix). Diffed all 5 commits directly: every hunk is
+confined to `event normcal`/`event movies_output_tau`/the `fp_tau`
+header string -- none touch `event acceleration`, `event adapt`, or the
+timestep loop. The restart carries forward solver STATE (velocity/
+pressure/VOF, via Basilisk's dump/restore); none of these 5 commits
+changed the solver itself, only what gets additionally computed/written
+at output time. Cross-binary continuation is physically valid here --
+verified by reading the diffs, not by trusting the commit messages'
+one-line summaries.
+
+**FigA16: WAS actually stale -- comparing two different physical
+conditions, not L6-vs-L8 convergence.** The 2026-08-04 diary entry
+claimed "L6 was already at the correct RPM." Directly checked
+`runs/health_l6/params.json` (the only plausible L6 source, given
+`health_l6_video`'s wrong condition was independently flagged the same
+day for a different figure): `omega_b=3.93` (~37.5rpm, not Kim's
+32.5rpm baseline) and `geometry.b=0.071` (the pre-2026-08-03-fix value).
+Computed its actual `u'_x,rms` peak over `t/Tp=[29,31]`
+(`scripts/audit_figA16_source.py`): **0.39** -- exactly the "half of
+Kim's value" signature the OLD geometry/H_bio bug produces, per
+`tests/verification/test_kim_fig_a16_velocity_rms.py`'s own docstring
+(a test that exists for precisely this failure mode, never run against
+this particular figure). The committed image was showing a 37.5rpm/
+old-geometry run next to a 32.5rpm/new-geometry run -- not a resolution
+comparison at all.
+
+**Fix:** `runs/fig13a_l6_rpm32.5` (this session's L6 sweep, correct RPM
+and geometry, reaches t/Tp=33) gives `ux_rms=0.774`, `uy_rms=0.212` --
+matching both Kim (~0.80/~0.21) and the L8 point (0.771/0.210) closely.
+Regenerated both panels (`scripts/plot_figA16_current.py`) with this L6
+source in place of `health_l6`. Zero new compute -- the correct data
+already existed from an unrelated sweep.
+
+**Also independently launched** `tests/verification/
+test_kim_fig_a16_velocity_rms.py` (marked `hpc`, opt-in, direct external
+check against Kim's published peak values, not just internal self-
+consistency) as a second, from-scratch confirmation -- running in the
+background at time of writing.
+
+**Lesson, stated plainly:** a diary entry describing what a figure
+"should" contain is not evidence the figure is correct. The only thing
+that counts as evidence is checking the actual params.json/data that
+produced it, which nothing had done for FigA16 until asked twice.
+
 ## 2026-09-03 (3) — restart-bias result does NOT generalize: 32.5rpm was
 the best case, not representative. tau_100_max diverges 3-16% depending
 on RPM; tau_mean_max stays robust everywhere.
