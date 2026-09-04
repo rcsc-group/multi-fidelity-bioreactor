@@ -55,22 +55,22 @@ l6 = _load("fig13a_l6_rpm{rpm:g}")
 fig, ax = plt.subplots(figsize=(6, 4.3))
 
 ax.plot(kim["RPM"], kim["tau_liq_max"], color="royalblue", marker="o", ms=7, lw=1.3,
-        label=r"Kim $\tau_\mathrm{max}$")
+        label=r"Kim $\tau$")
 ax.plot(kim["RPM"], kim["tau_liq_mean"], color="royalblue", marker="o", ms=7, lw=1.3, ls="--",
-        markerfacecolor="white", label=r"Kim $\langle\tau\rangle_\mathrm{max}$")
+        markerfacecolor="white", label=r"Kim $\langle\tau\rangle$")
 
 ax.plot(l8["rpm"], l8["tau_max"], color="darkred", marker="^", ms=8, lw=1.3,
-        label=r"Our fork $\tau_\mathrm{max}$ (L8)")
+        label=r"Ours $\tau$ (L8)")
 ax.plot(l8["rpm"], l8["tau_mean_max"], color="darkred", marker="^", ms=8, lw=1.3, ls="--",
-        markerfacecolor="white", label=r"Our fork $\langle\tau\rangle_\mathrm{max}$ (L8)")
+        markerfacecolor="white", label=r"Ours $\langle\tau\rangle$ (L8)")
 
 ax.plot(l6["rpm"], l6["tau_max"], color="darkorange", marker="s", ms=7, lw=1.3,
-        label=r"Our fork $\tau_\mathrm{max}$ (L6)")
+        label=r"Ours $\tau$ (L6)")
 ax.plot(l6["rpm"], l6["tau_mean_max"], color="darkorange", marker="s", ms=7, lw=1.3, ls="--",
-        markerfacecolor="white", label=r"Our fork $\langle\tau\rangle_\mathrm{max}$ (L6)")
+        markerfacecolor="white", label=r"Ours $\langle\tau\rangle$ (L6)")
 
 ax.set_xlabel(r"Rocking frequency $f_b$ (rpm)", fontsize=11)
-ax.set_ylabel("Shear stress (Pa)", fontsize=11)
+ax.set_ylabel("Peak shear stress (Pa)", fontsize=11)
 ax.set_yscale("log")
 ax.set_title(r"$\theta=7°$", fontsize=10)
 ax.tick_params(which="both", direction="in", top=True, right=True)
