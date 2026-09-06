@@ -1,0 +1,22 @@
+{
+  "baseline": {"rpm": 32.5, "theta": 7.0},
+  "levels": [6, 7, 8],
+  "transitions": {
+    "6": {
+      "rpm17.5_th2": "08b040be", "rpm17.5_th4": "0cd3175e", "rpm17.5_th7": "4641bb11",
+      "rpm32.5_th2": "cf8b7139", "rpm32.5_th4": "4a747163",
+      "rpm37.5_th2": "a4668d97", "rpm37.5_th4": "c9035a61", "rpm37.5_th7": "74c81249"
+    },
+    "7": {
+      "rpm17.5_th2": "cc39b71c", "rpm17.5_th4": "61020c1d", "rpm17.5_th7": "b817a0b9",
+      "rpm32.5_th2": "3ef5de8d", "rpm32.5_th4": "33f1ffa3",
+      "rpm37.5_th2": "8eab4bb4", "rpm37.5_th4": "bf593f27", "rpm37.5_th7": "d622e385"
+    },
+    "8": {
+      "rpm17.5_th2": "4f8f45da", "rpm17.5_th4": "b5970035", "rpm17.5_th7": "145d42bd",
+      "rpm32.5_th2": "2a066be0", "rpm32.5_th4": "13c5b8f7",
+      "rpm37.5_th2": "35ef3fdc", "rpm37.5_th4": "e268a7de", "rpm37.5_th7": "92e87a3a"
+    }
+  },
+  "note": "reference run_ids are deterministic via settling_study_grid.reference_run_id(fidelity, point) -- e.g. settling_ref_L6_rpm17.5_th2 -- no manifest needed for those. baseline run_ids are settling_baseline_L{6,7,8}."
+}
