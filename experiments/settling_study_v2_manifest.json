@@ -1,0 +1,299 @@
+{
+  "cycles_per_run": 60,
+  "edges": {
+    "6": {
+      "32.5_7__32.5_4": {
+        "from": {
+          "rpm": 32.5,
+          "theta": 7.0
+        },
+        "to": {
+          "rpm": 32.5,
+          "theta": 4.0
+        },
+        "run_id": "7bb073d2",
+        "source_run": "settling_baseline_L6"
+      },
+      "32.5_4__32.5_2": {
+        "from": {
+          "rpm": 32.5,
+          "theta": 4.0
+        },
+        "to": {
+          "rpm": 32.5,
+          "theta": 2.0
+        },
+        "run_id": "da4b0fe3",
+        "source_run": "settling_ref_L6_rpm32.5_th4"
+      },
+      "32.5_7__17.5_7": {
+        "from": {
+          "rpm": 32.5,
+          "theta": 7.0
+        },
+        "to": {
+          "rpm": 17.5,
+          "theta": 7.0
+        },
+        "run_id": "842420f6",
+        "source_run": "settling_baseline_L6"
+      },
+      "17.5_7__17.5_4": {
+        "from": {
+          "rpm": 17.5,
+          "theta": 7.0
+        },
+        "to": {
+          "rpm": 17.5,
+          "theta": 4.0
+        },
+        "run_id": "b31a1248",
+        "source_run": "settling_ref_L6_rpm17.5_th7"
+      },
+      "17.5_4__17.5_2": {
+        "from": {
+          "rpm": 17.5,
+          "theta": 4.0
+        },
+        "to": {
+          "rpm": 17.5,
+          "theta": 2.0
+        },
+        "run_id": "34e3657b",
+        "source_run": "settling_ref_L6_rpm17.5_th4"
+      },
+      "32.5_7__37.5_7": {
+        "from": {
+          "rpm": 32.5,
+          "theta": 7.0
+        },
+        "to": {
+          "rpm": 37.5,
+          "theta": 7.0
+        },
+        "run_id": "43fb86a2",
+        "source_run": "settling_baseline_L6"
+      },
+      "37.5_7__37.5_4": {
+        "from": {
+          "rpm": 37.5,
+          "theta": 7.0
+        },
+        "to": {
+          "rpm": 37.5,
+          "theta": 4.0
+        },
+        "run_id": "d3829e78",
+        "source_run": "settling_ref_L6_rpm37.5_th7"
+      },
+      "37.5_4__37.5_2": {
+        "from": {
+          "rpm": 37.5,
+          "theta": 4.0
+        },
+        "to": {
+          "rpm": 37.5,
+          "theta": 2.0
+        },
+        "run_id": "5be14096",
+        "source_run": "settling_ref_L6_rpm37.5_th4"
+      }
+    },
+    "7": {
+      "32.5_7__32.5_4": {
+        "from": {
+          "rpm": 32.5,
+          "theta": 7.0
+        },
+        "to": {
+          "rpm": 32.5,
+          "theta": 4.0
+        },
+        "run_id": "ec7752d9",
+        "source_run": "settling_baseline_L7"
+      },
+      "32.5_4__32.5_2": {
+        "from": {
+          "rpm": 32.5,
+          "theta": 4.0
+        },
+        "to": {
+          "rpm": 32.5,
+          "theta": 2.0
+        },
+        "run_id": "2c107144",
+        "source_run": "settling_ref_L7_rpm32.5_th4"
+      },
+      "32.5_7__17.5_7": {
+        "from": {
+          "rpm": 32.5,
+          "theta": 7.0
+        },
+        "to": {
+          "rpm": 17.5,
+          "theta": 7.0
+        },
+        "run_id": "b2edb7d6",
+        "source_run": "settling_baseline_L7"
+      },
+      "17.5_7__17.5_4": {
+        "from": {
+          "rpm": 17.5,
+          "theta": 7.0
+        },
+        "to": {
+          "rpm": 17.5,
+          "theta": 4.0
+        },
+        "run_id": "b435380c",
+        "source_run": "settling_ref_L7_rpm17.5_th7"
+      },
+      "17.5_4__17.5_2": {
+        "from": {
+          "rpm": 17.5,
+          "theta": 4.0
+        },
+        "to": {
+          "rpm": 17.5,
+          "theta": 2.0
+        },
+        "run_id": "eb021b15",
+        "source_run": "settling_ref_L7_rpm17.5_th4"
+      },
+      "32.5_7__37.5_7": {
+        "from": {
+          "rpm": 32.5,
+          "theta": 7.0
+        },
+        "to": {
+          "rpm": 37.5,
+          "theta": 7.0
+        },
+        "run_id": "06190ce4",
+        "source_run": "settling_baseline_L7"
+      },
+      "37.5_7__37.5_4": {
+        "from": {
+          "rpm": 37.5,
+          "theta": 7.0
+        },
+        "to": {
+          "rpm": 37.5,
+          "theta": 4.0
+        },
+        "run_id": "bab68cf9",
+        "source_run": "settling_ref_L7_rpm37.5_th7"
+      },
+      "37.5_4__37.5_2": {
+        "from": {
+          "rpm": 37.5,
+          "theta": 4.0
+        },
+        "to": {
+          "rpm": 37.5,
+          "theta": 2.0
+        },
+        "run_id": "996ab63c",
+        "source_run": "settling_ref_L7_rpm37.5_th4"
+      }
+    },
+    "8": {
+      "32.5_7__32.5_4": {
+        "from": {
+          "rpm": 32.5,
+          "theta": 7.0
+        },
+        "to": {
+          "rpm": 32.5,
+          "theta": 4.0
+        },
+        "run_id": "865f5441",
+        "source_run": "settling_baseline_L8"
+      },
+      "32.5_4__32.5_2": {
+        "from": {
+          "rpm": 32.5,
+          "theta": 4.0
+        },
+        "to": {
+          "rpm": 32.5,
+          "theta": 2.0
+        },
+        "run_id": "6f8744b0",
+        "source_run": "settling_ref_L8_rpm32.5_th4"
+      },
+      "32.5_7__17.5_7": {
+        "from": {
+          "rpm": 32.5,
+          "theta": 7.0
+        },
+        "to": {
+          "rpm": 17.5,
+          "theta": 7.0
+        },
+        "run_id": "79c8f2ae",
+        "source_run": "settling_baseline_L8"
+      },
+      "17.5_7__17.5_4": {
+        "from": {
+          "rpm": 17.5,
+          "theta": 7.0
+        },
+        "to": {
+          "rpm": 17.5,
+          "theta": 4.0
+        },
+        "run_id": "091981f7",
+        "source_run": "settling_ref_L8_rpm17.5_th7"
+      },
+      "17.5_4__17.5_2": {
+        "from": {
+          "rpm": 17.5,
+          "theta": 4.0
+        },
+        "to": {
+          "rpm": 17.5,
+          "theta": 2.0
+        },
+        "run_id": "dcf9f1a8",
+        "source_run": "settling_ref_L8_rpm17.5_th4"
+      },
+      "32.5_7__37.5_7": {
+        "from": {
+          "rpm": 32.5,
+          "theta": 7.0
+        },
+        "to": {
+          "rpm": 37.5,
+          "theta": 7.0
+        },
+        "run_id": "77a88c02",
+        "source_run": "settling_baseline_L8"
+      },
+      "37.5_7__37.5_4": {
+        "from": {
+          "rpm": 37.5,
+          "theta": 7.0
+        },
+        "to": {
+          "rpm": 37.5,
+          "theta": 4.0
+        },
+        "run_id": "e98806fb",
+        "source_run": "settling_ref_L8_rpm37.5_th7"
+      },
+      "37.5_4__37.5_2": {
+        "from": {
+          "rpm": 37.5,
+          "theta": 4.0
+        },
+        "to": {
+          "rpm": 37.5,
+          "theta": 2.0
+        },
+        "run_id": "70db6266",
+        "source_run": "settling_ref_L8_rpm37.5_th4"
+      }
+    }
+  }
+}
