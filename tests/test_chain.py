@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
-from scripts.chain import build_chain
+from scripts.chain import build_chain, submit_chain
 
 # ── minimal valid config ──────────────────────────────────────────────────────
 _CFG = {
@@ -238,3 +238,32 @@ def test_initial_checkpoint_checkpoint_times_advance():
         assert chain[k]["t_checkpoint"] > chain[k - 1]["t_checkpoint"], (
             f"segment {k} t_checkpoint should exceed segment {k-1}"
         )
+
+
+def test_submit_chain_passes_ntasks_to_segment0(monkeypatch, tmp_path):
+    """Regression test (2026-09-06): cfg["ntasks"] used to only be written
+    into the self-submission annotation (_ntasks, read by LATER segments),
+    never passed to segment 0's own submit_slurm() call -- segment 0
+    silently fell back to the MPI template's hardcoded --ntasks=16 default
+    regardless of what cfg requested. Caught when a cfg["ntasks"]=32 L9 run
+    actually ran at 16 procs per its own SLURM log.
+    """
+    import scripts.chain as chain_mod
+
+    captured = {}
+
+    def fake_submit_slurm(params, **kwargs):
+        captured.update(kwargs)
+        return "999999"
+
+    monkeypatch.setattr(chain_mod, "validate_params", lambda params: None)
+    monkeypatch.setattr(chain_mod.simulate, "submit_slurm", fake_submit_slurm)
+    monkeypatch.setattr(chain_mod, "_PROJECT_ROOT", tmp_path)
+
+    cfg = {**_CFG, "mpi": True, "ntasks": 32, "submit": True,
+           "sweep": {"parameter": "omega_b", "values": [1.0]}}
+    submit_chain(cfg)
+
+    assert captured.get("ntasks") == 32, (
+        f"segment 0 should be submitted with ntasks=32, got {captured.get('ntasks')!r}"
+    )

@@ -251,6 +251,13 @@ def submit_chain(cfg: dict) -> list[tuple[str, str]]:
 
         validate_params(params)
         if submit:
+            # [FIX 2026-09-06, diary.md] cfg["ntasks"] was only ever written
+            # into the SELF-SUBMISSION annotation (_ntasks, read by later
+            # segments at self-submit time) -- never passed to this,
+            # segment 0's OWN submit_slurm() call. Segment 0 silently fell
+            # back to the MPI template's hardcoded #SBATCH --ntasks=16
+            # default regardless of what cfg requested (caught when a
+            # cfg["ntasks"]=32 L9 run ran at 16 procs per its own log).
             job_id = simulate.submit_slurm(
                 params,
                 project_root=_PROJECT_ROOT,
@@ -260,6 +267,7 @@ def submit_chain(cfg: dict) -> list[tuple[str, str]]:
                 checkpoint=checkpoint,
                 dependency=dependency,
                 cpus=1 if use_mpi else 4,
+                ntasks=cfg.get("ntasks", 16) if use_mpi else None,
             )
             job_ids.append((params["run_id"], job_id))
             print(f"  → job {job_id}")
