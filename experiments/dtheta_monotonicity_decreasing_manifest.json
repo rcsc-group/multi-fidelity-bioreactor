@@ -1,0 +1,57 @@
+{
+  "target_theta": 2.0,
+  "rpm": 32.5,
+  "fidelity": 6,
+  "edges": {
+    "2": {
+      "theta_source": 2.0,
+      "run_id": "7cfd3268",
+      "source_run": "settling_ref_L6_rpm32.5_th2"
+    },
+    "2.1": {
+      "theta_source": 2.1,
+      "run_id": "9b47a5d0",
+      "source_run": "dtheta_src_L6_th2.1"
+    },
+    "2.5": {
+      "theta_source": 2.5,
+      "run_id": "2fbbbace",
+      "source_run": "dtheta_src_L6_th2.5"
+    },
+    "3": {
+      "theta_source": 3.0,
+      "run_id": "f6070b7a",
+      "source_run": "dtheta_src_L6_th3"
+    },
+    "4": {
+      "theta_source": 4.0,
+      "run_id": "309859c2",
+      "source_run": "settling_ref_L6_rpm32.5_th4"
+    },
+    "5": {
+      "theta_source": 5.0,
+      "run_id": "0f4b3a08",
+      "source_run": "dtheta_src_L6_th5"
+    },
+    "6": {
+      "theta_source": 6.0,
+      "run_id": "a8af7858",
+      "source_run": "dtheta_src_L6_th6"
+    },
+    "6.5": {
+      "theta_source": 6.5,
+      "run_id": "f61d96f1",
+      "source_run": "dtheta_src_L6_th6.5"
+    },
+    "6.9": {
+      "theta_source": 6.9,
+      "run_id": "34cb9ee3",
+      "source_run": "dtheta_src_L6_th6.9"
+    },
+    "7": {
+      "theta_source": 7.0,
+      "run_id": "e75f297c",
+      "source_run": "settling_baseline_L6"
+    }
+  }
+}

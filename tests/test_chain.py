@@ -267,3 +267,70 @@ def test_submit_chain_passes_ntasks_to_segment0(monkeypatch, tmp_path):
     assert captured.get("ntasks") == 32, (
         f"segment 0 should be submitted with ntasks=32, got {captured.get('ntasks')!r}"
     )
+
+
+def test_submit_chain_non_mpi_dependency_uses_job_id_not_tuple(monkeypatch, tmp_path):
+    """Regression test (2026-09-07): the non-MPI dependency chain stores
+    (run_id, job_id) tuples in job_ids, but the sequential-dependency line
+    (`f"afterok:{job_ids[k-1]}"`, in the non-MPI/non-self-submitting path)
+    formatted the WHOLE TUPLE into the --dependency string instead of just
+    job_ids[k-1][1] -- producing a malformed dependency like
+    "afterok:('d5c582d9', '6021991')" that sbatch rejects outright. Never
+    hit before because every prior chained sweep this session used mpi=True
+    (self-submitting path), which never reaches this line. Caught
+    submitting a 2-segment videos=True (non-MPI) chain for the checkpoint-
+    chaining visualization (diary.md 2026-09-07).
+    """
+    import scripts.chain as chain_mod
+
+    calls = []
+
+    def fake_submit_slurm(params, **kwargs):
+        calls.append(kwargs)
+        return f"job{len(calls)}"
+
+    monkeypatch.setattr(chain_mod, "validate_params", lambda params: None)
+    monkeypatch.setattr(chain_mod.simulate, "submit_slurm", fake_submit_slurm)
+    monkeypatch.setattr(chain_mod, "_PROJECT_ROOT", tmp_path)
+
+    cfg = {**_CFG, "mpi": False, "submit": True,
+           "sweep": {"parameter": "omega_b", "values": [1.0, 1.1]}}
+    submit_chain(cfg)
+
+    assert len(calls) == 2
+    assert calls[1]["dependency"] == "afterok:job1", (
+        f"segment 1's dependency should reference segment 0's job id string, "
+        f"got {calls[1]['dependency']!r}"
+    )
+
+
+def test_submit_chain_passes_mem_per_cpu_to_segment0(monkeypatch, tmp_path):
+    """Regression test (2026-09-07): same bug class as the ntasks fix above.
+    cfg["mem_per_cpu"] was only ever written into the self-submission
+    annotation (_mem, read by LATER segments), never passed to segment 0's
+    own submit_slurm() call -- segment 0 silently fell back to
+    submit_slurm's mem="12G" default regardless of what cfg requested.
+    Caught when 10 concurrent L6 checkpoint transitions (ntasks=8,
+    mem_per_cpu="4G" requested, 32G/job intended) actually requested 96G/job
+    (12G/cpu default x 8 cpus) and three of them were cancelled outright by
+    SLURM with reason QOSMaxMemoryPerUser (960G requested vs a 492G cap).
+    """
+    import scripts.chain as chain_mod
+
+    captured = {}
+
+    def fake_submit_slurm(params, **kwargs):
+        captured.update(kwargs)
+        return "999999"
+
+    monkeypatch.setattr(chain_mod, "validate_params", lambda params: None)
+    monkeypatch.setattr(chain_mod.simulate, "submit_slurm", fake_submit_slurm)
+    monkeypatch.setattr(chain_mod, "_PROJECT_ROOT", tmp_path)
+
+    cfg = {**_CFG, "mpi": True, "ntasks": 8, "mem_per_cpu": "4G", "submit": True,
+           "sweep": {"parameter": "omega_b", "values": [1.0]}}
+    submit_chain(cfg)
+
+    assert captured.get("mem") == "4G", (
+        f"segment 0 should be submitted with mem='4G', got {captured.get('mem')!r}"
+    )

@@ -222,7 +222,7 @@ def submit_chain(cfg: dict) -> list[tuple[str, str]]:
             checkpoint = str((runs_root / prev_run_id / "checkpoint.dump").resolve())
         else:
             checkpoint = None
-        dependency = f"afterok:{job_ids[k-1]}" if k > 0 and not use_mpi else None
+        dependency = f"afterok:{job_ids[k-1][1]}" if k > 0 and not use_mpi else None
 
         # sweep_param may be a vector-indexed alias (e.g. "theta_max_0" ->
         # params["theta_max"][0]) rather than a literal top-level key.
@@ -258,6 +258,14 @@ def submit_chain(cfg: dict) -> list[tuple[str, str]]:
             # back to the MPI template's hardcoded #SBATCH --ntasks=16
             # default regardless of what cfg requested (caught when a
             # cfg["ntasks"]=32 L9 run ran at 16 procs per its own log).
+            #
+            # [FIX 2026-09-07, diary.md] Same bug class for cfg["mem_per_cpu"]:
+            # only wired into the self-submission annotation (_mem), never
+            # passed to segment 0's own submit_slurm() call -- segment 0
+            # silently fell back to submit_slurm's mem="12G" default (3x the
+            # 4G/cpu actually requested). 10 concurrent 8-cpu transitions
+            # then requested 96G each (960G total) against a 492G QOS cap;
+            # three were cancelled outright with reason QOSMaxMemoryPerUser.
             job_id = simulate.submit_slurm(
                 params,
                 project_root=_PROJECT_ROOT,
@@ -268,6 +276,7 @@ def submit_chain(cfg: dict) -> list[tuple[str, str]]:
                 dependency=dependency,
                 cpus=1 if use_mpi else 4,
                 ntasks=cfg.get("ntasks", 16) if use_mpi else None,
+                mem=cfg.get("mem_per_cpu", "2G") if use_mpi else "12G",
             )
             job_ids.append((params["run_id"], job_id))
             print(f"  → job {job_id}")

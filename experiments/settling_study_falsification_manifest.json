@@ -1,0 +1,83 @@
+{
+  "cycles_per_run": 60,
+  "edges": {
+    "6": {
+      "32.5_2__32.5_4": {
+        "from": {
+          "rpm": 32.5,
+          "theta": 2.0
+        },
+        "to": {
+          "rpm": 32.5,
+          "theta": 4.0
+        },
+        "run_id": "679049e7",
+        "source_run": "settling_ref_L6_rpm32.5_th2"
+      },
+      "32.5_2__32.5_7": {
+        "from": {
+          "rpm": 32.5,
+          "theta": 2.0
+        },
+        "to": {
+          "rpm": 32.5,
+          "theta": 7.0
+        },
+        "run_id": "193fd50b",
+        "source_run": "settling_ref_L6_rpm32.5_th2"
+      }
+    },
+    "7": {
+      "32.5_2__32.5_4": {
+        "from": {
+          "rpm": 32.5,
+          "theta": 2.0
+        },
+        "to": {
+          "rpm": 32.5,
+          "theta": 4.0
+        },
+        "run_id": "da03de2b",
+        "source_run": "settling_ref_L7_rpm32.5_th2"
+      },
+      "32.5_2__32.5_7": {
+        "from": {
+          "rpm": 32.5,
+          "theta": 2.0
+        },
+        "to": {
+          "rpm": 32.5,
+          "theta": 7.0
+        },
+        "run_id": "4ff413c4",
+        "source_run": "settling_ref_L7_rpm32.5_th2"
+      }
+    },
+    "8": {
+      "32.5_2__32.5_4": {
+        "from": {
+          "rpm": 32.5,
+          "theta": 2.0
+        },
+        "to": {
+          "rpm": 32.5,
+          "theta": 4.0
+        },
+        "run_id": "9efba7b2",
+        "source_run": "settling_ref_L8_rpm32.5_th2"
+      },
+      "32.5_2__32.5_7": {
+        "from": {
+          "rpm": 32.5,
+          "theta": 2.0
+        },
+        "to": {
+          "rpm": 32.5,
+          "theta": 7.0
+        },
+        "run_id": "4bdb037b",
+        "source_run": "settling_ref_L8_rpm32.5_th2"
+      }
+    }
+  }
+}

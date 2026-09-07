@@ -223,6 +223,14 @@ FILE * fp_stats, * fp_norm, * fp_stats2, * fp_stats3, * fp_tau;
 
 // Key physical and dimensionless parameters (computed in main)
 double U0, Re_w, Re_a, We_w, Fr, rhor, mur, Pe_tracer_1, Pe_tracer_2, Pe_oxy_1, Pe_oxy_2, Th, Th_d, Th_2d, U_bio, w_bio, w_bio_st, T_per_st, T_bio, t_change_st;
+
+// [PROJECT ADDED, 2026-09-07] Diagnostic-only mirror of the k=1 harmonic's
+// ramped amplitude, updated every step inside event acceleration() so
+// movies_output() (a separate event) can stamp the CURRENT (post-ramp-
+// interpolation) envelope angle onto video frames -- not the same as Th,
+// which is the instantaneous oscillating tilt, not the envelope. Used to
+// visually verify checkpoint-restart chaining (diary.md 2026-09-07).
+double _theta_env_deg = 0.0;
 // [PROJECT ADDED] `params` holds everything read from params.json (see
 // params_read.h); replaces the three scalar globals (L_bio/ANGLE/RPM) that
 // upstream populated straight from argv.
@@ -473,6 +481,49 @@ int main(int argc, char * argv[]){
 }
 
 
+// [PROJECT ADDED, 2026-09-07] Restart-correctness diagnostic (Test C,
+// diary.md 2026-09-07): field-level summary statistics (Basilisk's
+// statsf(), already used elsewhere in this file, MPI-safe), written to
+// restart_diagnostic.txt. Called BOTH right before dump() (this run's own
+// pre-dump state, in event dump_checkpoint below) and immediately after
+// restore() succeeds on any restart (this run's post-restore state, in
+// event init below) -- BEFORE any of the restart-specific fixups (fs
+// recompute, omega_b rescaling, stracer reset) so it reflects exactly
+// what restore() itself reconstructed, unmodified by anything else.
+// Comparing the two files across a dump-then-restore pair (source run's
+// file vs the restarted run's file) checks whether restore() faithfully
+// reconstructs dump()'s content, independent of what the ramp/forcing
+// does afterward -- the question the missing-dAk/dt-term and Delta_theta
+// investigations couldn't answer on their own.
+static void write_restart_diagnostic (const char *tag)
+{
+  stats su = statsf (u.x);
+  stats sv = statsf (u.y);
+  stats sp = statsf (p);
+  stats sfv = statsf (f);
+#if _MPI
+  if (pid() == 0)
+#endif
+  {
+    char fname[64];
+    sprintf (fname, "restart_diagnostic_%s.txt", tag);
+    FILE *fp = fopen (fname, "w");
+    if (fp) {
+      fprintf (fp, "tag %s\n", tag);
+      fprintf (fp, "t %.17g\n", t);
+      fprintf (fp, "ux_min %.17g\nux_max %.17g\nux_sum %.17g\nux_stddev %.17g\n",
+               su.min, su.max, su.sum, su.stddev);
+      fprintf (fp, "uy_min %.17g\nuy_max %.17g\nuy_sum %.17g\nuy_stddev %.17g\n",
+               sv.min, sv.max, sv.sum, sv.stddev);
+      fprintf (fp, "p_min %.17g\np_max %.17g\np_sum %.17g\np_stddev %.17g\n",
+               sp.min, sp.max, sp.sum, sp.stddev);
+      fprintf (fp, "f_min %.17g\nf_max %.17g\nf_sum %.17g\nf_stddev %.17g\n",
+               sfv.min, sfv.max, sfv.sum, sfv.stddev);
+      fclose (fp);
+    }
+  }
+}
+
 // ================================================================== //
 //                      INITIAL CONDITIONS                            //
 // ================================================================== //
@@ -484,10 +535,36 @@ event init (t = 0)
     // fully active.  It sets t = t_checkpoint and restores all fields.
     // All timing was already computed in main() from params.t_checkpoint so
     // the event system has the correct t_dump_checkpoint before run().
+    //
+    // [PROJECT FIXED, 2026-09-07] restore() internally calls Basilisk's own
+    // dump_list(all, true) to decide which scalars to populate, and that
+    // function skips any scalar whose CURRENT (in-memory, on THIS restoring
+    // process) .nodump flag is true. p/pf default to nodump=true (per the
+    // comment below) in a fresh process, regardless of what the DUMPING
+    // side set before calling dump(). Without this override, restore()
+    // finds "p" in the file's field-name table, fails to match it against
+    // its own (p-excluded) scalar list, and silently routes that column's
+    // data to a discarded placeholder instead of the real p[] field --
+    // meaning p (and pf) were NEVER actually restored, staying at their
+    // fresh-declaration default (exactly zero), for every restart this
+    // project has ever run, no exceptions. Confirmed directly (Test C,
+    // diary.md 2026-09-07): u.x/u.y/f matched the pre-dump state to full
+    // double precision, but p came back as EXACTLY zero (min=max=sum=
+    // stddev=0) regardless of whether the restart was a trivial identity
+    // restart or an already-anomalous one -- this bug is present on EVERY
+    // restart, independent of theta_max/omega_b changing at all, and is
+    // the leading root-cause candidate for the whole cold-start-beats-
+    // warm-start investigation (a from-scratch pressure solve is forced on
+    // every restart instead of the "tiny correction" the code intended,
+    // directly contradicting the p.nodump=false comment at the dump call
+    // site below).
+    p.nodump = pf.nodump = false;
     if (!restore (file = restart_file)) {
       fprintf (stderr, "ERROR: restore() failed to open '%s' — aborting\n", restart_file);
       exit (1);
     }
+    p.nodump = pf.nodump = true;
+    write_restart_diagnostic ("post_restore");
     // fs (embed face fractions) is a face field — excluded from Basilisk dumps.
     // After restore, fs=0 everywhere: the NS solver sees no solid walls and the
     // velocity collapses on the first timestep.  Re-compute fs from the same
@@ -724,8 +801,30 @@ event acceleration(i++)
   // between two fully-forced steady states without ever underdriving the system.
   double elapsed  = t - t_ramp_start;
   double ramp_dur = N_RAMP_CYCLES * T_per_st;
-  double x_ss     = (elapsed < ramp_dur) ? elapsed / ramp_dur : 1.0;
+  int    in_ramp  = elapsed < ramp_dur;
+  double x_ss     = in_ramp ? elapsed / ramp_dur : 1.0;
   double alpha    = 3.*x_ss*x_ss - 2.*x_ss*x_ss*x_ss;   // smooth-step ∈ [0,1]
+  // [PROJECT FIXED, 2026-09-07] d(alpha)/dt and d²(alpha)/dt², needed below.
+  // Th_d/Th_2d previously assumed Ak(t)/phk(t) constant in time (correct
+  // only once the ramp has finished, alpha'=alpha''=0) -- but during any
+  // restart with theta_max_prev != theta_max, Ak(t) = Ak_prev+alpha(t)*dAk
+  // genuinely varies over the ramp, and the old formulas silently dropped
+  // the resulting Ak'(t)*sin(...) term entirely. This meant the velocity/
+  // acceleration fed to the embedded-boundary condition was inconsistent
+  // with the angle Th(t) actually being imposed, for the full N_RAMP_CYCLES
+  // window, regardless of how small the parameter change was -- diary.md
+  // 2026-09-07: an infinitesimal Delta_theta_max=0.1deg restart was found
+  // to settle into a persistently different (14-23% offset) quasi-steady
+  // tau_mean than an independent cold start at the IDENTICAL target
+  // condition, while the trivial Delta_theta_max=0 identity-restart
+  // control settled instantly and exactly -- consistent with a spurious
+  // "kick" from this missing term tipping the flow into a different
+  // attractor, present whenever alpha'(t) != 0 (i.e. whenever anything is
+  // actually being ramped), independent of the ramp's amplitude.
+  // d/dx[3x²-2x³] = 6x-6x², chain-ruled by dx_ss/dt = 1/ramp_dur (0 once
+  // clamped past the ramp window, matching alpha itself being clamped).
+  double dalpha_dt   = in_ramp ? 6.*x_ss*(1.-x_ss)/ramp_dur : 0.0;
+  double d2alpha_dt2 = in_ramp ? 6.*(1.-2.*x_ss)/(ramp_dur*ramp_dur) : 0.0;
 
   // [PROJECT CHANGED] Upstream applies a single harmonic unconditionally:
   // `Th=Th_max*sin(w_bio_st*t); Th_d=w_bio_st*Th_max*cos(...); Th_2d=-w_bio_st²*
@@ -735,16 +834,30 @@ event acceleration(i++)
   // algebraically, diary.md 2026-07-28 — Ak=theta_max[0]*pi/180, phk=0).
   // Multi-harmonic angular forcing with smooth-step interpolation of amplitude and phase.
   // For each harmonic k: Ak and phk are interpolated from _prev → current over N_RAMP_CYCLES.
+  // wk (frequency) is NOT ramped -- see N_RAMP_CYCLES's definition above;
+  // that remains a real, separate, unfixed discontinuity at omega_b-
+  // changing restarts, orthogonal to the Ak(t)/phk(t) fix below.
   Th = 0;  Th_d = 0;  Th_2d = 0;
   for (int k = 1; k <= params.n_harmonics; k++) {
-    double wk  = k * w_bio_st;
-    double Ak  = ((1.-alpha)*params.theta_max_prev[k-1]
-                +     alpha *params.theta_max[k-1]) * pi / 180.;
-    double phk =  (1.-alpha)*params.phi_angular_prev[k-1]
-                +     alpha *params.phi_angular[k-1];
-    Th    +=  Ak * sin(wk*t + phk);
-    Th_d  +=  Ak * wk * cos(wk*t + phk);
-    Th_2d += -Ak * wk*wk * sin(wk*t + phk);
+    double wk   = k * w_bio_st;
+    double dAk  = params.theta_max[k-1]   - params.theta_max_prev[k-1];    // deg
+    double dphk = params.phi_angular[k-1] - params.phi_angular_prev[k-1];  // rad
+    double Ak   = (params.theta_max_prev[k-1]   + alpha*dAk)  * pi / 180.;
+    double phk  =  params.phi_angular_prev[k-1] + alpha*dphk;
+    double Ak_d   = dalpha_dt   * dAk * pi / 180.;
+    double Ak_2d  = d2alpha_dt2 * dAk * pi / 180.;
+    double phk_d  = dalpha_dt   * dphk;
+    double phk_2d = d2alpha_dt2 * dphk;
+    if (k == 1)
+      _theta_env_deg = Ak * 180. / pi;
+
+    double theta_arg = wk*t + phk;
+    double theta_d    = wk + phk_d;
+    double s = sin(theta_arg), c = cos(theta_arg);
+
+    Th    += Ak * s;
+    Th_d  += Ak_d*s + Ak*theta_d*c;
+    Th_2d += Ak_2d*s + 2.*Ak_d*theta_d*c + Ak*phk_2d*c - Ak*theta_d*theta_d*s;
   }
 
   // [PROJECT ADDED] Horizontal translational forcing has no upstream
@@ -805,6 +918,7 @@ event dump_checkpoint (t = t_dump_checkpoint) {
   // Force them into the checkpoint so the restart Poisson solve starts from
   // the correct pressure and applies only a tiny correction.
   p.nodump = pf.nodump = false;
+  write_restart_diagnostic ("pre_dump");
   dump (file = "checkpoint.dump");
   p.nodump = pf.nodump = true;
   // acceleration(i++) and oxygen(t=t_mix;i++) are unconditional (no t<=t_end
@@ -1191,10 +1305,20 @@ event movies_output(i++)
     sprintf(fpath, "frames/frame_%06d.bin", _vframe);
     FILE *fp = fopen(fpath, "wb");
     if (fp) {
-      fwrite(&n,     sizeof(int),    1, fp);
-      fwrite(&t_nd,  sizeof(double), 1, fp);
-      fwrite(&Th,    sizeof(double), 1, fp);
-      fwrite(&xh_nd, sizeof(double), 1, fp);
+      // [PROJECT ADDED, 2026-09-07] w_bio (dimensional rad/s)/_theta_env_deg
+      // appended after xh_nd for the checkpoint-chaining visualization
+      // (diary.md 2026-09-07) -- see render_videos.py's load_frame() for
+      // the matching read order. w_bio is set once per segment in main()
+      // and never interpolated across a restart (unlike the amplitude
+      // envelope) -- deliberately dumped raw so a frequency-changing
+      // checkpoint transition shows its true instantaneous jump, not a
+      // smoothed value.
+      fwrite(&n,              sizeof(int),    1, fp);
+      fwrite(&t_nd,           sizeof(double), 1, fp);
+      fwrite(&Th,             sizeof(double), 1, fp);
+      fwrite(&xh_nd,          sizeof(double), 1, fp);
+      fwrite(&w_bio,          sizeof(double), 1, fp);
+      fwrite(&_theta_env_deg, sizeof(double), 1, fp);
       fwrite(buf,    sizeof(float), n * n, fp);
       fclose(fp);
     } else {

@@ -1,10 +1,16 @@
 """Render VOF videos from binary frame dumps produced by BioReactor-video.
 
 Binary frame format (per file frames/frame_XXXXXX.bin):
-  int32    n        grid size (n×n uniform grid)
-  float64  t_nd     non-dim simulation time
-  float64  Th       current tilt angle (radians)
-  float64  xh_nd    horizontal displacement (non-dim, lab frame)
+  int32    n              grid size (n×n uniform grid)
+  float64  t_nd           non-dim simulation time
+  float64  Th             current tilt angle (radians)
+  float64  xh_nd          horizontal displacement (non-dim, lab frame)
+  float64  w_bio          instantaneous rocking angular velocity (rad/s) --
+                           set once per segment, NOT ramped across a
+                           checkpoint restart (2026-09-07)
+  float64  theta_env_deg  ramped envelope amplitude (deg) -- smoothly
+                           interpolated across a checkpoint restart, unlike
+                           w_bio (2026-09-07)
   float32  [n*n]    VOF field f, row-major, row 0 = bottom (y=Y0)
 
 Usage:
@@ -44,15 +50,18 @@ def compute_T_bio(params: dict) -> float:
 
 # ── I/O ──────────────────────────────────────────────────────────────────────
 
-def load_frame(path: Path) -> tuple[int, float, float, float, np.ndarray]:
-    """Returns (n, t_nd, Th, xh_nd, field[n,n]) — row 0 = bottom of domain."""
+def load_frame(path: Path) -> tuple[int, float, float, float, float, float, np.ndarray]:
+    """Returns (n, t_nd, Th, xh_nd, w_bio, theta_env_deg, field[n,n]) —
+    row 0 = bottom of domain."""
     with open(path, "rb") as fh:
-        (n,)   = struct.unpack("i", fh.read(4))
-        (t,)   = struct.unpack("d", fh.read(8))
-        (Th,)  = struct.unpack("d", fh.read(8))
-        (xh,)  = struct.unpack("d", fh.read(8))
-        data   = np.frombuffer(fh.read(n * n * 4), dtype=np.float32).reshape(n, n)
-    return n, t, Th, xh, data
+        (n,)      = struct.unpack("i", fh.read(4))
+        (t,)      = struct.unpack("d", fh.read(8))
+        (Th,)     = struct.unpack("d", fh.read(8))
+        (xh,)     = struct.unpack("d", fh.read(8))
+        (w_bio,)  = struct.unpack("d", fh.read(8))
+        (th_env,) = struct.unpack("d", fh.read(8))
+        data      = np.frombuffer(fh.read(n * n * 4), dtype=np.float32).reshape(n, n)
+    return n, t, Th, xh, w_bio, th_env, data
 
 
 # ── rendering ────────────────────────────────────────────────────────────────
@@ -99,6 +108,24 @@ def _draw_label(img: Image.Image, text: str) -> Image.Image:
     draw.rectangle([bbox[0] - 3, bbox[1] - 3, bbox[2] + 3, bbox[3] + 3],
                    fill=(255, 255, 255))
     draw.text((8, 8), text, fill=(0, 0, 0), font=font)
+    return img
+
+
+def _draw_label_topright(img: Image.Image, text: str) -> Image.Image:
+    """Stamp instantaneous frequency/rocking-angle in the top-right corner."""
+    draw = ImageDraw.Draw(img)
+    try:
+        font = ImageFont.load_default(size=28)
+    except TypeError:
+        font = ImageFont.load_default()
+    w, _ = img.size
+    bbox = draw.textbbox((0, 8), text, font=font)
+    tw = bbox[2] - bbox[0]
+    x = w - tw - 8
+    bbox = draw.textbbox((x, 8), text, font=font)
+    draw.rectangle([bbox[0] - 3, bbox[1] - 3, bbox[2] + 3, bbox[3] + 3],
+                   fill=(255, 255, 255))
+    draw.text((x, 8), text, fill=(0, 0, 0), font=font)
     return img
 
 
@@ -221,8 +248,8 @@ def main() -> None:
 
     # Realtime fps: 1 physical second of video = 1 physical second of simulation
     if len(frame_files) >= 2:
-        _, t0_nd, _, _, _ = load_frame(frame_files[0])
-        _, t1_nd, _, _, _ = load_frame(frame_files[1])
+        _, t0_nd, _, _, _, _, _ = load_frame(frame_files[0])
+        _, t1_nd, _, _, _, _, _ = load_frame(frame_files[1])
         dt_phys = (t1_nd - t0_nd) * T_bio
         fps = 1.0 / dt_phys if dt_phys > 0 else 25.0
     else:
@@ -234,13 +261,15 @@ def main() -> None:
     lab_frames:  list[Image.Image] = []
 
     for path in frame_files:
-        n, t_nd, Th, xh_nd, data = load_frame(path)
+        n, t_nd, Th, xh_nd, w_bio, theta_env_deg, data = load_frame(path)
         mask  = _make_mask(n, Ly, n_exp)
         label = f"t = {t_nd * T_bio:.2f} s"
-        body_frames.append(_draw_label(
-            _render_body(data, mask, Ly, 1200, t_nd, T_bio), label))
-        lab_frames.append(_draw_label(
-            _render_lab(data, mask, Ly, Th, xh_nd, Th_max, 1200), label))
+        rpm = w_bio * 60.0 / (2 * math.pi)
+        label2 = f"f = {rpm:.1f} rpm   theta_max = {theta_env_deg:.2f} deg"
+        body_frames.append(_draw_label_topright(_draw_label(
+            _render_body(data, mask, Ly, 1200, t_nd, T_bio), label), label2))
+        lab_frames.append(_draw_label_topright(_draw_label(
+            _render_lab(data, mask, Ly, Th, xh_nd, Th_max, 1200), label), label2))
 
     print("Writing volume_fraction.mp4 …")
     _to_mp4(body_frames, run_dir / "volume_fraction.mp4", fps=fps)

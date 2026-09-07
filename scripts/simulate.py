@@ -131,6 +131,7 @@ def submit_slurm(
     checkpoint: str | None = None,
     dependency: str | None = None,
     begin: str | None = None,
+    exclude: str | None = None,
     mpi_scratch_root: Path | str | None = None,
 ) -> str:
     """Write params.json and submit a SLURM job via sbatch.
@@ -149,6 +150,11 @@ def submit_slurm(
                    DUMP env var is exported so the binary receives it as argv[2]
     dependency   : SLURM dependency string, e.g. "afterok:12345"; passed as
                    --dependency to sbatch (enables chained job submission)
+    exclude      : comma-separated node names to pass as --exclude, e.g.
+                   "node2336" -- for routing around a node that reproducibly
+                   kills jobs instantly (RunTime~1s, empty output, no
+                   documented reason) rather than gambling on the scheduler
+                   picking elsewhere (diary.md 2026-09-07)
     mpi_scratch_root : where to stage params/checkpoint for MPI jobs (real MPI
                    compute nodes can't see project_root); defaults to the
                    real OSCAR scratch path. Overridable so tests exercising
@@ -218,6 +224,8 @@ def submit_slurm(
         cmd.insert(1, f"--dependency={dependency}")
     if begin:
         cmd.insert(1, f"--begin={begin}")
+    if exclude:
+        cmd.insert(1, f"--exclude={exclude}")
 
     result = subprocess.run(cmd, capture_output=True, text=True, check=True)
     # sbatch stdout: "Submitted batch job 123456"

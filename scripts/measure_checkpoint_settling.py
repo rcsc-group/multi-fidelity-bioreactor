@@ -2,7 +2,13 @@
 actually take to stabilize after the t=24.9 handoff? Measured directly
 from the data, not estimated by analogy (diary.md 2026-09-06).
 
-Looks at cycle-to-cycle peak tau_100 (per-cycle max) and asks when it
+Uses tau_mean (bulk, spatially-averaged), not tau_100 (pointwise), as
+the settling indicator -- 2026-09-06's rank-invariance check found
+tau_100 carries ~5% MPI-rank-count noise even deep in QSS (up to 16% at
+individual timesteps), while tau_mean stays under ~0.2%. Using the
+noisier statistic risked reading numerical noise as "still settling."
+
+Looks at cycle-to-cycle peak tau_mean (per-cycle max) and asks when it
 stops drifting monotonically and settles into a stable oscillation
 (std/mean of the last few cycles' peaks below a tolerance).
 
@@ -27,7 +33,7 @@ T_per_nd = T_per / T_bio
 
 d = np.loadtxt(RUN_DIR / "shear_stress.dat", skiprows=1)
 t = d[:, 1]
-tau_100 = d[:, 4]
+tau_mean = d[:, 5]
 
 cycles_since_ckpt = (t - T_CHECKPOINT) / T_per_nd
 n_cycles = int(cycles_since_ckpt.max())
@@ -37,12 +43,12 @@ peak_per_cycle = []
 for c in range(n_cycles):
     mask = (cycles_since_ckpt >= c) & (cycles_since_ckpt < c + 1)
     if mask.sum() > 0:
-        peak_per_cycle.append(tau_100[mask].max())
+        peak_per_cycle.append(tau_mean[mask].max())
 
 peak_per_cycle = np.array(peak_per_cycle)
-print("cycle : peak tau_100")
+print("cycle : peak tau_mean")
 for c, p in enumerate(peak_per_cycle):
-    print(f"{c:5d} : {p:.5f}")
+    print(f"{c:5d} : {p:.6f}")
 
 # Settled = last-5-cycle peaks within 5% of their own mean, find first cycle
 # where this holds for the remainder of the run.

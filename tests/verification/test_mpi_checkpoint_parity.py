@@ -181,6 +181,92 @@ def test_checkpoint_matches_uninterrupted(tmp_path):
 
 
 @pytest.mark.medium
+def test_checkpoint_theta_change_matches_independent_reference(tmp_path):
+    """Regression test for the 2026-09-07 cold-start-beats-warm-start
+    anomaly (diary.md): a checkpoint-restart that changes theta_max mid-run
+    should converge to the SAME quasi-steady velocity field as an
+    INDEPENDENT run started fresh at the target theta_max -- checkpointing
+    exists to skip a redundant transient, not to reach a different state.
+
+    Found instead (L6, 32.5rpm, theta 7->4, `experiments/
+    dtheta_monotonicity/settling_vs_dtheta_th4target.png`): the checkpoint-
+    restarted run does NOT slowly settle toward the independent reference,
+    it PLATEAUS at a persistent 14-23% offset from it, for every nonzero
+    theta step tested (even Delta_theta_max=0.1deg) -- while the pure
+    identity restart (Delta_theta_max=0, see test_checkpoint_matches_
+    uninterrupted above) matches its own reference almost exactly. Two
+    hypotheses for the mechanism have already been tested and FALSIFIED
+    (see diary.md): (1) a directional "excess energy" story -- ruled out,
+    reverse-direction warm starts are equally pathological; (2) a missing
+    dAk/dt chain-rule term in the ramp's Th_d/Th_2d formulas -- fixed
+    (correct regardless), but the offset was unchanged (16.6% -> 15.3%) on
+    the smallest anomalous case. Root cause is still open.
+
+    THIS TEST IS EXPECTED TO FAIL until that anomaly is root-caused and
+    fixed -- it exists to formally document the bug at CI scale and serve
+    as the eventual fix's acceptance criterion. A green run of this test
+    (without a corresponding diary.md entry explaining the fix) should be
+    treated as suspicious, not celebrated.
+    """
+    theta_from, theta_to = 7.0, 4.0
+
+    source_params = {**_BASE_PARAMS, "run_id": "theta_ckpt_source",
+                      "theta_max": [theta_from, 0.0, 0.0]}
+    source_dir = run_bioreactor(source_params, tmp_path, timeout=_TIMEOUT)
+    source_t_final = float(load_normf(source_dir)[-1, 1])
+    dump_path = source_dir / "checkpoint.dump"
+    if not dump_path.exists():
+        pytest.fail(f"checkpoint.dump not written in {source_dir} -- source run likely crashed")
+
+    reference_params = {**_BASE_PARAMS, "run_id": "theta_ckpt_reference",
+                         "theta_max": [theta_to, 0.0, 0.0]}
+    reference_dir = run_bioreactor(reference_params, tmp_path, timeout=_TIMEOUT)
+    vel_reference = _vel_rms(reference_dir, reference_params)
+
+    transition_params = {
+        **_BASE_PARAMS, "run_id": "theta_ckpt_transition",
+        "theta_max": [theta_to, 0.0, 0.0], "t_end": 12.0,
+        "t_checkpoint": source_t_final,
+        "omega_b_prev": _BASE_PARAMS["omega_b"],
+        "theta_max_prev": [theta_from, 0.0, 0.0],
+    }
+    transition_dir = tmp_path / transition_params["run_id"]
+    transition_dir.mkdir(parents=True, exist_ok=True)
+    (transition_dir / "params.json").write_text(json.dumps(transition_params))
+    shutil.copy(dump_path, transition_dir / "checkpoint.dump")
+    binary = PROJECT_ROOT / "build" / "BioReactor"
+    try:
+        subprocess.run(
+            [str(binary.resolve()), "params.json", "checkpoint.dump"],
+            cwd=transition_dir, capture_output=True, text=True, timeout=_TIMEOUT,
+        )
+    except subprocess.TimeoutExpired:
+        pass
+
+    # Ramp for the transition segment starts AT t_checkpoint (absolute sim
+    # time never resets on restart), not at t=0 -- _t_ramp_nd() alone would
+    # under-window here (it returns a 3-cycle DURATION, meant to be added to
+    # the segment's own start time, not compared to it directly).
+    normf_transition = load_normf(transition_dir)
+    t_ramp_abs = source_t_final + _t_ramp_nd(transition_params)
+    vel_transition = _mean_post_ramp_vel_rms(normf_transition, t_ramp_abs)
+
+    assert not math.isnan(vel_reference) and not math.isnan(vel_transition), (
+        f"vel_rms is NaN (reference={vel_reference}, transition={vel_transition}) -- "
+        "one of the runs produced too little post-ramp data."
+    )
+    rel_err = abs(vel_transition - vel_reference) / (vel_reference + 1e-30)
+    assert rel_err < _VEL_RTOL_CKPT, (
+        f"Checkpoint-restarted velocity RMS after a theta_max change diverges from an "
+        f"INDEPENDENT reference run at the same target condition: "
+        f"reference={vel_reference:.5f}, transition={vel_transition:.5f}, "
+        f"relative error={rel_err:.2%} (threshold {_VEL_RTOL_CKPT:.0%}). "
+        "See diary.md 2026-09-07: this is the cold-start-beats-warm-start anomaly, "
+        "root cause still open as of this test's creation."
+    )
+
+
+@pytest.mark.medium
 def test_combined_mpi_checkpoint_vs_serial(mpi_binary, tmp_path):
     """(c) MPI + checkpoint-restart TOGETHER (the actual production
     configuration) must reproduce a plain serial/uninterrupted run's

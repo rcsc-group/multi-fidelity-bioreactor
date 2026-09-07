@@ -1,0 +1,52 @@
+{
+  "target_theta": 7.0,
+  "rpm": 32.5,
+  "fidelity": 6,
+  "edges": {
+    "1": {
+      "theta_source": 1.0,
+      "run_id": "b3a800cf",
+      "source_run": "dtheta_src_L6_th1"
+    },
+    "2": {
+      "theta_source": 2.0,
+      "run_id": "46aa1ea2",
+      "source_run": "settling_ref_L6_rpm32.5_th2"
+    },
+    "3": {
+      "theta_source": 3.0,
+      "run_id": "552a55f4",
+      "source_run": "dtheta_src_L6_th3"
+    },
+    "4": {
+      "theta_source": 4.0,
+      "run_id": "04179a02",
+      "source_run": "settling_ref_L6_rpm32.5_th4"
+    },
+    "5": {
+      "theta_source": 5.0,
+      "run_id": "a805e2a0",
+      "source_run": "dtheta_src_L6_th5"
+    },
+    "6": {
+      "theta_source": 6.0,
+      "run_id": "7cf2ba16",
+      "source_run": "dtheta_src_L6_th6"
+    },
+    "6.5": {
+      "theta_source": 6.5,
+      "run_id": "60f90365",
+      "source_run": "dtheta_src_L6_th6.5"
+    },
+    "6.9": {
+      "theta_source": 6.9,
+      "run_id": "b708c101",
+      "source_run": "dtheta_src_L6_th6.9"
+    },
+    "7": {
+      "theta_source": 7.0,
+      "run_id": "439993bc",
+      "source_run": "settling_baseline_L6"
+    }
+  }
+}
