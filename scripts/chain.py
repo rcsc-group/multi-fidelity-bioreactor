@@ -277,6 +277,7 @@ def submit_chain(cfg: dict) -> list[tuple[str, str]]:
                 cpus=1 if use_mpi else 4,
                 ntasks=cfg.get("ntasks", 16) if use_mpi else None,
                 mem=cfg.get("mem_per_cpu", "2G") if use_mpi else "12G",
+                exclude=cfg.get("exclude"),
             )
             job_ids.append((params["run_id"], job_id))
             print(f"  → job {job_id}")

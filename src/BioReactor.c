@@ -128,7 +128,17 @@ int NN;  // Grid resolution: set from params.fidelity as 1<<fidelity in main()
 // effect of a longer forcing ramp -- it does not (see diary.md) -- but that
 // only tested the post-hoc window, not re-running with the actual 30s
 // forcing profile itself. Still open.
+// [PROJECT ADDED, 2026-09-07] Overridable via -DN_RAMP_CYCLES=<n> (mirrors
+// the VIDEOS/DIAGNOSTICS pattern) so a slow-ramp test binary can be built
+// without disturbing the default for every other binary -- direct test of
+// the hysteresis/multiple-coexisting-branches hypothesis for the cold-
+// start-beats-warm-start anomaly (diary.md 2026-09-07): if a quasi-static
+// (long) ramp between conditions stays on the reference branch instead of
+// jumping to the other one that a fast (3-cycle) ramp lands on, that's
+// direct evidence for genuine bistability, not a residual bug.
+#ifndef N_RAMP_CYCLES
 #define N_RAMP_CYCLES 3            // Ramp duration in rocking cycles; t_change_st = N_RAMP_CYCLES * T_per_st
+#endif
 const double th_cont = 90;        // Contact angle for wetting conditions (degrees)
 // Upstream's REMOVE_DROP constants, unchanged (see remove_drop event below).
 const int    remove_minsize   = 20;      // minimum number of cells for a region to survive removal
@@ -497,10 +507,24 @@ int main(int argc, char * argv[]){
 // investigations couldn't answer on their own.
 static void write_restart_diagnostic (const char *tag)
 {
-  stats su = statsf (u.x);
-  stats sv = statsf (u.y);
-  stats sp = statsf (p);
-  stats sfv = statsf (f);
+  stats su   = statsf (u.x);
+  stats sv   = statsf (u.y);
+  stats sp   = statsf (p);
+  stats sfv  = statsf (f);
+  // [PROJECT ADDED, 2026-09-07] Extended past u.x/u.y/p/f (which all
+  // matched exactly in the first pass) to every OTHER field the su-
+  // rescaling code (event init's restart branch, a few hundred lines
+  // below) itself flags as needing special restart handling: pf (half-
+  // step pressure), g.x/g.y (BCG pressure-gradient/acceleration term),
+  // uf.x/uf.y (face-centered velocity). The kick test (diary.md
+  // 2026-09-07) ruled out the continuous PDE itself as the source of the
+  // escape-to-a-different-branch behavior -- a direct, tiny, non-
+  // checkpoint velocity perturbation causes no drift at all -- so
+  // whatever's wrong must be a field the FIRST diagnostic pass didn't
+  // check.
+  stats spf  = statsf (pf);
+  stats sgx  = statsf (g.x);
+  stats sgy  = statsf (g.y);
 #if _MPI
   if (pid() == 0)
 #endif
@@ -519,6 +543,12 @@ static void write_restart_diagnostic (const char *tag)
                sp.min, sp.max, sp.sum, sp.stddev);
       fprintf (fp, "f_min %.17g\nf_max %.17g\nf_sum %.17g\nf_stddev %.17g\n",
                sfv.min, sfv.max, sfv.sum, sfv.stddev);
+      fprintf (fp, "pf_min %.17g\npf_max %.17g\npf_sum %.17g\npf_stddev %.17g\n",
+               spf.min, spf.max, spf.sum, spf.stddev);
+      fprintf (fp, "gx_min %.17g\ngx_max %.17g\ngx_sum %.17g\ngx_stddev %.17g\n",
+               sgx.min, sgx.max, sgx.sum, sgx.stddev);
+      fprintf (fp, "gy_min %.17g\ngy_max %.17g\ngy_sum %.17g\ngy_stddev %.17g\n",
+               sgy.min, sgy.max, sgy.sum, sgy.stddev);
       fclose (fp);
     }
   }
@@ -581,10 +611,33 @@ event init (t = 0)
     }
 #endif
     // Rescale stored velocity and pressure to the new segment's non-dim frame.
-    // U_bio ∝ omega_b (fixed geometry, theta_max) → scale = omega_b_prev / omega_b.
-    // Without this, the restored velocity is 2× too large when frequency doubles.
+    // [PROJECT FIXED, 2026-09-07] The comment this replaces claimed "U_bio ∝
+    // omega_b (fixed geometry, theta_max)" and rescaled by su =
+    // omega_b_prev/omega_b alone -- but U_bio = V_bio/(H_bio/2)/T_per, and
+    // V_bio = L_bio/4*(H_bio + 0.5*L_bio*tan(theta_max)) depends on
+    // theta_max too. That assumption is simply wrong for exactly the case
+    // this project's settling-time sweeps rely on: checkpointing across a
+    // theta_max-only change (omega_b_prev == omega_b, so the old code
+    // silently applied su=1, no rescale at all, regardless of how much
+    // theta_max changed). This left a real, structured velocity/pressure/
+    // gravity-balance inconsistency -- small for small Delta_theta_max
+    // (~0.05-0.25% for the 0.02-0.1deg steps tested) but present on EVERY
+    // theta_max-changing restart, isolated as the likely seed of the
+    // cold-start-beats-warm-start anomaly after ruling out the continuous
+    // PDE (kick test), ramp speed (slow-ramp test), and every dumped field
+    // (Test C, u.x/u.y/p/f/pf/g.x/g.y all matched exactly) -- diary.md
+    // 2026-09-07. Fix: compute the FULL U_bio ratio (both omega_b and
+    // theta_max contributions), not just the omega_b part.
     if (params.omega_b_prev > 0.) {
-      double su = params.omega_b_prev / params.omega_b;
+      // H_bio is a LOCAL in main() (not a global), so it must be
+      // recomputed here from the globals it derives from (L_bio, Ly),
+      // which main() has already set by the time any event fires.
+      double H_bio_here  = 2.*L_bio*Ly;
+      double T_per_prev  = 2.*pi/params.omega_b_prev;
+      double Th_max_prev = params.theta_max_prev[0] * pi / 180.;
+      double V_bio_prev  = L_bio/4*(H_bio_here + 0.5*L_bio*tan(Th_max_prev));
+      double U_bio_prev  = V_bio_prev/(H_bio_here*0.5)/T_per_prev;
+      double su = U_bio_prev / U_bio;
       foreach() {
         u.x[] *= su;
         u.y[] *= su;
@@ -906,6 +959,71 @@ event remove_drop(i++) {
   remove_droplets(f, remove_minsize, remove_threshold, false);  // remove droplets
   remove_droplets(f, remove_minsize, remove_threshold, true);   // remove bubbles
 }
+
+// [PROJECT ADDED, 2026-09-07] One-shot velocity-field "kick" test (diary.md
+// 2026-09-07): direct test of whether the cold-start-beats-warm-start
+// escape-to-a-different-branch behavior is a genuine property of the
+// continuous dynamical system (any tiny perturbation escapes to the same
+// branch, regardless of how it's introduced) or something specific to the
+// checkpoint dump/restore code path (already ruled out as a slow-ramp
+// artifact -- a 40-cycle quasi-static ramp landed on the same branch as a
+// 3-cycle one). Enabled only when compiled with -DKICK_TEST=1; fires ONCE
+// at t=KICK_T (nondim) in a single, otherwise-uninterrupted continuous run
+// -- no dump/restore involved at all, so this isolates the continuous PDE's
+// own dynamics from anything checkpoint-related.
+//
+// [PROJECT AMENDED, 2026-09-07] KICK_MODE. The original kick (now mode 0)
+// was u *= (1+KICK_EPS): a UNIFORM rescale. That is a bad probe of
+// stability, and its null result was over-read. A uniform rescale keeps the
+// field divergence-free, preserves every symmetry of the state, and is very
+// nearly tangent to the one-parameter family of periodic orbits -- i.e. it
+// is close to the single direction guaranteed NOT to excite a transverse
+// mode. Its decay says almost nothing.
+//
+// Mode 1 is the honest probe: u *= (1 + KICK_EPS*noise()) per cell, a
+// spatially-random, zero-mean, KICK_EPS-relative perturbation that breaks
+// the symmetries and projects onto every mode, including the ones a uniform
+// rescale cannot reach. It is not divergence-free; the projection step at
+// the next timestep handles that, which is precisely what a generic
+// perturbation does.
+//
+// The question this settles: the 2x2 (diary.md 2026-09-07) showed the
+// escape is driven by the restored STATE, not the ramp code path -- a
+// restart whose state is ~0.3% off the target's own converged state
+// diverges, while a bit-exact one and a 1e-7 forcing change do not. Either
+// the reference state is linearly stable with a finite basin that 0.3%
+// escapes (then a 0.3% random kick on a pure cold start must also escape,
+// and nothing about this is restart-specific), or it is not (then the
+// restart path is still doing something extra).
+#ifndef KICK_TEST
+#define KICK_TEST 0
+#endif
+#if KICK_TEST
+#ifndef KICK_T
+#define KICK_T 12.15
+#endif
+#ifndef KICK_EPS
+#define KICK_EPS 1e-4
+#endif
+#ifndef KICK_MODE
+#define KICK_MODE 0            // 0 = uniform rescale, 1 = per-cell random
+#endif
+event velocity_kick (t = KICK_T) {
+  if (pid() == 0)
+    fprintf (ferr, "kick: mode %d, relative amplitude %g, at t=%.4g\n",
+             KICK_MODE, KICK_EPS, t);
+  foreach() {
+#if KICK_MODE == 1
+    u.x[] *= (1. + KICK_EPS*noise());
+    u.y[] *= (1. + KICK_EPS*noise());
+#else
+    u.x[] *= (1. + KICK_EPS);
+    u.y[] *= (1. + KICK_EPS);
+#endif
+  }
+  boundary ({u.x, u.y});
+}
+#endif
 
 // Write a Basilisk checkpoint at the first complete period boundary after t_end.
 // The checkpoint is always at θ=0 (zero-crossing) — clean phase alignment for

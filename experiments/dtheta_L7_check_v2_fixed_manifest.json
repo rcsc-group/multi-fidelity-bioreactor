@@ -1,0 +1,27 @@
+{
+  "target_theta": 7.0,
+  "rpm": 32.5,
+  "fidelity": 7,
+  "edges": {
+    "7": {
+      "theta_source": 7.0,
+      "run_id": "8fd81f04",
+      "source_run": "settling_baseline_L7"
+    },
+    "6.9": {
+      "theta_source": 6.9,
+      "run_id": "c2001da9",
+      "source_run": "dtheta_src_L7_th6.9"
+    },
+    "4": {
+      "theta_source": 4.0,
+      "run_id": "1ddbba85",
+      "source_run": "settling_ref_L7_rpm32.5_th4"
+    },
+    "2": {
+      "theta_source": 2.0,
+      "run_id": "3324f34b",
+      "source_run": "settling_ref_L7_rpm32.5_th2"
+    }
+  }
+}
