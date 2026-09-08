@@ -206,11 +206,13 @@ def submit_chain(cfg: dict) -> list[tuple[str, str]]:
                 p_annotated["_walltime"]   = walltime
                 p_annotated["_ntasks"]     = cfg.get("ntasks", 16)
                 p_annotated["_mem"]        = cfg.get("mem_per_cpu", "2G")
+                p_annotated["_exclude"]    = cfg.get("exclude", "")
             (run_dir / "params.json").write_text(_json.dumps(p_annotated, indent=2))
         chain[0]["next_run_id"] = chain[1]["run_id"]
         chain[0]["_walltime"]   = walltime
         chain[0]["_ntasks"]     = cfg.get("ntasks", 16)
         chain[0]["_mem"]        = cfg.get("mem_per_cpu", "2G")
+        chain[0]["_exclude"]    = cfg.get("exclude", "")
 
     for k, params in enumerate(chain):
         if k == 0 and initial_ck:

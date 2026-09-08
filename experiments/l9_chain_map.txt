@@ -1,0 +1,8 @@
+20.0  20a14369  6077612  passthrough
+22.5  255e0b87  -        measured (cf. l9_cold_rpm22.5)
+25.0  bce29aa5  -        passthrough
+27.5  9ec56180  -        passthrough
+30.0  60d09a80  -        measured (cf. l9_cold_rpm30)
+32.5  a34fc4d4  -        passthrough
+35.0  a281a16f  -        passthrough
+37.5  cbbd0063  -        measured (cf. l9_cold_rpm37.5)

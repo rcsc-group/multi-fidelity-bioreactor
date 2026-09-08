@@ -147,6 +147,14 @@ json.dump(p, open(sys.argv[2], 'w'), indent=2)
         NTASKS=$(python3 -c "import json,sys; p=json.load(open(sys.argv[1])); print(p.get('_ntasks',16))" "$NEXT_PARAMS_CANON" 2>/dev/null)
         MAIL_USER=$(python3 -c "import json,sys; p=json.load(open(sys.argv[1])); print(p.get('_mail_user',''))" "$NEXT_PARAMS_CANON" 2>/dev/null)
         MAIL_TYPE=$(python3 -c "import json,sys; p=json.load(open(sys.argv[1])); print(p.get('_mail_type','FAIL'))" "$NEXT_PARAMS_CANON" 2>/dev/null)
+        # [PROJECT FIXED, 2026-09-08] --exclude was applied to segment 0's
+        # own submit_slurm() call (chain.py) but never propagated to THIS
+        # self-submission, so segments 1+ of a long chain could still land
+        # on a known-flaky node -- silently stalling the whole chain (a
+        # killed segment never reaches "Simulation complete", so it never
+        # self-submits the next one). Same bug class as the ntasks/mem
+        # misses already fixed here; see chain.py's "_exclude" stamping.
+        EXCLUDE=$(python3 -c "import json,sys; p=json.load(open(sys.argv[1])); print(p.get('_exclude',''))" "$NEXT_PARAMS_CANON" 2>/dev/null)
         NEXT_DUMP_ARG=""
         if [ -f "$NEXT_SCRATCH/checkpoint.dump" ]; then
             NEXT_DUMP_ARG="DUMP=$NEXT_SCRATCH/checkpoint.dump"
@@ -156,12 +164,17 @@ json.dump(p, open(sys.argv[2], 'w'), indent=2)
         if [ -n "$MAIL_USER" ]; then
             MAIL_ARGS=(--mail-type="$MAIL_TYPE" --mail-user="$MAIL_USER")
         fi
+        EXCLUDE_ARGS=()
+        if [ -n "$EXCLUDE" ]; then
+            EXCLUDE_ARGS=(--exclude="$EXCLUDE")
+        fi
         NEXT_JID=$(sbatch --no-requeue \
             --time="$WALLTIME" \
             --mem-per-cpu="$MEM" \
             --ntasks="$NTASKS" \
             --cpus-per-task=1 \
             "${MAIL_ARGS[@]}" \
+            "${EXCLUDE_ARGS[@]}" \
             --export="NONE,PARAMS=$NEXT_SCRATCH/params.json${NEXT_DUMP_ARG:+,$NEXT_DUMP_ARG}" \
             "$TEMPLATE" | awk '{print $NF}')
         echo "$NEXT_JID" > "$NEXT_SCRATCH/.slurm_jid"
