@@ -401,13 +401,34 @@ int main(int argc, char * argv[]){
     // restart and 1.0000x for a cold start).
     //
     // The correction is a constant offset added to the forcing's time
-    // argument, t_phase_offset, chosen so that at the restart instant the
-    // forcing sees t_ck*T_bio_prev/T_bio_new -- the restored t converted
-    // into this segment's units -- and advances at this segment's rate
-    // thereafter (dt is already in this segment's units). The scheduler's t
-    // is deliberately NOT touched: writing it from event init desynchronizes
-    // the event system and dies with an FPE in dtnext().
-    if (params.omega_b_prev > 0.) {
+    // argument, t_phase_offset, chosen so the forcing is at a zero-crossing
+    // at the restart instant -- which is the phase the restored fields are
+    // actually at. The scheduler's t is deliberately NOT touched: writing it
+    // from event init desynchronizes the event system and dies with an FPE
+    // in dtnext().
+    //
+    // The offset is derived from the restored t alone, NOT from the U_bio
+    // ratio between the two segments. Deriving it from the ratio is the
+    // obvious move and it is wrong for chains: a second segment that
+    // changes nothing computes a ratio of 1 and therefore an offset of 0,
+    // but its restored t is already displaced from a period boundary by the
+    // FIRST segment's offset, so it resumes off-phase and escapes. Measured
+    // on a theta 2 -> 7 -> 7 chain: segment 0 landed at 1.0003 and segment 1
+    // at 1.2564, the full escape, one link down (diary.md 2026-09-07 (5)).
+    //
+    // Every checkpoint is written at a zero-crossing of ITS OWN writer's
+    // forcing -- cold starts by n_per*T_per_st below, restarted segments by
+    // the same expression shifted by their offset -- so the alignment
+    // condition is simply w_bio_st*(t + t_phase_offset) == 2*pi*m, giving
+    // the nearest-period-boundary form used here. That is provenance-free:
+    // it needs nothing about the previous segment, self-heals over any
+    // chain depth, and is bounded by T_per_st/2 rather than growing with t
+    // the way the ratio form did (which reached 2.23 time units on the
+    // theta 2 -> 7 case). For a single segment it reproduces the ratio
+    // form's value exactly -- theta 6.9 -> 7 gives +23.86deg either way,
+    // the value independently verified by the phi_angular cancellation
+    // test.
+    {
       // The exact dump time, read from the checkpoint itself. params
       // .t_checkpoint is chain.py's estimate from the source's last
       // shear_stress.dat sample and can be off by an output interval
@@ -421,13 +442,7 @@ int main(int argc, char * argv[]){
           t_ck = t_dumped;
         fclose (fp_ck);
       }
-      double T_per_prev = 2.*pi/params.omega_b_prev;
-      double V_bio_prev = L_bio/4*(H_bio + 0.5*L_bio
-                                   *tan(params.theta_max_prev[0]*pi/180.));
-      double U_bio_prev = V_bio_prev/(H_bio*0.5)/T_per_prev;
-      double T_bio_prev = L_bio/U_bio_prev;
-      double w_bio_st_prev = (2.*pi/T_per_prev)*T_bio_prev;
-      t_phase_offset      = t_ck*(w_bio_st_prev/w_bio_st) - t_ck;
+      t_phase_offset      = T_per_st*round (t_ck/T_per_st) - t_ck;
       params.t_checkpoint = t_ck;
     }
     // Smooth-step interpolation starts AT the checkpoint and runs N_RAMP_CYCLES forward.

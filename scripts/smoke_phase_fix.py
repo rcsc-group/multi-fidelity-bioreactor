@@ -34,7 +34,8 @@ params = {
     "omega_b_prev": omega, "theta_max_prev": [4.1, 0.0, 0.0],
     "phi_angular_prev": [0.0, 0.0, 0.0], "amplitude_h_prev": [0.0, 0.0, 0.0],
     "phi_horizontal_prev": [0.0, 0.0, 0.0], "omega_h_prev": 0.0,
-    "_binary": "/oscar/scratch/eaguerov/BioReactor-mpi-phasefix",
+    "_binary": (sys.argv[1] if len(sys.argv) > 1
+                else "/oscar/scratch/eaguerov/BioReactor-mpi-phasefix"),
 }
 job = submit_slurm(params, project_root=root, runs_root=root / "runs",
                    walltime="00:30:00",

@@ -64,6 +64,14 @@ CASES = [
     ("FIX dtheta=5",   "fa718f3a", 5.0),
     ("FIX dtheta=0.1, LEGACY su", "c1437263", 0.1),
     ("FIX dtheta=5,   LEGACY su", "277f6876", 5.0),
+    ("v1 CHAIN seg0 (th2->7)", "5f931126", 5.0),
+    ("v1 CHAIN seg1 (th7->7)", "475a8839", 0.0),
+    ("v2 dtheta=0",   "ebd941af", 0.0),
+    ("v2 dtheta=0.1", "89b3359a", 0.1),
+    ("v2 dtheta=3",   "2d527106", 3.0),
+    ("v2 dtheta=5",   "2b90f675", 5.0),
+    ("v2 CHAIN seg0 (th2->7)", "ef6f956d", 5.0),
+    ("v2 CHAIN seg1 (th7->7)", "e3fa8c4e", 0.0),
 ]
 
 ref_peaks = per_cycle_peak(RUNS / "kicktest_L7_th7" / "shear_stress.dat")
