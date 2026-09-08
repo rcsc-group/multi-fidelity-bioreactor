@@ -16,6 +16,7 @@ dependencies = [
     "mfpml @ git+https://github.com/JiaxiangYi96/mfpml.git",
     "torch",
     "pytest",
+    "imageio-ffmpeg>=0.6.0",
 ]
 
 [tool.uv]
