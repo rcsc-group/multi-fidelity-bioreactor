@@ -765,11 +765,48 @@ event init (t = 0)
       // the acceleration part of g is correct (w_bio_st is constant across omega_b).
       // The pressure-gradient part scales as su² (same as p).  Scale by su² to keep
       // the pressure-gradient contribution accurate in the first BCG half-step.
+      // [PROJECT ADDED, 2026-09-08] G_RESTART_MODE. The uniform su^2 below is
+      // provably wrong: g combines the pressure gradient with the whole
+      // acceleration field a, and those do NOT share a scaling law --
+      //   -sin(Th)/Fr^2            gravity      ~ su^2
+      //   2*Th_d*u                 Coriolis     ~ su   (Th_d is su-invariant)
+      //   Th_d^2*(x+L_piv sin Th)  centrifugal  ~ 1
+      //   Th_2d*(y+L_piv cos Th)   Euler        ~ 1
+      // so scaling all of g by su^2 mis-scales three of the four terms, by
+      // |su^2-1| on the su-invariant ones: 24% at theta 2->7 (su=0.874,
+      // converges) but 33% at omega 37.5->32.5 (su=1.154, escapes) and 71%
+      // at omega 17.5->32.5 (su=0.538, escapes). Harmless while su stayed
+      // near 1 on theta-only restarts; exposed by omega restarts.
+      //
+      // g only feeds the first BCG predictor half-step and is rebuilt by
+      // centered_gradient(p,g) at the end of it, and a COLD start runs that
+      // first half-step with g==0 (centered.h's event init never sets it).
+      // Mode 2 therefore reproduces cold-start behaviour exactly, mode 1
+      // leaves the restored value untouched, mode 0 is the current su^2.
+      // Measured on the worst case (omega 17.5->32.5, su=0.538, 71% error
+      // on the su-invariant terms): all three modes give tau/tau_ref
+      // 1.2273-1.2308, identical to within noise. g simply does not matter
+      // -- it survives one predictor half-step. So the su^2 scaling was
+      // never the cause of the omega escape (that is a basin crossing set
+      // by the size of the jump), but it is still provably wrong code, and
+      // the default is now mode 2: match a cold start exactly rather than
+      // apply a scaling that is right for one of four terms.
+#ifndef G_RESTART_MODE
+#define G_RESTART_MODE 2
+#endif
+#if G_RESTART_MODE == 0
       foreach() {
         g.x[] *= su * su;
         g.y[] *= su * su;
       }
       boundary ({g.x, g.y});
+#elif G_RESTART_MODE == 2
+      foreach() {
+        g.x[] = 0.;
+        g.y[] = 0.;
+      }
+      boundary ({g.x, g.y});
+#endif
     }
     // Re-apply the prolongation/restriction setup from event defaults(i=0) in
     // henry_oxy2.h.  That event fires at i=0 on a fresh start but is skipped on
