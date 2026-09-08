@@ -56,6 +56,14 @@ CASES = [
     ("restart dtheta=5",       "3324f34b",        5.0),
     ("B ramp on, state on-target",  "ba2f3cc1",   1e-7),
     ("C ramp off, state off-target", "46196ea2",  0.0),
+    ("P1 clean case + 30deg phase error", "35bde376", 0.0),
+    ("P2 dtheta=0.1, phase corrected",    "57eeee1a", 0.1),
+    ("FIX dtheta=0",   "2e69509a", 0.0),
+    ("FIX dtheta=0.1", "3537850c", 0.1),
+    ("FIX dtheta=3",   "8108abc0", 3.0),
+    ("FIX dtheta=5",   "fa718f3a", 5.0),
+    ("FIX dtheta=0.1, LEGACY su", "c1437263", 0.1),
+    ("FIX dtheta=5,   LEGACY su", "277f6876", 5.0),
 ]
 
 ref_peaks = per_cycle_peak(RUNS / "kicktest_L7_th7" / "shear_stress.dat")

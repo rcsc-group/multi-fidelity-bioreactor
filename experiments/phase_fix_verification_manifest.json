@@ -1,0 +1,22 @@
+{
+  "7": {
+    "theta_source": 7.0,
+    "run_id": "2e69509a",
+    "source_run": "settling_baseline_L7"
+  },
+  "6.9": {
+    "theta_source": 6.9,
+    "run_id": "3537850c",
+    "source_run": "dtheta_src_L7_th6.9"
+  },
+  "4": {
+    "theta_source": 4.0,
+    "run_id": "8108abc0",
+    "source_run": "settling_ref_L7_rpm32.5_th4"
+  },
+  "2": {
+    "theta_source": 2.0,
+    "run_id": "fa718f3a",
+    "source_run": "settling_ref_L7_rpm32.5_th2"
+  }
+}

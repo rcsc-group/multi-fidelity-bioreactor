@@ -252,6 +252,10 @@ BioreactorParams params;  // global so all events (acceleration, init) can acces
 // these three globals carry the state that decision needs. See main()'s
 // [PROJECT ADDED] checkpoint-restart block below.
 static double t_ramp_start      = 0.0;   // simulation time when the current ramp began
+// [PROJECT ADDED, 2026-09-07] Added to the forcing's time argument so a
+// restart resumes in phase with the state it restored. Nonzero only on a
+// restart that changes omega_b or theta_max; see the derivation in main().
+static double t_phase_offset    = 0.0;
 static double t_dump_checkpoint = 0.0;   // simulation time to write checkpoint.dump
 static const char * restart_file = NULL; // argv[2] if this is a restart run
 // Upstream declares these for its `#if AMR` adaptive-refinement path (see
@@ -367,15 +371,80 @@ int main(int argc, char * argv[]){
       return 1;
     }
     restart_file     = argv[2];
+    // [PROJECT FIXED, 2026-09-07] Restart forcing-phase error. Simulation
+    // time is measured in units of T_bio = L_bio/U_bio, and U_bio depends on
+    // BOTH omega_b and theta_max (see V_bio above), so the nondimensional
+    // rocking period T_per_st differs between two segments that differ in
+    // either. A checkpoint is written at an integer multiple of the SOURCE
+    // segment's T_per_st (the n_per*T_per_st dump time below), i.e. at a
+    // genuine zero-crossing of the run that wrote it -- but restore() hands
+    // that t straight to a segment whose T_per_st is different, where it is
+    // no longer a whole number of periods. The forcing
+    // Th = Ak*sin(k*w_bio_st*t + phk) therefore resumes at an arbitrary
+    // phase while the restored velocity and interface fields still
+    // correspond to phase 0. This is the same wrong assumption the u/p/g
+    // rescale in event init fixes ("U_bio is independent of theta_max"),
+    // applied to the clock instead of to the fields.
+    //
+    // Measured phase errors into theta=7: source theta 6.9 gave -23.9deg,
+    // 4.0 gave -53.7deg, 2.0 gave +116.6deg, and 7.0 gave exactly 0 --
+    // which is the only reason trivial restarts ever looked clean. Because
+    // the error is (period count)x(period ratio) mod 2pi it is pseudo-random
+    // rather than proportional to Delta_theta_max, which is what made the
+    // anomaly look like a step function: 0.1deg and 5deg steps both landed
+    // ~25% high in quasi-steady tau_mean while 0deg was exact. Proven in
+    // both directions (diary.md 2026-09-07 (4)): injecting a 30deg phase
+    // error into an otherwise-clean restart with NO theta change reproduced
+    // the escape (1.2596x, against 1.2547x for the real Delta_theta=0.1
+    // case), and cancelling the phase error on the real Delta_theta=0.1
+    // restart removed it entirely (0.9962x, against 0.9961x for a trivial
+    // restart and 1.0000x for a cold start).
+    //
+    // The correction is a constant offset added to the forcing's time
+    // argument, t_phase_offset, chosen so that at the restart instant the
+    // forcing sees t_ck*T_bio_prev/T_bio_new -- the restored t converted
+    // into this segment's units -- and advances at this segment's rate
+    // thereafter (dt is already in this segment's units). The scheduler's t
+    // is deliberately NOT touched: writing it from event init desynchronizes
+    // the event system and dies with an FPE in dtnext().
+    if (params.omega_b_prev > 0.) {
+      // The exact dump time, read from the checkpoint itself. params
+      // .t_checkpoint is chain.py's estimate from the source's last
+      // shear_stress.dat sample and can be off by an output interval
+      // (15.74 vs 15.750302 for the theta=6.9 source), which here would
+      // leave a residual phase error of a few degrees.
+      double t_ck = params.t_checkpoint;
+      FILE *fp_ck = fopen (restart_file, "r");
+      if (fp_ck) {
+        double t_dumped;
+        if (fread (&t_dumped, sizeof(double), 1, fp_ck) == 1 && t_dumped > 0.)
+          t_ck = t_dumped;
+        fclose (fp_ck);
+      }
+      double T_per_prev = 2.*pi/params.omega_b_prev;
+      double V_bio_prev = L_bio/4*(H_bio + 0.5*L_bio
+                                   *tan(params.theta_max_prev[0]*pi/180.));
+      double U_bio_prev = V_bio_prev/(H_bio*0.5)/T_per_prev;
+      double T_bio_prev = L_bio/U_bio_prev;
+      double w_bio_st_prev = (2.*pi/T_per_prev)*T_bio_prev;
+      t_phase_offset      = t_ck*(w_bio_st_prev/w_bio_st) - t_ck;
+      params.t_checkpoint = t_ck;
+    }
     // Smooth-step interpolation starts AT the checkpoint and runs N_RAMP_CYCLES forward.
     // alpha goes 0→1 over [t_checkpoint, t_checkpoint + N_RAMP_CYCLES*T_per_st].
     t_ramp_start     = params.t_checkpoint;
     t_mix            = params.t_checkpoint + T_per_st * params.n_mix_cycles;
     t_dump           = t_mix;
     {
+      // The dump must land on a zero-crossing of THIS segment's forcing,
+      // which t_phase_offset has shifted: the forcing argument is
+      // w_bio_st*(t + t_phase_offset), so a whole number of periods means
+      // t + t_phase_offset == n*T_per_st, not t == n*T_per_st. Without
+      // this the fix would hand the next segment in a chain a checkpoint
+      // that is itself off-phase, reintroducing the same bug one link down.
       double t_end_abs = params.t_checkpoint + params.t_end;
-      int n_per        = (int)(t_end_abs / T_per_st) + 1;
-      t_dump_checkpoint = n_per * T_per_st;
+      int n_per        = (int)((t_end_abs + t_phase_offset) / T_per_st) + 1;
+      t_dump_checkpoint = n_per * T_per_st - t_phase_offset;
       t_end            = t_dump_checkpoint;
     }
   } else {
@@ -619,15 +688,23 @@ event init (t = 0)
     // this project's settling-time sweeps rely on: checkpointing across a
     // theta_max-only change (omega_b_prev == omega_b, so the old code
     // silently applied su=1, no rescale at all, regardless of how much
-    // theta_max changed). This left a real, structured velocity/pressure/
-    // gravity-balance inconsistency -- small for small Delta_theta_max
-    // (~0.05-0.25% for the 0.02-0.1deg steps tested) but present on EVERY
-    // theta_max-changing restart, isolated as the likely seed of the
-    // cold-start-beats-warm-start anomaly after ruling out the continuous
-    // PDE (kick test), ramp speed (slow-ramp test), and every dumped field
-    // (Test C, u.x/u.y/p/f/pf/g.x/g.y all matched exactly) -- diary.md
-    // 2026-09-07. Fix: compute the FULL U_bio ratio (both omega_b and
-    // theta_max contributions), not just the omega_b part.
+    // theta_max changed). Fix: compute the FULL U_bio ratio (both omega_b
+    // and theta_max contributions), not just the omega_b part.
+    //
+    // HONEST STATUS: dimensionally required, empirically inert. This was
+    // first committed (646b7b3) as a "confirmed bug fix" and as the likely
+    // seed of the cold-start-beats-warm-start anomaly. Both claims were
+    // wrong. The anomaly is the restart forcing-phase error fixed in
+    // main(); A/B'ing this term against -DLEGACY_SU=1 with that fix in
+    // place (scripts/ab_test_su_rescale.py, diary.md 2026-09-07 (4)) gives
+    //     Delta_theta = 0.1 (term = 0.26% on u): 1.0001 vs 1.0005
+    //     Delta_theta = 5   (term = 14%   on u): 0.9999 vs 1.0002
+    // against a 0.43-0.48% cycle-to-cycle spread -- no measurable effect at
+    // any Delta_theta_max tested, including the 14% case. It is kept
+    // because u_nd = u_phys/U_bio and a segment that changes U_bio must
+    // convert, not because any experiment supports it; the reference state
+    // simply re-equilibrates within its basin. Do not cite it as evidence
+    // for anything.
     if (params.omega_b_prev > 0.) {
       // H_bio is a LOCAL in main() (not a global), so it must be
       // recomputed here from the globals it derives from (L_bio, Ly),
@@ -637,7 +714,23 @@ event init (t = 0)
       double Th_max_prev = params.theta_max_prev[0] * pi / 180.;
       double V_bio_prev  = L_bio/4*(H_bio_here + 0.5*L_bio*tan(Th_max_prev));
       double U_bio_prev  = V_bio_prev/(H_bio_here*0.5)/T_per_prev;
+      // [PROJECT ADDED, 2026-09-07] -DLEGACY_SU=1 restores the original
+      // omega_b-only ratio, so the theta_max contribution to su can be
+      // A/B'd against this fix rather than asserted. It needs A/B'ing: the
+      // change was committed as a "confirmed bug fix" on dimensional
+      // grounds alone, and its one verification run moved the metric from
+      // 5.8% to 5.4%, i.e. not at all. For a theta 6.9->7 restart the term
+      // it adds is 0.26% on velocity, and the kicknoise run showed a
+      // deliberate 0.3% per-cell random velocity perturbation decaying to
+      // nothing (every quantity back to 1.000 within 0.1% over 160 cycles),
+      // so it cannot matter at small Delta_theta_max. At theta 2->7 it is
+      // 14%, which is the case worth measuring.
+#if LEGACY_SU
+      double su = params.omega_b_prev / params.omega_b;
+#else
       double su = U_bio_prev / U_bio;
+#endif
+      (void) U_bio_prev;
       foreach() {
         u.x[] *= su;
         u.y[] *= su;
@@ -662,7 +755,6 @@ event init (t = 0)
         g.y[] *= su * su;
       }
       boundary ({g.x, g.y});
-
     }
     // Re-apply the prolongation/restriction setup from event defaults(i=0) in
     // henry_oxy2.h.  That event fires at i=0 on a fresh start but is skipped on
@@ -904,7 +996,7 @@ event acceleration(i++)
     if (k == 1)
       _theta_env_deg = Ak * 180. / pi;
 
-    double theta_arg = wk*t + phk;
+    double theta_arg = wk*(t + t_phase_offset) + phk;
     double theta_d    = wk + phk_d;
     double s = sin(theta_arg), c = cos(theta_arg);
 
@@ -930,7 +1022,7 @@ event acceleration(i++)
                     +     alpha *params.amplitude_h[k-1];
         double phh  = (1.-alpha)*params.phi_horizontal_prev[k-1]
                     +     alpha *params.phi_horizontal[k-1];
-        x_acc += (Ah / L_bio) * sq(wk_h) * sin(wk_h*t + phh);
+        x_acc += (Ah / L_bio) * sq(wk_h) * sin(wk_h*(t + t_phase_offset) + phh);
       }
     }
   }
