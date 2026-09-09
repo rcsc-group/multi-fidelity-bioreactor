@@ -1,8 +1,12 @@
 """Stacked warm(top)/cold(bottom) comparison video: signed shear-stress
-field in Pa (with a labeled colorbar), live tau_mean/u_rms legend, and a
-persistent caption stating the warm-start's actual initial condition --
-aligned by CYCLE (not raw t, since the warm run's t starts at
-t_checkpoint, the cold run's at 0).
+field in Pa (with a labeled colorbar), live tau_mean/u_rms readout in the
+margin BELOW each panel (never overlaid on the field) -- aligned by CYCLE
+(not raw t, since the warm run's t starts at t_checkpoint, the cold run's
+at 0). No baked-in title or setup caption: which run is warm/cold, the
+source condition, su, etc. belong in the surrounding prose/caption when
+the file is sent, not rendered into the pixels (feedback_figure_
+minimalism.md -- caught live 2026-09-09, same rule violated on a video
+after already being written down for static figures).
 
 Reads frames_tau/*.bin (int32 n, float64 t/Th/xh_nd, then three n*n
 float32 buffers f, tau_field [signed, nondimensional], ediss_field).
@@ -141,17 +145,13 @@ def _colorbar(total_height, vmax_pa, width=46):
     return img
 
 
-def _label_block(lines, font_size=20):
-    """Small, semi-opaque label as its own image (composited, not stamped
-    directly on the flow field, so it never obscures more than its own box)."""
-    font = _font(font_size)
-    tmp = Image.new("RGB", (10, 10))
-    d = ImageDraw.Draw(tmp)
-    text = "\n".join(lines)
-    bbox = d.multiline_textbbox((0, 0), text, font=font)
-    w, h = bbox[2] - bbox[0] + 12, bbox[3] - bbox[1] + 10
-    img = Image.new("RGBA", (w, h), (255, 255, 255, 200))
-    ImageDraw.Draw(img).multiline_text((6, 5), text, fill=(0, 0, 0), font=font)
+def _margin_readout(text, width, height, font_size=20):
+    """Plain single-line readout, drawn on its own blank strip -- lives
+    OUTSIDE the flow-field panel (in the margin below it), never overlaid
+    on the data."""
+    img = Image.new("RGB", (width, height), (255, 255, 255))
+    ImageDraw.Draw(img).text((0, height // 2 - font_size // 2 - 2), text,
+                             fill=(0, 0, 0), font=_font(font_size))
     return img
 
 
@@ -208,43 +208,34 @@ def main():
     print(f"warm: {len(warm)} frames, cold: {len(cold)} frames -> using {n_frames}")
     print(f"colorbar range: +-{vmax_pa:.3g} Pa")
 
+    panel_w = warm[0][3].size[0]
     panel_h = warm[0][3].size[1]
-    total_h = panel_h * 2 + 8
-    cbar = _colorbar(total_h, vmax_pa)
+    readout_h = 28
     gap = 10
+    row_h = panel_h + readout_h  # one flow panel + its own margin readout below it
+    total_h = row_h * 2 + 6
 
-    su = args.source_rpm / args.rpm
-    caption_lines = [
-        f"target: {args.rpm:g} rpm, theta_max = {args.theta:g} deg   |   "
-        f"WARM initial condition: checkpoint restart from a converged "
-        f"{args.source_rpm:g} rpm flow (su = {su:.3f})   |   "
-        f"COLD initial condition: fluid at rest",
-    ]
-    cap_font = _font(20)
-    tmp = Image.new("RGB", (10, 10))
-    cap_h = ImageDraw.Draw(tmp).multiline_textbbox((0, 0), "\n".join(caption_lines),
-                                                    font=cap_font)[3] + 16
+    cbar = _colorbar(total_h, vmax_pa)
+    canvas_w = panel_w + gap + cbar.size[0]
 
-    canvas_w = warm[0][3].size[0] + gap + cbar.size[0]
     frames = []
     for i in range(n_frames):
         cw, tauw, uw, imgw = warm[i]
         cc, tauc, uc, imgc = cold[i]
 
-        canvas = Image.new("RGB", (canvas_w, cap_h + total_h), (255, 255, 255))
-        d = ImageDraw.Draw(canvas)
-        d.multiline_text((8, 8), "\n".join(caption_lines), fill=(0, 0, 0), font=cap_font)
+        canvas = Image.new("RGB", (canvas_w, total_h), (255, 255, 255))
+        canvas.paste(imgw, (0, 0))
+        canvas.paste(_margin_readout(
+            f"warm  ·  cycle {cw:5.1f}  ·  tau_mean {tauw:.4f} Pa  ·  u_rms {uw:.3f}",
+            panel_w, readout_h), (0, panel_h))
 
-        canvas.paste(imgw, (0, cap_h))
-        canvas.paste(imgc, (0, cap_h + panel_h + 8))
-        canvas.paste(cbar, (imgw.size[0] + gap, cap_h))
+        row2_y = row_h + 6
+        canvas.paste(imgc, (0, row2_y))
+        canvas.paste(_margin_readout(
+            f"cold  ·  cycle {cc:5.1f}  ·  tau_mean {tauc:.4f} Pa  ·  u_rms {uc:.3f}",
+            panel_w, readout_h), (0, row2_y + panel_h))
 
-        lw = _label_block([f"WARM   cycle {cw:5.1f}", f"tau_mean = {tauw:6.3f} Pa",
-                           f"u_rms = {uw:.3f} (nd)"])
-        lc = _label_block([f"COLD   cycle {cc:5.1f}", f"tau_mean = {tauc:6.3f} Pa",
-                           f"u_rms = {uc:.3f} (nd)"])
-        canvas.paste(lw, (8, cap_h + 6), lw)
-        canvas.paste(lc, (8, cap_h + panel_h + 14), lc)
+        canvas.paste(cbar, (panel_w + gap, 0))
         frames.append(canvas)
 
     with tempfile.TemporaryDirectory() as tmp:
