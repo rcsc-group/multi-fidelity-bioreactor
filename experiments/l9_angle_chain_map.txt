@@ -1,0 +1,6 @@
+7.0  a34fc4d4  (source, from RPM chain seg5, validated)
+6.0  fbe93e9a  6190729
+5.0  fcc0fc84  -
+4.0  81f191ed  -
+3.0  52e007f3  -
+2.0  74af0afd  -
