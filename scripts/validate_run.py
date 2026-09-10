@@ -50,6 +50,7 @@ RUNS = ROOT / "runs"
 KNOWN_GOOD_BINARIES = {
     "/oscar/scratch/eaguerov/BioReactor-mpi-phasefix2",
     "/oscar/scratch/eaguerov/BioReactor-mpi-video-fixed",
+    "/oscar/scratch/eaguerov/BioReactor-mpi-crosslevel",
 }
 
 

@@ -133,6 +133,8 @@ def submit_slurm(
     begin: str | None = None,
     exclude: str | None = None,
     mpi_scratch_root: Path | str | None = None,
+    account: str | None = None,
+    qos: str | None = None,
 ) -> str:
     """Write params.json and submit a SLURM job via sbatch.
 
@@ -226,6 +228,15 @@ def submit_slurm(
         cmd.insert(1, f"--begin={begin}")
     if exclude:
         cmd.insert(1, f"--exclude={exclude}")
+    # [PROJECT ADDED, 2026-09-10] account/qos override -- ONLY for an
+    # explicitly user-authorized, narrowly-scoped exception (e.g.
+    # mbessa-condo for one named experiment; see feedback_mbessa_condo_
+    # scope.md). Never set these as a default; every call site in this
+    # project omits them unless the user has named that specific job.
+    if account:
+        cmd.insert(1, f"--account={account}")
+    if qos:
+        cmd.insert(1, f"--qos={qos}")
 
     result = subprocess.run(cmd, capture_output=True, text=True, check=True)
     # sbatch stdout: "Submitted batch job 123456"

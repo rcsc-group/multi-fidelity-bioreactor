@@ -679,6 +679,75 @@ event init (t = 0)
     }
     p.nodump = pf.nodump = true;
     write_restart_diagnostic ("post_restore");
+
+    // [PROJECT ADDED, 2026-09-10] Cross-level warm-start pilot (diary.md
+    // 2026-09-10): restore() reconstructs the checkpoint's tree EXACTLY as
+    // dumped -- a checkpoint written at fidelity F restores as a uniform
+    // tree of depth F, even when THIS run's own NN/init_grid was set up
+    // for a finer fidelity. Gated behind -DCROSS_LEVEL_WARMSTART=1, off by
+    // default and NOT part of the normal restart path.
+    //
+    // [CORRECTED, 2026-09-10] First attempt used adapt_wavelet() with a
+    // deliberately tiny (1e-30) tolerance on every field, reasoning that
+    // any nonzero wavelet detail coefficient would trigger refinement.
+    // Wrong, caught by the verification below on a smoke test (not
+    // assumed correct and left unverified): grid->n came back 752 against
+    // a wanted 16384. adapt_wavelet refines on the wavelet DETAIL
+    // coefficient, which is bit-exactly 0.0 over large flat sub-regions of
+    // these fields (f exactly 0 or 1 away from the interface, quiescent
+    // near-zero velocity in the air phase) -- and 0.0 is not greater than
+    // any positive tolerance, however small, so those regions never
+    // refined at all. An error-driven criterion cannot deliver unconditional
+    // uniform refinement no matter how the tolerance is tuned.
+    //
+    // Fixed: Basilisk's own `refine (bool cond)` macro
+    // (grid/tree-common.h) is genuinely unconditional -- it loops
+    // (foreach_leaf, refine_cell) until no leaf satisfies `cond` anywhere,
+    // with no error estimate involved, and refines with field list `all`
+    // (interpolates every declared scalar via its own .prolongation
+    // attribute, not just the ones named explicitly). `level < params.
+    // fidelity` refines every leaf below the target depth, repeatedly,
+    // until the whole domain is uniform at that depth -- the actual
+    // "spatially interpolate the coarse field onto the finer grid
+    // everywhere" operation the experiment needs.
+    //
+    // Verified after the call, not assumed: depth() and the leaf count
+    // must both match the fully-refined uniform grid this run's own NN
+    // implies. If either check fails the run aborts rather than silently
+    // continuing on a partially-refined grid.
+#if CROSS_LEVEL_WARMSTART
+    {
+      // [CORRECTED, 2026-09-10] The first two attempts checked
+      // grid->n == NN*NN, assuming the checkpoint's grid is uniform across
+      // the WHOLE bounding box -- wrong, and caught by looking at the
+      // actual pre-refine count instead of assuming it: restore() hands
+      // back only 512 active leaves for a nominally-uniform L6 grid whose
+      // full bounding box would be 4096, because embed.h's own machinery
+      // keeps cells entirely outside the thin bag geometry coarse (no
+      // fluid physics there to resolve) -- true of every run this project
+      // has ever done, at every fidelity, not a defect in this checkpoint.
+      // The actual success criterion is that refine() cleanly multiplied
+      // whatever active-cell count existed by exactly 4 (one uniform
+      // level, one pass), which is what a leaf refining into 4 children
+      // means in 2D -- not that the whole box reached maximum depth.
+      long n_before = grid->n;
+      refine (level < params.fidelity);
+      long n_after = grid->n;
+      if (pid() == 0)
+        fprintf (ferr, "cross-level warmstart: refine n %ld -> %ld "
+                 "(want exactly 4x), depth %d\n", n_before, n_after, depth());
+      if (depth() != params.fidelity || n_after != 4 * n_before) {
+        fprintf (stderr, "ERROR: cross-level refine incomplete -- "
+                 "depth()=%d (want %d), n %ld -> %ld (want exactly 4x)\n",
+                 depth(), params.fidelity, n_before, n_after);
+        exit (1);
+      }
+      if (pid() == 0)
+        fprintf (ferr, "cross-level warmstart: refined to depth=%d, "
+                 "n=%ld cells\n", depth(), (long) grid->n);
+    }
+#endif
+
     // fs (embed face fractions) is a face field — excluded from Basilisk dumps.
     // After restore, fs=0 everywhere: the NS solver sees no solid walls and the
     // velocity collapses on the first timestep.  Re-compute fs from the same
