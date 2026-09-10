@@ -18,6 +18,21 @@ This script plots only what is currently valid:
     old L8 series outright, zero new compute.
   - Our L6 fig13a_l6 sweep (2026-09-02): same driver/ramp/methodology,
     fidelity=6 instead of 8.
+  - [ADDED 2026-09-10] Our L9 CHAINED sweep: 17.5rpm independent cold
+    start, then a checkpoint chain 20->22.5->...->37.5rpm, each hop
+    warm-started from the previous rpm's own converged state -- the
+    production chained-sweep protocol this week's phase-offset/su/g fixes
+    targeted, not independent cold starts like L6/L8. Every restart
+    segment passed scripts/validate_run.py (bit-exact restore against its
+    parent, correct parent linkage, settled tail) before being trusted
+    here; the one exception is the 17.5rpm source's own restore fidelity,
+    unverifiable rather than confirmed-bad (its checkpoint predates the
+    diagnostic instrumentation -- see diary.md 2026-09-08/09). Also the
+    run that caught and required fixing a real bug in postprocess.py's
+    QSS-window logic (_ramp_end_nd ignored t_checkpoint, so a restart
+    segment's own post-restart transient was silently included in what
+    was supposed to be its converged window) -- fixed before these numbers
+    were generated, not after.
 
 L10 is omitted rather than shown stale -- no rerun on the current driver
 yet. See diary.md 2026-09-02.
@@ -52,6 +67,18 @@ def _load(run_id_fmt):
 l8 = _load("fig13a_rampmatch_rpm{rpm:g}")
 l6 = _load("fig13a_l6_rpm{rpm:g}")
 
+L9_RUN_IDS = {
+    17.5: "l9_sweep_rpm17.5", 20.0: "20a14369", 22.5: "255e0b87",
+    25.0: "bce29aa5", 27.5: "9ec56180", 30.0: "60d09a80",
+    32.5: "a34fc4d4", 35.0: "a281a16f", 37.5: "0f0ad3ea",
+}
+l9 = pd.DataFrame(
+    [{"rpm": rpm,
+      "tau_max": json.loads((RUNS_DIR / rid / "results.json").read_text())["tau_100_max"],
+      "tau_mean_max": json.loads((RUNS_DIR / rid / "results.json").read_text())["tau_mean_max"]}
+     for rpm, rid in L9_RUN_IDS.items()]
+).sort_values("rpm")
+
 fig, ax = plt.subplots(figsize=(6, 4.3))
 
 ax.plot(kim["RPM"], kim["tau_liq_max"], color="royalblue", marker="o", ms=7, lw=1.3,
@@ -68,6 +95,11 @@ ax.plot(l6["rpm"], l6["tau_max"], color="darkorange", marker="s", ms=7, lw=1.3,
         label=r"Ours $\tau$ (L6)")
 ax.plot(l6["rpm"], l6["tau_mean_max"], color="darkorange", marker="s", ms=7, lw=1.3, ls="--",
         markerfacecolor="white", label=r"Ours $\langle\tau\rangle$ (L6)")
+
+ax.plot(l9["rpm"], l9["tau_max"], color="seagreen", marker="D", ms=6, lw=1.3,
+        label=r"Ours $\tau$ (L9)")
+ax.plot(l9["rpm"], l9["tau_mean_max"], color="seagreen", marker="D", ms=6, lw=1.3, ls="--",
+        markerfacecolor="white", label=r"Ours $\langle\tau\rangle$ (L9)")
 
 ax.set_xlabel(r"Rocking frequency $f_b$ (rpm)", fontsize=11)
 ax.set_ylabel("Peak shear stress (Pa)", fontsize=11)

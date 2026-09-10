@@ -200,11 +200,24 @@ def _ramp_end_nd(params: dict) -> float:
     Detected via params["_binary"] containing "rampmatch" -- every one of
     this session's ramp-matched runs sets that override explicitly; there
     is no other marker of which ramp mechanism a given run used.
+
+    [FIX 2026-09-10, diary.md] This returned an ABSOLUTE time offset from
+    t=0, correct for a cold start but silently wrong for any RESTART
+    segment, whose own t column starts at t_checkpoint (potentially 100+
+    nondim time units into a chain), not 0. qss_mask = t > t_ramp was then
+    trivially true for the segment's ENTIRE data range, including its own
+    post-restart ramp-up and settling transient -- exactly the kind of
+    transient-contaminated "QSS" window this project has spent all week
+    hunting for elsewhere. Affects every restart-based run ever
+    postprocessed by this function, not just one figure. Fix: add the
+    segment's own t_checkpoint (0.0 for a genuine cold start) to the ramp
+    duration.
     """
     T_bio, T_per_nd = _t_scales(params)
+    t0 = float(params.get("t_checkpoint") or 0.0)
     if "rampmatch" in str(params.get("_binary", "")):
-        return 30.0 / T_bio
-    return 3.0 * T_per_nd
+        return t0 + 30.0 / T_bio
+    return t0 + 3.0 * T_per_nd
 
 
 def _load_params(run_dir: Path) -> dict:
