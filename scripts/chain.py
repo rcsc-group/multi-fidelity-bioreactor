@@ -197,16 +197,30 @@ def submit_chain(cfg: dict) -> list[tuple[str, str]]:
     # segment after completion (MPI compute nodes cannot read /oscar/data/, so the
     # checkpoint must be staged at runtime, not at Python submission time).
     if use_mpi and submit and len(chain) > 1:
+        # [PROJECT FIXED, 2026-09-10] _walltime/_ntasks/_mem/_exclude describe
+        # what THIS segment needs when IT is submitted (read by its
+        # PREDECESSOR's self-submission block, from THIS segment's own
+        # params.json -- see slurm_mpi_template.sh's NEXT_PARAMS_CANON reads).
+        # next_run_id describes what THIS segment itself submits next.
+        # Bundling both under "k+1 < len(chain)" left the LAST segment with
+        # no _walltime at all -- its predecessor's self-submit call then fell
+        # back to the template's hardcoded 4h default instead of the chain's
+        # real walltime, and the last segment of an 8-hop L9 chain (37.5rpm,
+        # cbbd0063) was silently killed by TIMEOUT four cycles short of its
+        # 25-cycle target as a direct result. Same bug CLASS as the
+        # ntasks/mem_per_cpu/exclude misses already fixed here -- caught this
+        # time only because sacct was checked instead of trusting a run that
+        # "should" have finished.
         for k, p in enumerate(chain):
             run_dir = runs_root / p["run_id"]
             run_dir.mkdir(parents=True, exist_ok=True)
             p_annotated = dict(p)
+            p_annotated["_walltime"] = walltime
+            p_annotated["_ntasks"]   = cfg.get("ntasks", 16)
+            p_annotated["_mem"]      = cfg.get("mem_per_cpu", "2G")
+            p_annotated["_exclude"]  = cfg.get("exclude", "")
             if k + 1 < len(chain):
                 p_annotated["next_run_id"] = chain[k + 1]["run_id"]
-                p_annotated["_walltime"]   = walltime
-                p_annotated["_ntasks"]     = cfg.get("ntasks", 16)
-                p_annotated["_mem"]        = cfg.get("mem_per_cpu", "2G")
-                p_annotated["_exclude"]    = cfg.get("exclude", "")
             (run_dir / "params.json").write_text(_json.dumps(p_annotated, indent=2))
         chain[0]["next_run_id"] = chain[1]["run_id"]
         chain[0]["_walltime"]   = walltime
