@@ -93,7 +93,11 @@ def check_cycle_count(params, report):
     if not ss_path.exists():
         report.append(("HARD", "FAIL", "shear_stress.dat missing"))
         return
-    d = np.loadtxt(ss_path, skiprows=1)
+    try:
+        d = np.loadtxt(ss_path, skiprows=1)
+    except ValueError as e:
+        report.append(("HARD", "FAIL", f"shear_stress.dat unparseable: {e}"))
+        return
     got = (d[-1, 1] - d[0, 1]) / T_ND
     want = params.get("n_mix_cycles")
     if want is None:
@@ -108,13 +112,28 @@ def check_cycle_count(params, report):
 
 
 def check_nan_inf(params, report):
+    """Also catches file-level corruption, not just NaN/Inf VALUES. Caught
+    live (diary.md 2026-09-10): the first multi-node (5-node) MPI job this
+    project ever ran wrote a null-byte-padded gap (exactly one 4KB block,
+    the classic signature of a parallel-filesystem write race on a file's
+    first block) into shear_stress.dat, merging several rows into one
+    unparseable line. np.loadtxt() on that file raises ValueError, not a
+    silent bad value -- the ORIGINAL version of this check let that
+    exception propagate uncaught, crashing the validator instead of
+    reporting a clean FAIL. A crashed validator is silence, and silence
+    reads as "nothing to report" -- exactly the failure mode this script
+    exists to prevent."""
     run_dir = RUNS / params["run_id"]
     bad = []
     for fname in ("shear_stress.dat", "normf.dat", "vol_frac_interf.dat", "tr_oxy.dat"):
         p = run_dir / fname
         if not p.exists():
             continue
-        d = np.loadtxt(p, skiprows=1)
+        try:
+            d = np.loadtxt(p, skiprows=1)
+        except ValueError as e:
+            bad.append(f"{fname} (unparseable: {e})")
+            continue
         if not np.all(np.isfinite(d)):
             bad.append(fname)
     rjson = run_dir / "results.json"
@@ -205,7 +224,11 @@ def check_drift(params, report):
     rpm = params["omega_b"] * 60.0 / (2 * math.pi)
     theta = params["theta_max"][0]
     T_ND = t_per_nd(rpm, theta)
-    d = np.loadtxt(RUNS / params["run_id"] / "shear_stress.dat", skiprows=1)
+    try:
+        d = np.loadtxt(RUNS / params["run_id"] / "shear_stress.dat", skiprows=1)
+    except ValueError as e:
+        report.append(("HARD", "FAIL", f"shear_stress.dat unparseable: {e}"))
+        return
     t, y = d[:, 1], d[:, 5]
     c = (t - t[0]) / T_ND
     n = int(c[-1])
@@ -237,14 +260,24 @@ def validate(run_id, parent_id=None):
         parent_params["run_id"] = parent_id
 
     report = []
-    check_binary(params, report)
-    check_cycle_count(params, report)
-    check_nan_inf(params, report)
     is_restart = params.get("t_checkpoint") is not None
+    checks = [check_binary, check_cycle_count, check_nan_inf]
     if is_restart:
-        check_restart_fidelity(params, parent_params, report)
-        check_parent_linkage(params, parent_params, report)
-    check_drift(params, report)
+        checks += [lambda p, r: check_restart_fidelity(p, parent_params, r),
+                  lambda p, r: check_parent_linkage(p, parent_params, r)]
+    checks.append(check_drift)
+    for fn in checks:
+        try:
+            fn(params, report)
+        except Exception as e:
+            # A check that crashes is silence, not a pass -- and silence
+            # reads as "nothing to report." Report it as a failure to
+            # analyze instead of letting the whole script die (caught
+            # live, 2026-09-10: the first multi-node job's corrupted
+            # output file crashed three of these checks in a row before
+            # this net was added).
+            report.append(("HARD", "FAIL", f"{fn.__name__ if hasattr(fn, '__name__') else 'check'} "
+                                           f"crashed: {type(e).__name__}: {e}"))
 
     hard_fail = any(sev == "HARD" and status == "FAIL" for sev, status, _ in report)
     verdict = "FAIL" if hard_fail else "PASS"
