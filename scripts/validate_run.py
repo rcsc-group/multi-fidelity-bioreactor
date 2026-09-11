@@ -51,6 +51,7 @@ KNOWN_GOOD_BINARIES = {
     "/oscar/scratch/eaguerov/BioReactor-mpi-phasefix2",
     "/oscar/scratch/eaguerov/BioReactor-mpi-video-fixed",
     "/oscar/scratch/eaguerov/BioReactor-mpi-crosslevel",
+    "/oscar/scratch/eaguerov/BioReactor-mpi-crosslevel-video",
 }
 
 
@@ -175,7 +176,20 @@ def check_restart_fidelity(params, parent_params, report):
     # the raw files before trusting the check's own output, which is
     # exactly the discipline this script exists to enforce on the
     # simulations themselves.
-    checks = ["ux_sum", "uy_sum", "p_sum", "f_sum", "pf_sum"]
+    # Not every restart_diagnostic file has the same fields -- the format
+    # was extended (2026-09-07) from the original {ux,uy,p,f}_sum to add
+    # pf_sum/gx_sum/gy_sum, and older parent checkpoints (e.g.
+    # kicktest_L7_th7) only ever wrote the original four. Compare whatever
+    # keys are actually present in BOTH files rather than assuming a fixed
+    # set and crashing (caught live, 2026-09-10: KeyError on pf_sum,
+    # reported cleanly by the top-level safety net instead of aborting the
+    # whole validation run -- but worth fixing at the source too).
+    checks = [k for k in ("ux_sum", "uy_sum", "p_sum", "f_sum", "pf_sum")
+             if k in this_diag and k in parent_diag]
+    if len(checks) < 4:
+        report.append(("WARN", "WARN",
+                       f"parent diagnostic only has {sorted(set(this_diag) & set(parent_diag))} "
+                       f"-- checking fewer fields than usual"))
     worst = 0.0
     for key in checks:
         expected = parent_diag[key]
