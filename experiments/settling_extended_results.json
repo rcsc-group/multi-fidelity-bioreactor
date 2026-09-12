@@ -1,0 +1,212 @@
+[
+  {
+    "level": 6,
+    "rpm": 32.5,
+    "theta": 4.0,
+    "tol": 0.05,
+    "settle_cycle": 103,
+    "n_cycles_available": 120,
+    "source_run_id": "7bb073d2",
+    "extension_run_id": "fd00e7b8"
+  },
+  {
+    "level": 6,
+    "rpm": 32.5,
+    "theta": 4.0,
+    "tol": 0.02,
+    "settle_cycle": null,
+    "n_cycles_available": 120,
+    "source_run_id": "7bb073d2",
+    "extension_run_id": "fd00e7b8"
+  },
+  {
+    "level": 6,
+    "rpm": 32.5,
+    "theta": 4.0,
+    "tol": 0.01,
+    "settle_cycle": null,
+    "n_cycles_available": 120,
+    "source_run_id": "7bb073d2",
+    "extension_run_id": "fd00e7b8"
+  },
+  {
+    "level": 8,
+    "rpm": 32.5,
+    "theta": 4.0,
+    "tol": 0.05,
+    "settle_cycle": 50,
+    "n_cycles_available": 120,
+    "source_run_id": "865f5441",
+    "extension_run_id": "c35b6eee"
+  },
+  {
+    "level": 8,
+    "rpm": 32.5,
+    "theta": 4.0,
+    "tol": 0.02,
+    "settle_cycle": 91,
+    "n_cycles_available": 120,
+    "source_run_id": "865f5441",
+    "extension_run_id": "c35b6eee"
+  },
+  {
+    "level": 8,
+    "rpm": 32.5,
+    "theta": 4.0,
+    "tol": 0.01,
+    "settle_cycle": null,
+    "n_cycles_available": 120,
+    "source_run_id": "865f5441",
+    "extension_run_id": "c35b6eee"
+  },
+  {
+    "level": 7,
+    "rpm": 32.5,
+    "theta": 2.0,
+    "tol": 0.05,
+    "settle_cycle": null,
+    "n_cycles_available": 120,
+    "source_run_id": "2c107144",
+    "extension_run_id": "e2a0fe1e"
+  },
+  {
+    "level": 7,
+    "rpm": 32.5,
+    "theta": 2.0,
+    "tol": 0.02,
+    "settle_cycle": null,
+    "n_cycles_available": 120,
+    "source_run_id": "2c107144",
+    "extension_run_id": "e2a0fe1e"
+  },
+  {
+    "level": 7,
+    "rpm": 32.5,
+    "theta": 2.0,
+    "tol": 0.01,
+    "settle_cycle": null,
+    "n_cycles_available": 120,
+    "source_run_id": "2c107144",
+    "extension_run_id": "e2a0fe1e"
+  },
+  {
+    "level": 6,
+    "rpm": 17.5,
+    "theta": 4.0,
+    "tol": 0.05,
+    "settle_cycle": null,
+    "n_cycles_available": 120,
+    "source_run_id": "b31a1248",
+    "extension_run_id": "f081ff04"
+  },
+  {
+    "level": 6,
+    "rpm": 17.5,
+    "theta": 4.0,
+    "tol": 0.02,
+    "settle_cycle": null,
+    "n_cycles_available": 120,
+    "source_run_id": "b31a1248",
+    "extension_run_id": "f081ff04"
+  },
+  {
+    "level": 6,
+    "rpm": 17.5,
+    "theta": 4.0,
+    "tol": 0.01,
+    "settle_cycle": null,
+    "n_cycles_available": 120,
+    "source_run_id": "b31a1248",
+    "extension_run_id": "f081ff04"
+  },
+  {
+    "level": 8,
+    "rpm": 37.5,
+    "theta": 7.0,
+    "tol": 0.05,
+    "settle_cycle": 116,
+    "n_cycles_available": 120,
+    "source_run_id": "77a88c02",
+    "extension_run_id": "354808af"
+  },
+  {
+    "level": 8,
+    "rpm": 37.5,
+    "theta": 7.0,
+    "tol": 0.02,
+    "settle_cycle": null,
+    "n_cycles_available": 120,
+    "source_run_id": "77a88c02",
+    "extension_run_id": "354808af"
+  },
+  {
+    "level": 8,
+    "rpm": 37.5,
+    "theta": 7.0,
+    "tol": 0.01,
+    "settle_cycle": null,
+    "n_cycles_available": 120,
+    "source_run_id": "77a88c02",
+    "extension_run_id": "354808af"
+  },
+  {
+    "level": 8,
+    "rpm": 37.5,
+    "theta": 2.0,
+    "tol": 0.05,
+    "settle_cycle": 96,
+    "n_cycles_available": 120,
+    "source_run_id": "70db6266",
+    "extension_run_id": "f0839974"
+  },
+  {
+    "level": 8,
+    "rpm": 37.5,
+    "theta": 2.0,
+    "tol": 0.02,
+    "settle_cycle": null,
+    "n_cycles_available": 120,
+    "source_run_id": "70db6266",
+    "extension_run_id": "f0839974"
+  },
+  {
+    "level": 8,
+    "rpm": 37.5,
+    "theta": 2.0,
+    "tol": 0.01,
+    "settle_cycle": null,
+    "n_cycles_available": 120,
+    "source_run_id": "70db6266",
+    "extension_run_id": "f0839974"
+  },
+  {
+    "level": 7,
+    "rpm": 17.5,
+    "theta": 2.0,
+    "tol": 0.05,
+    "settle_cycle": null,
+    "n_cycles_available": 120,
+    "source_run_id": "eb021b15",
+    "extension_run_id": "1a899cc2"
+  },
+  {
+    "level": 7,
+    "rpm": 17.5,
+    "theta": 2.0,
+    "tol": 0.02,
+    "settle_cycle": null,
+    "n_cycles_available": 120,
+    "source_run_id": "eb021b15",
+    "extension_run_id": "1a899cc2"
+  },
+  {
+    "level": 7,
+    "rpm": 17.5,
+    "theta": 2.0,
+    "tol": 0.01,
+    "settle_cycle": null,
+    "n_cycles_available": 120,
+    "source_run_id": "eb021b15",
+    "extension_run_id": "1a899cc2"
+  }
+]

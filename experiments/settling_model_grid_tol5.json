@@ -1,0 +1,386 @@
+[
+  {
+    "level": 6,
+    "from": {
+      "rpm": 32.5,
+      "theta": 7.0
+    },
+    "to": {
+      "rpm": 32.5,
+      "theta": 4.0
+    },
+    "d_rpm": 0.0,
+    "d_theta": -3.0,
+    "settle_cycle": null,
+    "n_cycles_available": 60,
+    "tol": 0.05
+  },
+  {
+    "level": 6,
+    "from": {
+      "rpm": 32.5,
+      "theta": 4.0
+    },
+    "to": {
+      "rpm": 32.5,
+      "theta": 2.0
+    },
+    "d_rpm": 0.0,
+    "d_theta": -2.0,
+    "settle_cycle": null,
+    "n_cycles_available": 60,
+    "tol": 0.05
+  },
+  {
+    "level": 6,
+    "from": {
+      "rpm": 32.5,
+      "theta": 7.0
+    },
+    "to": {
+      "rpm": 17.5,
+      "theta": 7.0
+    },
+    "d_rpm": -15.0,
+    "d_theta": 0.0,
+    "settle_cycle": 57,
+    "n_cycles_available": 60,
+    "tol": 0.05
+  },
+  {
+    "level": 6,
+    "from": {
+      "rpm": 17.5,
+      "theta": 7.0
+    },
+    "to": {
+      "rpm": 17.5,
+      "theta": 4.0
+    },
+    "d_rpm": 0.0,
+    "d_theta": -3.0,
+    "settle_cycle": null,
+    "n_cycles_available": 60,
+    "tol": 0.05
+  },
+  {
+    "level": 6,
+    "from": {
+      "rpm": 17.5,
+      "theta": 4.0
+    },
+    "to": {
+      "rpm": 17.5,
+      "theta": 2.0
+    },
+    "d_rpm": 0.0,
+    "d_theta": -2.0,
+    "settle_cycle": null,
+    "n_cycles_available": 60,
+    "tol": 0.05
+  },
+  {
+    "level": 6,
+    "from": {
+      "rpm": 32.5,
+      "theta": 7.0
+    },
+    "to": {
+      "rpm": 37.5,
+      "theta": 7.0
+    },
+    "d_rpm": 5.0,
+    "d_theta": 0.0,
+    "settle_cycle": 3,
+    "n_cycles_available": 60,
+    "tol": 0.05
+  },
+  {
+    "level": 6,
+    "from": {
+      "rpm": 37.5,
+      "theta": 7.0
+    },
+    "to": {
+      "rpm": 37.5,
+      "theta": 4.0
+    },
+    "d_rpm": 0.0,
+    "d_theta": -3.0,
+    "settle_cycle": 14,
+    "n_cycles_available": 60,
+    "tol": 0.05
+  },
+  {
+    "level": 6,
+    "from": {
+      "rpm": 37.5,
+      "theta": 4.0
+    },
+    "to": {
+      "rpm": 37.5,
+      "theta": 2.0
+    },
+    "d_rpm": 0.0,
+    "d_theta": -2.0,
+    "settle_cycle": null,
+    "n_cycles_available": 60,
+    "tol": 0.05
+  },
+  {
+    "level": 7,
+    "from": {
+      "rpm": 32.5,
+      "theta": 7.0
+    },
+    "to": {
+      "rpm": 32.5,
+      "theta": 4.0
+    },
+    "d_rpm": 0.0,
+    "d_theta": -3.0,
+    "settle_cycle": null,
+    "n_cycles_available": 60,
+    "tol": 0.05
+  },
+  {
+    "level": 7,
+    "from": {
+      "rpm": 32.5,
+      "theta": 4.0
+    },
+    "to": {
+      "rpm": 32.5,
+      "theta": 2.0
+    },
+    "d_rpm": 0.0,
+    "d_theta": -2.0,
+    "settle_cycle": null,
+    "n_cycles_available": 60,
+    "tol": 0.05
+  },
+  {
+    "level": 7,
+    "from": {
+      "rpm": 32.5,
+      "theta": 7.0
+    },
+    "to": {
+      "rpm": 17.5,
+      "theta": 7.0
+    },
+    "d_rpm": -15.0,
+    "d_theta": 0.0,
+    "settle_cycle": 44,
+    "n_cycles_available": 60,
+    "tol": 0.05
+  },
+  {
+    "level": 7,
+    "from": {
+      "rpm": 17.5,
+      "theta": 7.0
+    },
+    "to": {
+      "rpm": 17.5,
+      "theta": 4.0
+    },
+    "d_rpm": 0.0,
+    "d_theta": -3.0,
+    "settle_cycle": 55,
+    "n_cycles_available": 60,
+    "tol": 0.05
+  },
+  {
+    "level": 7,
+    "from": {
+      "rpm": 17.5,
+      "theta": 4.0
+    },
+    "to": {
+      "rpm": 17.5,
+      "theta": 2.0
+    },
+    "d_rpm": 0.0,
+    "d_theta": -2.0,
+    "settle_cycle": null,
+    "n_cycles_available": 60,
+    "tol": 0.05
+  },
+  {
+    "level": 7,
+    "from": {
+      "rpm": 32.5,
+      "theta": 7.0
+    },
+    "to": {
+      "rpm": 37.5,
+      "theta": 7.0
+    },
+    "d_rpm": 5.0,
+    "d_theta": 0.0,
+    "settle_cycle": 3,
+    "n_cycles_available": 60,
+    "tol": 0.05
+  },
+  {
+    "level": 7,
+    "from": {
+      "rpm": 37.5,
+      "theta": 7.0
+    },
+    "to": {
+      "rpm": 37.5,
+      "theta": 4.0
+    },
+    "d_rpm": 0.0,
+    "d_theta": -3.0,
+    "settle_cycle": 22,
+    "n_cycles_available": 60,
+    "tol": 0.05
+  },
+  {
+    "level": 7,
+    "from": {
+      "rpm": 37.5,
+      "theta": 4.0
+    },
+    "to": {
+      "rpm": 37.5,
+      "theta": 2.0
+    },
+    "d_rpm": 0.0,
+    "d_theta": -2.0,
+    "settle_cycle": null,
+    "n_cycles_available": 60,
+    "tol": 0.05
+  },
+  {
+    "level": 8,
+    "from": {
+      "rpm": 32.5,
+      "theta": 7.0
+    },
+    "to": {
+      "rpm": 32.5,
+      "theta": 4.0
+    },
+    "d_rpm": 0.0,
+    "d_theta": -3.0,
+    "settle_cycle": 50,
+    "n_cycles_available": 60,
+    "tol": 0.05
+  },
+  {
+    "level": 8,
+    "from": {
+      "rpm": 32.5,
+      "theta": 4.0
+    },
+    "to": {
+      "rpm": 32.5,
+      "theta": 2.0
+    },
+    "d_rpm": 0.0,
+    "d_theta": -2.0,
+    "settle_cycle": null,
+    "n_cycles_available": 60,
+    "tol": 0.05
+  },
+  {
+    "level": 8,
+    "from": {
+      "rpm": 32.5,
+      "theta": 7.0
+    },
+    "to": {
+      "rpm": 17.5,
+      "theta": 7.0
+    },
+    "d_rpm": -15.0,
+    "d_theta": 0.0,
+    "settle_cycle": 28,
+    "n_cycles_available": 60,
+    "tol": 0.05
+  },
+  {
+    "level": 8,
+    "from": {
+      "rpm": 17.5,
+      "theta": 7.0
+    },
+    "to": {
+      "rpm": 17.5,
+      "theta": 4.0
+    },
+    "d_rpm": 0.0,
+    "d_theta": -3.0,
+    "settle_cycle": 39,
+    "n_cycles_available": 60,
+    "tol": 0.05
+  },
+  {
+    "level": 8,
+    "from": {
+      "rpm": 17.5,
+      "theta": 4.0
+    },
+    "to": {
+      "rpm": 17.5,
+      "theta": 2.0
+    },
+    "d_rpm": 0.0,
+    "d_theta": -2.0,
+    "settle_cycle": 54,
+    "n_cycles_available": 60,
+    "tol": 0.05
+  },
+  {
+    "level": 8,
+    "from": {
+      "rpm": 32.5,
+      "theta": 7.0
+    },
+    "to": {
+      "rpm": 37.5,
+      "theta": 7.0
+    },
+    "d_rpm": 5.0,
+    "d_theta": 0.0,
+    "settle_cycle": null,
+    "n_cycles_available": 60,
+    "tol": 0.05
+  },
+  {
+    "level": 8,
+    "from": {
+      "rpm": 37.5,
+      "theta": 7.0
+    },
+    "to": {
+      "rpm": 37.5,
+      "theta": 4.0
+    },
+    "d_rpm": 0.0,
+    "d_theta": -3.0,
+    "settle_cycle": 41,
+    "n_cycles_available": 60,
+    "tol": 0.05
+  },
+  {
+    "level": 8,
+    "from": {
+      "rpm": 37.5,
+      "theta": 4.0
+    },
+    "to": {
+      "rpm": 37.5,
+      "theta": 2.0
+    },
+    "d_rpm": 0.0,
+    "d_theta": -2.0,
+    "settle_cycle": null,
+    "n_cycles_available": 60,
+    "tol": 0.05
+  }
+]

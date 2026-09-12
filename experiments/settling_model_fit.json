@@ -1,0 +1,407 @@
+[
+  {
+    "level": 6,
+    "from": {
+      "rpm": 32.5,
+      "theta": 7.0
+    },
+    "to": {
+      "rpm": 32.5,
+      "theta": 4.0
+    },
+    "d_rpm": 0.0,
+    "d_theta": -3.0,
+    "settle_cycle": 121,
+    "n_cycles_available": 180,
+    "tol_used": 0.03565809379121841,
+    "confidence": "measured"
+  },
+  {
+    "level": 6,
+    "from": {
+      "rpm": 32.5,
+      "theta": 4.0
+    },
+    "to": {
+      "rpm": 32.5,
+      "theta": 2.0
+    },
+    "d_rpm": 0.0,
+    "d_theta": -2.0,
+    "settle_cycle": null,
+    "confidence": "flagged_anomaly",
+    "note": "excluded: plateaus above reference noise floor after 180 cycles, see diary 2026-09-12 -- do not use for cycle-count sizing"
+  },
+  {
+    "level": 6,
+    "from": {
+      "rpm": 32.5,
+      "theta": 7.0
+    },
+    "to": {
+      "rpm": 17.5,
+      "theta": 7.0
+    },
+    "d_rpm": -15.0,
+    "d_theta": 0.0,
+    "settle_cycle": 26,
+    "n_cycles_available": 60,
+    "tol_used": 0.07740006196574524,
+    "confidence": "measured"
+  },
+  {
+    "level": 6,
+    "from": {
+      "rpm": 17.5,
+      "theta": 7.0
+    },
+    "to": {
+      "rpm": 17.5,
+      "theta": 4.0
+    },
+    "d_rpm": 0.0,
+    "d_theta": -3.0,
+    "settle_cycle": 27,
+    "n_cycles_available": 120,
+    "tol_used": 0.15884666040559925,
+    "confidence": "measured"
+  },
+  {
+    "level": 6,
+    "from": {
+      "rpm": 17.5,
+      "theta": 4.0
+    },
+    "to": {
+      "rpm": 17.5,
+      "theta": 2.0
+    },
+    "d_rpm": 0.0,
+    "d_theta": -2.0,
+    "settle_cycle": null,
+    "n_cycles_available": 60,
+    "tol_used": 0.24396161104500685,
+    "confidence": "censored_never_settled"
+  },
+  {
+    "level": 6,
+    "from": {
+      "rpm": 32.5,
+      "theta": 7.0
+    },
+    "to": {
+      "rpm": 37.5,
+      "theta": 7.0
+    },
+    "d_rpm": 5.0,
+    "d_theta": 0.0,
+    "settle_cycle": 1,
+    "n_cycles_available": 60,
+    "tol_used": 0.07470396631234594,
+    "confidence": "measured"
+  },
+  {
+    "level": 6,
+    "from": {
+      "rpm": 37.5,
+      "theta": 7.0
+    },
+    "to": {
+      "rpm": 37.5,
+      "theta": 4.0
+    },
+    "d_rpm": 0.0,
+    "d_theta": -3.0,
+    "settle_cycle": 4,
+    "n_cycles_available": 60,
+    "tol_used": 0.09276840700041268,
+    "confidence": "measured"
+  },
+  {
+    "level": 6,
+    "from": {
+      "rpm": 37.5,
+      "theta": 4.0
+    },
+    "to": {
+      "rpm": 37.5,
+      "theta": 2.0
+    },
+    "d_rpm": 0.0,
+    "d_theta": -2.0,
+    "settle_cycle": null,
+    "n_cycles_available": 60,
+    "tol_used": 0.13830520569173935,
+    "confidence": "censored_never_settled"
+  },
+  {
+    "level": 7,
+    "from": {
+      "rpm": 32.5,
+      "theta": 7.0
+    },
+    "to": {
+      "rpm": 32.5,
+      "theta": 4.0
+    },
+    "d_rpm": 0.0,
+    "d_theta": -3.0,
+    "settle_cycle": null,
+    "n_cycles_available": 60,
+    "tol_used": 0.020991780798985806,
+    "confidence": "censored_never_settled"
+  },
+  {
+    "level": 7,
+    "from": {
+      "rpm": 32.5,
+      "theta": 4.0
+    },
+    "to": {
+      "rpm": 32.5,
+      "theta": 2.0
+    },
+    "d_rpm": 0.0,
+    "d_theta": -2.0,
+    "settle_cycle": null,
+    "confidence": "flagged_anomaly",
+    "note": "excluded: plateaus above reference noise floor after 180 cycles, see diary 2026-09-12 -- do not use for cycle-count sizing"
+  },
+  {
+    "level": 7,
+    "from": {
+      "rpm": 32.5,
+      "theta": 7.0
+    },
+    "to": {
+      "rpm": 17.5,
+      "theta": 7.0
+    },
+    "d_rpm": -15.0,
+    "d_theta": 0.0,
+    "settle_cycle": 52,
+    "n_cycles_available": 60,
+    "tol_used": 0.037439812014314566,
+    "confidence": "measured"
+  },
+  {
+    "level": 7,
+    "from": {
+      "rpm": 17.5,
+      "theta": 7.0
+    },
+    "to": {
+      "rpm": 17.5,
+      "theta": 4.0
+    },
+    "d_rpm": 0.0,
+    "d_theta": -3.0,
+    "settle_cycle": 55,
+    "n_cycles_available": 60,
+    "tol_used": 0.06072512952688795,
+    "confidence": "measured"
+  },
+  {
+    "level": 7,
+    "from": {
+      "rpm": 17.5,
+      "theta": 4.0
+    },
+    "to": {
+      "rpm": 17.5,
+      "theta": 2.0
+    },
+    "d_rpm": 0.0,
+    "d_theta": -2.0,
+    "settle_cycle": 97,
+    "n_cycles_available": 120,
+    "tol_used": 0.10127802238098463,
+    "confidence": "measured"
+  },
+  {
+    "level": 7,
+    "from": {
+      "rpm": 32.5,
+      "theta": 7.0
+    },
+    "to": {
+      "rpm": 37.5,
+      "theta": 7.0
+    },
+    "d_rpm": 5.0,
+    "d_theta": 0.0,
+    "settle_cycle": 3,
+    "n_cycles_available": 60,
+    "tol_used": 0.05610025427780169,
+    "confidence": "measured"
+  },
+  {
+    "level": 7,
+    "from": {
+      "rpm": 37.5,
+      "theta": 7.0
+    },
+    "to": {
+      "rpm": 37.5,
+      "theta": 4.0
+    },
+    "d_rpm": 0.0,
+    "d_theta": -3.0,
+    "settle_cycle": 59,
+    "n_cycles_available": 60,
+    "tol_used": 0.02,
+    "confidence": "measured"
+  },
+  {
+    "level": 7,
+    "from": {
+      "rpm": 37.5,
+      "theta": 4.0
+    },
+    "to": {
+      "rpm": 37.5,
+      "theta": 2.0
+    },
+    "d_rpm": 0.0,
+    "d_theta": -2.0,
+    "settle_cycle": null,
+    "n_cycles_available": 60,
+    "tol_used": 0.060346457931214265,
+    "confidence": "censored_never_settled"
+  },
+  {
+    "level": 8,
+    "from": {
+      "rpm": 32.5,
+      "theta": 7.0
+    },
+    "to": {
+      "rpm": 32.5,
+      "theta": 4.0
+    },
+    "d_rpm": 0.0,
+    "d_theta": -3.0,
+    "settle_cycle": 91,
+    "n_cycles_available": 120,
+    "tol_used": 0.02,
+    "confidence": "measured"
+  },
+  {
+    "level": 8,
+    "from": {
+      "rpm": 32.5,
+      "theta": 4.0
+    },
+    "to": {
+      "rpm": 32.5,
+      "theta": 2.0
+    },
+    "d_rpm": 0.0,
+    "d_theta": -2.0,
+    "settle_cycle": null,
+    "confidence": "flagged_anomaly",
+    "note": "excluded: plateaus above reference noise floor after 180 cycles, see diary 2026-09-12 -- do not use for cycle-count sizing"
+  },
+  {
+    "level": 8,
+    "from": {
+      "rpm": 32.5,
+      "theta": 7.0
+    },
+    "to": {
+      "rpm": 17.5,
+      "theta": 7.0
+    },
+    "d_rpm": -15.0,
+    "d_theta": 0.0,
+    "settle_cycle": 29,
+    "n_cycles_available": 60,
+    "tol_used": 0.041173732287203585,
+    "confidence": "measured"
+  },
+  {
+    "level": 8,
+    "from": {
+      "rpm": 17.5,
+      "theta": 7.0
+    },
+    "to": {
+      "rpm": 17.5,
+      "theta": 4.0
+    },
+    "d_rpm": 0.0,
+    "d_theta": -3.0,
+    "settle_cycle": 52,
+    "n_cycles_available": 60,
+    "tol_used": 0.024987779147253985,
+    "confidence": "measured"
+  },
+  {
+    "level": 8,
+    "from": {
+      "rpm": 17.5,
+      "theta": 4.0
+    },
+    "to": {
+      "rpm": 17.5,
+      "theta": 2.0
+    },
+    "d_rpm": 0.0,
+    "d_theta": -2.0,
+    "settle_cycle": 59,
+    "n_cycles_available": 60,
+    "tol_used": 0.027702191880230858,
+    "confidence": "measured"
+  },
+  {
+    "level": 8,
+    "from": {
+      "rpm": 32.5,
+      "theta": 7.0
+    },
+    "to": {
+      "rpm": 37.5,
+      "theta": 7.0
+    },
+    "d_rpm": 5.0,
+    "d_theta": 0.0,
+    "settle_cycle": 6,
+    "n_cycles_available": 120,
+    "tol_used": 0.07307487809706335,
+    "confidence": "measured"
+  },
+  {
+    "level": 8,
+    "from": {
+      "rpm": 37.5,
+      "theta": 7.0
+    },
+    "to": {
+      "rpm": 37.5,
+      "theta": 4.0
+    },
+    "d_rpm": 0.0,
+    "d_theta": -3.0,
+    "settle_cycle": null,
+    "n_cycles_available": 60,
+    "tol_used": 0.02,
+    "confidence": "censored_never_settled"
+  },
+  {
+    "level": 8,
+    "from": {
+      "rpm": 37.5,
+      "theta": 4.0
+    },
+    "to": {
+      "rpm": 37.5,
+      "theta": 2.0
+    },
+    "d_rpm": 0.0,
+    "d_theta": -2.0,
+    "settle_cycle": 107,
+    "n_cycles_available": 120,
+    "tol_used": 0.033831764111240004,
+    "confidence": "measured"
+  }
+]

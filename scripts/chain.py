@@ -21,6 +21,7 @@ Results land in runs/<run_id>/results.json for each segment independently.
 """
 from __future__ import annotations
 
+import math
 import sys
 from pathlib import Path
 from uuid import uuid4
@@ -32,6 +33,8 @@ sys.path.insert(0, str(_PROJECT_ROOT))
 
 import scripts.simulate as simulate
 from scripts.postprocess import validate_params
+from scripts.settling_model import settling_cycles, UnresolvedSettlingCondition
+from scripts.cost_model import min_per_cycle
 
 _DEFAULT_TEMPLATE       = _PROJECT_ROOT / "config" / "slurm_template.sh"
 _DEFAULT_VIDEO_TEMPLATE = _PROJECT_ROOT / "config" / "slurm_video_template.sh"
@@ -129,7 +132,59 @@ def build_chain(cfg: dict) -> list[dict]:
         base = _apply_sweep_param(base, sweep_param, val)
 
         is_restart = (k > 0) or (initial_ck is not None)
-        n_mix = n_transition if is_restart else n_mix_cycles
+        auto_size = bool(cfg.get("auto_size", False))
+        settling_confidence = None
+        if is_restart and auto_size:
+            # [PROJECT ADDED, 2026-09-12] Replace the flat n_transition_cycles
+            # guess with the measured settling model (scripts/settling_model.py):
+            # kills the "our transient was longer than the fixed cycle count
+            # assumed, so the data isn't actually converged" failure mode by
+            # sizing every restart segment from real measured settle-cycle
+            # data instead of one number applied to every condition. Raises
+            # UnresolvedSettlingCondition for a known flagged anomaly rather
+            # than silently guessing a cycle count for it.
+            prev_rpm = prev_omega_b * 60.0 / (2 * math.pi)
+            prev_theta = prev_motion["theta_max"][0]
+            cur_rpm = base["omega_b"] * 60.0 / (2 * math.pi)
+            cur_theta = base["theta_max"][0]
+            n_mix, settling_confidence = settling_cycles(
+                fidelity, prev_rpm, prev_theta, cur_rpm, cur_theta,
+                safety_margin=float(cfg.get("settling_safety_margin", 1.5)),
+            )
+            # [PROJECT ADDED, 2026-09-12] The settling model's cycle count can
+            # require an unschedulable walltime in one job (e.g. L8 at 8 ranks,
+            # 137 cycles = ~273h -- found immediately when this was first
+            # tested). auto-extending a chain across multiple segments when one
+            # segment isn't enough is NOT implemented yet, so silently
+            # requesting that walltime would either fail to schedule or (worse)
+            # get killed by a QOS cap mid-run -- exactly the failure mode this
+            # whole mechanism exists to prevent. Cap the segment to what
+            # actually fits in max_segment_hours and say so loudly; the caller
+            # (a human) decides whether to accept a partial segment, split the
+            # chain manually, or use more ranks.
+            try:
+                ntasks_for_cost = cfg.get("ntasks", 16)
+                minutes_per_cycle, _ = min_per_cycle(fidelity, ntasks_for_cost, cur_rpm)
+                max_hours = float(cfg.get("max_segment_hours", 24))
+                margin = float(cfg.get("walltime_safety_margin", 1.3))
+                max_cycles_that_fit = int((max_hours * 60) / (minutes_per_cycle * margin))
+                if max_cycles_that_fit < n_mix:
+                    print(
+                        f"WARNING: settling model wants {n_mix} cycles for L{fidelity} "
+                        f"{prev_rpm:g}/{prev_theta:g} -> {cur_rpm:g}/{cur_theta:g} "
+                        f"(~{n_mix * minutes_per_cycle * margin / 60:.1f}h at {ntasks_for_cost} "
+                        f"ranks) -- exceeds the {max_hours:.0f}h per-segment cap. Capping this "
+                        f"segment to {max_cycles_that_fit} cycles; convergence will NOT be "
+                        f"reached within this one segment -- auto-extend-on-non-convergence "
+                        f"across multiple segments is not yet implemented, so this chain will "
+                        f"need manual continuation."
+                    )
+                    n_mix = max(1, max_cycles_that_fit)
+                    settling_confidence = "capped_incomplete"
+            except ValueError:
+                pass  # cost model has no data for (fidelity, ntasks) -- _segment_walltime raises later
+        else:
+            n_mix = n_transition if is_restart else n_mix_cycles
         t_end = n_mix * T_per_nd + t_buffer   # relative to this segment's start
 
         params = {
@@ -141,6 +196,8 @@ def build_chain(cfg: dict) -> list[dict]:
             "t_end":        t_end,
             **base,
         }
+        if settling_confidence is not None:
+            params["_settling_confidence"] = settling_confidence
         if cfg.get("binary"):
             params["_binary"] = cfg["binary"]
         if is_restart:
@@ -164,6 +221,31 @@ def build_chain(cfg: dict) -> list[dict]:
         prev_motion  = base
 
     return chain
+
+
+def _minutes_to_hms(minutes: float) -> str:
+    total_seconds = math.ceil(minutes * 60)
+    h, rem = divmod(total_seconds, 3600)
+    m, s = divmod(rem, 60)
+    return f"{h:02d}:{m:02d}:{s:02d}"
+
+
+def _segment_walltime(cfg: dict, params: dict, ntasks: int, default_walltime: str) -> str:
+    """Per-segment walltime. When cfg["auto_size"] is set, sizes it from the
+    measured cost model (scripts/cost_model.py) x this segment's own
+    n_mix_cycles x a safety margin, instead of one fixed value applied to
+    every segment of the chain regardless of level/rpm/cycle count --
+    replaces the guess that caused the L7->L8 pilot (3-4x over estimate)
+    and the L10 Fig13a sweep (all 3 points TIMED OUT at 24h). Floored at 10
+    minutes so a tiny cycle count doesn't produce a degenerate walltime.
+    """
+    if not cfg.get("auto_size", False):
+        return default_walltime
+    rpm = params["omega_b"] * 60.0 / (2 * math.pi)
+    minutes_per_cycle, _confidence = min_per_cycle(params["fidelity"], ntasks, rpm)
+    margin = float(cfg.get("walltime_safety_margin", 1.3))
+    minutes = max(10.0, params["n_mix_cycles"] * minutes_per_cycle * margin)
+    return _minutes_to_hms(minutes)
 
 
 def submit_chain(cfg: dict) -> list[tuple[str, str]]:
@@ -215,7 +297,7 @@ def submit_chain(cfg: dict) -> list[tuple[str, str]]:
             run_dir = runs_root / p["run_id"]
             run_dir.mkdir(parents=True, exist_ok=True)
             p_annotated = dict(p)
-            p_annotated["_walltime"] = walltime
+            p_annotated["_walltime"] = _segment_walltime(cfg, p, cfg.get("ntasks", 16), walltime)
             p_annotated["_ntasks"]   = cfg.get("ntasks", 16)
             p_annotated["_mem"]      = cfg.get("mem_per_cpu", "2G")
             p_annotated["_exclude"]  = cfg.get("exclude", "")
@@ -223,7 +305,7 @@ def submit_chain(cfg: dict) -> list[tuple[str, str]]:
                 p_annotated["next_run_id"] = chain[k + 1]["run_id"]
             (run_dir / "params.json").write_text(_json.dumps(p_annotated, indent=2))
         chain[0]["next_run_id"] = chain[1]["run_id"]
-        chain[0]["_walltime"]   = walltime
+        chain[0]["_walltime"]   = _segment_walltime(cfg, chain[0], cfg.get("ntasks", 16), walltime)
         chain[0]["_ntasks"]     = cfg.get("ntasks", 16)
         chain[0]["_mem"]        = cfg.get("mem_per_cpu", "2G")
         chain[0]["_exclude"]    = cfg.get("exclude", "")
@@ -286,7 +368,7 @@ def submit_chain(cfg: dict) -> list[tuple[str, str]]:
                 params,
                 project_root=_PROJECT_ROOT,
                 runs_root=runs_root,
-                walltime=walltime,
+                walltime=_segment_walltime(cfg, params, cfg.get("ntasks", 16) if use_mpi else 4, walltime),
                 template=template,
                 checkpoint=checkpoint,
                 dependency=dependency,

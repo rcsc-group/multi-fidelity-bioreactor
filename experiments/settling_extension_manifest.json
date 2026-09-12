@@ -1,0 +1,72 @@
+[
+  {
+    "level": 6,
+    "source_run_id": "7bb073d2",
+    "extension_run_id": "fd00e7b8",
+    "rpm": 32.5,
+    "theta": 4.0,
+    "t_dump": 48.847490136897406,
+    "walltime": "00:30:00",
+    "job_id": "6287058"
+  },
+  {
+    "level": 8,
+    "source_run_id": "865f5441",
+    "extension_run_id": "c35b6eee",
+    "rpm": 32.5,
+    "theta": 4.0,
+    "t_dump": 48.847490136897406,
+    "walltime": "05:00:00",
+    "job_id": "6287059"
+  },
+  {
+    "level": 7,
+    "source_run_id": "2c107144",
+    "extension_run_id": "e2a0fe1e",
+    "rpm": 32.5,
+    "theta": 2.0,
+    "t_dump": 47.53150888942733,
+    "walltime": "01:00:00",
+    "job_id": "6287060"
+  },
+  {
+    "level": 6,
+    "source_run_id": "b31a1248",
+    "extension_run_id": "f081ff04",
+    "rpm": 17.5,
+    "theta": 4.0,
+    "t_dump": 48.847490136897406,
+    "walltime": "00:30:00",
+    "job_id": "6287061"
+  },
+  {
+    "level": 8,
+    "source_run_id": "77a88c02",
+    "extension_run_id": "354808af",
+    "rpm": 37.5,
+    "theta": 7.0,
+    "t_dump": 51.61974969770478,
+    "walltime": "05:00:00",
+    "job_id": "6287062"
+  },
+  {
+    "level": 8,
+    "source_run_id": "70db6266",
+    "extension_run_id": "f0839974",
+    "rpm": 37.5,
+    "theta": 2.0,
+    "t_dump": 47.53150888942733,
+    "walltime": "05:00:00",
+    "job_id": "6287063"
+  },
+  {
+    "level": 7,
+    "source_run_id": "eb021b15",
+    "extension_run_id": "1a899cc2",
+    "rpm": 17.5,
+    "theta": 2.0,
+    "t_dump": 47.53150888942733,
+    "walltime": "01:00:00",
+    "job_id": "6287064"
+  }
+]

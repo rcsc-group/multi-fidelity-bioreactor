@@ -45,6 +45,7 @@ from pathlib import Path
 import numpy as np
 
 ROOT = Path(__file__).parent.parent
+sys.path.insert(0, str(ROOT))
 RUNS = ROOT / "runs"
 
 KNOWN_GOOD_BINARIES = {
@@ -256,7 +257,18 @@ def check_drift(params, report):
     local_noise = np.std(last) / max(np.mean(last), 1e-30)
     drift = abs(np.mean(last) - np.mean(prev)) / max(np.mean(prev), 1e-30)
     if drift > max(0.02, 3 * local_noise):
-        report.append(("WARN", "WARN",
+        # [PROJECT FIXED, 2026-09-12] Was WARN (informative, non-blocking):
+        # a run that failed this check could still be plotted/reported as
+        # converged data (exactly failure mode "our well-converged
+        # simulation actually tells us nothing physical"). Promoted to
+        # HARD FAIL. Known limitation (tested directly, see diary
+        # 2026-09-12): this self-referential check can itself false-PASS a
+        # slowly-drifting run (a slow decay's tail is locally
+        # indistinguishable from noise around a not-yet-converged mean) --
+        # it is a best-effort catch, not proof. check_settle_vs_reference()
+        # below is the strong check, used whenever an independent reference
+        # run is available for this condition.
+        report.append(("HARD", "FAIL",
                        f"NOT SETTLED: last {block} cycles differ from the {block} before them "
                        f"by {100*drift:.1f}% (tail's own noise floor {100*local_noise:.1f}%) -- "
                        f"do not report this run's converged value, extend it"))
@@ -264,6 +276,39 @@ def check_drift(params, report):
         report.append(("HARD", "PASS",
                        f"tail settled: last two {block}-cycle blocks agree to {100*drift:.1f}%"
                        f" (tail noise floor {100*local_noise:.1f}%)"))
+
+
+def check_settle_vs_reference(params, report):
+    """Strong convergence check: waveform-RMS residual against an
+    INDEPENDENT reference run at the same (rpm, theta, level), with a
+    per-condition adaptive tolerance (scripts/settling_model.py). Only runs
+    when such a reference exists on disk (settling_ref_L{level}_rpm{rpm}_
+    th{theta} -- currently just the settling-study grid conditions); SKIPs
+    otherwise, since most production sweep points don't have one and
+    check_drift() above is the only available (weaker) signal for those.
+    """
+    rpm = params["omega_b"] * 60.0 / (2 * math.pi)
+    theta = params["theta_max"][0]
+    level = params["fidelity"]
+    ref_id = f"settling_ref_L{level}_rpm{rpm:g}_th{theta:g}"
+    ref_dir = RUNS / ref_id
+    if not ref_dir.exists():
+        report.append(("SKIP", "SKIP", f"no independent reference run ({ref_id}) -- "
+                                        f"falling back to the weaker self-referential check_drift"))
+        return
+    from scripts.settling_model import settle_cycle_adaptive
+    run_dir = RUNS / params["run_id"]
+    t_ckpt = params.get("t_checkpoint", 0.0) or 0.0
+    k, n_avail, tol = settle_cycle_adaptive(run_dir, ref_dir, rpm, theta, t_checkpoint=t_ckpt)
+    if k is None:
+        report.append(("HARD", "FAIL",
+                       f"NOT SETTLED vs independent reference {ref_id}: never within "
+                       f"{100*tol:.1f}% (this condition's own adaptive tolerance) over "
+                       f"{n_avail} available cycles"))
+    else:
+        report.append(("HARD", "PASS",
+                       f"settled vs independent reference {ref_id} at cycle {k} of {n_avail} "
+                       f"(adaptive tolerance {100*tol:.1f}%)"))
 
 
 def validate(run_id, parent_id=None):
@@ -281,6 +326,7 @@ def validate(run_id, parent_id=None):
         checks += [lambda p, r: check_restart_fidelity(p, parent_params, r),
                   lambda p, r: check_parent_linkage(p, parent_params, r)]
     checks.append(check_drift)
+    checks.append(check_settle_vs_reference)
     for fn in checks:
         try:
             fn(params, report)
