@@ -729,6 +729,28 @@ event init (t = 0)
     }
     for (scalar s in {p, pf})
       s.embed_gradient = pressure_embed_gradient;
+
+    // [PROJECT ADDED, 2026-09-13] cs/fs themselves have exactly the same
+    // restart-attribute-loss problem as u/p/pf/g/uf above, and it was never
+    // fixed: embed.h's own `event metric (i=0)` is what normally assigns
+    // cs.refine=embed_fraction_refine, cs.prolongation=fraction_refine,
+    // fs.x.prolongation=embed_face_fraction_refine_x, and it is the ONLY
+    // place in Basilisk that calls `restriction ({cs,fs})` -- both skipped
+    // on restart for the same reason (i != 0). Root cause of the
+    // cross-level checkerboard (diary.md 2026-09-13): cs/fs are restored
+    // (cs) or recomputed (fs, via the solid() call below) at LEAF level
+    // only; nothing ever pushed the corrected leaf values up to the tree's
+    // coarse (non-leaf) cached cs/fs. Confirmed against Basilisk's own
+    // canonical idiom for recomputing solid() outside the normal i=0 init
+    // path (src/test/neumann3D.c:43-47): solid() must always be followed by
+    // reasserting cs/fs's refine+prolongation attributes and an explicit
+    // restriction({cs,fs}) call. None of the six fix attempts already
+    // documented below touched cs/fs's own attributes or tree consistency
+    // -- they all operated on u/p/g instead.
+    cs.refine = embed_fraction_refine;
+    cs.prolongation = fraction_refine;
+    foreach_dimension()
+      fs.x.prolongation = embed_face_fraction_refine_x;
 #endif // TREE && EMBED
     // Re-apply vof.h defaults: fraction_refine is set for f in vof.h's
     // event defaults(i=0), skipped on restart.  Without it AMR uses bilinear
@@ -819,11 +841,25 @@ event init (t = 0)
       else
         solid (cs, fs, 1. - pow(fabs(x/a_nd), params.geometry_n)
                           - pow(fabs(y/b_nd), params.geometry_n));
+      // [PROJECT ADDED, 2026-09-13] solid() only writes LEAF cells
+      // (fractions.h's foreach()/foreach_face() default to leaves). On a
+      // cross-level refine(), the tree's coarse (non-leaf, pre-refine)
+      // cs/fs cache is never touched by solid() and is never restricted
+      // anywhere else on the restart path -- it keeps the STALE, aliased
+      // pre-refine values (diary.md 2026-09-13's root cause) forever,
+      // feeding the embedded Poisson/diffusion operators at coarse tree
+      // levels every single timestep. Canonical Basilisk idiom for calling
+      // solid() outside the normal i=0 init path always follows it with
+      // this restriction (src/test/neumann3D.c:43-47); our restart path
+      // was missing it.
+#if TREE
+      restriction ({cs, fs});
+#endif
     }
 #endif
     // [PROJECT NOTE, 2026-09-13] A cross-level warm-start (CROSS_LEVEL_
-    // WARMSTART) introduces a real, root-caused, and so far UNFIXED
-    // artifact: a checkerboard pattern in u/p in a ~5-coarse-cell-wide band
+    // WARMSTART) introduces a real, root-caused artifact: a checkerboard
+    // pattern in u/p in a ~5-coarse-cell-wide band
     // next to the embedded wall, which accounts for the ENTIRE observed
     // 32-49% domain-mean tau discrepancy against a same-condition cold
     // start (measured directly by exclusion, diary.md 2026-09-13). Root
@@ -832,25 +868,32 @@ event init (t = 0)
     // neighbor pattern, and the coarse source grid's own discretization of
     // the curved bag boundary has a genuine period-2 aliasing in fs.x near
     // the wall -- refine_embed_linear faithfully (and correctly, per its
-    // own contract) propagates that into the fine grid. SIX independent
-    // fixes were tried and removed from this file after all failing on the
-    // real 60-cycle L6->L7 pilot (five had zero effect, one made it
-    // worse): moving this prolongation re-application before refine()
-    // (kept -- see below, it's a real separate bug, just not the cause of
-    // this artifact), an explicit post-refine incompressibility projection,
-    // plain non-embed-aware interpolation, near-wall corrective smoothing
-    // at two widths (one verified via direct measurement to actually clean
-    // the field at t=0), and propagating that correction to the tree's
-    // coarse-level cache via restriction(). The checkerboard regenerates
-    // within under 1% of one rocking cycle even from a verified-clean
-    // start, and does NOT appear in an ordinary (non-cross-level) restart
-    // into the same converged state, nor in a cold start forced through an
-    // near-instant ramp -- so it is specific to the cross-level refine()
-    // path, not to onset speed or to handling a converged flow in general,
-    // and lives in the solver's own per-timestep dynamics, not in the
-    // initial condition. See diary.md 2026-09-13 for the full investigation
-    // (kept there, not here, to keep this file uncluttered by six dead
-    // ends) before attempting a seventh fix.
+    // own contract) propagates that into the fine grid. SEVEN independent
+    // fixes have been tried and removed from this file after all failing on
+    // the real 60-cycle L6->L7 pilot (five had zero effect, one made it
+    // worse, one -- the cs/fs reapplication + restriction({cs,fs}) added
+    // above, 2026-09-13, the same restart-attribute-loss bug already fixed
+    // for u/p/pf/g/uf but never extended to cs/fs itself -- produced a
+    // trajectory BIT-IDENTICAL to the unfixed run, max diff 7.9e-7 over the
+    // whole 60-cycle run): moving this prolongation re-application before
+    // refine() (kept -- see below, it's a real separate bug, just not the
+    // cause of this artifact), an explicit post-refine incompressibility
+    // projection, plain non-embed-aware interpolation, near-wall corrective
+    // smoothing at two widths (one verified via direct measurement to
+    // actually clean the field at t=0), propagating that correction to the
+    // tree's coarse-level cache via restriction(), and the cs/fs restart-
+    // attribute fix. The checkerboard regenerates within under 1% of one
+    // rocking cycle even from a verified-clean start, and does NOT appear
+    // in an ordinary (non-cross-level) restart into the same converged
+    // state, nor in a cold start forced through an near-instant ramp -- so
+    // it is specific to the cross-level refine() path, not to onset speed
+    // or to handling a converged flow in general, and lives in the solver's
+    // own per-timestep dynamics, not in the initial condition, and not in
+    // anything related to cs/fs's own tree consistency either (that fix is
+    // kept anyway -- it's a real, separate correctness fix matching
+    // upstream's own contract, just not the cause of this artifact). See
+    // diary.md 2026-09-13 for the full investigation (kept there, not
+    // here, to keep this file uncluttered) before attempting further fixes.
 
     // Rescale stored velocity and pressure to the new segment's non-dim frame.
     // [PROJECT FIXED, 2026-09-07] The comment this replaces claimed "U_bio ∝
