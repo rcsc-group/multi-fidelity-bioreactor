@@ -32,6 +32,9 @@ _MEASURED: dict[tuple[int, int], dict[float, float]] = {
     # from partial shear_stress.dat + sacct TIMEOUT elapsed, since none
     # reached completion -- see conversation 2026-09-12):
     (10, 48): {17.5: 148.8, 32.5: 83.0, 37.5: 74.6},
+    # l10_kim_fig8_signed's own extension segment, 2026-08-09, job 4812614
+    # (sacct Elapsed 01:27:49 / 2.98 cycles covered):
+    (10, 64): {32.5: 29.5},
 }
 
 

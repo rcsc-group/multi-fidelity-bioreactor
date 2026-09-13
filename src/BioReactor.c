@@ -680,6 +680,64 @@ event init (t = 0)
     p.nodump = pf.nodump = true;
     write_restart_diagnostic ("post_restore");
 
+    // Re-apply the prolongation/restriction setup from event defaults(i=0) in
+    // henry_oxy2.h.  That event fires at i=0 on a fresh start but is skipped on
+    // restart (i resumes from the checkpoint value, so i==0 is never seen again).
+    // Basilisk's dump/restore does NOT serialize scalar function-pointer attributes
+    // (restriction, prolongation, refine), so they revert to defaults.  Without
+    // restriction_volume_average the multigrid h_relax propagates NaN from solid
+    // cells (cm=0 → d=0 → c[]=n/0) into fluid cells → NaN kLa and tracer sums.
+    //
+    // [PROJECT MOVED, 2026-09-12] This whole block (prolongation/restriction
+    // re-application for stracers, u/p/pf/g/uf, and f) used to sit AFTER the
+    // cross-level warm-start's refine() call below -- meaning refine()
+    // interpolated every field using Basilisk's generic, non-embed-aware
+    // default prolongation instead of the embed-aware one this project's own
+    // (pre-existing) comments already say is required near the embedded
+    // boundary. Moved here, before refine(), so cross-level interpolation
+    // uses the correct prolongation from the start. Ordering is harmless for
+    // an ordinary (non-cross-level) restart, since no refine() call happens
+    // there either way. Falsifiable test: does this close (or shrink) the
+    // ~32%/~49% L6->L7/L7->L8 cross-level tau discrepancy (diary.md
+    // 2026-09-12)? Not yet re-run.
+#if TREE
+    for (scalar s in stracers) {
+      s.refine = refine_embed_linear;
+      set_prolongation (s, refine_embed_linear);
+      set_restriction (s, restriction_volume_average);
+    }
+#endif
+
+    // Re-apply centered.h's EMBED defaults (event defaults(i=0) is skipped on
+    // restart because i resumes from the checkpoint value).  Without these,
+    // p/pf/u/g use non-EMBED prolongation/restriction and uf uses
+    // refine_face_solenoidal instead of refine_face.  The pressure gradient at
+    // the embedded wall falls back to the generic gradient (no
+    // pressure_embed_gradient), so the Poisson solve near the solid accumulates
+    // small errors each timestep.  After ~300 steps (~1 T) the velocity
+    // diverges → SIGFPE in tracer_diffusion/h_residual.
+    // Confirmed experimentally: fresh run to t=15 is stable; restart crashes at
+    // t=t_checkpoint+1.14T with both 4 and 16 MPI ranks.
+#if TREE && EMBED
+    uf.x.refine = refine_face;
+    foreach_dimension()
+      uf.x.prolongation = refine_embed_face_x;
+    for (scalar s in {p, pf, u, g}) {
+      s.refine = refine_embed_linear;
+      set_prolongation (s, refine_embed_linear);
+      set_restriction (s, restriction_embed_linear);
+    }
+    for (scalar s in {p, pf})
+      s.embed_gradient = pressure_embed_gradient;
+#endif // TREE && EMBED
+    // Re-apply vof.h defaults: fraction_refine is set for f in vof.h's
+    // event defaults(i=0), skipped on restart.  Without it AMR uses bilinear
+    // prolongation for f, creating non-physical VOF fractions near the interface.
+#if TREE
+    f.refine = fraction_refine;
+    set_prolongation (f, fraction_refine);
+#endif // TREE
+
     // [PROJECT ADDED, 2026-09-10] Cross-level warm-start pilot (diary.md
     // 2026-09-10): restore() reconstructs the checkpoint's tree EXACTLY as
     // dumped -- a checkpoint written at fidelity F restores as a uniform
@@ -763,6 +821,37 @@ event init (t = 0)
                           - pow(fabs(y/b_nd), params.geometry_n));
     }
 #endif
+    // [PROJECT NOTE, 2026-09-13] A cross-level warm-start (CROSS_LEVEL_
+    // WARMSTART) introduces a real, root-caused, and so far UNFIXED
+    // artifact: a checkerboard pattern in u/p in a ~5-coarse-cell-wide band
+    // next to the embedded wall, which accounts for the ENTIRE observed
+    // 32-49% domain-mean tau discrepancy against a same-condition cold
+    // start (measured directly by exclusion, diary.md 2026-09-13). Root
+    // cause: Basilisk's refine_embed_linear (embed-tree.h:268) picks its
+    // per-child interpolation formula from the COARSE parent's fs/cs
+    // neighbor pattern, and the coarse source grid's own discretization of
+    // the curved bag boundary has a genuine period-2 aliasing in fs.x near
+    // the wall -- refine_embed_linear faithfully (and correctly, per its
+    // own contract) propagates that into the fine grid. SIX independent
+    // fixes were tried and removed from this file after all failing on the
+    // real 60-cycle L6->L7 pilot (five had zero effect, one made it
+    // worse): moving this prolongation re-application before refine()
+    // (kept -- see below, it's a real separate bug, just not the cause of
+    // this artifact), an explicit post-refine incompressibility projection,
+    // plain non-embed-aware interpolation, near-wall corrective smoothing
+    // at two widths (one verified via direct measurement to actually clean
+    // the field at t=0), and propagating that correction to the tree's
+    // coarse-level cache via restriction(). The checkerboard regenerates
+    // within under 1% of one rocking cycle even from a verified-clean
+    // start, and does NOT appear in an ordinary (non-cross-level) restart
+    // into the same converged state, nor in a cold start forced through an
+    // near-instant ramp -- so it is specific to the cross-level refine()
+    // path, not to onset speed or to handling a converged flow in general,
+    // and lives in the solver's own per-timestep dynamics, not in the
+    // initial condition. See diary.md 2026-09-13 for the full investigation
+    // (kept there, not here, to keep this file uncluttered by six dead
+    // ends) before attempting a seventh fix.
+
     // Rescale stored velocity and pressure to the new segment's non-dim frame.
     // [PROJECT FIXED, 2026-09-07] The comment this replaces claimed "U_bio ∝
     // omega_b (fixed geometry, theta_max)" and rescaled by su =
@@ -877,50 +966,6 @@ event init (t = 0)
       boundary ({g.x, g.y});
 #endif
     }
-    // Re-apply the prolongation/restriction setup from event defaults(i=0) in
-    // henry_oxy2.h.  That event fires at i=0 on a fresh start but is skipped on
-    // restart (i resumes from the checkpoint value, so i==0 is never seen again).
-    // Basilisk's dump/restore does NOT serialize scalar function-pointer attributes
-    // (restriction, prolongation, refine), so they revert to defaults.  Without
-    // restriction_volume_average the multigrid h_relax propagates NaN from solid
-    // cells (cm=0 → d=0 → c[]=n/0) into fluid cells → NaN kLa and tracer sums.
-#if TREE
-    for (scalar s in stracers) {
-      s.refine = refine_embed_linear;
-      set_prolongation (s, refine_embed_linear);
-      set_restriction (s, restriction_volume_average);
-    }
-#endif
-
-    // Re-apply centered.h's EMBED defaults (event defaults(i=0) is skipped on
-    // restart because i resumes from the checkpoint value).  Without these,
-    // p/pf/u/g use non-EMBED prolongation/restriction and uf uses
-    // refine_face_solenoidal instead of refine_face.  The pressure gradient at
-    // the embedded wall falls back to the generic gradient (no
-    // pressure_embed_gradient), so the Poisson solve near the solid accumulates
-    // small errors each timestep.  After ~300 steps (~1 T) the velocity
-    // diverges → SIGFPE in tracer_diffusion/h_residual.
-    // Confirmed experimentally: fresh run to t=15 is stable; restart crashes at
-    // t=t_checkpoint+1.14T with both 4 and 16 MPI ranks.
-#if TREE && EMBED
-    uf.x.refine = refine_face;
-    foreach_dimension()
-      uf.x.prolongation = refine_embed_face_x;
-    for (scalar s in {p, pf, u, g}) {
-      s.refine = refine_embed_linear;
-      set_prolongation (s, refine_embed_linear);
-      set_restriction (s, restriction_embed_linear);
-    }
-    for (scalar s in {p, pf})
-      s.embed_gradient = pressure_embed_gradient;
-#endif // TREE && EMBED
-    // Re-apply vof.h defaults: fraction_refine is set for f in vof.h's
-    // event defaults(i=0), skipped on restart.  Without it AMR uses bilinear
-    // prolongation for f, creating non-physical VOF fractions near the interface.
-#if TREE
-    f.refine = fraction_refine;
-    set_prolongation (f, fraction_refine);
-#endif // TREE
 
     // Reset ALL stracers to zero at EVERY multigrid level.  reset() zeroes
     // owned cells; boundary() communicates zeroed leaf ghost values.  But
