@@ -590,6 +590,44 @@ int main(int argc, char * argv[]){
 // reconstructs dump()'s content, independent of what the ramp/forcing
 // does afterward -- the question the missing-dAk/dt-term and Delta_theta
 // investigations couldn't answer on their own.
+// [PROJECT ADDED, 2026-09-14] Invariant guard for the cross-level bug of
+// 2026-09-14 (diary.md): fs does not survive dump/restore -- Basilisk's
+// dump_list() skips face fields outright (output.h:1037) -- and what comes
+// back has ~50% of FULLY OPEN faces at hard zero. Since refine_embed_linear
+// gates its interpolation branches on fs truthiness, that silently degrades
+// half the domain to piecewise-constant injection during a cross-level
+// refine(), costing +30-42% on tau and +126-220% on dissipation with no
+// crash, no warning, and a physically plausible-looking result.
+//
+// The invariant: a face whose BOTH neighbouring cells are entirely fluid
+// cannot have zero open area. Violations mean fs is stale/partial and must
+// not be used. Cheap (one pass), so it runs on every restart rather than
+// behind a debug flag -- this class of bug is silent, which is exactly why
+// it needs an always-on check.
+static void assert_fs_sane (const char *tag)
+{
+#if EMBED
+  int nopen = 0, nzero = 0;
+  foreach_face(reduction(+:nopen) reduction(+:nzero))
+    if (cs[] > 0.99 && cs[-1] > 0.99) {
+      nopen++;
+      if (fs.x[] == 0.) nzero++;
+    }
+  if (nzero > 0) {
+    if (pid() == 0)
+      fprintf (stderr, "ERROR [%s]: fs is not usable -- %d of %d fully-open "
+               "faces (both neighbours cs>0.99) have fs==0. Face fields do "
+               "not survive dump/restore; recompute cs/fs with solid() "
+               "BEFORE any refine() that interpolates u/p/g. "
+               "See diary.md 2026-09-14.\n", tag, nzero, nopen);
+    exit (1);
+  }
+  if (pid() == 0)
+    fprintf (ferr, "fs sanity [%s]: OK (%d fully-open faces, none zero)\n",
+             tag, nopen);
+#endif
+}
+
 static void write_restart_diagnostic (const char *tag)
 {
   stats su   = statsf (u.x);
@@ -870,6 +908,11 @@ event init (t = 0)
       }
 #endif
 
+      // fs must be usable HERE -- refine() below interpolates u/p/g through
+      // refine_embed_linear, which reads it. This is the check that would
+      // have caught the 2026-09-14 bug on day one.
+      assert_fs_sane ("pre-refine");
+
       long n_before = grid->n;
       refine (level < params.fidelity);
       long n_after = grid->n;
@@ -929,6 +972,11 @@ event init (t = 0)
       restriction ({cs, fs});
 #endif
     }
+    // fs must also be usable here, on the FINAL grid the solver will run on
+    // -- this covers the ordinary (non-cross-level) restart path too, where
+    // fs is likewise broken by restore() and only repaired by the solid()
+    // call just above.
+    assert_fs_sane ("post-solid");
 #endif
 
     // [PROJECT NOTE, 2026-09-13] A cross-level warm-start (CROSS_LEVEL_

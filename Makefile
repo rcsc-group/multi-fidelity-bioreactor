@@ -116,6 +116,17 @@ $(EXECUTABLE): $(SIM_SRC) $(SRC_HEADERS)
 	@mkdir -p $(BUILD_DIR)
 	$(QCC) $(CFLAGS) $< -o $@ $(LDFLAGS)
 
+# Cross-level warm-start binary: restores a checkpoint written at a COARSER
+# fidelity and refine()s it onto this run's finer grid (diary.md 2026-09-10,
+# and 2026-09-14 for the fs ordering bug that made it silently wrong until
+# then). Serial; used by tests/verification/test_cross_level_warmstart.py.
+.PHONY: build-crosslevel
+build-crosslevel: $(BUILD_DIR)/BioReactor-crosslevel
+
+$(BUILD_DIR)/BioReactor-crosslevel: $(SIM_SRC) $(SRC_HEADERS)
+	@mkdir -p $(BUILD_DIR)
+	$(QCC) $(CFLAGS) -DCROSS_LEVEL_WARMSTART=1 $< -o $@ $(LDFLAGS)
+
 # Health-check binary: identical to production but compiled with DIAGNOSTICS=1.
 # Writes pressure_diag.dat per run; not for production use.
 .PHONY: build-health
