@@ -25,7 +25,16 @@
 
 // Core Basilisk modules for embedding geometries and centered Navier-Stokes solver
 #include "embed.h"
+// [PROJECT ADDED, 2026-09-13] TEMPORARY diagnostic: -DCROSS_LEVEL_SUBSTEP_PROBE=1
+// swaps in a one-off, disclosed fork of centered.h (src/debug/centered_substep_probe.h,
+// identical to canonical except 4 added probe calls) to localize which
+// per-timestep sub-step regenerates the cross-level checkerboard (diary.md
+// 2026-09-13). Off by default -- normal builds use the real canonical header.
+#if CROSS_LEVEL_SUBSTEP_PROBE
+#include "debug/centered_substep_probe.h"
+#else
 #include "navier-stokes/centered.h"
+#endif
 
 // Define dynamic viscosity as a function of the volume fraction (f)
 // Uses harmonic averaging for two-phase flow
@@ -56,6 +65,7 @@
 // Mathematical constants (e.g., M_PI from math.h)
 #define _USE_MATH_DEFINES
 #include <math.h>
+#include <string.h>
 
 // [PROJECT ADDED] JSON parameter reader (jsmn-based). Upstream took L_bio,
 // ANGLE, RPM as three positional argv[] floats; this project needed many
@@ -638,6 +648,162 @@ static void write_restart_diagnostic (const char *tag)
   }
 }
 
+// [PROJECT ADDED, 2026-09-13] TEMPORARY diagnostic (paired with
+// src/debug/centered_substep_probe.h): localizes which per-timestep
+// sub-step regenerates the cross-level checkerboard by measuring the
+// near-wall row's alternating-sign pattern in u.x immediately before/after
+// each of advection_term/viscous_term/acceleration/projection, for the
+// first few timesteps only. Same near-wall band the exclusion test proved
+// contains the whole discrepancy (diary.md 2026-09-13): cells within
+// roughly one coarse-cell-width of y = -b_nd. Serial-only (no MPI gather
+// implemented) -- run this diagnostic with ntasks=1.
+#if CROSS_LEVEL_SUBSTEP_PROBE
+static int _substep_probe_calls = 0;
+// [PROJECT FIXED, 2026-09-13] On restart, Basilisk's `iter`/`i` resume from
+// the CHECKPOINT's own absolute step count (e.g. i=7646 for this project's
+// t_checkpoint=15.18), not 0 -- an `iter > 2` gate compared against that
+// absolute count is always true from the very first call and a `i = 4`
+// exit event never fires (i is already far past 4). Use a since-restart
+// call counter instead, incremented once per timestep (see
+// stop_substep_probe_early below, which increments the SAME counter).
+int _substep_probe_step_count = 0;
+
+// [PROJECT ADDED, 2026-09-13] Widened from a single row to the whole
+// ~11-fine-row band the exclusion test proved contains the ENTIRE domain-
+// mean tau discrepancy (diary.md 2026-09-13). A radius-1 correction only
+// touches the row(s) immediately adjacent to a cut cell -- rows a few
+// cells further out are untouched by it and may be exactly where the
+// diary's original fix #4 (same radius-1 correction) still showed
+// regeneration at 60 cycles, even though row 0 (this file's single-row
+// probe) stayed clean for 42 steps. Scans ROWS_TO_CHECK rows outward from
+// the wall, one flip/std pair per row, only at pre_advection/
+// post_projection (the two tags that bracket a whole timestep) to keep
+// output volume manageable over more steps.
+// [PROJECT CHANGED, 2026-09-14] Widened window (400 steps, ~66% of one
+// rocking cycle -- dt~0.00125 near-uniformly once ramped, T_per_ND=0.607329)
+// to see whether std plateaus at a nonzero floor (persistent slowly-damped
+// mode) or fully decays (transient). Reduced to 5 representative rows to
+// keep output volume manageable over the longer window.
+static const int SUBSTEP_PROBE_ROW_LIST[] = {0, 3, 6, 9, 11};
+#define SUBSTEP_PROBE_ROWS (int)(sizeof(SUBSTEP_PROBE_ROW_LIST)/sizeof(int))
+
+void cross_level_substep_probe (const char * tag)
+{
+  if (_substep_probe_step_count > 400) return;
+  if (strcmp (tag, "pre_advection") != 0 && strcmp (tag, "post_projection") != 0)
+    return;
+  double b_nd = params.geometry_b / L_bio;
+  double row_delta = L0 / (1 << params.fidelity); // fine-cell width at L7
+  for (int _rk = 0; _rk < SUBSTEP_PROBE_ROWS; _rk++) {
+    int row = SUBSTEP_PROBE_ROW_LIST[_rk];
+    double y_row = -b_nd + (row + 0.5) * row_delta;
+    double xs[512], vs[512];
+    int n = 0;
+    foreach (serial) {
+      if (cs[] > 0.01 && fabs (y - y_row) < 0.5*Delta && n < 512) {
+        xs[n] = x;
+        vs[n] = u.x[];
+        n++;
+      }
+    }
+    for (int a = 0; a < n - 1; a++)
+      for (int b = a + 1; b < n; b++)
+        if (xs[b] < xs[a]) {
+          double tx = xs[a]; xs[a] = xs[b]; xs[b] = tx;
+          double tv = vs[a]; vs[a] = vs[b]; vs[b] = tv;
+        }
+    int flips = 0;
+    double mean = 0., m2 = 0.;
+    for (int k = 0; k < n; k++)
+      mean += vs[k];
+    mean = n > 0 ? mean / n : 0.;
+    for (int k = 0; k < n; k++)
+      m2 += (vs[k] - mean)*(vs[k] - mean);
+    for (int k = 1; k < n - 1; k++)
+      if ((vs[k] - vs[k-1]) * (vs[k+1] - vs[k]) < 0.)
+        flips++;
+    fprintf (ferr, "substep_probe #%d i=%d t=%.6f tag=%-16s row=%2d n=%3d "
+             "flips=%3d std=%.6e\n", _substep_probe_calls++, iter, t, tag,
+             row, n, flips, n > 0 ? sqrt (m2 / n) : 0.);
+  }
+  fflush (ferr);
+}
+
+// Cheap diagnostic run only needs the first few timesteps since restart --
+// exit before burning compute on the rest of the requested cycles.
+// Increments the same since-restart counter cross_level_substep_probe()
+// checks, once per timestep (i++,last runs after every real sub-step of
+// this iteration has already fired its probes).
+event stop_substep_probe_early (i++, last) {
+  fprintf (ferr, "substep_probe: end of timestep i=%d (absolute), "
+           "step_count=%d (since restart)\n", i, _substep_probe_step_count);
+  fflush (ferr);
+  if (++_substep_probe_step_count > 402)
+    exit (0);
+}
+#endif
+
+// [PROJECT ADDED, 2026-09-14] Fix attempt #8 for the cross-level
+// checkerboard (diary.md 2026-09-14): direct falsifiable test of a new,
+// evidence-based hypothesis -- the checkerboard is not a one-time IC
+// residue but a WEAKLY-DAMPED mode of the embedded-boundary viscous/
+// projection operator near cut cells, continuously (if weakly) excited by
+// ORDINARY per-timestep dynamics in ANY run near this geometry (confirmed:
+// an ordinary same-resolution restart shows the same row-local checkerboard
+// flip-count signature, just at ~1.3-2.4x lower amplitude, strongest at the
+// wall and decaying outward -- measured directly via a row-by-row
+// substep probe, not inferred). The cross-level path's distinguishing
+// defect is a ONE-TIME excitation of this mode during refine_embed_linear's
+// interpolation of u/p/g using the STALE COARSE fs (before the post-refine
+// analytic solid() call corrects cs/fs itself to be leaf-exact). All seven
+// prior fixes applied a correction exactly ONCE, expecting it to persist --
+// wrong framing for a weakly-damped mode: this fix instead REPEATS the
+// same corrective smoothing (fix attempt #5's mechanism, 5x radius-1
+// passes) every timestep, for CROSS_LEVEL_SUPPRESS_CYCLES rocking cycles
+// after restart, continuously counteracting the small per-step
+// reinjection rather than trying to zero it out once. Gated behind
+// CROSS_LEVEL_WARMSTART; off by default. NOT YET VERIFIED against the real
+// 60-cycle pilot's tau_mean -- see diary.md before assuming this works.
+#if CROSS_LEVEL_WARMSTART
+bool cross_level_warmstart_active = false;
+int cross_level_warmstart_step = 0;
+#ifndef CROSS_LEVEL_SUPPRESS_CYCLES
+#define CROSS_LEVEL_SUPPRESS_CYCLES 10
+#endif
+
+event cross_level_persistent_correction (i++, last)
+{
+#if EMBED
+  if (!cross_level_warmstart_active) return;
+  double T_per_nd = 2.*pi/params.omega_b;
+  if (t - params.t_checkpoint > CROSS_LEVEL_SUPPRESS_CYCLES * T_per_nd) return;
+  for (int _pass = 0; _pass < 5; _pass++) {
+    scalar u0x[], u0y[], p0[];
+    foreach() {
+      u0x[] = u.x[]; u0y[] = u.y[]; p0[] = p[];
+    }
+    foreach() {
+      bool near_cut = false;
+      foreach_neighbor (1)
+        if (cs[] > 0. && cs[] < 1.)
+          near_cut = true;
+      if (near_cut) {
+        double sux = 0., suy = 0., sp = 0.; int cnt = 0;
+        foreach_neighbor (1)
+          if (cs[] > 0.5) {
+            sux += u0x[]; suy += u0y[]; sp += p0[]; cnt++;
+          }
+        if (cnt > 0) {
+          u.x[] = sux / cnt; u.y[] = suy / cnt; p[] = sp / cnt;
+        }
+      }
+    }
+  }
+  cross_level_warmstart_step++;
+#endif
+}
+#endif
+
 // ================================================================== //
 //                      INITIAL CONDITIONS                            //
 // ================================================================== //
@@ -825,6 +991,7 @@ event init (t = 0)
       if (pid() == 0)
         fprintf (ferr, "cross-level warmstart: refined to depth=%d, "
                  "n=%ld cells\n", depth(), (long) grid->n);
+      cross_level_warmstart_active = true;
     }
 #endif
 
@@ -855,6 +1022,44 @@ event init (t = 0)
 #if TREE
       restriction ({cs, fs});
 #endif
+    }
+#endif
+
+    // [PROJECT ADDED, 2026-09-13] TEMPORARY diagnostic-only near-wall
+    // correction, paired with src/debug/centered_substep_probe.h. WIDENED,
+    // 2026-09-14: now reproduces fix attempt #5 from diary.md 2026-09-13
+    // exactly (5 repeated radius-1 passes = effective ~5-coarse-cell reach,
+    // matching the exclusion-test-confirmed affected band width), not just
+    // the single-pass version this block used yesterday -- the single-pass
+    // version only cleaned the ONE row immediately adjacent to a cut cell,
+    // leaving rows further out (1-11 in the multi-row probe) UNCORRECTED
+    // from the start, which confounded the first probe run's "regeneration"
+    // reading (diary.md 2026-09-14). Gated behind the same
+    // CROSS_LEVEL_SUBSTEP_PROBE flag -- not a candidate fix, purely to set
+    // up this one diagnostic's initial condition genuinely clean across the
+    // whole affected band before watching it evolve.
+#if CROSS_LEVEL_SUBSTEP_PROBE && EMBED
+    for (int _pass = 0; _pass < 5; _pass++) {
+      scalar u0x[], u0y[], p0[];
+      foreach() {
+        u0x[] = u.x[]; u0y[] = u.y[]; p0[] = p[];
+      }
+      foreach() {
+        bool near_cut = false;
+        foreach_neighbor (1)
+          if (cs[] > 0. && cs[] < 1.)
+            near_cut = true;
+        if (near_cut) {
+          double sux = 0., suy = 0., sp = 0.; int cnt = 0;
+          foreach_neighbor (1)
+            if (cs[] > 0.5) {
+              sux += u0x[]; suy += u0y[]; sp += p0[]; cnt++;
+            }
+          if (cnt > 0) {
+            u.x[] = sux / cnt; u.y[] = suy / cnt; p[] = sp / cnt;
+          }
+        }
+      }
     }
 #endif
     // [PROJECT NOTE, 2026-09-13] A cross-level warm-start (CROSS_LEVEL_
