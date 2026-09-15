@@ -50,6 +50,9 @@ from scripts.cost_model import min_per_cycle       # noqa: E402
 # the commit so a stale-binary mixup is visible rather than inferred -- see
 # feedback_binary_deployment.
 BINARY = "/oscar/scratch/eaguerov/BioReactor-mpi-fig9-2736992"
+# Same source, built with -DEXTRA_TRACERS=0 (drops the three never-initialised
+# tracer variants c/c1/c3 from stracers).
+LEAN_BINARY = "/oscar/scratch/eaguerov/BioReactor-mpi-lean"
 
 KIM_CSV = ROOT / "experiments/kimetal2024/csv_raw/mixing_kla_vs_frequency.csv"
 SPINUP_CYCLES = 80     # Kim's tracer release instant, t/T_p = 80
@@ -93,7 +96,8 @@ def plan(rpm: float, level: int, ntasks: int, allow_missing_cost: bool = False) 
 
 
 def submit(rpm: float, level: int, ntasks: int, prefix: str, dry: bool,
-           walltime_override: str | None = None) -> None:
+           walltime_override: str | None = None,
+           binary: str | None = None) -> None:
     p = plan(rpm, level, ntasks, allow_missing_cost=walltime_override is not None)
     if walltime_override is None and p["hours"] > 48:
         raise SystemExit(
@@ -111,7 +115,7 @@ def submit(rpm: float, level: int, ntasks: int, prefix: str, dry: bool,
         "amplitude_h": [0.0, 0.0, 0.0], "phi_horizontal": [0.0, 0.0, 0.0],
         "t_end": round(p["t_end"], 4),
         "n_mix_cycles": SPINUP_CYCLES,
-        "_binary": BINARY,
+        "_binary": binary or BINARY,
     }
     print(f"  L{level} {rpm:g} rpm  {p['cyc_tot']:6.1f} cyc  t_end={p['t_end']:8.3f}  "
           f"walltime={walltime}  ({p['min_per_cycle']:.2f} min/cyc, {p['confidence']})")
@@ -129,7 +133,8 @@ def submit(rpm: float, level: int, ntasks: int, prefix: str, dry: bool,
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--stage", choices=["validate", "ladder", "sweep"], required=True)
+    ap.add_argument("--stage", choices=["validate", "ladder", "lean", "sweep"],
+                    required=True)
     ap.add_argument("--dry-run", action="store_true")
     a = ap.parse_args()
 
@@ -154,6 +159,13 @@ def main() -> None:
         for level, walltime in [(7, "02:00:00"), (8, "08:00:00"), (9, "30:00:00")]:
             submit(32.5, level=level, ntasks=8, prefix="fig9_ladder",
                    dry=a.dry_run, walltime_override=walltime)
+    elif a.stage == "lean":
+        # A/B against fig9_ladder_l7 (34m17s): identical config, identical
+        # walltime cap, only EXTRA_TRACERS=0. c/c1/c3 are never initialised
+        # and never read, but each costs 2 VOF-advected fields plus a
+        # multigrid diffusion solve every timestep.
+        submit(32.5, level=7, ntasks=8, prefix="fig9_lean", dry=a.dry_run,
+               walltime_override="02:00:00", binary=LEAN_BINARY)
     else:
         print("Stage 'sweep': L7, all 10 of Kim's rpm points.")
         for rpm in [37.5, 35, 32.5, 30, 27.5, 25, 22.5, 20, 17.5, 15]:

@@ -217,10 +217,27 @@ scalar c[], oxy[], c1[], c2[], c3[];   // for tracer and oxygen transfer
 // Required for MPI correctness — unused scalars must not appear in stracers
 // when their compile-time flags are off, or boundary reductions will
 // reference uninitialised memory across MPI ranks.
-#if TRACER && OXYGEN
+// [PROJECT ADDED, 2026-09-15] c, c1 and c3 are the horizontal-left,
+// horizontal-right and vertical-down tracer variants. Only ONE variant is
+// ever initialised (VERTICAL_MIXUP -> c2), and postprocess reads only c2
+// (dtmix) and oxy (kLa) -- so with the default flags c, c1 and c3 stay
+// identically zero for the whole run while STILL costing, every timestep,
+// two VOF-advected fields each (henry_oxy2.h event vof clones phi1/phi2 and
+// appends both to f.tracers) plus a multigrid diffusion solve each
+// (event tracer_diffusion). That is 3 of 5 tracers doing no work at full
+// price. EXTRA_TRACERS=0 drops them. Default 1 preserves existing behaviour
+// exactly; set 0 for mixing/kLa production runs.
+#ifndef EXTRA_TRACERS
+#define EXTRA_TRACERS 1
+#endif
+#if TRACER && OXYGEN && EXTRA_TRACERS
 scalar * stracers = {c, oxy, c1, c2, c3};
-#elif TRACER
+#elif TRACER && OXYGEN
+scalar * stracers = {oxy, c2};
+#elif TRACER && EXTRA_TRACERS
 scalar * stracers = {c, c1, c2, c3};
+#elif TRACER
+scalar * stracers = {c2};
 #elif OXYGEN
 scalar * stracers = {oxy};
 #else
