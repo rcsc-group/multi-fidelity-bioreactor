@@ -1,32 +1,40 @@
-"""Replica of Kim et al. (2024) Fig. 8 (tau_Ediss_evol), v2 -- corrected
-after actually viewing experiments/kimetal2024/Figures/Fig_tau_Ediss.pdf:
+"""Replica of Kim et al. (2024) Fig. 8 (tau_Ediss_evol).
 
-  (a) domain-mean SIGNED shear stress <tau_w'> (blue) and EDR <eps_w'>
-      (red), dual y-axis, LINEAR scale, matching Kim's style. v1 plotted
-      mean(|tau|) (always >=0) instead of Kim's actual plotted quantity,
-      the signed mean (oscillates through zero) -- a real bug, not a
-      styling choice, caught by comparing against Kim's real figure.
-  (b) histogram of the SIGNED shear stress across the liquid at the
-      instant <tau_w'> peaks. LINEAR axes (Kim's own figure uses linear,
-      not log) -- v1 used log-log, which was a deviation introduced
-      without first checking Kim's actual convention.
-  (c) histogram of EDR (non-negative by construction, no sign issue)
-      across the liquid at the instant <eps_w'> peaks. LINEAR axes.
+Panels, following Kim's own axis limits throughout:
+  (a1) spatial mean SIGNED shear stress <tau_w'> over the rocking phase,
+       tau in [-3e-3, 3e-3] Pa.
+  (a2) spatial mean EDR <eps_w'> over the rocking phase, [0, 0.4] W/m^3.
+  (b)  histogram of signed tau across the liquid at the instant <tau_w'>
+       peaks, over Kim's [-15e-3, 15e-3] Pa window, linear axes.
+  (c)  histogram of EDR at the instant <eps_w'> peaks, [0, 1] W/m^3.
 
-Data [UPDATED 2026-09-15]: runs/57f68830, the L10 late-time probe (job
-6314896) -- t=22.48->28.54, i.e. t/Tp 37->47, 10 rocking periods.
+Kim's (a) is one twin-axis panel; it is split here because overlaying three
+resolutions on twin axes was unreadable. (b) and (c) are L10 only, as in Kim
+-- they are single-instant distributions, not a convergence statement.
 
-Supersedes runs/l10_kim_fig8_signed, which this script used until now and
-which must NOT be used again: its params.json carries `_binary: None`,
-validate_run.py's first HARD failure condition ("ran on the
-default/unknown binary"), and it is the run named in that script's own
-docstring as having silently predated the H_bio nondim and
-tau-histogram-OpenMP-race fixes. The Aug-10 panels built from it are
-therefore invalid, not merely stale.
+Every value is recomputed from the saved fields with the BAG mask
+(`f > 0.5` AND inside the embedded geometry), never from the on-disk KPIs:
+runs predating the mask fix (diary.md 2026-09-15 (2)) logged spatial means
+over the whole lower half-domain, which is 3.51x the bag's liquid area and
+diluted every mean accordingly. Maxima were never affected, means always
+were.
 
-Also settled by this run (diary.md 2026-09-15): the amplitude is FLAT
-across t/Tp 37->47 (0.6% spread cycle to cycle), so the standing ~3-4x
-gap versus Kim is NOT an artifact of comparing different time windows.
+Panels a1/a2 fold on the TRUE forcing phase (absolute simulation time mod
+T_p), not on each run's own first frame: the three runs sit at different
+absolute times, and zeroing each at its window start imposed an arbitrary
+per-level phase offset. That artifact -- not physics -- is what made L8 look
+"totally off" when the split was first produced.
+
+Data: L8 runs/l8_coldstart_vid, L9 runs/a34fc4d4, L10 runs/57f68830 (the
+late-time probe, t/Tp 37->47). Frame counts differ by level because these
+predate the off-period frame cadence (params_read.h, T_p/(N+0.618)); runs
+on the old cadence sample only N distinct phases however long they run.
+
+runs/l10_kim_fig8_signed must NOT be used again: `_binary: None` in its
+params.json is validate_run.py's first hard-fail condition, and it predates
+the H_bio nondim and tau-histogram OpenMP-race fixes.
+
+Usage:  uv run python scripts/plot_fig8.py
 """
 import json
 import math
@@ -34,73 +42,28 @@ import struct
 from pathlib import Path
 
 import numpy as np
+import matplotlib
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-mpl_rc = plt.rcParams
-mpl_rc['mathtext.fontset'] = 'cm'
-mpl_rc['font.family'] = 'serif'
-mpl_rc['axes.linewidth'] = 1.4
-mpl_rc['xtick.direction'] = 'in'
-mpl_rc['ytick.direction'] = 'in'
+ROOT = Path("/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor")
+OUT_DIR = ROOT / "experiments/kimetal2024/figure_replicas"
 
-RUN_DIR = Path("/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor/runs/57f68830")
-OUT_DIR = Path("/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor/experiments/kimetal2024/figure_replicas")
+plt.rcParams.update({
+    "mathtext.fontset": "cm", "font.family": "serif", "axes.linewidth": 1.2,
+    "xtick.direction": "in", "ytick.direction": "in",
+})
 
-params = json.load(open(RUN_DIR / "params.json"))
-L = params["geometry"]["a"]; H = 2 * params["geometry"]["b"]
-th = math.radians(params["theta_max"][0])
-omega_b = params["omega_b"]
-T_per = 2 * math.pi / omega_b
-V = L / 4 * (H + 0.5 * L * math.tan(th))
-U_bio = V / (H * 0.5) / T_per
-T_bio = L / U_bio
-T_per_nd = T_per / T_bio
-rho_w = 1000.0
-tau_scale = rho_w * U_bio**2
-ediss_scale = rho_w * U_bio**3 / L
+# Kim's reported peaks at 32.5 rpm, theta=7 deg (csv_raw/shear_ediss_vs_frequency.csv)
+KIM_TAU_PEAK = 1.8026e-3      # Pa
+KIM_EDISS_PEAK = 0.28655      # W/m^3
 
-# ── panel (a): time series, SIGNED tau_mean this time ──────────────────────
-d = np.loadtxt(RUN_DIR / "shear_stress.dat", skiprows=1)
-t_nd = d[:, 1]
-tau_mean_signed_nd = d[:, 10]   # new column
-ediss_mean_nd = d[:, 9]
-tau_mean_pa = tau_mean_signed_nd * tau_scale
-ediss_mean_wm3 = ediss_mean_nd * ediss_scale
-t_over_Tp = t_nd / T_per_nd
-
-# peak = max |signed mean| (matches "amplitude" reading off Kim's fig,
-# not just the positive-going max) for picking the panel-(b) snapshot instant
-i_tau_peak = int(np.argmax(np.abs(tau_mean_pa)))
-i_ediss_peak = int(np.argmax(ediss_mean_wm3))
-t_tau_peak = t_nd[i_tau_peak]
-t_ediss_peak = t_nd[i_ediss_peak]
-print(f"tau_mean_signed |peak| at t={t_tau_peak:.4f} (t/Tp={t_over_Tp[i_tau_peak]:.3f}), {tau_mean_pa[i_tau_peak]:.6f} Pa")
-print(f"ediss_mean peak at t={t_ediss_peak:.4f} (t/Tp={t_over_Tp[i_ediss_peak]:.3f}), {ediss_mean_wm3[i_ediss_peak]:.4f} W/m3")
-print(f"tau_mean_signed range: [{tau_mean_pa.min():.6f}, {tau_mean_pa.max():.6f}] Pa  (Kim: [-1.8e-3, +1.8e-3])")
-print(f"ediss_mean range: [{ediss_mean_wm3.min():.4f}, {ediss_mean_wm3.max():.4f}] W/m3  (Kim: [0, ~0.35])")
-
-fig, ax1 = plt.subplots(figsize=(6.0, 4.2))
-l1, = ax1.plot(t_over_Tp, tau_mean_pa, color="royalblue", lw=1.6, label=r"$\langle\tau_w'\rangle$")
-ax1.axhline(0, color="gray", lw=0.6, ls="-")
-ax1.set_xlabel(r"$t/T_p$", fontsize=13)
-ax1.set_ylabel(r"$\langle\tau_w'\rangle$ (Pa)", fontsize=13, color="royalblue")
-ax1.set_ylim(-3e-3, 3e-3)
-ax1.tick_params(axis="y", labelcolor="royalblue")
-
-ax2 = ax1.twinx()
-l2, = ax2.plot(t_over_Tp, ediss_mean_wm3, color="firebrick", lw=1.6, label=r"$\langle\epsilon_w'\rangle$")
-ax2.set_ylim(0.0, 0.4)
-ax2.set_ylabel(r"$\langle\epsilon_w'\rangle$ (W/m$^3$)", fontsize=13, color="firebrick")
-ax2.tick_params(axis="y", labelcolor="firebrick")
-
-ax1.legend(handles=[l1, l2], fontsize=10, loc="upper right")
-ax1.text(-0.16, 1.02, r'$(a)$', transform=ax1.transAxes, fontsize=16, style='italic')
-fig.tight_layout()
-fig.savefig(OUT_DIR / "replicated_Fig8_a.png", dpi=150)
-print("saved fig8_a_v2.png")
+RUNS = [("L8", "l8_coldstart_vid", "tab:orange"),
+        ("L9", "a34fc4d4", "seagreen"),
+        ("L10", "57f68830", "purple")]
+HIST_RUN = "57f68830"
 
 
-# ── panels (b),(c): field histograms at the peak instants, LINEAR axes ────
 def load_frame(path):
     with open(path, "rb") as fh:
         (n,) = struct.unpack("i", fh.read(4))
@@ -112,63 +75,113 @@ def load_frame(path):
     return t, f, tau, ediss
 
 
-frame_files = sorted((RUN_DIR / "frames_tau").glob("frame_*.bin"))
-frame_times, frames = [], []
-for p in frame_files:
-    t, f, tau, ediss = load_frame(p)
-    frame_times.append(t)
-    frames.append((f, tau, ediss))
-frame_times = np.array(frame_times)
+def scales(run_id):
+    """(bag half-height /L, tau scale, EDR scale, T_bio, omega_b)."""
+    p = json.load(open(ROOT / "runs" / run_id / "params.json"))
+    L = p["geometry"]["a"]
+    b = p["geometry"]["b"] / L
+    tm = p["theta_max"]
+    th = math.radians(tm[0] if isinstance(tm, list) else tm)
+    omega_b = p["omega_b"]
+    T_per = 2 * math.pi / omega_b
+    H = 2 * L * b
+    V = L / 4 * (H + 0.5 * L * math.tan(th))
+    U = V / (H * 0.5) / T_per
+    return b, 1000.0 * U**2, 1000.0 * U**3 / L, L / U, omega_b
 
-idx_tau_frame = int(np.argmin(np.abs(frame_times - t_tau_peak)))
-idx_ediss_frame = int(np.argmin(np.abs(frame_times - t_ediss_peak)))
-print(f"nearest video frame to tau peak: t={frame_times[idx_tau_frame]:.4f} (target {t_tau_peak:.4f})")
-print(f"nearest video frame to ediss peak: t={frame_times[idx_ediss_frame]:.4f} (target {t_ediss_peak:.4f})")
 
-f_tau, tau_field, _ = frames[idx_tau_frame]      # tau_field is now SIGNED (2026-08-09 fix)
-f_ediss, _, ediss_field = frames[idx_ediss_frame]
+def bag_mask(f, b):
+    """Liquid INSIDE the embedded bag. `f` alone fills the whole lower half-domain."""
+    n = f.shape[0]
+    y = (-0.5 + (np.arange(n) + 0.5) / n)[:, None] * np.ones((1, n))
+    return (f > 0.5) & (np.abs(y) < b)
 
-tau_liquid = tau_field[f_tau > 0.5] * tau_scale
-ediss_liquid = ediss_field[f_ediss > 0.5] * ediss_scale
-print(f"tau_liquid (signed) range at peak frame: [{tau_liquid.min():.6f}, {tau_liquid.max():.6f}] Pa")
-print(f"ediss_liquid range at peak frame: [{ediss_liquid.min():.6f}, {ediss_liquid.max():.6f}] W/m3")
 
-# Bins span Kim's OWN window, not our full data range -- binning over our
-# much wider range (tau tail reaches +-0.25 Pa) and then zooming into his
-# +-15e-3 window would leave only ~3 giant bins visible instead of a real
-# distribution shape. Counts still normalize by the TOTAL sample count
-# (not just the in-window subset), so the visible bars are not inflated by
-# excluding the tail -- the tail's share is reported separately below.
-def _hist_in_window(values, lo, hi, n_bins=30):
-    bins = np.linspace(lo, hi, n_bins + 1)
-    counts, edges = np.histogram(values, bins=bins)
-    counts_norm = counts / len(values)  # normalize by ALL samples, not just in-window
-    return counts_norm, edges
+# ── panels (a1), (a2): phase-folded spatial means at three resolutions ─────
+series = {}
+for lvl, run, col in RUNS:
+    b, tau_scale, ediss_scale, T_bio, omega_b = scales(run)
+    files = sorted((ROOT / "runs" / run / "frames_tau").glob("frame_*.bin"))
+    files = files[len(files) // 2:]          # settled half only
+    times, tau_mean, ediss_mean = [], [], []
+    for fp in files:
+        t, f, tau, ediss = load_frame(fp)
+        m = bag_mask(f, b)
+        if not m.any():
+            continue
+        times.append(t)
+        tau_mean.append(tau[m].mean() * tau_scale)
+        ediss_mean.append(ediss[m].mean() * ediss_scale)
+    T_per_nd = (2 * math.pi / omega_b) / T_bio
+    phase = (np.array(times) / T_per_nd) % 1.0
+    o = np.argsort(phase)
+    series[lvl] = dict(phase=phase[o], tau=np.array(tau_mean)[o],
+                       ediss=np.array(ediss_mean)[o], col=col, n=len(o))
+    print(f"{lvl}: {len(o)} frames, {len(set(np.round(phase, 6)))} distinct phases")
 
-fig, ax = plt.subplots(figsize=(5.0, 4.0))
-counts_norm, edges = _hist_in_window(tau_liquid, -15e-3, 15e-3)
-ax.bar(edges[:-1], counts_norm, width=np.diff(edges), align="edge",
-       color="royalblue", edgecolor="none", alpha=0.85)
-ax.set_xlim(-15e-3, 15e-3)
-ax.set_xlabel(r"$\tau_w'$ (Pa)", fontsize=13)
-ax.set_ylabel("Normalized frequency", fontsize=13)
-ax.text(-0.16, 1.02, r'$(b)$', transform=ax.transAxes, fontsize=16, style='italic')
-fig.tight_layout()
-fig.savefig(OUT_DIR / "replicated_Fig8_b.png", dpi=150)
-print("saved fig8_b_v2.png")
-frac_outside_b = float(((tau_liquid < -15e-3) | (tau_liquid > 15e-3)).mean())
-print(f"fraction of tau_liquid outside Kim's [-15e-3,15e-3] window: {frac_outside_b*100:.2f}%")
 
-fig, ax = plt.subplots(figsize=(5.0, 4.0))
-counts_norm, edges = _hist_in_window(ediss_liquid, 0.0, 1.0)
-ax.bar(edges[:-1], counts_norm, width=np.diff(edges), align="edge",
-       color="firebrick", edgecolor="none", alpha=0.85)
-ax.set_xlim(0.0, 1.0)
-ax.set_xlabel(r"$\epsilon_w'$ (W/m$^3$)", fontsize=13)
-ax.set_ylabel("Normalized frequency", fontsize=13)
-ax.text(-0.16, 1.02, r'$(c)$', transform=ax.transAxes, fontsize=16, style='italic')
-fig.tight_layout()
-fig.savefig(OUT_DIR / "replicated_Fig8_c.png", dpi=150)
-frac_outside_c = float((ediss_liquid > 1.0).mean())
-print(f"fraction of ediss_liquid above Kim's 1.0 W/m3 window: {frac_outside_c*100:.2f}%")
-print("saved fig8_c_v2.png")
+def phase_panel(key, fname, ylabel, ylim, kim_peak, symmetric):
+    fig, ax = plt.subplots(figsize=(5.6, 3.4))
+    for lvl, _, col in RUNS:
+        d = series[lvl]
+        ax.plot(d["phase"], d[key], color=col, lw=0, marker="o", ms=3.2,
+                alpha=0.85, label=f"{lvl} (n={d['n']})")
+    ax.axhline(kim_peak, color="0.25", lw=1.0, ls="--", label="Kim peak")
+    if symmetric:
+        ax.axhline(-kim_peak, color="0.25", lw=1.0, ls="--")
+    ax.set_xlabel(r"rocking phase  $t/T_p$  (mod 1)", fontsize=12)
+    ax.set_ylabel(ylabel, fontsize=12)
+    ax.set_xlim(0, 1)
+    ax.set_ylim(*ylim)
+    ax.legend(fontsize=8, frameon=False, loc="upper left", bbox_to_anchor=(1.01, 1.0))
+    fig.tight_layout()
+    fig.savefig(OUT_DIR / fname, dpi=150, bbox_inches="tight")
+    print("saved", fname)
+
+
+phase_panel("tau", "replicated_Fig8_a1.png", r"$\langle\tau_w'\rangle$ (Pa)",
+            (-3e-3, 3e-3), KIM_TAU_PEAK, symmetric=True)
+phase_panel("ediss", "replicated_Fig8_a2.png", r"$\langle\epsilon_w'\rangle$ (W/m$^3$)",
+            (0.0, 0.4), KIM_EDISS_PEAK, symmetric=False)
+
+
+# ── panels (b), (c): field histograms at the peak instants ────────────────
+b_hi, tau_scale, ediss_scale, _, _ = scales(HIST_RUN)
+frames = [load_frame(p) for p in
+          sorted((ROOT / "runs" / HIST_RUN / "frames_tau").glob("frame_*.bin"))]
+frames = frames[len(frames) // 2:]
+
+tau_means = [tau[bag_mask(f, b_hi)].mean() for _, f, tau, _ in frames]
+ediss_means = [ed[bag_mask(f, b_hi)].mean() for _, f, _, ed in frames]
+i_tau = int(np.argmax(np.abs(tau_means)))
+i_ediss = int(np.argmax(ediss_means))
+
+_, f_t, tau_field, _ = frames[i_tau]
+_, f_e, _, ediss_field = frames[i_ediss]
+tau_liquid = tau_field[bag_mask(f_t, b_hi)] * tau_scale
+ediss_liquid = ediss_field[bag_mask(f_e, b_hi)] * ediss_scale
+print(f"tau_liquid at peak frame: [{tau_liquid.min():.3e}, {tau_liquid.max():.3e}] Pa")
+print(f"ediss_liquid at peak frame: [{ediss_liquid.min():.3e}, {ediss_liquid.max():.3e}] W/m3")
+
+
+def histogram_panel(values, lo, hi, fname, xlabel, color, n_bins=30):
+    """Bins span Kim's OWN window. Counts normalize by the TOTAL sample count,
+    not the in-window subset, so bars are not inflated by excluding the tail;
+    the tail's share is printed instead."""
+    counts, edges = np.histogram(values, bins=np.linspace(lo, hi, n_bins + 1))
+    fig, ax = plt.subplots(figsize=(5.0, 4.0))
+    ax.bar(edges[:-1], counts / len(values), width=np.diff(edges), align="edge",
+           color=color, edgecolor="none", alpha=0.85)
+    ax.set_xlim(lo, hi)
+    ax.set_xlabel(xlabel, fontsize=13)
+    ax.set_ylabel("Normalized frequency", fontsize=13)
+    fig.tight_layout()
+    fig.savefig(OUT_DIR / fname, dpi=150)
+    outside = float(((values < lo) | (values > hi)).mean())
+    print(f"saved {fname}  ({outside*100:.2f}% of samples outside the window)")
+
+
+histogram_panel(tau_liquid, -15e-3, 15e-3, "replicated_Fig8_b.png",
+                r"$\tau_w'$ (Pa)", "royalblue")
+histogram_panel(ediss_liquid, 0.0, 1.0, "replicated_Fig8_c.png",
+                r"$\epsilon_w'$ (W/m$^3$)", "firebrick")

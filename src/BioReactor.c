@@ -347,7 +347,31 @@ int main(int argc, char * argv[]){
   w_bio  = 2*pi/T_per;              // Angular velocity (rad/s)
   w_bio_st = w_bio*T_bio;           // Dimensionless angular velocity
   T_per_st = T_per/T_bio;           // Dimensionless period
-  dt_video = T_per_st / (params.frames_per_period > 0 ? params.frames_per_period : 5);
+  // [PROJECT FIXED, 2026-09-15, diary.md] Frame cadence must NOT divide the
+  // rocking period exactly. It used to be dt_video = T_per_st/N, which makes
+  // every frame land on the SAME N phases of the cycle forever -- measured on
+  // real runs: a34fc4d4 (L9, 130 frames) and 57f68830 (L10, 50 frames) sample
+  // only 5 distinct phases (0.0,0.2,0.4,0.6,0.8), so recording more frames
+  // adds zero phase coverage and the true peak of any oscillating quantity is
+  // never captured, only a max-over-5-samples lower bound. Every <tau> and
+  // <eps> peak this project has reported from frames is therefore slightly
+  // understated. (l8_coldstart_vid escaped only because its dt happened to
+  // drift relative to its period.)
+  //
+  // Kim et al. hit the same trap and designed around it -- Main.tex: "a
+  // constant time gap of 0.05 simulation time ... approximately 13 simulation
+  // points per cycle but is intentionally misaligned with the period to
+  // ensure convergence."
+  //
+  // Fix: offset the divisor by the golden ratio conjugate. phi = 0.618... is
+  // the irrational that is hardest to approximate by rationals, so successive
+  // frames land at maximally-spread phases and N frames over many periods
+  // give near-uniform (low-discrepancy) phase coverage rather than N points.
+  // Default raised 5 -> 13 to match Kim's cadence.
+  {
+    int nfp = params.frames_per_period > 0 ? params.frames_per_period : 13;
+    dt_video = T_per_st / (nfp + 0.6180339887498949);
+  }
   U0     = w_bio_st*Th_max;         // Initial rotational velocity
   t_change_st = N_RAMP_CYCLES * T_per_st;  // ramp over 3 cycles regardless of omega_b
   t_mix      = T_per_st*params.n_mix_cycles; // rocking cycles before tracer/oxygen start (wired from params.json)

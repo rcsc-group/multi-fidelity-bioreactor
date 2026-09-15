@@ -1,0 +1,74 @@
+{
+  "l10_fig13a_xlevel_rpm17.5": {
+    "rpm": 17.5,
+    "l9_source": "l9_sweep_rpm17.5",
+    "min_per_cycle_est": 168.1,
+    "walltime": "26:00:00",
+    "n_cycles": 6,
+    "job": "6407074"
+  },
+  "l10_fig13a_xlevel_rpm20": {
+    "rpm": 20.0,
+    "l9_source": "20a14369",
+    "min_per_cycle_est": 156.9,
+    "walltime": "24:00:00",
+    "n_cycles": 6,
+    "job": "6407075"
+  },
+  "l10_fig13a_xlevel_rpm22.5": {
+    "rpm": 22.5,
+    "l9_source": "255e0b87",
+    "min_per_cycle_est": 145.7,
+    "walltime": "22:00:00",
+    "n_cycles": 6,
+    "job": "6407076"
+  },
+  "l10_fig13a_xlevel_rpm25": {
+    "rpm": 25.0,
+    "l9_source": "bce29aa5",
+    "min_per_cycle_est": 134.6,
+    "walltime": "21:00:00",
+    "n_cycles": 6,
+    "job": "6407077"
+  },
+  "l10_fig13a_xlevel_rpm27.5": {
+    "rpm": 27.5,
+    "l9_source": "9ec56180",
+    "min_per_cycle_est": 123.4,
+    "walltime": "19:00:00",
+    "n_cycles": 6,
+    "job": "6407078"
+  },
+  "l10_fig13a_xlevel_rpm30": {
+    "rpm": 30.0,
+    "l9_source": "60d09a80",
+    "min_per_cycle_est": 112.2,
+    "walltime": "17:00:00",
+    "n_cycles": 6,
+    "job": "6407080"
+  },
+  "l10_fig13a_xlevel_rpm32.5": {
+    "rpm": 32.5,
+    "l9_source": "a34fc4d4",
+    "min_per_cycle_est": 101.0,
+    "walltime": "16:00:00",
+    "n_cycles": 6,
+    "job": "6407081"
+  },
+  "l10_fig13a_xlevel_rpm35": {
+    "rpm": 35.0,
+    "l9_source": "a281a16f",
+    "min_per_cycle_est": 71.5,
+    "walltime": "11:00:00",
+    "n_cycles": 6,
+    "job": "6407082"
+  },
+  "l10_fig13a_xlevel_rpm37.5": {
+    "rpm": 37.5,
+    "l9_source": "0f0ad3ea",
+    "min_per_cycle_est": 42.0,
+    "walltime": "07:00:00",
+    "n_cycles": 6,
+    "job": "6407083"
+  }
+}

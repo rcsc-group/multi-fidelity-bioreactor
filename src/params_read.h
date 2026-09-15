@@ -36,7 +36,9 @@ typedef struct {
   double fill_level;
   double t_end;                 // simulation end time [non-dim]; default 250.0
   int    n_mix_cycles;          // rocking cycles before oxygen/tracer start; default 80
-  int    frames_per_period;     // video-frame cadence (VIDEOS builds only); default 5, 0 means unset
+  int    frames_per_period;     // video-frame cadence (VIDEOS builds only); default 13, 0 means unset.
+                                // NOTE: the actual interval is T_per/(N+0.618), deliberately NOT a
+                                // divisor of the period -- see BioReactor.c (2026-09-15) for why.
   int    remove_drop;           // droplet/bubble removal (upstream REMOVE_DROP); default 0, matches upstream's own runs
   // Checkpoint restart fields (set by chain.py for restart segments; 0 for fresh runs)
   double t_checkpoint;               // absolute non-dim time of the restored checkpoint
@@ -88,7 +90,7 @@ static BioreactorParams params_read(const char *path) {
   p.n_harmonics   = 1;         // default: single sinusoid (pure rocking)
   p.t_end         = 250.0;    // default if not present in params.json
   p.n_mix_cycles  = 80;       // default: 80 rocking cycles (upstream hardcoded value)
-  p.frames_per_period = 5;    // default: matches the previous hardcoded dt_video=T_per_st/5
+  p.frames_per_period = 13;   // ~Kim et al.'s cadence; interval is offset off-period (see BioReactor.c)
 
   FILE *fp = fopen(path, "r");
   if (!fp) {
