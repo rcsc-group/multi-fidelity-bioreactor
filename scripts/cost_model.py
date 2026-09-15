@@ -35,6 +35,12 @@ _MEASURED: dict[tuple[int, int], dict[float, float]] = {
     # l10_kim_fig8_signed's own extension segment, 2026-08-09, job 4812614
     # (sacct Elapsed 01:27:49 / 2.98 cycles covered):
     (10, 64): {32.5: 29.5},
+    # 32-rank L10, measured 2026-09-13/15 from runs that actually completed:
+    # 17.5 and 37.5 are the 5-cycle Fig13a calibration runs (jobs 6326988,
+    # 6326989); 32.5 is the Fig 8 late-time probe (job 6314896, 9.98 cycles
+    # in 16:47:58). Note the strong rpm dependence -- 4x across the range --
+    # which is exactly why walltime guessing kept failing here.
+    (10, 32): {17.5: 168.1, 32.5: 101.0, 37.5: 42.0},
 }
 
 

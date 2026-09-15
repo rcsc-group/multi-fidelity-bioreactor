@@ -916,12 +916,35 @@ event init (t = 0)
       long n_before = grid->n;
       refine (level < params.fidelity);
       long n_after = grid->n;
+
+      // [PROJECT GENERALIZED, 2026-09-15] This check used to demand
+      // `n_after == 4 * n_before` -- a hardcoded SINGLE-level assumption.
+      // refine() loops internally until no leaf satisfies the condition, so
+      // a k-level jump multiplies the active leaf count by 4^k in 2D (an
+      // L6->L8 jump measured 512 -> 8192 = 16x = 4^2 and was rejected as
+      // "incomplete" even though it was correct, job 6402091). A k=0 jump
+      // (restarting at the SAME fidelity, e.g. the 2nd and later segments
+      // of a chained run) leaves the count unchanged and was likewise
+      // rejected, which forced chains to swap binaries mid-run.
+      //
+      // The real invariant is: the grid reached the target depth, and every
+      // refined leaf split cleanly, i.e. the ratio is an exact power of 4.
+      long ratio = (n_before > 0) ? n_after / n_before : 0;
+      bool clean_pow4 = (n_before > 0) && (n_after == ratio * n_before);
+      while (clean_pow4 && ratio > 1) {
+        if (ratio % 4) { clean_pow4 = false; break; }
+        ratio /= 4;
+      }
+      clean_pow4 = clean_pow4 && (ratio == 1);
       if (pid() == 0)
         fprintf (ferr, "cross-level warmstart: refine n %ld -> %ld "
-                 "(want exactly 4x), depth %d\n", n_before, n_after, depth());
-      if (depth() != params.fidelity || n_after != 4 * n_before) {
+                 "(want an exact power of 4), depth %d\n",
+                 n_before, n_after, depth());
+      if (depth() != params.fidelity || !clean_pow4) {
         fprintf (stderr, "ERROR: cross-level refine incomplete -- "
-                 "depth()=%d (want %d), n %ld -> %ld (want exactly 4x)\n",
+                 "depth()=%d (want %d), n %ld -> %ld (want n_after/n_before "
+                 "to be an exact power of 4: 1 for a same-level restart, 4 "
+                 "per level refined)\n",
                  depth(), params.fidelity, n_before, n_after);
         exit (1);
       }

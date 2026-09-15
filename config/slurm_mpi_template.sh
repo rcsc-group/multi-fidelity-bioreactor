@@ -14,6 +14,19 @@
 
 #SBATCH --ntasks=16
 #SBATCH --cpus-per-task=1
+# [PROJECT ADDED, 2026-09-15] Pin every MPI job to ONE node. Multi-node MPI
+# has a real, unfixed output-corruption bug in this project: the 240-task /
+# 5-node L10 scaling probe (job 6190727) completed its 10 cycles per
+# Basilisk's own end-of-run print, but all four output files were
+# null-byte-padded from just after the header to a 4096-byte boundary -- a
+# parallel-filesystem write race on the first block, never seen in any
+# single-node job (diary.md 2026-09-10 (2)). Re-verified 2026-09-15: that
+# run's shear_stress.dat still raises ValueError in np.loadtxt, i.e. the
+# data is permanently unusable. Without this line SLURM is free to spread a
+# large --ntasks across nodes and silently corrupt the run, which matters
+# now that 48/64-rank requests are being used. Remove only when that write
+# race is actually fixed and re-tested.
+#SBATCH --nodes=1
 #SBATCH --mail-type=FAIL
 #SBATCH --mail-user=elvis_alexander_aguero_vera@brown.edu
 

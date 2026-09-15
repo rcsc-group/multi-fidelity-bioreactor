@@ -13,8 +13,20 @@ after actually viewing experiments/kimetal2024/Figures/Fig_tau_Ediss.pdf:
   (c) histogram of EDR (non-negative by construction, no sign issue)
       across the liquid at the instant <eps_w'> peaks. LINEAR axes.
 
-Data: runs/l10_kim_fig8_signed (L10, warm-restarted from l10_kim_seg2's
-checkpoint at t=20.65, +1.8 nondim time / ~3 rocking periods).
+Data [UPDATED 2026-09-15]: runs/57f68830, the L10 late-time probe (job
+6314896) -- t=22.48->28.54, i.e. t/Tp 37->47, 10 rocking periods.
+
+Supersedes runs/l10_kim_fig8_signed, which this script used until now and
+which must NOT be used again: its params.json carries `_binary: None`,
+validate_run.py's first HARD failure condition ("ran on the
+default/unknown binary"), and it is the run named in that script's own
+docstring as having silently predated the H_bio nondim and
+tau-histogram-OpenMP-race fixes. The Aug-10 panels built from it are
+therefore invalid, not merely stale.
+
+Also settled by this run (diary.md 2026-09-15): the amplitude is FLAT
+across t/Tp 37->47 (0.6% spread cycle to cycle), so the standing ~3-4x
+gap versus Kim is NOT an artifact of comparing different time windows.
 """
 import json
 import math
@@ -31,8 +43,8 @@ mpl_rc['axes.linewidth'] = 1.4
 mpl_rc['xtick.direction'] = 'in'
 mpl_rc['ytick.direction'] = 'in'
 
-RUN_DIR = Path("/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor/runs/l10_kim_fig8_signed")
-OUT_DIR = Path("/oscar/scratch/eaguerov/tmp/fig8")
+RUN_DIR = Path("/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor/runs/57f68830")
+OUT_DIR = Path("/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor/experiments/kimetal2024/figure_replicas")
 
 params = json.load(open(RUN_DIR / "params.json"))
 L = params["geometry"]["a"]; H = 2 * params["geometry"]["b"]
@@ -84,7 +96,7 @@ ax2.tick_params(axis="y", labelcolor="firebrick")
 ax1.legend(handles=[l1, l2], fontsize=10, loc="upper right")
 ax1.text(-0.16, 1.02, r'$(a)$', transform=ax1.transAxes, fontsize=16, style='italic')
 fig.tight_layout()
-fig.savefig(OUT_DIR / "fig8_a_v2.png", dpi=150)
+fig.savefig(OUT_DIR / "replicated_Fig8_a.png", dpi=150)
 print("saved fig8_a_v2.png")
 
 
@@ -142,7 +154,7 @@ ax.set_xlabel(r"$\tau_w'$ (Pa)", fontsize=13)
 ax.set_ylabel("Normalized frequency", fontsize=13)
 ax.text(-0.16, 1.02, r'$(b)$', transform=ax.transAxes, fontsize=16, style='italic')
 fig.tight_layout()
-fig.savefig(OUT_DIR / "fig8_b_v2.png", dpi=150)
+fig.savefig(OUT_DIR / "replicated_Fig8_b.png", dpi=150)
 print("saved fig8_b_v2.png")
 frac_outside_b = float(((tau_liquid < -15e-3) | (tau_liquid > 15e-3)).mean())
 print(f"fraction of tau_liquid outside Kim's [-15e-3,15e-3] window: {frac_outside_b*100:.2f}%")
@@ -156,7 +168,7 @@ ax.set_xlabel(r"$\epsilon_w'$ (W/m$^3$)", fontsize=13)
 ax.set_ylabel("Normalized frequency", fontsize=13)
 ax.text(-0.16, 1.02, r'$(c)$', transform=ax.transAxes, fontsize=16, style='italic')
 fig.tight_layout()
-fig.savefig(OUT_DIR / "fig8_c_v2.png", dpi=150)
+fig.savefig(OUT_DIR / "replicated_Fig8_c.png", dpi=150)
 frac_outside_c = float((ediss_liquid > 1.0).mean())
 print(f"fraction of ediss_liquid above Kim's 1.0 W/m3 window: {frac_outside_c*100:.2f}%")
 print("saved fig8_c_v2.png")
