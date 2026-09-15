@@ -23,11 +23,29 @@ from __future__ import annotations
 
 # (level, ntasks) -> {rpm: minutes/cycle}. Sources noted per block.
 _MEASURED: dict[tuple[int, int], dict[float, float]] = {
-    # settling-study grid extension runs, 2026-09-12, jobs 5989327-5989350
-    # and 6287058-6287064 (60-cycle segments, sacct Elapsed / 60):
-    (6, 8): {32.5: 2.57, 17.5: 4.23},
-    (7, 8): {32.5: 10.18, 17.5: 13.63},
-    (8, 8): {32.5: 92.15, 37.5: 102.75},  # 37.5 averaged over 2 runs (91.62, 113.9)
+    # [CORRECTED 2026-09-15] This whole block was off by exactly 60x: the
+    # numbers were sacct Elapsed converted to MINUTES for a 60-cycle segment,
+    # recorded as if they were minutes PER CYCLE. The "/ 60" in the old note
+    # was the seconds->minutes conversion; the division by the 60 cycles never
+    # happened. Job 5989327 has Elapsed 00:02:34 -- i.e. 2.57 MINUTES TOTAL,
+    # which was stored as "2.57 min/cycle".
+    #
+    # Confirmed by two independent direct measurements at 32.5 rpm, 8 ranks,
+    # each a 209.7-cycle Fig 9 run that completed (diary.md 2026-09-15 (7)):
+    #   L6  job 6410430  00:08:36 / 209.7 cyc = 0.041 min/cyc  (x60 = 2.46)
+    #   L7  job 6410614  00:34:17 / 209.7 cyc = 0.163 min/cyc  (x60 = 9.8)
+    # against the stored 2.57 and 10.18. Both match to within 5%.
+    #
+    # This made every plan built on it ~60x too pessimistic, which is why the
+    # Fig 9 L7 sweep was costed at ~500 h and declared to need chaining for 9
+    # of 10 points. It does not.
+    #
+    # The 17.5 rpm and (8,8) entries are NOT independently verified yet -- they
+    # are corrected by the same factor of 60 because they come from the same
+    # mis-derivation, and are marked lower-confidence until measured directly.
+    (6, 8): {32.5: 0.041, 17.5: 0.0705},      # 32.5 measured directly
+    (7, 8): {32.5: 0.163, 17.5: 0.227},       # 32.5 measured directly
+    (8, 8): {32.5: 1.536, 37.5: 1.7125},      # neither measured directly yet
     # L10 Fig13a sweep, 2026-09-12, jobs 6197602-6197604 (measured directly
     # from partial shear_stress.dat + sacct TIMEOUT elapsed, since none
     # reached completion -- see conversation 2026-09-12):
