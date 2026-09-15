@@ -41,6 +41,17 @@ typedef struct {
                                 // divisor of the period -- see BioReactor.c (2026-09-15) for why.
   int    remove_drop;           // droplet/bubble removal (upstream REMOVE_DROP); default 0, matches upstream's own runs
   // Checkpoint restart fields (set by chain.py for restart segments; 0 for fresh runs)
+  // restart_continue distinguishes the TWO things a restart can mean:
+  //   0 (default) NEW EXPERIMENT. The restored state is a warm start for a
+  //               DIFFERENT condition (chain.py's parameter sweeps). Soluble
+  //               tracers are zeroed and re-injected n_mix_cycles later, so
+  //               each segment runs its own tracer/oxygen experiment.
+  //   1           CONTINUATION. The segment continues ONE experiment across a
+  //               walltime boundary: tracers keep their restored values and
+  //               are NOT re-injected. Required for any mixing-time (Fig 9/10)
+  //               or kLa (Fig 11/12) run too long for a single job.
+  // Default 0 preserves the existing sweep behaviour exactly.
+  int    restart_continue;
   double t_checkpoint;               // absolute non-dim time of the restored checkpoint
   double omega_b_prev;               // omega_b of the segment that wrote the checkpoint
   // Smooth-step motion interpolation: prev values for all sweepable motion params.
@@ -153,6 +164,8 @@ static BioreactorParams params_read(const char *path) {
       tok_array(json, tokens, ++i, p.phi_horizontal, N_MAX);
       i += tokens[i].size;
     }
+    else if (jsoneq(json, &tokens[i], "restart_continue"))
+      p.restart_continue = tok_int(json, &tokens[++i]);
     else if (jsoneq(json, &tokens[i], "t_checkpoint"))
       p.t_checkpoint = tok_double(json, &tokens[++i]);
     else if (jsoneq(json, &tokens[i], "omega_b_prev"))

@@ -672,6 +672,16 @@ static void write_restart_diagnostic (const char *tag)
   stats spf  = statsf (pf);
   stats sgx  = statsf (g.x);
   stats sgy  = statsf (g.y);
+  // [PROJECT ADDED, 2026-09-15] The passive tracer and oxygen were NOT
+  // covered here, and that gap is exactly why their loss across a restart
+  // went unnoticed: every field this diagnostic DID track round-tripped to
+  // full double precision, so the restart looked clean. Probe 6410668
+  // measured c2 mass 0.0534 -> 0 and oxy 0.0803 -> 0 across a seam while
+  // u/p/f/g were bit-exact. A guard must cover the fields the experiment
+  // depends on, not only the ones a previous investigation happened to
+  // suspect. Fig 9/10 (mixing) and Fig 11/12 (kLa) all hinge on these.
+  stats sc2  = statsf (c2);
+  stats soxy = statsf (oxy);
 #if _MPI
   if (pid() == 0)
 #endif
@@ -696,6 +706,10 @@ static void write_restart_diagnostic (const char *tag)
                sgx.min, sgx.max, sgx.sum, sgx.stddev);
       fprintf (fp, "gy_min %.17g\ngy_max %.17g\ngy_sum %.17g\ngy_stddev %.17g\n",
                sgy.min, sgy.max, sgy.sum, sgy.stddev);
+      fprintf (fp, "c2_min %.17g\nc2_max %.17g\nc2_sum %.17g\nc2_stddev %.17g\n",
+               sc2.min, sc2.max, sc2.sum, sc2.stddev);
+      fprintf (fp, "oxy_min %.17g\noxy_max %.17g\noxy_sum %.17g\noxy_stddev %.17g\n",
+               soxy.min, soxy.max, soxy.sum, soxy.stddev);
       fclose (fp);
     }
   }
@@ -1189,7 +1203,19 @@ event init (t = 0)
     // restriction() propagates leaf=0 to coarse own cells and then runs
     // halo_restriction which communicates those zeroed coarse values to
     // neighbouring ranks' ghost slots, closing the ghost-cell gap.
-    reset (stracers, 0.);
+    //
+    // [PROJECT FIXED, 2026-09-15] The zeroing is now conditional. Note what
+    // the diagnosis above actually says: the problem is STALE COARSE-LEVEL
+    // values, and restriction() is what fixes it, by recomputing coarse cells
+    // from the leaves and communicating them to neighbours' ghost slots. The
+    // leaf values are not the problem -- and on a CONTINUATION they are the
+    // entire experiment. Measured (probe job 6411170): c2 and oxy round-trip
+    // through restore() bit-exact and were then destroyed here, which made
+    // every chained mixing/kLa run silently measure from a blank tracer
+    // field. restore() and solid() were both ruled out by direct measurement
+    // before this line was touched. See diary.md 2026-09-15 (8).
+    if (!params.restart_continue)
+      reset (stracers, 0.);
     boundary (stracers);
     restriction (stracers);
   } else {
@@ -1232,6 +1258,14 @@ event init (t = 0)
                        - pow(fabs(y/b_nd), params.geometry_n));
     #endif
   }
+
+  // [PROJECT ADDED, 2026-09-15] Kept from the bisection that found the
+  // stracers reset (diary.md 2026-09-15 (8)): post_restore vs post_init
+  // brackets everything event init does to the restored state, which is
+  // where the tracer loss actually lived. Cheap, and it is the pair that
+  // would have caught it years earlier.
+  if (restart_file)
+    write_restart_diagnostic ("post_init");
 }
 
 
@@ -1240,6 +1274,13 @@ event init (t = 0)
 // ================================================================== //
 #if TRACER
 event tracer(t = t_mix){
+  // On a CONTINUATION the tracer was injected in an earlier segment and has
+  // been mixing ever since; re-injecting would overwrite that partially-mixed
+  // field with a fresh segregated one and restart chi from 0 mid-experiment
+  // (measured: sigma^2 jumping 0.0079 -> 0.2127, probe job 6410668).
+  // An `if` wrapper, NOT an early `return` -- a valueless return in a Basilisk
+  // event compiles to a nonzero int return and silently stops the time loop.
+  if (!params.restart_continue) {
 
   double h_tr;
   h_tr = (M_PI*R_tr*R_tr);  // Area of circular tracer patch
@@ -1274,6 +1315,7 @@ event tracer(t = t_mix){
     boundary ({c2});
   }
   #endif
+  }  // end if (!params.restart_continue)
 
 }
 #endif
