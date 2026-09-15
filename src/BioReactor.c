@@ -1676,7 +1676,25 @@ event normcal (t+=t_out; t<=t_end){
     foreach(reduction(max:tau_max_val) reduction(+:tau_sum) reduction(+:tau_vol)
             reduction(max:tau_max_strict) reduction(+:tau_sum_strict) reduction(+:tau_vol_strict)
             reduction(max:tau_max_signed) reduction(+:ediss_sum) reduction(+:tau_sum_signed)) {
-      if (f[] > 0.5) {
+      // [PROJECT FIX, 2026-09-15, diary.md] Mask on cs[] too, and weight by
+      // it. `f` is initialised with fraction(f, y_init - y), which fills the
+      // lower half of the WHOLE DOMAIN -- including everything outside the
+      // embedded bag, where there is no fluid and u is identically zero.
+      // Masking on `f[] > 0.5` alone therefore swept those cells into the
+      // spatial averages: they add nothing to the numerator but inflate the
+      // area in the denominator. Measured at L10 (runs/57f68830): cells with
+      // f>0.5 cover 0.5000 of the domain while the liquid actually inside the
+      // bag covers 0.1425 -- a 3.51x inflation, so every reported spatial mean
+      // of tau and EDR was ~3x too small. That is the entire "~3x below Kim"
+      // discrepancy: with the bag mask applied, tau_liq_mean becomes 1.685e-3
+      // Pa vs Kim's 1.803e-3 (0.93x) and Ediss_liq_mean 0.2773 vs 0.2866
+      // W/m3 (0.97x). Spatial MAXIMA were never affected (u=0 outside the bag
+      // => tau=0 there), which is why peak tau always looked reasonable while
+      // the means did not, and why the deficit was resolution-independent.
+      // cs[] is the embed fluid fraction, so cs[]*Delta*Delta is the true
+      // fluid area of a cut cell.
+      if (cs[] > 0. && f[] > 0.5) {
+        double dA = cs[]*(Delta*Delta);
         double du_dy = (u.x[0,1] - u.x[0,-1]) / (2.*Delta);
         double dv_dx = (u.y[1]   - u.y[-1])   / (2.*Delta);
         double du_dx = (u.x[1]   - u.x[-1])   / (2.*Delta);
@@ -1686,14 +1704,14 @@ event normcal (t+=t_out; t<=t_end){
         double ediss = mu(f[]) * (2.*du_dx*du_dx + 2.*dv_dy*dv_dy + (du_dy+dv_dx)*(du_dy+dv_dx));
         if (tau > tau_max_val) tau_max_val = tau;
         if (tau_signed > tau_max_signed) tau_max_signed = tau_signed;
-        tau_sum += tau * (Delta*Delta);
-        tau_sum_signed += tau_signed * (Delta*Delta);
-        tau_vol += Delta*Delta;
-        ediss_sum += ediss * (Delta*Delta);
+        tau_sum += tau * dA;
+        tau_sum_signed += tau_signed * dA;
+        tau_vol += dA;
+        ediss_sum += ediss * dA;
         if (f[] > 1. - 1e-6) {
           if (tau > tau_max_strict) tau_max_strict = tau;
-          tau_sum_strict += tau * (Delta*Delta);
-          tau_vol_strict += Delta*Delta;
+          tau_sum_strict += tau * dA;
+          tau_vol_strict += dA;
         }
       }
     }
@@ -1738,7 +1756,8 @@ event normcal (t+=t_out; t<=t_end){
     #endif
     long *_tau_tbins = (long *) calloc(_tau_nthreads * TAU_BINS, sizeof(long));
     foreach() {
-      if (f[] > 0.5) {
+      // same bag mask as the averaging pass above (2026-09-15 fix)
+      if (cs[] > 0. && f[] > 0.5) {
         double du_dy = (u.x[0,1] - u.x[0,-1]) / (2.*Delta);
         double dv_dx = (u.y[1]   - u.y[-1])   / (2.*Delta);
         double tau   = mu(f[]) * fabs(du_dy + dv_dx);
@@ -1954,7 +1973,9 @@ event movies_output_tau(i++)
   // buffer for any run recorded after this commit; older recordings
   // (l10_kim_tau_video, l10_kim_fig8, etc.) still store fabs()'d values.
   foreach() {
-    if (f[] > 0.5) {
+    // same bag mask as the averaging pass (2026-09-15 fix): outside the
+    // embedded bag there is no fluid, so these fields must be zero there.
+    if (cs[] > 0. && f[] > 0.5) {
       double du_dy = (u.x[0,1] - u.x[0,-1]) / (2.*Delta);
       double dv_dx = (u.y[1]   - u.y[-1])   / (2.*Delta);
       double du_dx = (u.x[1]   - u.x[-1])   / (2.*Delta);
