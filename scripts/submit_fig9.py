@@ -72,14 +72,19 @@ def t_scales(rpm: float) -> tuple[float, float]:
     return T_per, L / U
 
 
-def plan(rpm: float, level: int, ntasks: int) -> dict:
+def plan(rpm: float, level: int, ntasks: int, allow_missing_cost: bool = False) -> dict:
     """Cycles, non-dimensional t_end and a measured-cost walltime for one point."""
     kim = pd.read_csv(KIM_CSV).set_index("RPM")
     T_per, T_bio = t_scales(rpm)
     cyc_mix = MARGIN * float(kim.loc[rpm, "dtmix_strict_0.95"]) / T_per
     cyc_tot = SPINUP_CYCLES + cyc_mix
     t_end = cyc_tot * T_per / T_bio
-    mpc, conf = min_per_cycle(level=level, ntasks=ntasks, rpm=rpm)
+    try:
+        mpc, conf = min_per_cycle(level=level, ntasks=ntasks, rpm=rpm)
+    except ValueError:
+        if not allow_missing_cost:
+            raise
+        mpc, conf = float("nan"), "no cost data; explicit walltime"
     hours = cyc_tot * mpc / 60.0 * WALLTIME_SAFETY
     return {"rpm": rpm, "cyc_tot": cyc_tot, "t_end": t_end,
             "hours": hours, "min_per_cycle": mpc, "confidence": conf,
@@ -87,14 +92,15 @@ def plan(rpm: float, level: int, ntasks: int) -> dict:
             "kim_dtmix_0.50": float(kim.loc[rpm, "dtmix_strict_0.5"])}
 
 
-def submit(rpm: float, level: int, ntasks: int, prefix: str, dry: bool) -> None:
-    p = plan(rpm, level, ntasks)
-    if p["hours"] > 48:
+def submit(rpm: float, level: int, ntasks: int, prefix: str, dry: bool,
+           walltime_override: str | None = None) -> None:
+    p = plan(rpm, level, ntasks, allow_missing_cost=walltime_override is not None)
+    if walltime_override is None and p["hours"] > 48:
         raise SystemExit(
             f"L{level} {rpm} rpm needs {p['hours']:.1f} h, over the 48 h "
             f"Exploratory cap -- this point must be chained (scripts/chain.py), "
             f"not submitted as one job.")
-    walltime = f"{int(p['hours']) + 1:02d}:00:00"
+    walltime = walltime_override or f"{int(p['hours']) + 1:02d}:00:00"
     run_id = f"{prefix}_l{level}_rpm{rpm:g}"
     params = {
         "run_id": run_id, "fidelity": level,
@@ -123,13 +129,27 @@ def submit(rpm: float, level: int, ntasks: int, prefix: str, dry: bool) -> None:
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--stage", choices=["validate", "sweep"], required=True)
+    ap.add_argument("--stage", choices=["validate", "ladder", "sweep"], required=True)
     ap.add_argument("--dry-run", action="store_true")
     a = ap.parse_args()
 
     if a.stage == "validate":
         print("Stage 'validate': one L6 point, full Kim protocol.")
         submit(32.5, level=6, ntasks=8, prefix="fig9_validate", dry=a.dry_run)
+    elif a.stage == "ladder":
+        # L6 came out 12.6-12.9x faster than Kim UNIFORMLY across all three
+        # thresholds -- the signature of an over-diffusive tracer, not of
+        # distorted physics. So the sweep's resolution cannot be assumed; it
+        # gets measured. 32.5 rpm, the condition with the most reference data.
+        #
+        # Walltimes are scaled from the MEASURED L6 run (209.7 cycles in
+        # 8m36s on 8 ranks, no video) at 4x per level, not from cost_model,
+        # whose (6,8) entry is 63x pessimistic here because it was measured
+        # on a video-writing binary. Generous margins since 4x/level is
+        # itself an assumption.
+        for level, walltime in [(7, "02:00:00"), (8, "08:00:00"), (9, "30:00:00")]:
+            submit(32.5, level=level, ntasks=8, prefix="fig9_ladder",
+                   dry=a.dry_run, walltime_override=walltime)
     else:
         print("Stage 'sweep': L7, all 10 of Kim's rpm points.")
         for rpm in [37.5, 35, 32.5, 30, 27.5, 25, 22.5, 20, 17.5, 15]:
