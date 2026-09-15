@@ -137,10 +137,14 @@ def main() -> None:
         print("Stage 'validate': one L6 point, full Kim protocol.")
         submit(32.5, level=6, ntasks=8, prefix="fig9_validate", dry=a.dry_run)
     elif a.stage == "ladder":
-        # L6 came out 12.6-12.9x faster than Kim UNIFORMLY across all three
-        # thresholds -- the signature of an over-diffusive tracer, not of
-        # distorted physics. So the sweep's resolution cannot be assumed; it
-        # gets measured. 32.5 rpm, the condition with the most reference data.
+        # Kim's production mesh is n_L = 2^10 (Main.tex sec. 4), i.e. our
+        # L10 -- verified by his own stated 0.24 mm cell size and 1.05e6
+        # cell count, which our L10 reproduces exactly. Coarser levels
+        # sitting below his curve are therefore a resolution difference, not
+        # a discrepancy. This ladder measures the convergence RATE toward his
+        # mesh so the sweep level is chosen from data: L6 12.9x, L7 6.5x on
+        # dtmix_0.95 (gain 1.98/level, extrapolating to parity at ~L10).
+        # 32.5 rpm, the condition with the most reference data.
         #
         # Walltimes are scaled from the MEASURED L6 run (209.7 cycles in
         # 8m36s on 8 ranks, no video) at 4x per level, not from cost_model,

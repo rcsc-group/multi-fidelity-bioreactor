@@ -16,11 +16,21 @@ pipeline, which returns NaN unless sigma^2_max is within 20% of its analytic
 missing therefore failed that invariant rather than simply not having run --
 the printed table says which.
 
-Mixing is markedly more resolution-sensitive than shear: L6 came out
-12.0-12.9x faster than Kim UNIFORMLY across all three thresholds, the
-signature of an over-diffusive tracer setting the decay rate rather than of
-distorted physics (diary.md 2026-09-15 (7)). Levels are therefore plotted
-separately and never blended.
+KIM'S RESULTS ARE AT n_L = 2^10, i.e. our L10 (Main.tex sec. 4: "A uniform
+mesh with n_L=2^10 grid cells along the width of the domain is used. Each
+grid cell has a dimensional size of 0.24 mm, resulting in a total of
+1.05e6 cells"). Our levels map onto his one-to-one -- our domain width is
+L_bio = L_x = 0.25 m with 2^L cells across it, so L10 gives 0.244 mm and
+1024^2 = 1.05e6 cells, matching both of his stated numbers.
+
+So a coarser level sitting below Kim's curve is NOT a discrepancy; it is a
+grid 2^(10-L) times coarser per direction, and tracer numerical diffusion is
+the quantity most sensitive to cell size. Measured: L6 12.9x fast, L7 6.5x
+on dtmix_0.95, a per-level gain of 1.98 that extrapolates to parity at
+~L10 -- Kim's own mesh (diary.md 2026-09-15 (9)).
+
+Levels are therefore plotted separately and never blended, and the L-vs-Kim
+ratio is only a convergence statement, never an error.
 
 Usage:  uv run python scripts/plot_fig9.py
 """
