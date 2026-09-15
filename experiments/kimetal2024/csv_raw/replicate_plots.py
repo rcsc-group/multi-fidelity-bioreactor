@@ -1,3 +1,17 @@
+"""Redraw Kim et al. (2024) Figs. 9-13 from THEIR OWN digitized data, in
+Matlab's default style, as a visual check that csv_raw/*.csv were digitized
+correctly.
+
+THESE ARE NOT REPLICAS. This script reads zero of our runs -- it contains no
+simulation output whatsoever. Output therefore goes to ../kim_redrawn/ as
+`kim_Fig*.png`, NOT to ../figure_replicas/ as `replicated_Fig*.png`.
+
+[2026-09-15] It previously wrote `replicated_Fig9..13.png` into
+figure_replicas/, next to genuine replicas, where four Kim-only redraws sat
+for six weeks looking like replicated results -- and where its Fig13 output
+collided with the real replica written by scripts/plot_fig13.py, so running
+this script would have silently overwritten it.
+"""
 import os
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -30,7 +44,7 @@ MATLAB_PURPLE = '#7E2F8E'
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
 data_dir = script_dir
-output_dir = os.path.abspath(os.path.join(script_dir, "..", "figure_replicas"))
+output_dir = os.path.abspath(os.path.join(script_dir, "..", "kim_redrawn"))
 os.makedirs(output_dir, exist_ok=True)
 
 # Setup the standard axes box layout in pixels (margins)
@@ -108,7 +122,7 @@ def plot_figure_9():
     ax1.legend(lns, labs, loc='upper right', frameon=True, edgecolor='black', 
                facecolor='white', framealpha=1.0, fancybox=False)
     
-    plt.savefig(os.path.join(output_dir, "replicated_Fig9.png"), dpi=150)
+    plt.savefig(os.path.join(output_dir, "kim_Fig9.png"), dpi=150)
     plt.close()
     print("Replicated Figure 9 saved.")
 
@@ -145,7 +159,7 @@ def plot_figure_10():
     ax1.legend(lns, labs, loc='upper right', frameon=True, edgecolor='black', 
                facecolor='white', framealpha=1.0, fancybox=False)
     
-    plt.savefig(os.path.join(output_dir, "replicated_Fig10.png"), dpi=150)
+    plt.savefig(os.path.join(output_dir, "kim_Fig10.png"), dpi=150)
     plt.close()
     print("Replicated Figure 10 saved.")
 
@@ -187,7 +201,7 @@ def plot_figure_11():
     ax1.legend(lns, labs, loc='upper left', frameon=True, edgecolor='black', 
                facecolor='white', framealpha=1.0, fancybox=False)
     
-    plt.savefig(os.path.join(output_dir, "replicated_Fig11.png"), dpi=150)
+    plt.savefig(os.path.join(output_dir, "kim_Fig11.png"), dpi=150)
     plt.close()
     print("Replicated Figure 11 saved.")
 
@@ -227,7 +241,7 @@ def plot_figure_12():
     ax1.legend(lns, labs, loc='upper left', frameon=True, edgecolor='black', 
                facecolor='white', framealpha=1.0, fancybox=False)
     
-    plt.savefig(os.path.join(output_dir, "replicated_Fig12.png"), dpi=150)
+    plt.savefig(os.path.join(output_dir, "kim_Fig12.png"), dpi=150)
     plt.close()
     print("Replicated Figure 12 saved.")
 
@@ -236,7 +250,13 @@ def plot_figure_12():
 # ==============================================================================
 def plot_figure_13():
     csv_a = os.path.join(data_dir, "shear_ediss_vs_frequency.csv")
-    df_a = pd.read_csv(csv_a)
+    # row 1 of this CSV is a units/label row, not data. Reading it as data
+    # made every column strings and turned panel (a) into a categorical axis
+    # (y ticks read "tau_liq_max") -- which is why this function's output was
+    # never committed while Figs 9-12 were. The angle CSV has no units row.
+    df_a = pd.read_csv(csv_a, skiprows=[1])
+    df_a["RPM"] = pd.to_numeric(df_a["RPM"])
+    df_a = df_a.sort_values("RPM")
     
     csv_b = os.path.join(data_dir, "shear_ediss_vs_angle.csv")
     df_b = pd.read_csv(csv_b)
@@ -281,17 +301,17 @@ def plot_figure_13():
     # PANEL B: Angle sweep
     ax_b_r = ax_b.twinx()
     
-    h5 = ax_b.plot(df_b["Angle_deg"], df_b["tau_liq_max"], 'o-', color=MATLAB_BLUE, 
+    h5 = ax_b.plot(df_b["theta_deg"], df_b["tau_liq_max"], 'o-', color=MATLAB_BLUE, 
                   markerfacecolor=MATLAB_BLUE, markeredgecolor=MATLAB_BLUE, 
                   markersize=5, linewidth=1.2, label=r'$\tau_{w,\mathrm{max}}^\prime$ (abs max)')
-    h6 = ax_b.plot(df_b["Angle_deg"], df_b["tau_liq_mean"], 'o--', color=MATLAB_BLUE, 
+    h6 = ax_b.plot(df_b["theta_deg"], df_b["tau_liq_mean"], 'o--', color=MATLAB_BLUE, 
                   markerfacecolor='none', markeredgecolor=MATLAB_BLUE, 
                   markersize=5, linewidth=1.2, label=r'$\langle \tau_w^\prime \rangle$ (sp averaged max)')
     
-    h7 = ax_b_r.plot(df_b["Angle_deg"], df_b["Ediss_liq_max"], 's-', color=MATLAB_ORANGE, 
+    h7 = ax_b_r.plot(df_b["theta_deg"], df_b["Ediss_liq_max"], 's-', color=MATLAB_ORANGE, 
                   markerfacecolor=MATLAB_ORANGE, markeredgecolor=MATLAB_ORANGE, 
                   markersize=5, linewidth=1.2, label=r'$\epsilon_{w,\mathrm{max}}^\prime$ (abs max)')
-    h8 = ax_b_r.plot(df_b["Angle_deg"], df_b["Ediss_liq_mean"], 's--', color=MATLAB_ORANGE, 
+    h8 = ax_b_r.plot(df_b["theta_deg"], df_b["Ediss_liq_mean"], 's--', color=MATLAB_ORANGE, 
                   markerfacecolor='none', markeredgecolor=MATLAB_ORANGE, 
                   markersize=5, linewidth=1.2, label=r'$\langle \epsilon_w^\prime \rangle$ (sp averaged max)')
     
@@ -310,7 +330,7 @@ def plot_figure_13():
                facecolor='white', framealpha=1.0, fancybox=False)
     ax_b.text(0.02, 0.93, '(b)', transform=ax_b.transAxes, fontweight='bold')
     
-    plt.savefig(os.path.join(output_dir, "replicated_Fig13.png"), dpi=150)
+    plt.savefig(os.path.join(output_dir, "kim_Fig13.png"), dpi=150)
     plt.close()
     print("Replicated Figure 13 saved.")
 
