@@ -141,10 +141,18 @@ _COL_C2_LIQ_SUM  = 8   # VERTICAL_MIXUP tracer — used for dtmix
 _COL_C2_LIQ_SUM2 = 9
 # vol_frac_interf.dat: i t f_liq_sum f_liq_interf posY_max posY_min
 _COL_F_LIQ      = 2
+
 # normf.dat: i t Omega_avg Omega_rms Omega_vol Omega_max ux_avg ux_rms ux_vol ux_max uy_avg uy_rms uy_vol uy_max
 _COL_OMEGA_AVG  = 2
 _COL_UX_RMS     = 7
 _COL_UY_RMS     = 11
+# Analytic variance of a top-half tracer injection over the liquid, and how
+# far a run's measured value may stray before its dtmix is refused. The
+# tolerance is generous because interface and embed cut cells discretise the
+# half-and-half split; it is there to catch a wrong normalisation reference,
+# not to grade the mesh.
+_SIGMA2_MAX_EXACT = 0.25
+_SIGMA2_MAX_TOL   = 0.20
 
 
 # ── time-scale helpers ────────────────────────────────────────────────────────
@@ -377,7 +385,7 @@ def _compute_mixing_metrics(run_dir: Path, params: dict) -> dict:
     simulation duration.
     """
     nan_result = {"dtmix_0.50": math.nan, "dtmix_0.75": math.nan,
-                  "dtmix_0.95": math.nan}
+                  "dtmix_0.95": math.nan, "sigma2_max": math.nan}
     tr_path = run_dir / "tr_oxy.dat"
     vf_path = run_dir / "vol_frac_interf.dat"
     if not tr_path.exists() or not vf_path.exists():
@@ -408,13 +416,29 @@ def _compute_mixing_metrics(run_dir: Path, params: dict) -> dict:
     if sigma2_max <= 0:
         return nan_result
 
+    # At injection the tracer is 1 over the top half of the liquid and 0 over
+    # the bottom half, so <c>=0.5, <c^2>=0.5 and sigma^2_max = 0.25 EXACTLY --
+    # independent of resolution, rpm and bag geometry. A measured value far
+    # from 0.25 means the first sampled row is not the injection instant, or
+    # the injection did not fill exactly half the liquid; either way chi is
+    # being normalised against the wrong reference.
+    #
+    # This has to be checked directly, because dtmix cannot reveal it: for
+    # exponential mixing a first sample late by delta starts the clock at
+    # t_inj+delta AND lowers the threshold by exp(-delta/tau), and the two
+    # errors cancel exactly. See tests/verification/test_mixing_metrics.py.
+    if not (_SIGMA2_MAX_EXACT * (1 - _SIGMA2_MAX_TOL)
+            <= sigma2_max
+            <= _SIGMA2_MAX_EXACT * (1 + _SIGMA2_MAX_TOL)):
+        return {**nan_result, "sigma2_max": sigma2_max}
+
     chi = np.clip(1.0 - sigma2 / sigma2_max, 0.0, 1.0)
     chi[:t0_idx] = 0.0   # before injection χ is undefined → set to 0
 
     T_bio, _    = _t_scales(params)
     t_inject_nd = float(t[t0_idx])
 
-    result = {}
+    result = {"sigma2_max": sigma2_max}
     for threshold in (0.50, 0.75, 0.95):
         sub = chi[t0_idx:]
         idx = int(np.argmax(sub >= threshold))
