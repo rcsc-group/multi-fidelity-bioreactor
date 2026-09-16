@@ -110,3 +110,65 @@ def test_default_restart_still_wipes_and_reinjects(tmp_path):
         "restart_continue=0 must zero the tracer at the start of the segment "
         "(chain.py sweep semantics); found a non-zero value"
     )
+
+
+@pytest.mark.medium
+def test_kla_survives_a_restart_only_when_segments_are_stitched(tmp_path):
+    """kLa across a continuation is correct -- but ONLY from the joined series.
+
+    Measured: C* is continuous across the seam to 0.035%, and kLa fitted to the
+    STITCHED series reproduces an unbroken run to ratio 1.000 at all three
+    thresholds. So the solver side is sound.
+
+    The trap is on the postprocessing side. postprocess.py computes kLa per RUN
+    DIRECTORY, and a later segment restores an ALREADY-SATURATED oxygen field --
+    so C* starts near 1 and crosses every threshold at its first row, returning
+    the same kLa for 10%, 25% and 50%. That is the exact signature
+    test_kla_values_differ_across_saturation_levels was written to catch, and a
+    chained kLa sweep would hit it silently on every segment after the first.
+
+    Guarded here because Figs 11/12 depend on it and chaining is how the long
+    low-rpm points will have to run.
+    """
+    from scripts.postprocess import _compute_c_star, _kla_5pt_at_threshold
+
+    NC = 20
+    cont = run_bioreactor(_params("k_cont", NC), tmp_path, timeout=1200)
+    seg1 = run_bioreactor(_params("k_s1", NC // 2), tmp_path, timeout=1200)
+    ck = seg1 / "checkpoint.dump"
+    assert ck.exists(), "segment 1 wrote no checkpoint.dump"
+    t_ck = dump_fields(ck)[0]["t"]
+    seg2 = run_bioreactor(_params("k_s2", NC // 2, restart_continue=1, t_checkpoint=t_ck),
+                          tmp_path, timeout=1200, restart_from=ck)
+
+    tc, cc = _compute_c_star(cont)
+    t1, c1 = _compute_c_star(seg1)
+    t2, c2 = _compute_c_star(seg2)
+
+    # (a) the oxygen field itself carries across
+    assert abs(c2[0] - c1[-1]) < 0.01, (
+        f"C* jumps {abs(c2[0]-c1[-1]):.4f} across the seam; the restored oxygen "
+        f"field is not continuous")
+
+    # (b) stitched kLa reproduces the unbroken run
+    keep = t2 > t1[-1]
+    ts = np.concatenate([t1, t2[keep]])
+    cs = np.concatenate([c1, c2[keep]])
+    order = np.argsort(ts)
+    ts, cs = ts[order], cs[order]
+    for thr in (0.10, 0.25, 0.50):
+        a = _kla_5pt_at_threshold(tc, cc, thr)
+        b = _kla_5pt_at_threshold(ts, cs, thr)
+        if a != a:
+            continue
+        assert b == pytest.approx(a, rel=0.10), (
+            f"kLa_{int(thr*100)}: continuous={a:.4g} vs stitched={b:.4g}")
+
+    # (c) the trap: a later segment ALONE must not be treated as a kLa run
+    solo = [_kla_5pt_at_threshold(t2, c2, thr) for thr in (0.10, 0.25)]
+    if all(v == v for v in solo):
+        assert solo[0] == pytest.approx(solo[1], rel=1e-6), (
+            "expected the known-degenerate case (a saturated segment crosses "
+            "every threshold at its first row); if this no longer holds, "
+            "per-segment kLa may have become meaningful and this guard needs "
+            "rethinking rather than deleting")
