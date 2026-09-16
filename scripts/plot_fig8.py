@@ -122,18 +122,32 @@ for lvl, run, col in RUNS:
 
 def phase_panel(key, fname, ylabel, ylim, kim_peak, symmetric):
     fig, ax = plt.subplots(figsize=(5.6, 3.4))
+    # Mark size and line weight follow the SAMPLE DENSITY, because these runs
+    # predate the off-period frame cadence and so differ wildly in it:
+    # L8's frame spacing is 0.2006 T_p (slightly OFF commensurate), so its
+    # phase creeps ~0.0006/cycle and 150 frames fill in 150 distinct phases --
+    # it genuinely traces the curve. L9 (0.2000) pins to 16 phases and L10 to
+    # just 5, however long they run. Drawn at one size, L8's 150 markers
+    # clumped into drifting arcs and read as a heavy dashed rule rather than
+    # as the densest, most informative series on the panel.
     for lvl, _, col in RUNS:
         d = series[lvl]
-        ax.plot(d["phase"], d[key], color=col, lw=0, marker="o", ms=3.2,
-                alpha=0.85, label=f"{lvl} (n={d['n']})")
-    # Kim's peak as a quiet reference, not a feature: hairline, light grey,
-    # fine dashes, behind the data. At lw=1.0 in "0.25" it read as a heavy
-    # dashed rule across a small panel -- and in a1, drawn at +/-peak, as two
-    # of them competing with the curve the panel is actually about.
-    for y in ((kim_peak, -kim_peak) if symmetric else (kim_peak,)):
-        ax.axhline(y, color="0.62", lw=0.6, ls=(0, (4, 3)), zorder=0)
-    # one legend entry for the pair, via a proxy handle
-    ax.plot([], [], color="0.62", lw=0.6, ls=(0, (4, 3)), label="Kim peak")
+        dense = d["n"] > 60
+        ax.plot(d["phase"], d[key], color=col,
+                lw=1.0 if dense else 0.9,
+                marker="o", ms=1.8 if dense else 4.2,
+                alpha=0.55 if dense else 0.95, label=lvl, zorder=2 if dense else 3)
+    # NO Kim series on this panel, and no horizontal reference line either.
+    #
+    # Kim's Fig 8(a) is a TIME SERIES over the rocking phase, but we do not
+    # have it as data: Figures/Fig_tau_Ediss.pdf embeds the panel as a RASTER
+    # image (one 2.7 MB image stream, zero vector path operators), and his
+    # published dataset carries only the single PEAK value, not the curve.
+    # Plotting that lone number as a rule across the panel was a poor stand-in
+    # for a series -- it read as a heavy dashed line with no x-dependence,
+    # unlike every other mark here. Kim's peak belongs in the caption until
+    # the curve is pixel-digitised; then it can be drawn as markers joined by
+    # a line, exactly like ours.
     ax.set_xlabel(r"rocking phase  $t/T_p$  (mod 1)", fontsize=12)
     ax.set_ylabel(ylabel, fontsize=12)
     ax.set_xlim(0, 1)
