@@ -105,7 +105,37 @@ kim_rpm=pd.read_csv(CSV_RPM,skiprows=[1]); kim_rpm['RPM']=pd.to_numeric(kim_rpm[
 kim_rpm=kim_rpm.sort_values('RPM')
 kim_deg=pd.read_csv(CSV_DEG).sort_values('theta_deg')
 l6=from_timeseries('fig13a_l6_mf_rpm'); l8=from_timeseries('fig13a_rm_mf_rpm')
-l9=from_frames(RPM_RUNS_L9); l9d=from_frames(DEG_RUNS)
+def with_dense_max(df, runs):
+    """Replace the frame-derived tau_max with the per-timestep one.
+
+    [FIXED 2026-09-16] L9 was the only level whose MAX came from saved frames
+    rather than from shear_stress.dat, and frames sample ~5-16 phases against
+    the KPI's ~30 per cycle. A maximum over that sparse a sample misses the
+    peak instant: measured here 0.70x the true max at 32.5 rpm, 0.53x at 37.5
+    (worst where the peak is sharpest in time), 0.93x at 25. That deficit --
+    not physics -- is what made L10 look like it beat L9 on the filled circles.
+
+    The MEANS still come from the frames, because these L9 runs predate the
+    bag-mask fix and their logged means are diluted ~3.5x. The MAX does not
+    need that treatment: the mask bug could not touch maxima (u=0 outside the
+    bag, so tau=0 there), which is why the dense KPI max is usable here even
+    though the mean from the same file is not.
+    """
+    import numpy as np
+    out = df.copy()
+    for i, r in out.iterrows():
+        run = runs[r['x']]
+        f = ROOT/'runs'/run/'shear_stress.dat'
+        if not f.exists():
+            continue
+        a = np.loadtxt(f, skiprows=1); _, ts, _ = scales(run)
+        t = a[:, 1]; m = t >= t[0] + 0.5*(t[-1] - t[0])
+        out.at[i, 'tau_max'] = a[m, 8].max()*ts     # col 8 = signed max, as Kim
+    return out
+
+
+l9=with_dense_max(from_frames(RPM_RUNS_L9), RPM_RUNS_L9)
+l9d=with_dense_max(from_frames(DEG_RUNS), DEG_RUNS)
 # L10 -- Kim's OWN mesh (n_L=2^10). Cross-level sweep, each point warm-started
 # from the converged L9 state at the same rpm, on BioReactor-mpi-xlevel-chain
 # (built 2026-09-15 10:41, i.e. WITH the bag-mask fix).
