@@ -126,9 +126,14 @@ def phase_panel(key, fname, ylabel, ylim, kim_peak, symmetric):
         d = series[lvl]
         ax.plot(d["phase"], d[key], color=col, lw=0, marker="o", ms=3.2,
                 alpha=0.85, label=f"{lvl} (n={d['n']})")
-    ax.axhline(kim_peak, color="0.25", lw=1.0, ls="--", label="Kim peak")
-    if symmetric:
-        ax.axhline(-kim_peak, color="0.25", lw=1.0, ls="--")
+    # Kim's peak as a quiet reference, not a feature: hairline, light grey,
+    # fine dashes, behind the data. At lw=1.0 in "0.25" it read as a heavy
+    # dashed rule across a small panel -- and in a1, drawn at +/-peak, as two
+    # of them competing with the curve the panel is actually about.
+    for y in ((kim_peak, -kim_peak) if symmetric else (kim_peak,)):
+        ax.axhline(y, color="0.62", lw=0.6, ls=(0, (4, 3)), zorder=0)
+    # one legend entry for the pair, via a proxy handle
+    ax.plot([], [], color="0.62", lw=0.6, ls=(0, (4, 3)), label="Kim peak")
     ax.set_xlabel(r"rocking phase  $t/T_p$  (mod 1)", fontsize=12)
     ax.set_ylabel(ylabel, fontsize=12)
     ax.set_xlim(0, 1)
