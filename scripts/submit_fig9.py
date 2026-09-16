@@ -53,6 +53,10 @@ BINARY = "/oscar/scratch/eaguerov/BioReactor-mpi-fig9-2736992"
 # Same source, built with -DEXTRA_TRACERS=0 (drops the three never-initialised
 # tracer variants c/c1/c3 from stracers).
 LEAN_BINARY = "/oscar/scratch/eaguerov/BioReactor-mpi-lean"
+# Production binary for the Fig 9 sweep, built from 4b3a435 with
+# -DEXTRA_TRACERS=0: lean (1.69x), Kim-exact tau/EDR columns, and the
+# steady-streaming vorticity accumulator.
+PROD_BINARY = "/oscar/scratch/eaguerov/BioReactor-mpi-prod-4b3a435"
 
 KIM_CSV = ROOT / "experiments/kimetal2024/csv_raw/mixing_kla_vs_frequency.csv"
 SPINUP_CYCLES = 80     # Kim's tracer release instant, t/T_p = 80
@@ -292,9 +296,33 @@ def main() -> None:
                                cpus=1, ntasks=8, mem="4G")
             print(f"  submitted job={job}")
     else:
-        print("Stage 'sweep': L7, all 10 of Kim's rpm points.")
+        # L9, 32 ranks, all 10 of Kim's rpm points, run in PARALLEL.
+        #
+        # Not L10: measured L10 cost is 58.2 min/cycle at 32 ranks, so the same
+        # sweep there is ~2200 h and the longest point alone exceeds the 48 h
+        # cap. L9 is ~11x cheaper (5.2 min/cycle) -- every point fits in one
+        # job, longest 26 h. The L10 anchor at 32.5 rpm is run separately, in
+        # segments, to tie the sweep to Kim's own mesh.
+        print("Stage 'sweep': L9, 32 ranks, all 10 rpm points (parallel).")
         for rpm in [37.5, 35, 32.5, 30, 27.5, 25, 22.5, 20, 17.5, 15]:
-            submit(float(rpm), level=7, ntasks=8, prefix="fig9", dry=a.dry_run)
+            submit(float(rpm), level=9, ntasks=32, prefix="fig9",
+                   dry=a.dry_run, binary=PROD_BINARY,
+                   walltime_override=_l9_walltime(float(rpm)))
+
+
+def _l9_walltime(rpm: float) -> str:
+    """Per-point walltime from the MEASURED L10 cost divided by the measured
+    per-level factor, with 1.6x margin. Never a guess -- see cost_model."""
+    from scripts.cost_model import min_per_cycle, PER_LEVEL_WORK_FACTOR
+    mc10, _ = min_per_cycle(10, 32, 32.5)
+    mc9 = mc10 / PER_LEVEL_WORK_FACTOR
+    kim = pd.read_csv(KIM_CSV).set_index("RPM")
+    T_per, _ = t_scales(rpm)
+    cyc = SPINUP_CYCLES + MARGIN * float(kim.loc[rpm, "dtmix_strict_0.95"]) / T_per
+    hours = cyc * mc9 / 60.0 * 1.6
+    if hours > 47:
+        raise SystemExit(f"L9 {rpm} rpm needs {hours:.0f} h > 48 h cap")
+    return f"{int(hours) + 1:02d}:00:00"
 
 
 if __name__ == "__main__":
