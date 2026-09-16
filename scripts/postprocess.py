@@ -66,17 +66,26 @@ long it takes to reach three levels of homogeneity:
 A faster mixer reaches 95 % sooner.  Values of NaN mean the simulation did not
 run long enough (increase t_buffer in the sweep config).
 
-**Steady streaming vorticity — vor_mean  (units: 1/s)**
+**Mean absolute vorticity — vor_mean  (units: 1/s)**
 
-When a bag rocks back and forth, the time-averaged flow forms a slow "streaming"
-circulation (two counter-rotating vortices) that is responsible for most of the
-long-term mixing and oxygen transport.  ``vor_mean`` is the spatial average of
-the absolute vorticity |ξ| of this time-averaged flow, in dimensional units of
-1/s.
+``vor_mean`` is the time-average of the spatial mean of |ω| of the
+INSTANTANEOUS flow: ⟨|ω(t)|⟩ averaged over the settled window.  It measures
+overall agitation and is dominated by the rocking oscillation.
 
-Higher vor_mean → stronger steady streaming → faster mixing and higher kLa.
-It is the hydrodynamic root cause connecting operating conditions to
-bioreactor performance.
+[CORRECTED 2026-09-15] This docstring previously claimed vor_mean was "the
+spatial average of |ξ| of the TIME-AVERAGED flow" — Kim's steady-streaming
+vorticity ⟨|ξ̄_b'|⟩.  It is not, and never was: the overbar belongs INSIDE
+the curl.  For an oscillatory flow the two differ without limit (the mean
+flow can be ≈0 while |ω| is large), so comparing vor_mean to Kim's column was
+invalid.  The genuine quantity is ``vor_streaming`` below.  vor_mean is kept
+as-is because the heatmap figures label it ⟨|ξ|⟩, which is exactly what it is.
+
+**Steady streaming vorticity — vor_streaming  (units: 1/s)**
+
+Kim's ⟨|ξ̄_b'|⟩: average the velocity field over one rocking period FIRST,
+then take its curl, then spatially average |curl| over the water.  Computed in
+the solver (``streaming.dat``) because it needs every timestep, not the
+sampled output cadence.  NaN for runs predating that accumulator.
 
 Input files read
 -----------------
@@ -452,6 +461,34 @@ def _compute_mixing_metrics(run_dir: Path, params: dict) -> dict:
 
 # ── vorticity (steady streaming) ─────────────────────────────────────────────
 
+def _compute_streaming_vorticity(run_dir: Path, params: dict) -> dict:
+    """Kim's steady-streaming vorticity ⟨|ξ̄_b'|⟩ in 1/s, from streaming.dat.
+
+    The solver writes one row per completed rocking period, already spatially
+    averaged over the water with Kim's own cs==1 mask. Here we only convert to
+    1/s (÷ T_bio) and average over the SETTLED TAIL — the first windows carry
+    the ramp or post-restart transient, and including them biases the value
+    high (measured: 9.0 → 5.0 non-dim over the first four windows at L6).
+
+    Returns NaN rather than 0 when streaming.dat is absent: a run predating the
+    accumulator has no value, and 0 would plot as a real datum on Kim's axis.
+    """
+    nan_result = {"vor_streaming": math.nan, "vor_streaming_max": math.nan}
+    path = run_dir / "streaming.dat"
+    if not path.exists():
+        return nan_result
+    arr = _load_dat(path)
+    if arr.ndim != 2 or arr.shape[0] < 1 or arr.shape[1] < 4:
+        return nan_result
+
+    T_bio, _ = _t_scales(params)
+    vor_nd, vmax_nd = arr[:, 2], arr[:, 3]
+    # settled tail: last 60% of the windows, at least one
+    k = max(0, int(0.4 * len(vor_nd)))
+    return {"vor_streaming": float(np.mean(vor_nd[k:])) / T_bio,
+            "vor_streaming_max": float(np.max(vmax_nd[k:])) / T_bio}
+
+
 def _compute_vor_mean(run_dir: Path, params: dict) -> float:
     """Compute the period-averaged mean absolute vorticity in 1/s.
 
@@ -786,6 +823,8 @@ def main(run_dir: str, params: dict | None = None) -> dict:
         "kLa_inst_10": math.nan, "kLa_inst_25": math.nan, "kLa_inst_50": math.nan,
         "dtmix_0.50": math.nan, "dtmix_0.75": math.nan, "dtmix_0.95": math.nan,
         "vor_mean": math.nan,
+        "vor_streaming": math.nan,
+        "vor_streaming_max": math.nan,
         "vel_rms_qss": math.nan, "kla_fit_rmse_25": math.nan,
         "tau_95_qss": math.nan, "tau_98_qss": math.nan, "tau_100_qss": math.nan,
         "tau_95_max": math.nan, "tau_98_max": math.nan, "tau_100_max": math.nan,
@@ -814,6 +853,7 @@ def main(run_dir: str, params: dict | None = None) -> dict:
     }
     results.update(_compute_mixing_metrics(path, params))
     results["vor_mean"]          = _compute_vor_mean(path, params)
+    results.update(_compute_streaming_vorticity(path, params))
     results["vel_rms_qss"]       = _compute_vel_rms_qss(path, params)
     results["kla_fit_rmse_25"]   = _compute_kla_fit_rmse_25(t, c_star)
     results.update(_compute_tau98_kpis(path, params))

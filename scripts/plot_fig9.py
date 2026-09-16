@@ -77,7 +77,10 @@ def collect() -> pd.DataFrame:
                 "level": level, "rpm": float(rpm), "colour": colour,
                 "run_id": tmpl.format(rpm=rpm),
                 "sigma2_max": d.get("sigma2_max", math.nan),
-                "vor_mean": d.get("vor_mean", math.nan),
+                # Kim's right-hand axis is the STEADY-STREAMING vorticity (curl of the
+                # time-averaged flow), not vor_mean (time-average of |curl u|).
+                # See postprocess docstring; vor_mean is NaN-free but wrong here.
+                "vor_mean": d.get("vor_streaming", math.nan),
                 **{k: d.get(k, math.nan) for k, _, _ in THRESHOLDS},
             })
     return pd.DataFrame(rows).sort_values(["level", "rpm"])

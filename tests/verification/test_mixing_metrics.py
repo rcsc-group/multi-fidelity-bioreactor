@@ -174,3 +174,42 @@ def test_bad_sigma2_max_invalidates_dtmix(tmp_path):
             f"sigma^2_max = {got['sigma2_max']:.4f} is 30% below the analytic "
             f"0.25, so chi is normalised against the wrong reference and "
             f"dtmix_{thr:.2f} is not a mixing time. Return NaN.")
+
+
+# ── steady-streaming vorticity ────────────────────────────────────────────
+
+def _write_streaming(tmp_path: Path, rows: list[tuple[float, float, float]]) -> Path:
+    """rows: (t, vor_stream_mean, liq_area) per completed rocking period."""
+    lines = ["i t vor_stream_mean vor_stream_max liq_vol window_dt"]
+    for k, (t, v, area) in enumerate(rows):
+        lines.append(f"{k} {t:.17g} {v:.17g} {10*v:.17g} {area:.17g} 0.6073")
+    (tmp_path / "streaming.dat").write_text("\n".join(lines) + "\n")
+    return tmp_path
+
+
+def test_streaming_vorticity_is_dimensionalised_and_tail_averaged(tmp_path):
+    """Kim's <|xi_bar_b'|> is in 1/s; the solver writes it non-dimensional.
+
+    Conversion is vor_nd / T_bio, the same as vor_mean. The value reported is
+    the mean over the SETTLED tail, not the whole record, because the early
+    windows include the post-restart / ramp transient.
+    """
+    from scripts.postprocess import _compute_streaming_vorticity, _t_scales
+    T_bio = _t_scales(PARAMS)[0]
+    # transient then a clean plateau at 5.0 non-dim
+    rows = [(0.6 * k, v, 0.0937) for k, v in
+            enumerate([9.0, 7.0, 6.0, 5.4] + [5.0] * 16)]
+    got = _compute_streaming_vorticity(_write_streaming(tmp_path, rows), PARAMS)
+    assert got["vor_streaming"] == pytest.approx(5.0 / T_bio, rel=1e-3), (
+        f"expected the settled plateau 5.0 non-dim / T_bio = {5.0/T_bio:.4f} 1/s, "
+        f"got {got['vor_streaming']}")
+
+
+def test_streaming_vorticity_absent_is_nan_not_zero(tmp_path):
+    """A run predating the accumulator must report NaN, never 0.
+
+    0 would plot as a real datum on Kim's right-hand axis; NaN is skipped.
+    """
+    from scripts.postprocess import _compute_streaming_vorticity
+    got = _compute_streaming_vorticity(tmp_path, PARAMS)
+    assert math.isnan(got["vor_streaming"])
