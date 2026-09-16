@@ -20,6 +20,12 @@ other `*_prev` fields) are set to whatever condition actually produced the
 checkpoint, and a smooth-step ramp carries the forcing from the old
 condition to the new one.
 
+Since 2026-09-16 the two cases are told apart explicitly, by
+`restart_continue` in `params.json` — see
+[below](#restart_continue-tells-the-two-cases-apart). Before that they were
+indistinguishable to the code, which is how segments came to silently discard
+their tracers.
+
 Conflating these two — assuming a same-condition segment restart is
 "basically free" the way it is for pure wall-clock continuation — is exactly
 where this gets subtle, below.
@@ -130,6 +136,109 @@ change itself is a fast, resolution-intrinsic driver of the sign flip; see
 [Validating against Kim et al. (2024)](kim-et-al-validation.md#the-part-that-smells)
 for the full numbers.
 
+## Segments used to throw away the tracer and the oxygen
+
+Everything above is about momentum. The scalars were a different story.
+
+Until 2026-09-16, the restart path ran `reset (stracers, 0.)` — zeroing `c`,
+`oxy`, `c1`, `c2` and `c3` — on **every** restart, segment or warm-start
+alike. For a warm-start that is right: the new condition wants its own tracer
+experiment. For a segment it is fatal, because the whole point of a segment is
+that nothing physical changes. Any chained mixing or kLa run measured from a
+blank field.
+
+It hid for so long because `write_restart_diagnostic` tracked `u`, `p`, `f`,
+`pf` and `g` — the fields a 2026-09-07 investigation had suspected — and all
+of them round-trip to full double precision. The restart looked immaculate.
+Nobody was watching the fields the experiment actually depended on.
+
+The line is not careless, and its stated reason is real: stale *coarse-level*
+ghost values from the checkpoint drive a gradual multigrid divergence over
+about five periods. But the comment on it names `restriction()` as the cure,
+and `restriction()` recomputes coarse cells *from the leaves*. The leaves were
+never the problem — and on a segment they are the entire experiment. The
+zeroing overshot its own diagnosis.
+
+!!! note "The two obvious culprits were both wrong"
+    The bisection is worth recording, because the first two hypotheses were
+    confident and both survived long enough to nearly get patched. `restore()`
+    looked guilty — it is called with `list=NULL`, so `restore_all` is false
+    and any field name that doesn't match routes to a discarded placeholder,
+    exactly the documented `p`/`pf` trap. It was innocent: `c2` comes back
+    bit-exact. Then `solid()`, which does run on every restart. Also innocent.
+    The fields survive both and die between `post_solid` and the end of
+    `event init`. Reading the dump's own field table (`scripts/dump_fields.py`)
+    settles the first question in one command — `c`, `oxy`, `c1`, `c2`, `c3`
+    are all written.
+
+## `restart_continue` tells the two cases apart
+
+The fix is one parameter, defaulting to the old behaviour so sweeps are
+untouched:
+
+| `restart_continue` | meaning | tracers | `event tracer` |
+|---|---|---|---|
+| `0` (default) | **warm-start** — a new condition, a new tracer experiment | zeroed | re-injects after `n_mix_cycles` |
+| `1` | **segment** — one experiment across a walltime boundary | preserved | does not fire |
+
+`restriction()` still runs in both cases, so the coarse-ghost problem the
+original `reset` was aimed at stays fixed.
+
+The tracer event is guarded with an `if` wrapper rather than an early
+`return` — a valueless `return` in a Basilisk event compiles to a *nonzero*
+int return, which silently stops the time loop.
+
+!!! warning "Staging a dump is not the same as arming a restart"
+    The restart branch is gated on `params.t_checkpoint > 0`, **not** on
+    `argv[2]` being present. `simulate.submit_slurm`'s `checkpoint=` argument
+    only copies the file into place. A submit script that stages a dump and
+    forgets `t_checkpoint` gets a silent **cold start** — no error, no
+    warning, and a `results.json` that looks perfectly ordinary.
+    `runs/kimcheck_l10_rpm32.5` was described as warm-started and was not.
+    The tell is `restart_diagnostic_post_restore.txt`: present means the
+    branch actually ran.
+
+## kLa across a segment boundary has to be stitched, and nothing stitches it
+
+The physics carries across cleanly. Measured at fidelity 4, a 10+10-cycle
+split against an unbroken 20-cycle run:
+
+| | continuous | stitched | ratio |
+|---|---|---|---|
+| `kLa_10` | 1.927 | 1.927 | 1.000 |
+| `kLa_25` | 2.320 | 2.319 | 1.000 |
+| `kLa_50` | 0.9635 | 0.9634 | 1.000 |
+
+C\* is continuous across the seam to 0.035%.
+
+The trap is on the postprocessing side. `postprocess.py` computes kLa per
+**run directory**, and a later segment restores an already-saturated oxygen
+field — so C\* starts near 1 and crosses every threshold at its first row.
+Segment 2 alone returns `kLa_10 == kLa_25 == 0.9804`: identical at every
+threshold, which is precisely the degenerate signature
+`test_kla_values_differ_across_saturation_levels` was written to catch.
+
+**There is no automatic stitching.** A chained kLa sweep today would write a
+meaningless `kLa_*` into every `results.json` after the first segment, and
+nothing would flag it. Joining the C\*(t) series across segments before
+fitting is a manual step, and building it is open work — it blocks Figs 11
+and 12, where the long low-rpm points have to be chained.
+
+`tests/verification/test_restart_continue.py` guards all of this: seam
+continuity, stitched-vs-continuous kLa, and the degenerate per-segment case.
+
+!!! note "One residual gap, still unexplained"
+    Over a *short* segment the agreement is not exact: a 3-cycle continuation
+    lands about 7.6% below an unbroken run on oxygen transfer. Two mechanisms
+    were hypothesised and both were falsified by measurement — replenishment
+    pausing (firing `event oxygen` immediately moves 0.9236 to 0.9238, i.e.
+    nothing) and the smooth-step ramp (removing it made things *worse*,
+    0.9236 to 0.9100). Removing an under-driving ramp reducing oxygen
+    transfer is not understood, so no change was shipped on the strength of
+    it. Over the 10+10-cycle comparison above the effect is gone, so it reads
+    as a short-segment transient rather than a persistent bias — but it is
+    genuinely open.
+
 ## `n_mix_cycles` vs `n_transition_cycles`
 
 Related but separate: fresh runs (segment 0) use `n_mix_cycles` (typically
@@ -139,3 +248,7 @@ from rest. Restart segments use the much shorter `n_transition_cycles`
 assumption is exactly what makes chained sweeps 70–90% cheaper than running
 every condition cold. It's also exactly the assumption that same-condition
 restart-ramp contamination would undermine if it turns out to be real.
+
+Both numbers only apply to a **warm-start**. Under `restart_continue=1` the
+tracer is never re-injected at all, so neither count is consulted — the
+experiment simply carries on.

@@ -43,7 +43,7 @@ All fields for `runs/<run_id>/params.json`.
 | `fidelity` | int | — | required — no sensible fallback | Basilisk grid level; the computational mesh is 2^fidelity × 2^fidelity cells. Higher = more accurate and slower. See the [Fidelity guide](fidelity-guide.md) |
 | `n_mix_cycles` | int | — | **80** *(real default)* | Number of complete rocking cycles to run before injecting oxygen. Used to let the flow field reach a steady state before kLa measurement begins |
 | `t_end` | float | non-dim | **250.0** *(real default)* | When to stop the simulation (in non-dimensional time). Computed automatically by `simulate.py`, `chain.py`, and `sweep.py`; only set manually for custom runs |
-| `frames_per_period` | int | — | **5** *(real default)* | Video-frame cadence for `VIDEOS=1` builds: frames per rocking cycle. `0` is treated as unset (falls back to the default) |
+| `frames_per_period` | int | — | **13** *(real default)* | Video-frame cadence for `VIDEOS=1` builds. The interval is `T_per / (N + 0.618)`, deliberately **not** a divisor of the period: at `T_per / N` every frame of every run lands on the same N phases forever, however long the run goes — a 10-cycle run sampled 5 distinct phases. The golden-ratio offset makes successive cycles fill in new phases instead. `0` is treated as unset (falls back to the default) |
 | `remove_drop` | int (0 or 1) | — | 0 (disabled) | Droplet/bubble removal via Basilisk's `remove_droplets()` (reinstated 2026-08-22 as a runtime toggle for upstream's `REMOVE_DROP`). Confirmed a no-op at the validated baseline condition (θ=7°, 32.5rpm) — no disconnected fluid regions form for it to touch — so it isn't part of any documented workflow above; set it explicitly only if investigating a case where droplet/bubble pinch-off is actually expected |
 
 ## Checkpoint restart (set automatically by chain.py and sweep.py)
@@ -52,7 +52,8 @@ Do not set these manually — they are populated by the sweep scripts.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `t_checkpoint` | float | Absolute non-dim time at which the restored checkpoint was saved (0 for fresh runs) |
+| `t_checkpoint` | float | Absolute non-dim time at which the restored checkpoint was saved (0 for fresh runs). **This is what arms the restart** — the driver ignores `argv[2]` unless it is > 0, and staging a dump without it gives a silent cold start |
+| `restart_continue` | int | `0` (default) = warm-start: a new condition, so the soluble tracers are zeroed and re-injected after `n_mix_cycles`. `1` = segment: one experiment continuing across a walltime boundary, so the tracers are preserved and never re-injected. See [Checkpoint restart and warm-start chains](../explanation/checkpoint-restart.md#restart_continue-tells-the-two-cases-apart) |
 | `omega_b_prev` | float | Rocking frequency of the segment that wrote the checkpoint; used to smoothly ramp to the new frequency |
 | `theta_max_prev` | float[3] | Rocking amplitude of the previous segment |
 | `phi_angular_prev` | float[3] | Rocking phase of the previous segment |
