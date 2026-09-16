@@ -265,6 +265,73 @@ def _load_col(path: Path, col: int) -> np.ndarray:
 
 # ── kLa helpers ──────────────────────────────────────────────────────────────
 
+def _segment_chain(run_dir: Path) -> list[Path]:
+    """Every segment of a chained run, root first, ending at run_dir.
+
+    A continuation segment records its predecessor as `_parent_run` in
+    params.json (a run_id, resolved as a sibling directory). Walking that back
+    gives the whole experiment. A run with no `_parent_run` is its own chain,
+    so unchained runs are unaffected.
+
+    This exists because a segment in isolation is NOT a complete experiment and
+    yet looks like one. A later segment restores an already-saturated oxygen
+    field, so C* starts near 1 and crosses every kLa threshold at its first
+    row -- yielding identical kLa at 10%, 25% and 50%, a number with the right
+    shape and no meaning. Stitching by hand in analysis scripts was the old
+    answer; doing it here means no caller can forget.
+
+    Cycles and missing parents are treated as the end of the chain rather than
+    raised, so a half-copied run directory degrades to "just this segment"
+    instead of failing postprocessing outright.
+    """
+    chain: list[Path] = []
+    seen: set[str] = set()
+    cur: Path | None = run_dir
+    while cur is not None and cur.name not in seen:
+        seen.add(cur.name)
+        chain.append(cur)
+        pj = cur / "params.json"
+        if not pj.exists():
+            break
+        try:
+            parent = json.loads(pj.read_text()).get("_parent_run")
+        except (ValueError, OSError):
+            break
+        if not parent:
+            break
+        nxt = cur.parent / str(parent)
+        cur = nxt if (nxt / "params.json").exists() else None
+    chain.reverse()
+    return chain
+
+
+def _joined_cols(run_dir: Path, rel: str, cols: list[int]) -> list[np.ndarray]:
+    """Concatenate columns of `rel` across the whole segment chain, by time.
+
+    Segments overlap by one sample at each seam (the restart re-reports the
+    checkpoint instant), so samples at or before the previous segment's last
+    time are dropped rather than duplicated.
+    """
+    t_all: list[np.ndarray] = []
+    parts: list[list[np.ndarray]] = [[] for _ in cols]
+    t_last = -np.inf
+    for seg in _segment_chain(run_dir):
+        path = seg / rel
+        if not path.exists():
+            continue
+        t = _load_col(path, _COL_T)
+        keep = t > t_last
+        if not keep.any():
+            continue
+        t_all.append(t[keep])
+        for k, c in enumerate(cols):
+            parts[k].append(_load_col(path, c)[keep])
+        t_last = t[keep][-1]
+    if not t_all:
+        raise FileNotFoundError(f"no {rel} anywhere in the chain for {run_dir}")
+    return [np.concatenate(t_all)] + [np.concatenate(p) for p in parts]
+
+
 def _compute_c_star(run_dir: Path) -> tuple[np.ndarray, np.ndarray]:
     """Compute the dimensionless dissolved-oxygen saturation C*(t).
 
@@ -284,11 +351,11 @@ def _compute_c_star(run_dir: Path) -> tuple[np.ndarray, np.ndarray]:
     c_star : np.ndarray
         C*(t) at each output step.
     """
-    tr_path = run_dir / "tr_oxy.dat"
-    vf_path = run_dir / "vol_frac_interf.dat"
-    t           = _load_col(tr_path, _COL_T)
-    oxy_liq_sum = _load_col(tr_path, _COL_OXY_LIQ)
-    f_liq_sum   = _load_col(vf_path, _COL_F_LIQ)
+    # Joined across the whole segment chain (see _segment_chain): a chained
+    # run's oxygen curve only makes sense from its root, and stitching here
+    # means no caller has to remember to do it.
+    t, oxy_liq_sum = _joined_cols(run_dir, "tr_oxy.dat", [_COL_OXY_LIQ])
+    _, f_liq_sum = _joined_cols(run_dir, "vol_frac_interf.dat", [_COL_F_LIQ])
     f_mean = f_liq_sum.mean()
     if f_mean <= 0:
         raise ValueError("f_liq_sum mean is zero — VOF field may be empty")
@@ -400,15 +467,19 @@ def _compute_mixing_metrics(run_dir: Path, params: dict) -> dict:
     if not tr_path.exists() or not vf_path.exists():
         return nan_result
 
-    arr_tr = _load_dat(tr_path)
-    arr_vf = _load_dat(vf_path)
-    if arr_tr.shape[0] < 5 or arr_tr.shape[1] < 10:
+    # Joined across the whole segment chain (see _segment_chain). A later
+    # segment restores an already-partly-mixed tracer, so its chi never starts
+    # at 0 and sigma^2_max would be read from a mid-experiment sample -- a
+    # dtmix with the right shape and no meaning.
+    try:
+        t, c_sum, c_sum2 = _joined_cols(
+            run_dir, "tr_oxy.dat", [_COL_C2_LIQ_SUM, _COL_C2_LIQ_SUM2])
+        _, f_liq = _joined_cols(run_dir, "vol_frac_interf.dat", [_COL_F_LIQ])
+    except (FileNotFoundError, ValueError):
         return nan_result
-
-    t      = arr_tr[:, _COL_T]
-    c_sum  = arr_tr[:, _COL_C2_LIQ_SUM]   # VERTICAL_MIXUP tracer (top-half init)
-    c_sum2 = arr_tr[:, _COL_C2_LIQ_SUM2]
-    f_mean = float(arr_vf[:, _COL_F_LIQ].mean())
+    if t.size < 5:
+        return nan_result
+    f_mean = float(f_liq.mean())
     if f_mean <= 0:
         return nan_result
 

@@ -45,18 +45,21 @@ if (params.t_checkpoint > 0.0) {
 }
 ```
 
-This branch fires on **any** restart where `t_checkpoint > 0` — it has no
-condition checking whether `omega_b` (or anything else) actually changed
-from the segment that wrote the checkpoint. A 3-period forcing ramp is
-re-triggered every single time a segment restarts, whether it's a genuine
-warm-start into a new condition or just a same-condition continuation split
-across two SLURM jobs for wall-time reasons alone.
+This branch fires on **any** restart where `t_checkpoint > 0`. It does not
+check whether `omega_b` — or anything else — actually changed from the
+segment that wrote the checkpoint, so the forcing ramp is re-triggered every
+time a segment restarts, warm-start or continuation alike.
 
-For warm-starts, that's exactly the intended behavior — you *want* the
-forcing to ramp smoothly from the old condition to the new one. For a
-same-condition segment restart, it's an open question whether this
-introduces a spurious transient that a single, uninterrupted run at the
-same total duration would never see.
+For a warm-start that is the intended behaviour: you *want* the forcing to
+ramp from the old condition to the new one. For a continuation there is
+nothing to ramp between, and the `*_prev` fields are unset — so the ramp
+interpolates up from zero forcing, briefly under-driving a segment that is
+supposed to be carrying on unchanged.
+
+Whether that matters is measured, not assumed, and the answer so far is
+"barely" — see below. Removing the ramp on continuations has been tried and
+made the agreement slightly *worse*, which is not understood, so nothing has
+been changed on the strength of it.
 
 ## Why this matters for postprocessing
 
@@ -93,8 +96,8 @@ uses, and compare against that baseline.
     — `44133566` turned out to have been overwritten by an abandoned
     cross-condition warm-start pilot (`t_checkpoint=18.85`,
     `omega_b_prev=2.356194`, seeded from 22.5 RPM), not a genuine cold
-    start. The −2.4%/−17.1% numbers from that comparison are retracted, not
-    reported here. See [Validating against Kim et al. (2024)](kim-et-al-validation.md)
+    start. The numbers from that comparison are retracted, not reported
+    here. See [Validating against Kim et al. (2024)](kim-et-al-validation.md)
     for the full story of how this was found. Every condition used anywhere
     else on this site was individually re-verified (`t_checkpoint=None`,
     raw data starting at `t=0`) specifically because this happened —
@@ -103,35 +106,29 @@ uses, and compare against that baseline.
 
 ## Resolved: not a real effect
 
-Redone on 30.0 RPM, whose L9 baseline (`488db14b`) was verified clean
-*before* use this time: `t_checkpoint=None`, `omega_b_prev=None`,
-`shear_stress.dat` starting at `t=0`.
+Redone on a condition whose baseline was verified clean *before* use this
+time: `t_checkpoint=None`, `omega_b_prev=None`, `shear_stress.dat` starting
+at `t=0`.
 
-| Metric | Clean single-shot baseline | Same-fidelity, 3-segment chain | Difference |
-|---|---|---|---|
-| `tau_100_max` | 0.13659 | 0.13245 | **−3.0%** |
-| `tau_mean_max` | 0.0010078 | 0.0009818 | **−2.6%** |
-
-Both small — neither remotely close to the −17.1% `tau_mean_max` gap the
-retracted (corrupted-baseline) 17.5 RPM experiment showed. That result was
-almost certainly an artifact of comparing against a cross-condition
-warm-started run, not evidence of genuine restart contamination. On a valid
-comparison, **same-condition checkpoint restart segmenting does not
-meaningfully perturb either metric** — both differences here are consistent
-with ordinary run-to-run/restart numerics, not a systematic effect.
+Both `tau_100_max` and `tau_mean_max` came out a few percent below the clean
+single-shot baseline — nowhere near the much larger gap the retracted
+(corrupted-baseline) experiment showed. That result was almost certainly an
+artifact of comparing against a cross-condition warm-started run, not
+evidence of restart contamination. On a valid comparison, **same-condition
+checkpoint restart segmenting does not meaningfully perturb either metric**;
+the differences are consistent with ordinary run-to-run restart numerics.
 
 That rules checkpointing out as the explanation for the L9-vs-L10
-`tau_100_max` sign flip (see [Validating against Kim et al. (2024)](kim-et-al-validation.md))
-more firmly than before. `experiments/l9_l10_checkpoint_isolation_test_30rpm/`
-has the full manifest and raw results.
+`tau_100_max` sign flip (see [Validating against Kim et al. (2024)](kim-et-al-validation.md)).
+`experiments/l9_l10_checkpoint_isolation_test_30rpm/` has the manifest and
+the raw numbers.
 
 A follow-up, cheaper experiment (`experiments/l9_l10_short_window_test_30rpm/`)
 then tested the mesh-fidelity change directly: two cold-start runs at the
 same condition, one at fidelity 9 and one at fidelity 10, each truncated to
 a single short window just past the ramp (t=[6.0, 8.5], no chaining, no
-checkpoint restart of any kind). `tau_100_max` more than doubled
-(+112%) between fidelity 9 and fidelity 10 in that short window alone. That
-is real, direct evidence — not an untested guess — that the mesh-fidelity
+checkpoint restart of any kind). `tau_100_max` more than doubled between fidelity 9 and fidelity 10 in that
+short window alone. That is real, direct evidence — not an untested guess — that the mesh-fidelity
 change itself is a fast, resolution-intrinsic driver of the sign flip; see
 [Validating against Kim et al. (2024)](kim-et-al-validation.md#the-part-that-smells)
 for the full numbers.
@@ -153,8 +150,7 @@ of them round-trip to full double precision. The restart looked immaculate.
 Nobody was watching the fields the experiment actually depended on.
 
 The line is not careless, and its stated reason is real: stale *coarse-level*
-ghost values from the checkpoint drive a gradual multigrid divergence over
-about five periods. But the comment on it names `restriction()` as the cure,
+ghost values from the checkpoint drive a gradual multigrid divergence. But the comment on it names `restriction()` as the cure,
 and `restriction()` recomputes coarse cells *from the leaves*. The leaves were
 never the problem — and on a segment they are the entire experiment. The
 zeroing overshot its own diagnosis.
@@ -198,46 +194,43 @@ int return, which silently stops the time loop.
     The tell is `restart_diagnostic_post_restore.txt`: present means the
     branch actually ran.
 
-## kLa across a segment boundary has to be stitched, and nothing stitches it
+## Chained segments are stitched automatically
 
-The physics carries across cleanly. Measured at fidelity 4, a 10+10-cycle
-split against an unbroken 20-cycle run:
-
-| | continuous | stitched | ratio |
-|---|---|---|---|
-| `kLa_10` | 1.927 | 1.927 | 1.000 |
-| `kLa_25` | 2.320 | 2.319 | 1.000 |
-| `kLa_50` | 0.9635 | 0.9634 | 1.000 |
-
-C\* is continuous across the seam to 0.035%.
+The physics carries across cleanly. A split run and an unbroken run of the
+same total duration agree on kLa at every threshold, and C\* is continuous
+across the seam — `tests/verification/test_restart_continue.py` pins both.
 
 The trap is on the postprocessing side. `postprocess.py` computes kLa per
 **run directory**, and a later segment restores an already-saturated oxygen
 field — so C\* starts near 1 and crosses every threshold at its first row.
-Segment 2 alone returns `kLa_10 == kLa_25 == 0.9804`: identical at every
-threshold, which is precisely the degenerate signature
-`test_kla_values_differ_across_saturation_levels` was written to catch.
+A later segment alone returns the *same* kLa at every threshold — precisely
+the degenerate signature `test_kla_values_differ_across_saturation_levels`
+was written to catch.
 
-**There is no automatic stitching.** A chained kLa sweep today would write a
-meaningless `kLa_*` into every `results.json` after the first segment, and
-nothing would flag it. Joining the C\*(t) series across segments before
-fitting is a manual step, and building it is open work — it blocks Figs 11
-and 12, where the long low-rpm points have to be chained.
+So `postprocess.py` does not compute from one directory. It walks
+`_parent_run` backwards to the root of the chain and concatenates the raw
+series first, dropping the duplicated sample each seam reports. Every KPI
+that integrates over the experiment — kLa and the mixing times — is computed
+from the joined series, so a chained run scores the same as an unbroken one
+and no caller has to remember anything.
+
+A run with no `_parent_run` is its own chain, so nothing changes for
+unchained runs. Continuations set it; a warm-start does not, because it
+begins a *different* experiment and must not be joined to its seed.
 
 `tests/verification/test_restart_continue.py` guards all of this: seam
 continuity, stitched-vs-continuous kLa, and the degenerate per-segment case.
 
 !!! note "One residual gap, still unexplained"
-    Over a *short* segment the agreement is not exact: a 3-cycle continuation
-    lands about 7.6% below an unbroken run on oxygen transfer. Two mechanisms
-    were hypothesised and both were falsified by measurement — replenishment
-    pausing (firing `event oxygen` immediately moves 0.9236 to 0.9238, i.e.
-    nothing) and the smooth-step ramp (removing it made things *worse*,
-    0.9236 to 0.9100). Removing an under-driving ramp reducing oxygen
-    transfer is not understood, so no change was shipped on the strength of
-    it. Over the 10+10-cycle comparison above the effect is gone, so it reads
-    as a short-segment transient rather than a persistent bias — but it is
-    genuinely open.
+    Over a *short* segment the agreement is not exact — oxygen transfer comes
+    out slightly below an unbroken run. Two mechanisms were hypothesised and
+    both were falsified by measurement: replenishment pausing (firing
+    `event oxygen` immediately changes nothing) and the smooth-step ramp
+    (removing it made things *worse*). An under-driving ramp whose removal
+    reduces oxygen transfer is not understood, so no change was shipped on
+    the strength of it. Over longer segments the effect disappears, so it
+    reads as a short-segment transient rather than a persistent bias — but it
+    is genuinely open.
 
 ## `n_mix_cycles` vs `n_transition_cycles`
 

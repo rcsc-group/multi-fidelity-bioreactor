@@ -75,11 +75,13 @@ def main() -> None:
     if a.segment == 1:
         ckpt = ROOT / "runs" / SEED_RUN / "checkpoint.dump"
         n_mix, cont = SPINUP - SEED_CYCLE, 0      # release at absolute cycle 80
+        parent = None                             # the seed is a different experiment
     else:
         if not a.from_run:
             raise SystemExit("--from-run required for segments > 1")
         ckpt = ROOT / "runs" / a.from_run / "checkpoint.dump"
         n_mix, cont = 1, 1                        # continuation: no re-injection
+        parent = a.from_run
     if not ckpt.exists():
         raise SystemExit(f"checkpoint not found: {ckpt}")
 
@@ -110,6 +112,14 @@ def main() -> None:
         "restart_continue": cont,
         "_binary": BINARY,
     }
+    # postprocess walks _parent_run backwards and joins the raw series before
+    # computing dtmix or kLa. Without it a segment is scored in isolation, which
+    # for a continuation is meaningless: oxygen starts saturated so every kLa
+    # threshold is crossed at the first row, and the tracer starts partly mixed
+    # so chi never starts at 0. Only continuations set it -- segment 1 warm-starts
+    # from a DIFFERENT experiment and must not be joined to it.
+    if parent:
+        params["_parent_run"] = parent
     print(f"L10 anchor segment {a.segment}: {seg_cyc:.1f} cycles "
           f"(of {total_cyc:.1f} total), t_end={params['t_end']}")
     print(f"  from {ckpt.parent.name}, restart_continue={cont}, "

@@ -53,6 +53,7 @@ Do not set these manually — they are populated by the sweep scripts.
 | Field | Type | Description |
 |-------|------|-------------|
 | `t_checkpoint` | float | Absolute non-dim time at which the restored checkpoint was saved (0 for fresh runs). **This is what arms the restart** — the driver ignores `argv[2]` unless it is > 0, and staging a dump without it gives a silent cold start |
+| `_parent_run` | str | Run id of the preceding segment. `postprocess.py` walks this backwards and joins the raw series before computing kLa or the mixing times, so a chained run scores the same as an unbroken one. Set on continuations only — a warm-start begins a different experiment and must not be joined to its seed |
 | `restart_continue` | int | `0` (default) = warm-start: a new condition, so the soluble tracers are zeroed and re-injected after `n_mix_cycles`. `1` = segment: one experiment continuing across a walltime boundary, so the tracers are preserved and never re-injected. See [Checkpoint restart and warm-start chains](../explanation/checkpoint-restart.md#restart_continue-tells-the-two-cases-apart) |
 | `omega_b_prev` | float | Rocking frequency of the segment that wrote the checkpoint; used to smoothly ramp to the new frequency |
 | `theta_max_prev` | float[3] | Rocking amplitude of the previous segment |
