@@ -132,6 +132,12 @@ def submit(rpm: float, level: int, ntasks: int, prefix: str, dry: bool,
                        walltime=walltime,
                        template=ROOT / "config" / "slurm_mpi_template.sh",
                        cpus=1, ntasks=ntasks, mem="4G")
+    # Record run_id against the job id: a PENDING job has no stdout log yet, so
+    # without this the sweep driver cannot tell it is already in flight and
+    # would resubmit it.
+    rec = ROOT / "logs" / f"submitted_{job}.txt"
+    rec.parent.mkdir(exist_ok=True)
+    rec.write_text(f"{run_id}\n")
     print(f"       submitted {run_id}  job={job}")
 
 
@@ -209,6 +215,7 @@ def main() -> None:
                              "sweep"],
                     required=True)
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--rpms", help="comma-separated subset, e.g. 35,32.5")
     a = ap.parse_args()
 
     if a.stage == "validate":
@@ -303,8 +310,20 @@ def main() -> None:
         # cap. L9 is ~11x cheaper (5.2 min/cycle) -- every point fits in one
         # job, longest 26 h. The L10 anchor at 32.5 rpm is run separately, in
         # segments, to tie the sweep to Kim's own mesh.
-        print("Stage 'sweep': L9, 32 ranks, all 10 rpm points (parallel).")
-        for rpm in [37.5, 35, 32.5, 30, 27.5, 25, 22.5, 20, 17.5, 15]:
+        # These run on the `priority` QOS: MaxTRESPU = cpu=312. (NOT the
+        # `normal` QOS's cpu=64 -- read the limit for the QOS the jobs actually
+        # use, `squeue -o %q`.) Ten 32-rank points is 320 CPUs, 8 over, and on
+        # 2026-09-16 the scheduler CANCELLED nine outright rather than queueing
+        # them. 9 concurrent 32-rank jobs (288 CPUs) fit; use --rpms to batch.
+        allr = [37.5, 35, 32.5, 30, 27.5, 25, 22.5, 20, 17.5, 15]
+        rpms = [float(x) for x in a.rpms.split(",")] if a.rpms else allr
+        if len(rpms) * 32 > 288:
+            raise SystemExit(
+                f"{len(rpms)} x 32 ranks = {len(rpms)*32} CPUs; the priority QOS "
+                f"caps this user at 312 and the scheduler CANCELS the excess "
+                f"rather than queueing it. Submit at most 9 points with --rpms.")
+        print(f"Stage 'sweep': L9, 32 ranks, rpms={rpms}")
+        for rpm in rpms:
             submit(float(rpm), level=9, ntasks=32, prefix="fig9",
                    dry=a.dry_run, binary=PROD_BINARY,
                    walltime_override=_l9_walltime(float(rpm)))
