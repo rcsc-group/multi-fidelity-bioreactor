@@ -106,6 +106,20 @@ kim_rpm=kim_rpm.sort_values('RPM')
 kim_deg=pd.read_csv(CSV_DEG).sort_values('theta_deg')
 l6=from_timeseries('fig13a_l6_mf_rpm'); l8=from_timeseries('fig13a_rm_mf_rpm')
 l9=from_frames(RPM_RUNS_L9); l9d=from_frames(DEG_RUNS)
+# L10 -- Kim's OWN mesh (n_L=2^10). Cross-level sweep, each point warm-started
+# from the converged L9 state at the same rpm, on BioReactor-mpi-xlevel-chain
+# (built 2026-09-15 10:41, i.e. WITH the bag-mask fix).
+#
+# These supersede the two old l10_fig13a_*_32rank_calib points, which must NOT
+# be plotted: they ran on BioReactor-mpi-video-fixed (2026-09-08), predating
+# the mask fix, and it shows -- their tau amplitude is 0.32x Kim, the ~3x
+# signature of the broken mask, against 1.07x for the cross-level run at the
+# same condition. The diary also records them as never reaching quasi-steady.
+#
+# Settling verified rather than assumed: per-cycle tau amplitude over the 5
+# usable cycles varies 0.8% (32.5 rpm), 5.7% (25), 2.5% (37.5) with no drift,
+# so the warm start lands quasi-steady from cycle 0.
+l10=from_timeseries('l10_fig13a_xlevel_rpm')
 
 # ── encoding ──────────────────────────────────────────────────────────────
 # Each visual channel carries exactly ONE meaning, and the fill convention is
@@ -126,7 +140,8 @@ l9=from_frames(RPM_RUNS_L9); l9d=from_frames(DEG_RUNS)
 # colour meaning dataset, colouring them blue/red would point at nothing.
 #
 # Okabe-Ito, distinguishable in common colour-vision deficiencies.
-C_KIM, C_L6, C_L8, C_L9 = "black", "#E69F00", "#0072B2", "#009E73"
+C_KIM, C_L6, C_L8, C_L9, C_L10 = ("black", "#E69F00", "#0072B2",
+                                  "#009E73", "#CC79A7")
 MK_TAU, MK_EPS = "o", "s"
 
 
@@ -166,7 +181,7 @@ def panel(a, kx, kdf, ours, xlabel, xticks):
     return a2
 
 
-panel(ax, "RPM", kim_rpm, [(l6, C_L6), (l8, C_L8), (l9, C_L9)],
+panel(ax, "RPM", kim_rpm, [(l6, C_L6), (l8, C_L8), (l9, C_L9), (l10, C_L10)],
       r"Rocking frequency $f_b$ (rpm)", RPMS)
 ax.set_title(r"(a)  $\theta_{b,max}=7°$", loc="left", fontsize=10)
 panel(ax2, "theta_deg", kim_deg, [(l9d, C_L9)],
@@ -178,7 +193,8 @@ ax2.set_title(r"(b)  $f_b=32.5$ rpm", loc="left", fontsize=10)
 # outside the axes.
 from matplotlib.lines import Line2D
 ds = [Line2D([], [], color=c, lw=1.4, label=l) for c, l in
-      [(C_KIM, "Kim et al."), (C_L6, "L6"), (C_L8, "L8"), (C_L9, "L9")]]
+      [(C_KIM, "Kim et al."), (C_L6, "L6"), (C_L8, "L8"), (C_L9, "L9"),
+       (C_L10, "L10  (Kim's mesh)")]]
 enc = [Line2D([], [], color="0.3", marker=MK_TAU, ls="-",  mfc="0.3", ms=6,
               label=r"$\tau'_{w,max}$   (absolute max)"),
        Line2D([], [], color="0.3", marker=MK_TAU, ls="--", mfc="w",   ms=6,
