@@ -131,9 +131,78 @@ def submit(rpm: float, level: int, ntasks: int, prefix: str, dry: bool,
     print(f"       submitted {run_id}  job={job}")
 
 
+# The Fig 8 late-time probe left a CONVERGED L10 state at exactly Fig 9's
+# reference condition (7 deg, 32.5 rpm), at absolute cycle 47.0. Reusing it
+# skips 47 cycles of spin-up already paid for.
+L10_SEED_RUN = "57f68830"
+L10_SEED_CYCLE = 47.0
+
+
+def submit_l10_warm(dry: bool) -> None:
+    """The single most useful L10 run available: Fig 9 at Kim's own mesh.
+
+    Fig 8 already has L10 and agrees with Kim (0.93-0.97x). Fig 9 has NO L10
+    data at all, and Kim's production mesh IS n_L=2^10 -- so this is the only
+    run that can test whether our mixing times converge to his, rather than
+    comparing a coarse grid against his fine one.
+
+    Warm-started from runs/57f68830's checkpoint (cycle 47.0, same condition,
+    depth 10) with n_mix_cycles = 80 - 47 = 33, so the tracer is released at
+    ABSOLUTE cycle 80 -- Kim's exact protocol. The saving is therefore free of
+    protocol risk: it does not depend on whether the separate spin-up-25 test
+    (job 6417004) shows Kim's 80 cycles to be unnecessary.
+
+    restart_continue stays 0 (the default): this IS a new tracer experiment,
+    and 57f68830 never released a tracer anyway (its t_end < t_mix), so its
+    stracers are zero already.
+    """
+    rpm = 32.5
+    kim = pd.read_csv(KIM_CSV).set_index("RPM")
+    T_per, T_bio = t_scales(rpm)
+    n_mix = SPINUP_CYCLES - L10_SEED_CYCLE          # 33.0
+    cyc_mix = MARGIN * float(kim.loc[rpm, "dtmix_strict_0.95"]) / T_per
+    cyc_seg = n_mix + cyc_mix
+    t_end = cyc_seg * T_per / T_bio                 # relative to the checkpoint
+    seed_ck = ROOT / "runs" / L10_SEED_RUN / "checkpoint.dump"
+    if not seed_ck.exists():
+        raise SystemExit(f"seed checkpoint missing: {seed_ck}")
+
+    params = {
+        "run_id": f"fig9_l10_rpm{rpm:g}", "fidelity": 10,
+        "geometry": GEOMETRY, "fill_level": 0.5,
+        "n_harmonics": 1, "theta_max": THETA_MAX,
+        "phi_angular": [0.0, 0.0, 0.0],
+        "omega_b": rpm * 2 * math.pi / 60.0, "omega_h": 0.0,
+        "amplitude_h": [0.0, 0.0, 0.0], "phi_horizontal": [0.0, 0.0, 0.0],
+        "t_end": round(t_end, 4),
+        "n_mix_cycles": int(n_mix),
+        "restart_continue": 0,
+        "_binary": LEAN_BINARY,
+    }
+    print(f"L10 {rpm:g} rpm, warm from {L10_SEED_RUN} @ cycle {L10_SEED_CYCLE}")
+    print(f"  tracer released at absolute cycle "
+          f"{L10_SEED_CYCLE + n_mix:.0f} (Kim's protocol: 80)")
+    print(f"  segment = {cyc_seg:.1f} cycles (cold would be "
+          f"{SPINUP_CYCLES + cyc_mix:.1f}), t_end={t_end:.3f}")
+    print(f"  Kim @32.5rpm: dtmix 0.50/0.75/0.95 = "
+          f"{kim.loc[rpm,'dtmix_strict_0.5']:.1f} / "
+          f"{kim.loc[rpm,'dtmix_strict_0.75']:.1f} / "
+          f"{kim.loc[rpm,'dtmix_strict_0.95']:.1f} s")
+    if dry:
+        print("  DRY RUN -- not submitted")
+        return
+    job = submit_slurm(params, project_root=ROOT, runs_root=ROOT / "runs",
+                       walltime="48:00:00",
+                       template=ROOT / "config" / "slurm_mpi_template.sh",
+                       cpus=1, ntasks=32, mem="4G", checkpoint=str(seed_ck))
+    print(f"  submitted {params['run_id']}  job={job}  (32 ranks, 48 h)")
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--stage", choices=["validate", "ladder", "lean", "sweep"],
+    ap.add_argument("--stage",
+                    choices=["validate", "ladder", "lean", "l10", "streamcheck", "kimcheck",
+                             "sweep"],
                     required=True)
     ap.add_argument("--dry-run", action="store_true")
     a = ap.parse_args()
@@ -156,9 +225,17 @@ def main() -> None:
         # whose (6,8) entry is 63x pessimistic here because it was measured
         # on a video-writing binary. Generous margins since 4x/level is
         # itself an assumption.
-        for level, walltime in [(7, "02:00:00"), (8, "08:00:00"), (9, "30:00:00")]:
+        # L9 runs on the LEAN binary. On the baseline it needs 24-37 h
+        # (6.5-8x/level from L7's 34m17s) against a 30 h cap, and a timeout
+        # loses everything because results are only copied back on completion.
+        # Lean is 1.69x faster -> 14-22 h. L7 exists on both binaries with
+        # identical dtmix, so the ladder stays internally consistent.
+        for level, walltime, lean in [(7, "02:00:00", False),
+                                      (8, "08:00:00", False),
+                                      (9, "30:00:00", True)]:
             submit(32.5, level=level, ntasks=8, prefix="fig9_ladder",
-                   dry=a.dry_run, walltime_override=walltime)
+                   dry=a.dry_run, walltime_override=walltime,
+                   binary=LEAN_BINARY if lean else None)
     elif a.stage == "lean":
         # A/B against fig9_ladder_l7 (34m17s): identical config, identical
         # walltime cap, only EXTRA_TRACERS=0. c/c1/c3 are never initialised
@@ -166,6 +243,54 @@ def main() -> None:
         # multigrid diffusion solve every timestep.
         submit(32.5, level=7, ntasks=8, prefix="fig9_lean", dry=a.dry_run,
                walltime_override="02:00:00", binary=LEAN_BINARY)
+    elif a.stage == "l10":
+        submit_l10_warm(dry=a.dry_run)
+    elif a.stage == "kimcheck":
+        # Short L8 on the Kim-exact binary, to size the mask difference BEFORE
+        # committing to reruns of the Fig 8/13 sweeps. Kim masks on cs==1 AND
+        # f==1 and uses SIGNED tau; we used cs>0, f>0.5, |tau|.
+        rpm, T_per, T_bio = 32.5, *t_scales(32.5)
+        params = {
+            "run_id": "kimcheck_l8_rpm32.5", "fidelity": 8,
+            "geometry": GEOMETRY, "fill_level": 0.5, "n_harmonics": 1,
+            "theta_max": THETA_MAX, "phi_angular": [0.0, 0.0, 0.0],
+            "omega_b": rpm * 2 * math.pi / 60.0, "omega_h": 0.0,
+            "amplitude_h": [0.0, 0.0, 0.0], "phi_horizontal": [0.0, 0.0, 0.0],
+            "t_end": round(15 * T_per / T_bio, 4), "n_mix_cycles": 80,
+            "_binary": "/oscar/scratch/eaguerov/BioReactor-mpi-kimexact",
+        }
+        print(f"kimcheck: L8 15 cycles, t_end={params['t_end']}")
+        if not a.dry_run:
+            job = submit_slurm(params, project_root=ROOT, runs_root=ROOT / "runs",
+                               walltime="02:00:00",
+                               template=ROOT / "config" / "slurm_mpi_template.sh",
+                               cpus=1, ntasks=8, mem="4G")
+            print(f"  submitted job={job}")
+    elif a.stage == "streamcheck":
+        # Cheap L6 run, just long enough for steady streaming to establish
+        # (settled by ~cycle 23 at L6), to check the new streaming.dat output.
+        # Target: Kim reports <|xi_bar|> = 1.3295 1/s at 32.5 rpm, i.e. 4.04 in
+        # non-dim units (x T_bio = 3.039 s). The OLD, wrong quantity sat at
+        # ~6.2 non-dim. A correct streaming vorticity must be far below that.
+        rpm, T_per, T_bio = 32.5, *t_scales(32.5)
+        params = {
+            "run_id": "streamcheck_l6_rpm32.5", "fidelity": 6,
+            "geometry": GEOMETRY, "fill_level": 0.5, "n_harmonics": 1,
+            "theta_max": THETA_MAX, "phi_angular": [0.0, 0.0, 0.0],
+            "omega_b": rpm * 2 * math.pi / 60.0, "omega_h": 0.0,
+            "amplitude_h": [0.0, 0.0, 0.0], "phi_horizontal": [0.0, 0.0, 0.0],
+            "t_end": round(40 * T_per / T_bio, 4), "n_mix_cycles": 80,
+            "_binary": "/oscar/scratch/eaguerov/BioReactor-mpi-streaming",
+        }
+        print(f"streamcheck: L6 40 cycles, t_end={params['t_end']}")
+        if a.dry_run:
+            print("  DRY RUN")
+        else:
+            job = submit_slurm(params, project_root=ROOT, runs_root=ROOT / "runs",
+                               walltime="01:00:00",
+                               template=ROOT / "config" / "slurm_mpi_template.sh",
+                               cpus=1, ntasks=8, mem="4G")
+            print(f"  submitted job={job}")
     else:
         print("Stage 'sweep': L7, all 10 of Kim's rpm points.")
         for rpm in [37.5, 35, 32.5, 30, 27.5, 25, 22.5, 20, 17.5, 15]:

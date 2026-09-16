@@ -249,6 +249,28 @@ double (* gradient) (double, double, double) = minmod2;   // Custom slope limite
 char buf1[100], buf2[100], buf3[100], buf4[100];
 FILE * fp_stats, * fp_norm, * fp_stats2, * fp_stats3, * fp_tau;
 
+// ── Steady-streaming vorticity, Kim's <|xi_bar_b'|> ───────────────────────
+// [PROJECT ADDED, 2026-09-15] Kim's Fig 9/10/11/12 right-hand axis is the
+// spatial mean of |vorticity OF THE TIME-AVERAGED FLOW| in the water. The
+// overbar is INSIDE: average the velocity field over a rocking period FIRST,
+// then take its curl. What this project reported as `vor_mean` was instead
+// the time-average of the spatial mean of |instantaneous vorticity| -- a
+// different quantity, dominated by the rocking oscillation rather than by the
+// slow secondary circulation, and additionally normalised by the whole
+// embedded fluid volume rather than the liquid. For an oscillatory flow the
+// two can differ without limit (the mean flow can be ~0 while |omega| is
+// large), so the old number was not comparable to Kim at all. See diary.md
+// 2026-09-15 (12).
+#ifndef STREAMING_VORTICITY
+#define STREAMING_VORTICITY 1
+#endif
+#if STREAMING_VORTICITY
+vector u_acc[];                       // running integral of u*f dt over one period
+scalar f_acc[];                       // running integral of f dt (liquid residence)
+double streaming_acc_dt = 0.;         // elapsed time in the current window
+FILE * fp_streaming = NULL;
+#endif
+
 // Key physical and dimensionless parameters (computed in main)
 double U0, Re_w, Re_a, We_w, Fr, rhor, mur, Pe_tracer_1, Pe_tracer_2, Pe_oxy_1, Pe_oxy_2, Th, Th_d, Th_2d, U_bio, w_bio, w_bio_st, T_per_st, T_bio, t_change_st;
 
@@ -600,11 +622,15 @@ int main(int argc, char * argv[]){
   fp_stats2= fopen(name3,"w");
   fp_stats3= fopen(name4,"w");
   fp_tau   = fopen(name5,"w");
+#if STREAMING_VORTICITY
+  fp_streaming = fopen("streaming.dat","w");
+  fprintf(fp_streaming, "i t vor_stream_mean vor_stream_max liq_vol window_dt \n");
+#endif
 
   fprintf(fp_norm, "i t Omega_liq_avg Omega_liq_rms Omega_liq_vol Omega_liq_max ux_liq_avg ux_liq_rms ux_liq_vol ux_liq_max uy_liq_avg uy_liq_rms uy_liq_vol uy_liq_max \n");
   fprintf(fp_stats2, "i t f_liq_sum f_liq_interf posY_max posY_min \n");
   fprintf(fp_stats3, "i t oxy_liq_sum oxy_liq_sum2 c_liq_sum c_liq_sum2 c1_liq_sum c1_liq_sum2 c2_liq_sum c2_liq_sum2 c3_liq_sum c3_liq_sum2 \n");
-  fprintf(fp_tau,   "i t tau_95 tau_98 tau_100 tau_mean tau_100_strict tau_mean_strict tau_100_signed ediss_mean tau_mean_signed \n");
+  fprintf(fp_tau,   "i t tau_95 tau_98 tau_100 tau_mean tau_100_strict tau_mean_strict tau_100_signed ediss_mean tau_mean_signed tau_kim_max tau_kim_mean ediss_kim_max ediss_kim_mean \n");
 
   NITERMAX = 1000;     // Max iterations per timestep
   TOLERANCE = 5.0e-4;  // // Solver tolerance (convergence criterion)
@@ -614,6 +640,9 @@ int main(int argc, char * argv[]){
   
   // Close all output files
   fclose(fp_stats); fclose(fp_norm); fclose(fp_stats2); fclose(fp_stats3); fclose(fp_tau);
+#if STREAMING_VORTICITY
+  if (fp_streaming) fclose(fp_streaming);
+#endif
 }
 
 
@@ -1363,6 +1392,86 @@ event oxygen (t=t_mix; i++){
 //                           ACCELERATION                             //
 // ================================================================== //
 #if ACCELERATION
+#if STREAMING_VORTICITY
+// Kim's steady-streaming vorticity: average u over ONE rocking period, then
+// take the curl of that average, then spatially average |curl| over the WATER.
+//
+// Accumulating u*dt every step (rather than sampling) makes the window average
+// exact for any variable timestep. The window is reset each period, so a
+// restart loses at most one window rather than corrupting the series.
+//
+// Masked with `cs[] > 0. && f[] > 0.5` and area-weighted by cs[]*Delta*Delta,
+// the same bag mask the tau/EDR diagnostics use -- `f` alone fills the whole
+// lower half-DOMAIN including cells outside the embedded bag (diary.md
+// 2026-09-15 (2)). Normalising by that liquid area is what makes this a water
+// average, as Kim defines it, rather than a whole-fluid-volume average.
+event streaming_vorticity (i++)
+{
+  // LIQUID-CONDITIONED time average: accumulate u*f dt and f dt, so
+  // ubar = INT(u f dt)/INT(f dt) is the mean velocity OF THE WATER.
+  //
+  // [PROJECT FIXED, 2026-09-15] A plain INT(u dt)/T average is contaminated by
+  // the free surface: the interface sloshes through a band of cells, so those
+  // cells hold water for part of the period and air for the rest, and the
+  // unconditioned average blends the two into an enormous spurious mean shear.
+  // Measured (job 6427163, L6): it gave <|xi_bar|> = 10.9 non-dim with a local
+  // max of 241, ABOVE the time-averaged |instantaneous vorticity| (~12.4 once
+  // correctly normalised by liquid area) -- impossible for a genuine mean-flow
+  // vorticity, since omega is linear in u so omega(ubar) = mean of omega(u)
+  // and |mean| <= mean|.|. That bound is the check that caught it.
+  foreach() {
+    u_acc.x[] += u.x[]*f[]*dt;
+    u_acc.y[] += u.y[]*f[]*dt;
+    f_acc[]   += f[]*dt;
+  }
+  streaming_acc_dt += dt;
+
+  if (streaming_acc_dt >= T_per_st) {
+    vector ubar[];
+    scalar omega_bar[];
+    foreach() {
+      double w = f_acc[];
+      ubar.x[] = w > 0. ? u_acc.x[]/w : 0.;
+      ubar.y[] = w > 0. ? u_acc.y[]/w : 0.;
+    }
+    boundary ((scalar *){ubar});
+    vorticity (ubar, omega_bar);
+
+    // Average only over cells that were water for essentially the WHOLE
+    // period. Cells the interface swept through have a noisy ubar and, more
+    // importantly, noisy neighbours -- and the vorticity stencil reads
+    // neighbours. Kim's quantity is defined in the water, not at the surface.
+    double vsum = 0., varea = 0., vmax = 0.;
+    foreach (reduction(+:vsum) reduction(+:varea) reduction(max:vmax)) {
+      // cs == 1, not cs > 0: Kim's own postprocessing masks on `sol_2D == 1`
+      // (bio_stress.m:412), excluding embed CUT cells. Measured here: the
+      // f-conditioned average alone left vor_max pinned at 241 non-dim, so the
+      // extreme was never at the interface -- it is at the bag wall, where cut
+      // cells carry huge velocity gradients. Same mask as the Kim-exact
+      // tau/EDR columns.
+      if (cs[] > 1. - 1e-10 && f_acc[] > 0.99*streaming_acc_dt) {
+        double dA = cs[]*(Delta*Delta);
+        double a  = fabs(omega_bar[]);
+        vsum  += a*dA;
+        varea += dA;
+        if (a > vmax) vmax = a;
+      }
+    }
+    if (pid() == 0 && fp_streaming) {
+      fprintf (fp_streaming, "%i %g %g %g %g %g \n", i, t,
+               varea > 0. ? vsum/varea : 0., vmax, varea, streaming_acc_dt);
+      fflush (fp_streaming);
+    }
+    foreach() {
+      u_acc.x[] = 0.;
+      u_acc.y[] = 0.;
+      f_acc[]   = 0.;
+    }
+    streaming_acc_dt = 0.;
+  }
+}
+#endif
+
 event acceleration(i++)
 {
   // [PROJECT CHANGED] Upstream's ramp is a plain LINEAR interpolation over a
@@ -1743,6 +1852,17 @@ event normcal (t+=t_out; t<=t_end){
     // max); reuses the exact same f[]>0.5 mask as tau for consistency.
     double tau_max_val = 0., tau_sum = 0., tau_vol = 0.;
     double tau_max_strict = 0., tau_sum_strict = 0., tau_vol_strict = 0.;
+    // [PROJECT ADDED, 2026-09-15] Kim-EXACT mask, read from his own
+    // postprocessing (rcsc-group/BioReactor3D dev/postprocessing/bio_stress.m,
+    // private repo): line 412 `in_solid = find(sol_2D == 1)` and line 546
+    // `in_liq_field2 = find(abs(al_2D_proj)>1-1e-10)` -- FULLY-fluid AND
+    // FULLY-liquid cells only, excluding every interface cell and every embed
+    // cut cell. He also takes max()/mean() of the SIGNED tau (line 583-585:
+    // `tau_field_liq2_dim = tau_field_liq2*U_bio/L_bio`, no abs()), where our
+    // tau_100 is max|tau|. And he reports an Ediss MAX (line 600) that this
+    // project never logged at all -- Kim's Fig 13 has four series per panel.
+    double tau_kim_max = -HUGE, tau_kim_sum = 0., kim_vol = 0.;
+    double ediss_kim_max = 0., ediss_kim_sum = 0.;
     double tau_max_signed = -1e30;
     double ediss_sum = 0.;
     // [PROJECT ADDED, 2026-08-09] tau_sum_signed: Kim et al.'s Fig. 8a
@@ -1758,7 +1878,9 @@ event normcal (t+=t_out; t<=t_end){
     double tau_sum_signed = 0.;
     foreach(reduction(max:tau_max_val) reduction(+:tau_sum) reduction(+:tau_vol)
             reduction(max:tau_max_strict) reduction(+:tau_sum_strict) reduction(+:tau_vol_strict)
-            reduction(max:tau_max_signed) reduction(+:ediss_sum) reduction(+:tau_sum_signed)) {
+            reduction(max:tau_max_signed) reduction(+:ediss_sum) reduction(+:tau_sum_signed)
+            reduction(max:tau_kim_max) reduction(+:tau_kim_sum) reduction(+:kim_vol)
+            reduction(max:ediss_kim_max) reduction(+:ediss_kim_sum)) {
       // [PROJECT FIX, 2026-09-15, diary.md] Mask on cs[] too, and weight by
       // it. `f` is initialised with fraction(f, y_init - y), which fills the
       // lower half of the WHOLE DOMAIN -- including everything outside the
@@ -1796,10 +1918,23 @@ event normcal (t+=t_out; t<=t_end){
           tau_sum_strict += tau * dA;
           tau_vol_strict += dA;
         }
+        // Kim's own mask: cs==1 (no cut cells) AND f==1 (no interface cells),
+        // on the SIGNED tau. Area-weighted, which is identical to his
+        // arithmetic mean() on his uniform mesh and correct on a graded one.
+        if (cs[] > 1. - 1e-10 && f[] > 1. - 1e-10) {
+          if (tau_signed > tau_kim_max) tau_kim_max = tau_signed;
+          if (ediss > ediss_kim_max)    ediss_kim_max = ediss;
+          tau_kim_sum   += tau_signed * dA;
+          ediss_kim_sum += ediss * dA;
+          kim_vol       += dA;
+        }
       }
     }
     double tau_mean_val    = (tau_vol > 0.)        ? tau_sum / tau_vol               : 0.;
     double tau_mean_strict = (tau_vol_strict > 0.) ? tau_sum_strict / tau_vol_strict : 0.;
+    double tau_kim_mean   = (kim_vol > 0.) ? tau_kim_sum   / kim_vol : 0.;
+    double ediss_kim_mean = (kim_vol > 0.) ? ediss_kim_sum / kim_vol : 0.;
+    if (kim_vol <= 0.) { tau_kim_max = 0.; ediss_kim_max = 0.; }
     double ediss_mean_val  = (tau_vol > 0.)        ? ediss_sum / tau_vol             : 0.;
     double tau_mean_signed = (tau_vol > 0.)        ? tau_sum_signed / tau_vol        : 0.;
     if (tau_max_val < 1e-14) tau_max_val = 1e-14;  // guard /0
@@ -1901,7 +2036,7 @@ event normcal (t+=t_out; t<=t_end){
       //fprintf(fp_stats3, "%i %g %g %g %g %g \n",i,t,oxy_liq_sum,oxy_liq_sum2,c_liq_sum,c_liq_sum2);
       fflush(fp_stats3);
 
-      fprintf(fp_tau, "%i %g %g %g %g %g %g %g %g %g %g \n", i, t, tau_95_val, tau_98_val, tau_max_val, tau_mean_val, tau_max_strict, tau_mean_strict, tau_max_signed, ediss_mean_val, tau_mean_signed);
+      fprintf(fp_tau, "%i %g %g %g %g %g %g %g %g %g %g %g %g %g %g \n", i, t, tau_95_val, tau_98_val, tau_max_val, tau_mean_val, tau_max_strict, tau_mean_strict, tau_max_signed, ediss_mean_val, tau_mean_signed, tau_kim_max, tau_kim_mean, ediss_kim_max, ediss_kim_mean);
       fflush(fp_tau);
    }
 }

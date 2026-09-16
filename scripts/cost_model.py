@@ -45,7 +45,7 @@ _MEASURED: dict[tuple[int, int], dict[float, float]] = {
     # mis-derivation, and are marked lower-confidence until measured directly.
     (6, 8): {32.5: 0.041, 17.5: 0.0705},      # 32.5 measured directly
     (7, 8): {32.5: 0.163, 17.5: 0.227},       # 32.5 measured directly
-    (8, 8): {32.5: 1.536, 37.5: 1.7125},      # neither measured directly yet
+    (8, 8): {32.5: 1.476, 37.5: 1.7125},      # 32.5 MEASURED (job 6410615, 05:09:15/209.7cyc)
     # L10 Fig13a sweep, 2026-09-12, jobs 6197602-6197604 (measured directly
     # from partial shear_stress.dat + sacct TIMEOUT elapsed, since none
     # reached completion -- see conversation 2026-09-12):
@@ -58,8 +58,28 @@ _MEASURED: dict[tuple[int, int], dict[float, float]] = {
     # 6326989); 32.5 is the Fig 8 late-time probe (job 6314896, 9.98 cycles
     # in 16:47:58). Note the strong rpm dependence -- 4x across the range --
     # which is exactly why walltime guessing kept failing here.
-    (10, 32): {17.5: 168.1, 32.5: 101.0, 37.5: 42.0},
+    # [SUPERSEDED for 32.5 rpm, 2026-09-16] Those three were VIDEO-writing
+    # runs. Measured without video (job 6429568, warm from 57f68830, 6 cycles
+    # in 05:49:16): 58.2 min/cycle. Video therefore costs ~43 min/cycle at L10.
+    (10, 32): {17.5: 168.1, 32.5: 58.2, 37.5: 42.0},
 }
+
+
+# [MEASURED 2026-09-16] Cost per cycle rises ~11-13x PER LEVEL, not the 4x a
+# cell count alone suggests: one level multiplies cells by 4 AND shrinks dt by
+# ~2.8x, so work per cycle goes as ~11x, plus a ~1.8x efficiency loss L7->L10.
+#
+#          cells        steps/cycle   core-s per cell-step
+#   L7        16,384          486          5.8e-6
+#   L10    1,048,576       10,346          1.03e-5
+#
+# Check: 0.0966 min/cyc (L7, 8 ranks) x 64 (cells) x 21.3 (steps) x 1.8 / 4
+# (8->32 ranks) = 58.3 predicted vs 58.2 measured.
+#
+# TWO separate walltime plans in this project were built on a 4x-6.5x/level
+# assumption and were wrong by ~9x. Never extrapolate across levels without
+# accounting for the timestep shrinking too.
+PER_LEVEL_WORK_FACTOR = 11.2
 
 
 def min_per_cycle(level: int, ntasks: int, rpm: float, tol: float = 1e-6) -> tuple[float, str]:
