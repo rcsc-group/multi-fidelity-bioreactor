@@ -1,5 +1,6 @@
 import sys
 import json
+import shutil
 import subprocess
 import pathlib
 import numpy as np
@@ -61,22 +62,28 @@ def ensure_binaries_current():
         )
 
 
-def run_bioreactor(params: dict, tmp_path: pathlib.Path, timeout: int = 300) -> pathlib.Path:
+def run_bioreactor(params: dict, tmp_path: pathlib.Path, timeout: int = 300,
+                   restart_from: pathlib.Path | None = None) -> pathlib.Path:
     """Write params.json into a fresh run dir, execute BioReactor, return run_dir.
 
     Does not assert returncode — caller is responsible.  TimeoutExpired is caught
     silently so tests can check file existence regardless of sim completing.
+
+    restart_from: a checkpoint.dump to restore. Passed as argv[2], which is how
+    the driver takes it (src/BioReactor.c:398, `restart_file = argv[2]`); the
+    checkpoint's own time is read back out of the dump, not from params.json.
     """
     if not BINARY.exists():
         pytest.skip(f"BioReactor binary not found at {BINARY}; run 'make build' first")
     run_dir = tmp_path / params["run_id"]
     run_dir.mkdir(parents=True, exist_ok=True)
     (run_dir / "params.json").write_text(json.dumps(params))
+    cmd = [str(BINARY.resolve()), "params.json"]
+    if restart_from is not None:
+        shutil.copy(restart_from, run_dir / "restart.dump")
+        cmd.append("restart.dump")
     try:
-        subprocess.run(
-            [str(BINARY.resolve()), "params.json"],
-            cwd=run_dir, capture_output=True, text=True, timeout=timeout,
-        )
+        subprocess.run(cmd, cwd=run_dir, capture_output=True, text=True, timeout=timeout)
     except subprocess.TimeoutExpired:
         pass
     return run_dir

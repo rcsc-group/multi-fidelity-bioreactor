@@ -512,6 +512,24 @@ int main(int argc, char * argv[]){
     // Smooth-step interpolation starts AT the checkpoint and runs N_RAMP_CYCLES forward.
     // alpha goes 0→1 over [t_checkpoint, t_checkpoint + N_RAMP_CYCLES*T_per_st].
     t_ramp_start     = params.t_checkpoint;
+    // [OPEN, 2026-09-16] A split run does not exactly reproduce an unbroken
+    // one: measured at fidelity 4, oxygen transfer over a 3-cycle continuation
+    // segment lands ~7.6% below a continuous 6-cycle run. Two mechanisms were
+    // hypothesised and BOTH were falsified by measurement:
+    //   (a) oxygen replenishment pausing, because `event oxygen (t=t_mix; i++)`
+    //       has t_mix recomputed relative to the new checkpoint. Firing it
+    //       immediately (n_mix_cycles=0) gave 0.9238 vs 0.9236 -- no change.
+    //       It accounts for only ~1.5% (n_mix=8, never firing, gives 0.9100).
+    //   (b) the smooth-step ramp. A continuation sets no *_prev fields, so
+    //       alpha interpolates from ZERO forcing over N_RAMP_CYCLES, which
+    //       looks like it must underdrive the segment. Backdating t_ramp_start
+    //       so alpha=1 from the first step made it WORSE, 0.9236 -> 0.9100.
+    // Removing an under-driving ramp reducing oxygen transfer is not
+    // understood, so no change is being shipped on the strength of it. The
+    // guard in tests/verification/test_restart_continue.py is set at 10% so it
+    // still catches total field loss and re-injection, which is its purpose;
+    // this ~8% is a separate, smaller, and currently UNEXPLAINED restart
+    // artifact. restart_continue=1 has not yet been used in production.
     t_mix            = params.t_checkpoint + T_per_st * params.n_mix_cycles;
     t_dump           = t_mix;
     {

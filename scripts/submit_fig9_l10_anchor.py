@@ -36,6 +36,7 @@ import pandas as pd
 ROOT = Path("/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor")
 sys.path.insert(0, str(ROOT))
 from scripts.simulate import submit_slurm            # noqa: E402
+from scripts.dump_fields import fields as _dump_fields  # noqa: E402
 from scripts.cost_model import min_per_cycle         # noqa: E402
 
 BINARY = "/oscar/scratch/eaguerov/BioReactor-mpi-prod-4b3a435"
@@ -86,8 +87,20 @@ def main() -> None:
     if seg_cyc <= 0:
         raise SystemExit(f"segment {a.segment} is past the end ({total_cyc:.1f} cyc total)")
 
+    # The restart branch is gated on params.t_checkpoint > 0 (BioReactor.c:~437),
+    # NOT on a dump being staged. submit_slurm's checkpoint= only copies the file
+    # into place; without t_checkpoint the binary IGNORES argv[2] and silently
+    # runs a COLD start. That is exactly what happened to kimcheck_l10_rpm32.5,
+    # which was reported as warm-started from 57f68830 and was not. The C code
+    # then overwrites this with the dump's own time, so the value here only has
+    # to be the true one for the pre-restore timing to be right.
+    t_ck = _dump_fields(ckpt)[0]["t"]
+    if t_ck <= 0:
+        raise SystemExit(f"checkpoint {ckpt} reports t={t_ck}; cannot arm a restart")
+
     params = {
         "run_id": f"fig9_l10_seg{a.segment}", "fidelity": 10,
+        "t_checkpoint": t_ck,
         "geometry": GEOMETRY, "fill_level": 0.5, "n_harmonics": 1,
         "theta_max": THETA, "phi_angular": [0.0, 0.0, 0.0],
         "omega_b": RPM * 2 * math.pi / 60.0, "omega_h": 0.0,
