@@ -65,7 +65,10 @@ def from_timeseries(prefix):
         if not f.exists(): continue
         a=np.loadtxt(f,skiprows=1); _,ts,es=scales(run)
         t=a[:,1]; m=t>=t[0]+0.6*(t[-1]-t[0])          # settled tail
-        rows.append(dict(x=r, tau_max=a[m,4].max()*ts,
+        # col 8 = tau_100_signed. Kim takes max() of the SIGNED field
+        # (bio_stress.m:583-585, no abs()); col 4 is max|tau|, a different
+        # statistic. Measured difference here: 0-3.5%.
+        rows.append(dict(x=r, tau_max=a[m,8].max()*ts,
                          tau_mean=0.5*(a[m,10].max()-a[m,10].min())*ts,
                          ed_mean=a[m,9].max()*es))
     return pd.DataFrame(rows).sort_values('x')
@@ -93,7 +96,7 @@ def from_frames(runs):
             bag=(f>0.5)&(np.abs(yy)<b)
             if not bag.any(): continue
             sm.append(tau[bag].mean()); em.append(ed[bag].mean())
-            tmax=max(tmax,float(np.abs(tau[bag]).max()))
+            tmax=max(tmax,float(tau[bag].max()))   # signed, as Kim
         rows.append(dict(x=x, tau_max=tmax*ts,
                          tau_mean=0.5*(max(sm)-min(sm))*ts, ed_mean=max(em)*es))
     return pd.DataFrame(rows).sort_values('x')
@@ -104,33 +107,94 @@ kim_deg=pd.read_csv(CSV_DEG).sort_values('theta_deg')
 l6=from_timeseries('fig13a_l6_mf_rpm'); l8=from_timeseries('fig13a_rm_mf_rpm')
 l9=from_frames(RPM_RUNS_L9); l9d=from_frames(DEG_RUNS)
 
-fig,(ax,ax2)=plt.subplots(1,2,figsize=(14,4.8))
-def panel(a,kx,kdf,ours,xlabel,xticks):
-    a2=a.twinx()
-    a.plot(kdf[kx],kdf['tau_liq_max'],color='royalblue',marker='o',ms=6,lw=1.2,label=r"Kim $\tau'_{w,max}$")
-    a.plot(kdf[kx],kdf['tau_liq_mean'],color='royalblue',marker='o',ms=6,lw=1.2,ls='--',mfc='w',label=r"Kim $\langle\tau'_w\rangle$")
-    a2.plot(kdf[kx],kdf['Ediss_liq_max'],color='firebrick',marker='s',ms=5,lw=1.2,label=r"Kim $\epsilon'_{w,max}$")
-    a2.plot(kdf[kx],kdf['Ediss_liq_mean'],color='firebrick',marker='s',ms=5,lw=1.2,ls='--',mfc='w',label=r"Kim $\langle\epsilon'_w\rangle$")
-    for d,c,l in ours:
-        if d.empty: continue
-        a.plot(d['x'],d['tau_max'],color=c,marker='D',ms=5,lw=1.1,label=rf"$\tau'_{{w,max}}$ ({l})")
-        a.plot(d['x'],d['tau_mean'],color=c,marker='D',ms=5,lw=1.1,ls='--',mfc='w',label=rf"$\langle\tau'_w\rangle$ ({l})")
-        a2.plot(d['x'],d['ed_mean'],color=c,marker='^',ms=5,lw=1.1,ls=':',label=rf"$\langle\epsilon'_w\rangle$ ({l})")
-    a.set_yscale('log'); a2.set_yscale('log')
-    a.set_xlabel(xlabel); a.set_ylabel('Shear stress (Pa)',color='royalblue')
-    a2.set_ylabel(r'EDR (W/m$^3$)',color='firebrick')
-    a.tick_params(axis='y',colors='royalblue'); a2.tick_params(axis='y',colors='firebrick')
-    a.tick_params(which='both',direction='in'); a2.tick_params(which='both',direction='in')
-    a.grid(True,which='major',ls=':',alpha=0.4); a.set_xticks(xticks)
+# ── encoding ──────────────────────────────────────────────────────────────
+# Each visual channel carries exactly ONE meaning, and the fill convention is
+# Kim's own (caption of his Fig. 13: "maximum shear stress (solid blue
+# circles) and energy dissipation rate (solid red squares) ... along with the
+# maximum of the spatially averaged shear stress (hollow blue circles) and
+# energy dissipation rate (hollow red squares)"):
+#
+#   COLOUR  = dataset        Kim / L6 / L8 / L9
+#   MARKER  = quantity       circle = tau      square = epsilon
+#   FILL    = statistic      filled = absolute max      hollow = max of the
+#                            SPATIAL MEAN
+#
+# Previously colour encoded dataset AND quantity at once, which put our L8
+# (darkred) next to Kim's EDR (firebrick) -- two different datasets in
+# near-identical red -- and our <eps> was a FILLED triangle while every other
+# spatially-averaged series was hollow. Axis labels are neutral now: with
+# colour meaning dataset, colouring them blue/red would point at nothing.
+#
+# Okabe-Ito, distinguishable in common colour-vision deficiencies.
+C_KIM, C_L6, C_L8, C_L9 = "black", "#E69F00", "#0072B2", "#009E73"
+MK_TAU, MK_EPS = "o", "s"
+
+
+def _series(axis, x, y, colour, marker, filled, lw=1.2, ms=5.5):
+    axis.plot(x, y, color=colour, marker=marker, ms=ms, lw=lw,
+              ls="-" if filled else "--",
+              mfc=colour if filled else "w", mec=colour, mew=1.1)
+
+
+fig,(ax,ax2)=plt.subplots(1,2,figsize=(13.5,4.8))
+
+
+def panel(a, kx, kdf, ours, xlabel, xticks):
+    a2 = a.twinx()
+    # Kim: all four series
+    _series(a,  kdf[kx], kdf["tau_liq_max"],    C_KIM, MK_TAU, True)
+    _series(a,  kdf[kx], kdf["tau_liq_mean"],   C_KIM, MK_TAU, False)
+    _series(a2, kdf[kx], kdf["Ediss_liq_max"],  C_KIM, MK_EPS, True)
+    _series(a2, kdf[kx], kdf["Ediss_liq_mean"], C_KIM, MK_EPS, False)
+    # ours: tau max + tau mean, and EDR mean only -- these runs predate the
+    # ediss_kim_max column, so the filled square is Kim's alone. Shown as the
+    # absence of a series rather than by substituting a different statistic.
+    for d, colour in ours:
+        if d.empty:
+            continue
+        _series(a,  d["x"], d["tau_max"],  colour, MK_TAU, True)
+        _series(a,  d["x"], d["tau_mean"], colour, MK_TAU, False)
+        _series(a2, d["x"], d["ed_mean"],  colour, MK_EPS, False)
+    a.set_yscale("log"); a2.set_yscale("log")
+    a.set_xlabel(xlabel, fontsize=11)
+    a.set_ylabel(r"Shear stress $\tau'_w$ (Pa)   $\bullet$ circles", fontsize=11)
+    a2.set_ylabel(r"EDR $\epsilon'_w$ (W/m$^3$)   $\blacksquare$ squares", fontsize=11)
+    a.tick_params(which="both", direction="in")
+    a2.tick_params(which="both", direction="in")
+    a.grid(True, which="major", ls=":", alpha=0.35)
+    a.set_xticks(xticks)
     return a2
 
-a2a=panel(ax,'RPM',kim_rpm,[(l6,'darkorange','L6'),(l8,'darkred','L8'),(l9,'seagreen','L9')],
-          r'Rocking frequency $f_b$ (rpm)',RPMS)
-ax.set_title(r'(a)  $\theta_{b,max}=7°$',loc='left',fontsize=10)
-a2b=panel(ax2,'theta_deg',kim_deg,[(l9d,'seagreen','L9')],
-          r'Rocking angle $\theta_{b,max}$ (deg)',[2,3,4,5,6,7])
-ax2.set_title(r'(b)  $f_b=32.5$ rpm',loc='left',fontsize=10)
-h1,l1=ax.get_legend_handles_labels(); h2,l2=a2a.get_legend_handles_labels()
-fig.legend(h1+h2,l1+l2,fontsize=7,loc='center left',bbox_to_anchor=(1.0,0.5),frameon=False)
-fig.tight_layout(); fig.savefig(OUT,dpi=150,bbox_inches='tight')
-print('saved',OUT)
+
+panel(ax, "RPM", kim_rpm, [(l6, C_L6), (l8, C_L8), (l9, C_L9)],
+      r"Rocking frequency $f_b$ (rpm)", RPMS)
+ax.set_title(r"(a)  $\theta_{b,max}=7°$", loc="left", fontsize=10)
+panel(ax2, "theta_deg", kim_deg, [(l9d, C_L9)],
+      r"Rocking angle $\theta_{b,max}$ (deg)", [2, 3, 4, 5, 6, 7])
+ax2.set_title(r"(b)  $f_b=32.5$ rpm", loc="left", fontsize=10)
+
+# Two small legends instead of one list of eleven: one decodes colour
+# (dataset), the other decodes marker+fill (quantity, statistic). Both sit
+# outside the axes.
+from matplotlib.lines import Line2D
+ds = [Line2D([], [], color=c, lw=1.4, label=l) for c, l in
+      [(C_KIM, "Kim et al."), (C_L6, "L6"), (C_L8, "L8"), (C_L9, "L9")]]
+enc = [Line2D([], [], color="0.3", marker=MK_TAU, ls="-",  mfc="0.3", ms=6,
+              label=r"$\tau'_{w,max}$   (absolute max)"),
+       Line2D([], [], color="0.3", marker=MK_TAU, ls="--", mfc="w",   ms=6,
+              label=r"$\langle\tau'_w\rangle$   (max of spatial mean)"),
+       Line2D([], [], color="0.3", marker=MK_EPS, ls="-",  mfc="0.3", ms=6,
+              label=r"$\epsilon'_{w,max}$   (absolute max)"),
+       Line2D([], [], color="0.3", marker=MK_EPS, ls="--", mfc="w",   ms=6,
+              label=r"$\langle\epsilon'_w\rangle$   (max of spatial mean)")]
+leg1 = fig.legend(handles=ds, fontsize=8.5, loc="upper left",
+                  bbox_to_anchor=(1.0, 0.93), frameon=False, title="dataset")
+leg2 = fig.legend(handles=enc, fontsize=8.5, loc="upper left",
+                  bbox_to_anchor=(1.0, 0.63), frameon=False, title="marker / fill")
+for lg in (leg1, leg2):
+    lg.get_title().set_fontsize(8.5)
+fig.add_artist(leg1)
+
+fig.tight_layout()
+fig.savefig(OUT, dpi=150, bbox_inches="tight")
+print("saved", OUT)
