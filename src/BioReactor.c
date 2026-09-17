@@ -645,7 +645,7 @@ int main(int argc, char * argv[]){
   fprintf(fp_streaming, "i t vor_stream_mean vor_stream_max liq_vol window_dt \n");
 #endif
 
-  fprintf(fp_norm, "i t Omega_liq_avg Omega_liq_rms Omega_liq_vol Omega_liq_max ux_liq_avg ux_liq_rms ux_liq_vol ux_liq_max uy_liq_avg uy_liq_rms uy_liq_vol uy_liq_max ux_liq_savg uy_liq_savg \n");
+  fprintf(fp_norm, "i t Omega_liq_avg Omega_liq_rms Omega_liq_vol Omega_liq_max ux_liq_avg ux_liq_rms ux_liq_vol ux_liq_max uy_liq_avg uy_liq_rms uy_liq_vol uy_liq_max ux_liq_savg uy_liq_savg uz_liq_savg uz_liq_rms \n");
   fprintf(fp_stats2, "i t f_liq_sum f_liq_interf posY_max posY_min posY_left posY_right \n");
   fprintf(fp_stats3, "i t oxy_liq_sum oxy_liq_sum2 c_liq_sum c_liq_sum2 c1_liq_sum c1_liq_sum2 c2_liq_sum c2_liq_sum2 c3_liq_sum c3_liq_sum2 \n");
   fprintf(fp_tau,   "i t tau_95 tau_98 tau_100 tau_mean tau_100_strict tau_mean_strict tau_100_signed ediss_mean tau_mean_signed tau_kim_max tau_kim_mean ediss_kim_max ediss_kim_mean \n");
@@ -2031,6 +2031,30 @@ event normcal (t+=t_out; t<=t_end){
     double ux_liq_savg = wsum > 0. ? ux_sig/wsum : 0.;
     double uy_liq_savg = wsum > 0. ? uy_sig/wsum : 0.;
 
+    // [PROJECT ADDED, 2026-09-16] The SPANWISE component, for Kim's Fig. A.18
+    // (2D vs 3D). The solver compiles and runs unchanged under -grid=octree --
+    // the embedded bag is a function of x and y only, so it extrudes into a
+    // slab and the liquid volume comes out identical to 2D -- but nothing
+    // logged u_z, so the one quantity the comparison turns on was the one
+    // quantity missing. Zero by construction in 2D, where these two columns
+    // are written as zeros to keep the file's shape the same at both
+    // dimensionalities.
+    double uz_liq_savg = 0., uz_liq_rms = 0.;
+#if dimension > 2
+    {
+      double uz_sig = 0., uz_sq = 0.;
+      foreach (reduction(+:uz_sig) reduction(+:uz_sq)) {
+        double dA = dv();
+        uz_sig += u.z[]*f[]*dA;
+        uz_sq  += sq(u.z[]*f[])*dA;
+      }
+      if (wsum > 0.) {
+        uz_liq_savg = uz_sig/wsum;
+        uz_liq_rms  = sqrt (uz_sq/wsum);
+      }
+    }
+#endif
+
     posY_max      = statsf(posY).max;
 
     // [PROJECT ADDED, 2026-09-16] Interface height at the two ENDS of the bag.
@@ -2303,7 +2327,7 @@ event normcal (t+=t_out; t<=t_end){
    // i, timestep, no of cells, real time elapsed, cpu time
    if (pid() == 0){
 
-      fprintf(fp_norm, "%i %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g \n",i,t,omega_liq_avg,omega_liq_rms,omega_liq_vol,omega_liq_max,ux_liq_avg,ux_liq_rms,ux_liq_vol,ux_liq_max,uy_liq_avg,uy_liq_rms,uy_liq_vol,uy_liq_max,ux_liq_savg,uy_liq_savg);
+      fprintf(fp_norm, "%i %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g \n",i,t,omega_liq_avg,omega_liq_rms,omega_liq_vol,omega_liq_max,ux_liq_avg,ux_liq_rms,ux_liq_vol,ux_liq_max,uy_liq_avg,uy_liq_rms,uy_liq_vol,uy_liq_max,ux_liq_savg,uy_liq_savg,uz_liq_savg,uz_liq_rms);
       fflush(fp_norm);
 
       fprintf(fp_stats2, "%i %g %g %g %g %g %g %g \n",i,t,f_liq_sum,f_liq_interf,posY_max,posY_min,y_left,y_right);

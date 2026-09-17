@@ -175,6 +175,21 @@ $(BUILD_DIR)/BioReactor-mpi-lean: $(SIM_SRC) $(SRC_HEADERS)
 	CC99='mpicc -std=c99 -D_XOPEN_SOURCE=700 -D_GNU_SOURCE=1' \
 	$(QCC) $(CFLAGS) -D_MPI=1 -DEXTRA_TRACERS=0 $< -o $@ -L$(BASILISK)/gl -lglutils -lfb_tiny -lm
 
+# 3D binary: MPI, octree grid. Kim's Fig. A.18 compares 2D against 3D to
+# justify running the study in 2D, so reproducing that justification needs a
+# 3D build. The source needs no changes -- the embedded bag is a function of
+# x and y only, so it extrudes into a slab and the liquid volume comes out
+# identical (0.286 at both dimensionalities, measured 2026-09-16).
+.PHONY: build-mpi-3d
+build-mpi-3d: $(BUILD_DIR)/BioReactor-mpi-3d
+
+$(BUILD_DIR)/BioReactor-mpi-3d: $(SIM_SRC) $(SRC_HEADERS)
+	@mkdir -p $(BUILD_DIR)
+	if command -v mpicc >/dev/null 2>&1; then :; \
+	elif command -v module >/dev/null 2>&1; then module load openmpi; fi && \
+	CC99='mpicc -std=c99 -D_XOPEN_SOURCE=700 -D_GNU_SOURCE=1' \
+	$(QCC) -grid=octree $(CFLAGS) -D_MPI=1 -DEXTRA_TRACERS=0 $< -o $@ -L$(BASILISK)/gl -lglutils -lfb_tiny -lm
+
 # Figure-set binary: MPI, all four initial tracer configurations. Kim's Figs. 5
 # and 6 compare top half / left half / circle / line, which are four soluble
 # tracers advected by the same flow -- one run rather than four.
