@@ -180,3 +180,22 @@ def test_untested_rpm_buys_a_bigger_walltime_cushion():
 
     assert walltime_safety("measured") < walltime_safety("measured_other_rpm_max")
     assert walltime_safety("measured_other_rpm_max") >= 2.9
+
+
+# ── a second figure, a second threshold ──────────────────────────────────────
+
+def test_the_target_threshold_is_not_hardwired_to_0_95():
+    """Fig 9 needs chi=0.95; Kim only publishes chi=0.50 for the angle series
+    (Fig 10). A point that stops at chi=0.60 is finished for Fig 10 and short
+    for Fig 9, and the extender must be able to say so."""
+    short_for_95 = {"dtmix_0.95": math.nan, "dtmix_0.50": 61.4,
+                    "sigma2_max": 0.2423}
+    assert needs_extension(short_for_95, target_key="dtmix_0.95")
+    assert not needs_extension(short_for_95, target_key="dtmix_0.50")
+
+
+def test_a_lower_target_asks_for_less_compute():
+    t, chi = _truncated_exponential(12.0, 6.0)      # chi = 0.393
+    to_50 = extension_cycles(t, chi, T_per=1.846, target=0.50, margin=1.0)
+    to_95 = extension_cycles(t, chi, T_per=1.846, target=0.95, margin=1.0)
+    assert 0 < to_50 < to_95

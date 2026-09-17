@@ -202,7 +202,9 @@ def tip_results(runs_root: Path, base_run_id: str) -> dict:
 # ── submission ───────────────────────────────────────────────────────────────
 
 def plan_extension(runs_root: Path, base_run_id: str,
-                   margin: float = DEFAULT_MARGIN) -> dict | None:
+                   margin: float = DEFAULT_MARGIN,
+                   target_key: str = TARGET_KEY,
+                   target_chi: float = TARGET_CHI) -> dict | None:
     """What the next segment for this point should be, or None if it needs none."""
     runs_root = Path(runs_root)
     tip = chain_tip(runs_root, base_run_id)
@@ -211,7 +213,7 @@ def plan_extension(runs_root: Path, base_run_id: str,
     if not rj.exists():
         return None                       # still running; nothing to judge yet
     results = json.loads(rj.read_text())
-    if not needs_extension(results):
+    if not needs_extension(results, target_key=target_key):
         return None
     if segment_index(tip) >= MAX_SEGMENTS:
         return {"run_id": tip, "blocked": True, "reason":
@@ -219,12 +221,14 @@ def plan_extension(runs_root: Path, base_run_id: str,
     params = json.loads((tip_dir / "params.json").read_text())
     T_per = period_seconds(params)
     t_s, chi = chi_from_run(tip_dir, params)
-    cycles = extension_cycles(t_s, chi, T_per=T_per, margin=margin)
+    cycles = extension_cycles(t_s, chi, T_per=T_per, target=target_chi,
+                              margin=margin)
     if cycles <= 0:
         return None
     return {"parent": tip, "run_id": f"{base_run_id}_ext{segment_index(tip) + 1}",
             "cycles": cycles, "T_per": T_per, "params": params,
-            "chi_now": float(chi[-1]), "blocked": False}
+            "chi_now": float(chi[-1]), "target_chi": target_chi,
+            "blocked": False}
 
 
 def submit_extension(plan: dict, ntasks: int, min_per_cycle: float,
@@ -257,7 +261,8 @@ def submit_extension(plan: dict, ntasks: int, min_per_cycle: float,
     })
     hours = plan["cycles"] * min_per_cycle / 60.0 * walltime_safety
     walltime = f"{min(int(hours) + 1, 47):02d}:00:00"
-    print(f"  {plan['run_id']}: chi={plan['chi_now']:.4f} -> {TARGET_CHI}, "
+    print(f"  {plan['run_id']}: chi={plan['chi_now']:.4f} -> "
+          f"{plan.get('target_chi', TARGET_CHI)}, "
           f"{plan['cycles']:.0f} cyc, t_end={params['t_end']}, walltime={walltime}")
     if dry:
         print("       DRY RUN -- not submitted")
