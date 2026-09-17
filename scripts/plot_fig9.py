@@ -146,7 +146,7 @@ def main() -> None:
     ax2.tick_params(which="both", direction="in")
     ax.grid(True, which="major", ls=":", alpha=0.4)
     ax.set_xticks(RPMS)
-    ax.set_title(r"$\theta_{b,max}=7°$", loc="left", fontsize=10)
+    ax.set_title(r"$\theta_{b,max}=7^\circ$", loc="left", fontsize=10)
 
     h1, l1 = ax.get_legend_handles_labels()
     h2, l2 = ax2.get_legend_handles_labels()
