@@ -40,6 +40,15 @@ typedef struct {
                                 // NOTE: the actual interval is T_per/(N+0.618), deliberately NOT a
                                 // divisor of the period -- see BioReactor.c (2026-09-15) for why.
   int    remove_drop;           // droplet/bubble removal (upstream REMOVE_DROP); default 0, matches upstream's own runs
+  // Field snapshots (fields/snap_*.bin): u, vorticity, f, tracers and oxygen on
+  // a uniform grid, on the video cadence, between these two ABSOLUTE cycle
+  // counts. Kim's Figs. 3, 6 and 7 are fields at particular instants -- the
+  // phases of one rocking cycle, the instant chi reaches 0.5, the instants
+  // C* reaches 0.10/0.25/0.50 -- and none of those instants is known in
+  // advance. Recording a window and letting the analysis pick the frame keeps
+  // every threshold out of the solver. Both 0 (default) disables the writer.
+  double snap_start_cycle;
+  double snap_end_cycle;
   // Checkpoint restart fields (set by chain.py for restart segments; 0 for fresh runs)
   // restart_continue distinguishes the TWO things a restart can mean:
   //   0 (default) NEW EXPERIMENT. The restored state is a warm start for a
@@ -102,6 +111,8 @@ static BioreactorParams params_read(const char *path) {
   p.t_end         = 250.0;    // default if not present in params.json
   p.n_mix_cycles  = 80;       // default: 80 rocking cycles (upstream hardcoded value)
   p.frames_per_period = 13;   // ~Kim et al.'s cadence; interval is offset off-period (see BioReactor.c)
+  p.snap_start_cycle  = 0.0;  // field snapshots off unless a window is given
+  p.snap_end_cycle    = 0.0;
 
   FILE *fp = fopen(path, "r");
   if (!fp) {
@@ -148,6 +159,10 @@ static BioreactorParams params_read(const char *path) {
       p.frames_per_period = tok_int(json, &tokens[++i]);
     else if (jsoneq(json, &tokens[i], "remove_drop"))
       p.remove_drop = tok_int(json, &tokens[++i]);
+    else if (jsoneq(json, &tokens[i], "snap_start_cycle"))
+      p.snap_start_cycle = tok_double(json, &tokens[++i]);
+    else if (jsoneq(json, &tokens[i], "snap_end_cycle"))
+      p.snap_end_cycle = tok_double(json, &tokens[++i]);
     else if (jsoneq(json, &tokens[i], "theta_max")) {
       tok_array(json, tokens, ++i, p.theta_max, N_MAX);
       i += tokens[i].size;

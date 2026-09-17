@@ -48,9 +48,13 @@ SRC = PROJECT_ROOT / "src" / "BioReactor.c"
 
 # Real `if (...)` masks that select liquid cells. Comments mentioning the
 # mask are deliberately excluded -- only executable conditions count.
-# Currently: the kLa/interface loop (which already required cs[]==1), the
-# tau/EDR averaging pass, the histogram pass, and the video field pass.
-_EXPECTED_MASKED_LOOPS = 4
+# Currently: the initialisation of the extra tracer configurations and the
+# top-half tracer (both require cs[]==1), the tau/EDR averaging pass, the
+# histogram pass, and the video field pass.
+# [2026-09-16] 4 -> 5: the Fig. 5/6 tracer configurations (left half, circle,
+# line) are initialised in a loop of their own, and it masks on cs[]==1 like
+# its neighbour. Raised deliberately, which is what this guard is for.
+_EXPECTED_MASKED_LOOPS = 5
 
 
 def _mask_lines() -> list[str]:

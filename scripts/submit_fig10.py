@@ -46,7 +46,10 @@ from scripts.cost_model import min_per_cycle            # noqa: E402
 from scripts.simulate import submit_slurm               # noqa: E402
 
 KIM_CSV = ROOT / "experiments/kimetal2024/csv_raw/mixing_kla_vs_angle.csv"
-BINARY = "/oscar/scratch/eaguerov/BioReactor-mpi-prod-4b3a435"
+# Lean build (one tracer) at 3645d13. Newer than prod-4b3a435 in one way that
+# matters here: it writes posY_left/posY_right, so the angle sweep also feeds
+# Figs. 14(b) and 15(d-f) instead of needing its own re-run.
+BINARY = "/oscar/scratch/eaguerov/BioReactor-mpi-lean-3645d13"
 
 RPM = 32.5
 LEVEL, NTASKS = 9, 32

@@ -645,8 +645,8 @@ int main(int argc, char * argv[]){
   fprintf(fp_streaming, "i t vor_stream_mean vor_stream_max liq_vol window_dt \n");
 #endif
 
-  fprintf(fp_norm, "i t Omega_liq_avg Omega_liq_rms Omega_liq_vol Omega_liq_max ux_liq_avg ux_liq_rms ux_liq_vol ux_liq_max uy_liq_avg uy_liq_rms uy_liq_vol uy_liq_max \n");
-  fprintf(fp_stats2, "i t f_liq_sum f_liq_interf posY_max posY_min \n");
+  fprintf(fp_norm, "i t Omega_liq_avg Omega_liq_rms Omega_liq_vol Omega_liq_max ux_liq_avg ux_liq_rms ux_liq_vol ux_liq_max uy_liq_avg uy_liq_rms uy_liq_vol uy_liq_max ux_liq_savg uy_liq_savg \n");
+  fprintf(fp_stats2, "i t f_liq_sum f_liq_interf posY_max posY_min posY_left posY_right \n");
   fprintf(fp_stats3, "i t oxy_liq_sum oxy_liq_sum2 c_liq_sum c_liq_sum2 c1_liq_sum c1_liq_sum2 c2_liq_sum c2_liq_sum2 c3_liq_sum c3_liq_sum2 \n");
   fprintf(fp_tau,   "i t tau_95 tau_98 tau_100 tau_mean tau_100_strict tau_mean_strict tau_100_signed ediss_mean tau_mean_signed tau_kim_max tau_kim_mean ediss_kim_max ediss_kim_mean \n");
 
@@ -1355,6 +1355,56 @@ event tracer(t = t_mix){
   // tracer released as a line (same area)
   // fraction(c, intersection( -(y-y_tr - 0.5*h_tr), -(-(y-y_tr + 0.5*h_tr)) ));
 
+  // [PROJECT ADDED, 2026-09-16] Kim's Fig. 5 compares the degree of mixing for
+  // FOUR initial tracer configurations, and Fig. 6 shows their fields at
+  // chi = 0 and chi = 0.5. Upstream left the circle and the line commented out
+  // and never initialised c1 or c3 at all, so only the top-half case existed
+  // and neither figure could be drawn.
+  //
+  // One run gives all of them: the four soluble tracers are independent
+  // scalars advected by the same flow, and tr_oxy.dat already logs the first
+  // and second moments of each. Four runs would differ only in noise.
+  //
+  //   c2  top half   (upstream's VERTICAL_MIXUP; left exactly as it was)
+  //   c1  left half
+  //   c3  circle at the centre of the water
+  //   c   line across the middle of the water, same area as the circle
+  //
+  // Kim's fourth panel in Fig. 6 is the BOTTOM half, which needs no tracer of
+  // its own: sigma^2 is invariant under c -> 1 - c, so the bottom half's chi(t)
+  // is identical to the top half's, and its field is 1 - c2 wherever there is
+  // water. Spending a fifth advected scalar on it would buy a copy.
+  //
+  // Gated on EXTRA_TRACERS because advecting them is not free: each costs two
+  // VOF-advected fields and a multigrid diffusion solve per timestep, and
+  // dropping the three idle ones is where the mixing sweeps got 41% of their
+  // speed (fc70305). Production keeps EXTRA_TRACERS=0 and one tracer; the
+  // Fig. 5/6 build turns them on.
+#if EXTRA_TRACERS
+  {
+    // The line spans the water and is thinned to the circle's area, but never
+    // below one cell: at L6 the exact band is 0.23 cells thick and would
+    // initialise NOTHING, giving a tracer that is identically zero and a chi
+    // with the right shape and no meaning. Where the floor binds, the line
+    // and the circle no longer have equal areas -- postprocess reads each
+    // tracer's own sigma^2_max at injection, so chi stays correct, but the
+    // two configurations are then not area-matched and should not be compared
+    // as if they were.
+    foreach() {
+      if ((f[] > 0.5) && (cs[] == 1)) {
+        double half_h = fmax (0.5 * h_tr, Delta);
+        if (x <= x_tr)
+          c1[] = 1.0;                             // left half
+        if (sq(x - x_tr) + sq(y - y_tr) <= sq(R_tr))
+          c3[] = 1.0;                             // circle at the centre
+        if (fabs (y - y_tr) <= half_h)
+          c[]  = 1.0;                             // line across the middle
+      }
+    }
+    boundary ({c, c1, c3});
+  }
+#endif
+
   // Vertical mixing-top side
   #if VERTICAL_MIXUP
   {
@@ -1479,6 +1529,50 @@ event streaming_vorticity (i++)
       fprintf (fp_streaming, "%i %g %g %g %g %g \n", i, t,
                varea > 0. ? vsum/varea : 0., vmax, varea, streaming_acc_dt);
       fflush (fp_streaming);
+    }
+
+    // [PROJECT ADDED, 2026-09-16] The steady-streaming FIELD, not just its
+    // spatial mean. Kim's Fig. 4 is the mean-flow vorticity field and the
+    // volume fraction field, each overlaid with streamlines of the mean flow,
+    // and streamlines need ubar itself -- streaming.dat's single number cannot
+    // produce them. Rewritten every window rather than accumulated: the file
+    // that matters is the last (most settled) one, and at L10 each is 16 MB.
+    {
+      int    n_s  = NN;
+      double dx_s = L0 / n_s;
+      scalar *sp = {ubar.x, ubar.y, omega_bar, f_acc};
+      int np_s = 4;
+      float *bs = (float *) malloc ((size_t) np_s * n_s * n_s * sizeof (float));
+      int ks = 0;
+      for (scalar s in sp) {
+        for (int j = 0; j < n_s; j++) {
+          double yj = Y0 + (j + 0.5) * dx_s;
+          for (int ii = 0; ii < n_s; ii++) {
+            double xi = X0 + (ii + 0.5) * dx_s;
+            bs[(size_t) ks * n_s * n_s + j * n_s + ii] =
+              (float) interpolate (s, xi, yj);
+          }
+        }
+        ks++;
+      }
+#if _MPI
+      if (pid() == 0)
+#endif
+      {
+        FILE *fs_ = fopen ("streaming_field.bin", "wb");
+        if (fs_) {
+          fwrite (&n_s,  sizeof(int),    1, fs_);
+          fwrite (&np_s, sizeof(int),    1, fs_);
+          fwrite (&t,    sizeof(double), 1, fs_);
+          // The window length is what f_acc is normalised by; without it a
+          // reader cannot tell a cell that was water throughout from one the
+          // interface swept.
+          fwrite (&streaming_acc_dt, sizeof(double), 1, fs_);
+          fwrite (bs, sizeof(float), (size_t) np_s * n_s * n_s, fs_);
+          fclose (fs_);
+        }
+      }
+      free (bs);
     }
     foreach() {
       u_acc.x[] = 0.;
@@ -1697,6 +1791,80 @@ event velocity_kick (t = KICK_T) {
 // a zero-crossing by construction. For a convergence measure the phase only
 // has to be the SAME across levels, which this guarantees and an arbitrary
 // mid-cycle time would not.
+// [PROJECT ADDED, 2026-09-16] Field snapshot on a uniform grid: velocity,
+// vorticity, the interface, the embedded geometry, all four tracer
+// configurations and oxygen. Kim's Figs. 3, 6 and 7 are FIELDS at instants
+// that are not known in advance -- four phases of one rocking cycle, the
+// instant chi reaches 0.5, the instants C* reaches 0.10/0.25/0.50 -- so the
+// solver records a window on the video cadence and the analysis picks the
+// frame it wants from the time series it already has. No threshold logic
+// enters the solver, where getting it wrong costs a rerun.
+//
+// Nine planes, float32, in this order:
+//   ux, uy, omega, f, cs, c (line), c1 (left half), c2 (top half), c3 (circle)
+// followed by oxy. Readers must take the plane count from the header.
+#define SNAP_NPLANES 10
+
+static void write_snapshot (const char *path, double t_nd)
+{
+  int    n  = NN;
+  double dx = L0 / n;
+  scalar omega[];
+  vorticity (u, omega);
+
+  scalar *planes = {u.x, u.y, omega, f, cs, c, c1, c2, c3, oxy};
+  int np = SNAP_NPLANES;
+  float *buf = (float *) malloc ((size_t) np * n * n * sizeof (float));
+  int k = 0;
+  for (scalar s in planes) {
+    for (int j = 0; j < n; j++) {
+      double yj = Y0 + (j + 0.5) * dx;
+      for (int i = 0; i < n; i++) {
+        double xi = X0 + (i + 0.5) * dx;
+        // interpolate() is collective: every rank calls it for every cell.
+        buf[(size_t) k * n * n + j * n + i] = (float) interpolate (s, xi, yj);
+      }
+    }
+    k++;
+  }
+#if _MPI
+  if (pid() == 0)
+#endif
+  {
+    FILE *fp = fopen (path, "wb");
+    if (fp) {
+      fwrite (&n,    sizeof(int),    1, fp);
+      fwrite (&np,   sizeof(int),    1, fp);
+      fwrite (&t_nd, sizeof(double), 1, fp);
+      fwrite (buf,   sizeof(float), (size_t) np * n * n, fp);
+      fclose (fp);
+    } else
+      fprintf (stderr, "write_snapshot: cannot open %s\n", path);
+  }
+  free (buf);
+}
+
+static int    _snap_idx  = 0;
+static double _last_snap = -1e30;
+
+event field_snapshots (i++)
+{
+  if (params.snap_end_cycle > 0.) {
+    double c0 = params.snap_start_cycle * T_per_st;
+    double c1_ = params.snap_end_cycle   * T_per_st;
+    if (t >= c0 && t <= c1_ && t - _last_snap >= dt_video) {
+      _last_snap = t;
+#if _MPI
+      if (pid() == 0)
+#endif
+      { if (_snap_idx == 0) system ("mkdir -p fields"); }
+      char path[512];
+      sprintf (path, "fields/snap_%06d.bin", _snap_idx++);
+      write_snapshot (path, t);
+    }
+  }
+}
+
 static void write_uv_field (double t_nd)
 {
   int    n  = NN;
@@ -1847,7 +2015,41 @@ event normcal (t+=t_out; t<=t_end){
     
     f_liq_sum     = statsf2(f_liq).sum;
     f_liq_interf  = interface_area(f);
+    // [PROJECT ADDED, 2026-09-16] SIGNED spatial means of the liquid velocity.
+    // Basilisk's normf(v).avg is sum(|v| dv)/volume -- an absolute value -- so
+    // ux_liq_avg rectifies the signal: it oscillates at TWICE the rocking
+    // frequency and never goes negative. Kim's Fig. 2 plots the signed means
+    // against the rocking angle, and a rectified series cannot show the phase
+    // relationship that figure exists to show.
+    double ux_sig = 0., uy_sig = 0., wsum = 0.;
+    foreach (reduction(+:ux_sig) reduction(+:uy_sig) reduction(+:wsum)) {
+      double dA = dv();
+      ux_sig += u.x[]*f[]*dA;
+      uy_sig += u.y[]*f[]*dA;
+      wsum   += dA;
+    }
+    double ux_liq_savg = wsum > 0. ? ux_sig/wsum : 0.;
+    double uy_liq_savg = wsum > 0. ? uy_sig/wsum : 0.;
+
     posY_max      = statsf(posY).max;
+
+    // [PROJECT ADDED, 2026-09-16] Interface height at the two ENDS of the bag.
+    // Kim's Fig. 14 is "the maximum surface elevation at the left end", and
+    // Fig. 15 is the frequency spectrum of the surface elevation -- neither is
+    // the global posY_max, which is wherever the crest happens to be and
+    // wanders across the bag over a cycle. The probe is the outermost 2% of
+    // the bag width; narrower than that and a coarse grid has no interface
+    // cell in it on some timesteps, leaving the column empty at random.
+    double x_lo = X0 + 0.02*L0, x_hi = X0 + L0 - 0.02*L0;
+    double y_left = -HUGE, y_right = -HUGE;
+    foreach (reduction(max:y_left) reduction(max:y_right)) {
+      if (posY[] != nodata && cs[] > 0.) {
+        if (x <= x_lo && posY[] > y_left)  y_left  = posY[];
+        if (x >= x_hi && posY[] > y_right) y_right = posY[];
+      }
+    }
+    if (y_left  == -HUGE) y_left  = nodata;
+    if (y_right == -HUGE) y_right = nodata;
     posY_min      = statsf(posY).min;
 
     oxy_liq_sum   = statsf2(oxy_liq).sum;
@@ -2101,10 +2303,10 @@ event normcal (t+=t_out; t<=t_end){
    // i, timestep, no of cells, real time elapsed, cpu time
    if (pid() == 0){
 
-      fprintf(fp_norm, "%i %g %g %g %g %g %g %g %g %g %g %g %g %g \n",i,t,omega_liq_avg,omega_liq_rms,omega_liq_vol,omega_liq_max,ux_liq_avg,ux_liq_rms,ux_liq_vol,ux_liq_max,uy_liq_avg,uy_liq_rms,uy_liq_vol,uy_liq_max);
+      fprintf(fp_norm, "%i %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g \n",i,t,omega_liq_avg,omega_liq_rms,omega_liq_vol,omega_liq_max,ux_liq_avg,ux_liq_rms,ux_liq_vol,ux_liq_max,uy_liq_avg,uy_liq_rms,uy_liq_vol,uy_liq_max,ux_liq_savg,uy_liq_savg);
       fflush(fp_norm);
 
-      fprintf(fp_stats2, "%i %g %g %g %g %g \n",i,t,f_liq_sum,f_liq_interf,posY_max,posY_min);
+      fprintf(fp_stats2, "%i %g %g %g %g %g %g %g \n",i,t,f_liq_sum,f_liq_interf,posY_max,posY_min,y_left,y_right);
       fflush(fp_stats2);
 
       fprintf(fp_stats3, "%i %g %g %g %g %g %g %g %g %g %g %g \n",i,t,oxy_liq_sum,oxy_liq_sum2,c_liq_sum,c_liq_sum2,c1_liq_sum,c1_liq_sum2,c2_liq_sum,c2_liq_sum2,c3_liq_sum,c3_liq_sum2);

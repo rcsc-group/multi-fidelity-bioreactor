@@ -160,6 +160,34 @@ $(BUILD_DIR)/BioReactor-mpi: $(SIM_SRC) $(SRC_HEADERS)
 	CC99='mpicc -std=c99 -D_XOPEN_SOURCE=700 -D_GNU_SOURCE=1' \
 	$(QCC) $(CFLAGS) -D_MPI=1 $< -o $@ -L$(BASILISK)/gl -lglutils -lfb_tiny -lm
 
+# Lean sweep binary: MPI, one tracer. The mixing and kLa sweeps read only c2
+# (dtmix) and oxy (kLa); c, c1 and c3 each cost two VOF-advected fields and a
+# multigrid diffusion solve every timestep. Dropping them is worth ~41%
+# (fc70305). EXTRA_TRACERS defaults to 1 in the source and no target passed 0
+# until now, so that saving was documented in a comment and never built.
+.PHONY: build-mpi-lean
+build-mpi-lean: $(BUILD_DIR)/BioReactor-mpi-lean
+
+$(BUILD_DIR)/BioReactor-mpi-lean: $(SIM_SRC) $(SRC_HEADERS)
+	@mkdir -p $(BUILD_DIR)
+	if command -v mpicc >/dev/null 2>&1; then :; \
+	elif command -v module >/dev/null 2>&1; then module load openmpi; fi && \
+	CC99='mpicc -std=c99 -D_XOPEN_SOURCE=700 -D_GNU_SOURCE=1' \
+	$(QCC) $(CFLAGS) -D_MPI=1 -DEXTRA_TRACERS=0 $< -o $@ -L$(BASILISK)/gl -lglutils -lfb_tiny -lm
+
+# Figure-set binary: MPI, all four initial tracer configurations. Kim's Figs. 5
+# and 6 compare top half / left half / circle / line, which are four soluble
+# tracers advected by the same flow -- one run rather than four.
+.PHONY: build-mpi-figset
+build-mpi-figset: $(BUILD_DIR)/BioReactor-mpi-figset
+
+$(BUILD_DIR)/BioReactor-mpi-figset: $(SIM_SRC) $(SRC_HEADERS)
+	@mkdir -p $(BUILD_DIR)
+	if command -v mpicc >/dev/null 2>&1; then :; \
+	elif command -v module >/dev/null 2>&1; then module load openmpi; fi && \
+	CC99='mpicc -std=c99 -D_XOPEN_SOURCE=700 -D_GNU_SOURCE=1' \
+	$(QCC) $(CFLAGS) -D_MPI=1 -DEXTRA_TRACERS=1 $< -o $@ -L$(BASILISK)/gl -lglutils -lfb_tiny -lm
+
 # Gold-standard production binary: MPI parallelism + inline video generation.
 # This is the default binary for all sweeps and SLURM submissions.
 .PHONY: build-mpi-video
