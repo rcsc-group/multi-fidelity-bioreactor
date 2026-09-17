@@ -62,6 +62,12 @@ _MEASURED: dict[tuple[int, int], dict[float, float]] = {
     # runs. Measured without video (job 6429568, warm from 57f68830, 6 cycles
     # in 05:49:16): 58.2 min/cycle. Video therefore costs ~43 min/cycle at L10.
     (10, 32): {17.5: 168.1, 32.5: 58.2, 37.5: 42.0},
+    # 32-rank L9, the Fig 9 sweep's own geometry. Measured 2026-09-16 from the
+    # first point to complete: job 6439393, sacct Elapsed 07:43:42 over the
+    # full 108.0 cycles of runs/fig9_l9_rpm37.5 (t_end 65.17 nd / 0.6073 nd
+    # per period) = 4.29 min/cycle. Until this landed, min_per_cycle raised for
+    # (9, 32) and every Fig 9 job had to carry a hand-written walltime.
+    (9, 32): {37.5: 4.29},
 }
 
 

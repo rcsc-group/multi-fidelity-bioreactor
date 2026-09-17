@@ -39,6 +39,7 @@ from __future__ import annotations
 import json
 import math
 from pathlib import Path
+import sys
 
 import matplotlib
 matplotlib.use("Agg")
@@ -50,6 +51,8 @@ ROOT = Path("/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor")
 KIM_CSV = ROOT / "experiments/kimetal2024/csv_raw/mixing_kla_vs_frequency.csv"
 OUT = ROOT / "experiments/kimetal2024/figure_replicas/replicated_Fig9.png"
 RUNS = ROOT / "runs"
+sys.path.insert(0, str(ROOT))
+from scripts.autoextend import tip_results  # noqa: E402
 
 RPMS = [15, 17.5, 20, 22.5, 25, 27.5, 30, 32.5, 35, 37.5]
 # (level, run_id template, colour). Ladder points are single-rpm probes;
@@ -60,6 +63,7 @@ SERIES = [
     (7, "fig9_ladder_l7_rpm{rpm:g}", "seagreen"),
     (8, "fig9_ladder_l8_rpm{rpm:g}", "darkred"),
     (9, "fig9_ladder_l9_rpm{rpm:g}", "purple"),
+    (9, "fig9_l9_rpm{rpm:g}", "purple"),          # the sweep itself
 ]
 THRESHOLDS = [("dtmix_0.95", "o", 0.95), ("dtmix_0.75", "^", 0.75),
               ("dtmix_0.50", "v", 0.50)]
@@ -69,10 +73,14 @@ def collect() -> pd.DataFrame:
     rows = []
     for level, tmpl, colour in SERIES:
         for rpm in RPMS:
-            rj = RUNS / tmpl.format(rpm=rpm) / "results.json"
-            if not rj.exists():
+            # A point that ran out of clock is finished by a continuation
+            # segment (scripts/autoextend.py); its completed measurement lives
+            # in the LAST segment, while the base run's own results.json keeps
+            # its NaN forever. Reading the base run_id directly would report
+            # every extended point as missing.
+            d = tip_results(RUNS, tmpl.format(rpm=rpm))
+            if not d:
                 continue
-            d = json.loads(rj.read_text())
             rows.append({
                 "level": level, "rpm": float(rpm), "colour": colour,
                 "run_id": tmpl.format(rpm=rpm),
