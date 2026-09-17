@@ -1681,10 +1681,67 @@ event velocity_kick (t = KICK_T) {
 }
 #endif
 
+// [PROJECT ADDED, 2026-09-16] Velocity field on a uniform grid, written once,
+// at the same instant as the checkpoint. Kim's Fig. A.16(c) is the discrete
+// L2 norm of the velocity error between each resolution and a finer
+// reference, which needs the FIELDS at one common instant across levels --
+// and nothing this code wrote was per-cell velocity: normf.dat carries rms
+// scalars, frames_tau carries (f, tau, eps), and the Basilisk dump stores a
+// tree the analysis scripts cannot read. Written unconditionally rather than
+// under VIDEOS because it is one file per run (8 MB at L10) and a run whose
+// velocity field cannot be compared to anything is a run that has to be
+// repeated to answer a convergence question.
+//
+// The instant is the checkpoint's own, i.e. a period boundary (theta=0), not
+// Kim's t/T_p = 29.77 (maximum rocking angle): t_dump_checkpoint is pinned to
+// a zero-crossing by construction. For a convergence measure the phase only
+// has to be the SAME across levels, which this guarantees and an arbitrary
+// mid-cycle time would not.
+static void write_uv_field (double t_nd)
+{
+  int    n  = NN;
+  double dx = L0 / n;
+  float *bux = (float *) malloc (n * n * sizeof (float));
+  float *buy = (float *) malloc (n * n * sizeof (float));
+  float *bf  = (float *) malloc (n * n * sizeof (float));
+  float *bcs = (float *) malloc (n * n * sizeof (float));
+  int idx = 0;
+  for (int j = 0; j < n; j++) {
+    double yj = Y0 + (j + 0.5) * dx;
+    for (int i = 0; i < n; i++) {
+      double xi = X0 + (i + 0.5) * dx;
+      // interpolate() is collective -- every rank must call it for all cells.
+      bux[idx] = (float) interpolate (u.x, xi, yj);
+      buy[idx] = (float) interpolate (u.y, xi, yj);
+      bf [idx] = (float) interpolate (f,   xi, yj);
+      bcs[idx] = (float) interpolate (cs,  xi, yj);
+      idx++;
+    }
+  }
+#if _MPI
+  if (pid() == 0)
+#endif
+  {
+    FILE *fp = fopen ("uv_field.bin", "wb");
+    if (fp) {
+      fwrite (&n,    sizeof(int),    1, fp);
+      fwrite (&t_nd, sizeof(double), 1, fp);
+      fwrite (bux,   sizeof(float), n * n, fp);
+      fwrite (buy,   sizeof(float), n * n, fp);
+      fwrite (bf,    sizeof(float), n * n, fp);
+      fwrite (bcs,   sizeof(float), n * n, fp);
+      fclose (fp);
+    } else
+      fprintf (stderr, "write_uv_field: cannot open uv_field.bin\n");
+  }
+  free (bux); free (buy); free (bf); free (bcs);
+}
+
 // Write a Basilisk checkpoint at the first complete period boundary after t_end.
 // The checkpoint is always at θ=0 (zero-crossing) — clean phase alignment for
 // the next segment's soft-start ramp.  Controlled by t_dump_checkpoint global.
 event dump_checkpoint (t = t_dump_checkpoint) {
+  write_uv_field (t);
   if (pid() == 0)
     fprintf (ferr, "checkpoint: writing checkpoint.dump at t=%.4g\n", t);
   // p and pf have nodump=true by default in centered.h (they're reconstructed

@@ -61,7 +61,13 @@ KIM_EDISS_PEAK = 0.28655      # W/m^3
 RUNS = [("L8", "l8_coldstart_vid", "tab:orange"),
         ("L9", "a34fc4d4", "seagreen"),
         ("L10", "57f68830", "purple")]
-HIST_RUN = "57f68830"
+# Panels (b)/(c) need MANY distinct phases to locate the peak instant, and
+# 57f68830 samples exactly five however long it runs (its frame interval is
+# T_p/5 on the nose). runs/fig8_hist_l10 re-records the same converged state
+# on the off-period cadence -- ~130 phases -- and is used as soon as it exists.
+HIST_RUN = ("fig8_hist_l10"
+            if (ROOT / "runs" / "fig8_hist_l10" / "frames_tau").is_dir()
+            else "57f68830")
 
 
 def load_frame(path):
