@@ -42,6 +42,7 @@ from scripts.fields import (  # noqa: E402
     cell_centres, liquid_mask, load_snapshot, nearest_snapshot,
 )
 from scripts.postprocess import _compute_c_star, _t_scales  # noqa: E402
+from scripts import figstyle as fs  # noqa: E402
 
 plt.rcParams.update({
     "mathtext.fontset": "cm", "font.family": "serif", "axes.linewidth": 1.2,
@@ -123,16 +124,20 @@ def main() -> None:
     fig = plt.figure(figsize=(9.4, 5.6))
     gs = fig.add_gridspec(2, 3, height_ratios=[1.1, 1.0])
     ax_c = fig.add_subplot(gs[0, :2])
-    ax_c.plot((t_nd - t_nd[0]) / T_per_nd, c_star, color="#0072B2", lw=1.4)
+    ax_c.plot((t_nd - t_nd[0]) / T_per_nd, c_star,
+              color=fs.COMPONENT_COLOUR["x"], lw=1.4)
     for thr, ls in zip(THRESHOLDS, ("-", "--", ":")):
         ax_c.axhline(thr, color="0.6", ls=ls, lw=0.9, zorder=0)
     ax_c.set_xlabel(r"$(t-t_{inj})/T_p$", fontsize=11)
-    ax_c.set_ylabel(r"$C^*_{w,\mathrm{oxy}}$", fontsize=11, color="#0072B2")
+    ax_c.set_ylabel(r"$C^*_{w,\mathrm{oxy}}$", fontsize=11,
+                    color=fs.COMPONENT_COLOUR["x"])
     ax_c.tick_params(which="both", direction="in")
     ax_k = ax_c.twinx()
-    ax_k.plot(t5 / (T_per_nd * T_bio), k5, color="#D55E00", lw=1.2)
-    ax_k.set_ylabel(r"$k_La$ (h$^{-1}$)", fontsize=11, color="#D55E00")
-    ax_k.tick_params(axis="y", colors="#D55E00")
+    ax_k.plot(t5 / (T_per_nd * T_bio), k5,
+              color=fs.COMPONENT_COLOUR["y"], lw=1.2)
+    ax_k.set_ylabel(r"$k_La$ (h$^{-1}$)", fontsize=11,
+                    color=fs.COMPONENT_COLOUR["y"])
+    ax_k.tick_params(axis="y", colors=fs.COMPONENT_COLOUR["y"])
 
     for col, thr in enumerate(THRESHOLDS):
         ax = fig.add_subplot(gs[1, col])
@@ -160,9 +165,11 @@ def main() -> None:
 
     # ── Fig A.17 ─────────────────────────────────────────────────────────
     fig, axes = plt.subplots(1, 2, figsize=(9.4, 3.6))
-    axes[0].plot(t_rel_s, k_glob, color="#0072B2", lw=1.3, label="global fit")
-    axes[0].plot(t5, k5, color="#D55E00", lw=1.2, ls="--", label="local, 5 pts")
-    axes[0].plot(t11, k11, color="#009E73", lw=1.2, ls="-.",
+    axes[0].plot(t_rel_s, k_glob, color=fs.COMPONENT_COLOUR["x"], lw=1.3,
+                 label="global fit")
+    axes[0].plot(t5, k5, color=fs.COMPONENT_COLOUR["y"], lw=1.2, ls="--",
+                 label="local, 5 pts")
+    axes[0].plot(t11, k11, color=fs.COMPONENT_COLOUR["z"], lw=1.2, ls="-.",
                  label="local, 11 pts")
     for thr in THRESHOLDS:
         idx = int(np.argmax(c_star >= thr))
@@ -173,8 +180,9 @@ def main() -> None:
     axes[0].legend(fontsize=8, frameon=False)
     axes[0].tick_params(which="both", direction="in")
 
-    axes[1].plot(t5, b5, color="#D55E00", lw=1.2, label=r"$\beta_0$, 5 pts")
-    axes[1].axhline(1.0, color="#0072B2", lw=1.2,
+    axes[1].plot(t5, b5, color=fs.COMPONENT_COLOUR["y"], lw=1.2,
+                 label=r"$\beta_0$, 5 pts")
+    axes[1].axhline(1.0, color=fs.COMPONENT_COLOUR["x"], lw=1.2,
                     label=r"$\beta_0$, global $\equiv 1$")
     axes[1].set_xlabel(r"$t-t_{inj}$ (s)", fontsize=11)
     axes[1].set_ylabel(r"$\beta_0$", fontsize=11)

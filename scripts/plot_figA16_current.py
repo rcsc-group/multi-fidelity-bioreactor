@@ -40,6 +40,15 @@ navy this script used until 2026-09-04 (2); panel (b)'s y-axis is
 comparing this script's output against the actual PDF, not just against
 memory of what the original replica looked like.
 
+2026-09-20: the CURVE COLOURS no longer follow Kim's. Matching his legend
+made this one figure easy to lay beside his PDF and made it lie about
+everything else -- n_L = 2^6 IS mesh level 6, and it was drawn crimson here
+while level 6 is orange in Figs 9, 11 and 13. Cross-figure consistency was
+judged the more valuable of the two, so the curves now take the level hues
+from scripts/figstyle and the reader can carry one key through the whole
+set. The AXIS RANGES above still follow Kim exactly; only the hues moved,
+and the decision is reversible by deleting three level_colour calls.
+
 Usage:
     uv run python scripts/plot_figA16_current.py
 """
@@ -49,6 +58,10 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
+import sys
+from pathlib import Path as _Path
+sys.path.insert(0, str(_Path(__file__).resolve().parents[1]))
+from scripts import figstyle as fs  # noqa: E402
 
 RUNS = Path(__file__).parent.parent / "runs"
 OUT_DIR = Path(__file__).parent.parent / "experiments/kimetal2024/figure_replicas"
@@ -86,13 +99,22 @@ PANEL_YLIM = {"a": (0.0, 1.2), "b": (0.0, 0.4)}  # matches Kim's Fig. A.16 exact
 
 for comp, u6, u8, u10, letter in [("x", ux6, ux8, ux10, "a"), ("y", uy6, uy8, uy10, "b")]:
     fig, ax = plt.subplots(figsize=(5.0, 4.5))
-    ax.plot(t6, u6, color="crimson", lw=2.2, ls="--", label=r"$n_L=2^6$")
-    ax.plot(t8, u8, color="mediumorchid", lw=1.6, ls="--", label=r"$n_L=2^8$")
-    ax.plot(t10, u10, color="gray", lw=1.2, ls="--", label=r"$n_L=2^{10}$")
+    # n_L = 2^k IS mesh level k, so these take the level hues rather than an
+    # unrelated red/purple/grey triple. Widths still taper with refinement so
+    # the coarse curve stays visible under the fine ones.
+    ax.plot(t6, u6, color=fs.level_colour(6), lw=2.2, ls="--",
+            label=r"$n_L=2^6$")
+    ax.plot(t8, u8, color=fs.level_colour(8), lw=1.6, ls="--",
+            label=r"$n_L=2^8$")
+    ax.plot(t10, u10, color=fs.level_colour(10), lw=1.2, ls="--",
+            label=r"$n_L=2^{10}$")
     ax.set_xlabel(r"$t/T_p$", fontsize=13)
     ax.set_ylabel(rf"$\langle u'_{{{comp},rms}}\rangle/U_b$", fontsize=13)
     ax.set_ylim(*PANEL_YLIM[letter])
-    ax.legend(fontsize=11, loc="upper right")
+    # Outside the plotted content: at n_L = 2^10 the trough minima run close
+    # to the frame and an inset legend sat on top of them.
+    ax.legend(fontsize=10, frameon=False, loc="upper left",
+              bbox_to_anchor=(1.02, 1.0))
     ax.text(-0.18, 1.02, rf"$({letter})$", transform=ax.transAxes, fontsize=15, style="italic")
     fig.tight_layout()
     out_path = OUT_DIR / f"replicated_FigA16_{letter}.png"

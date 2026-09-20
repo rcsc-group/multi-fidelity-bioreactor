@@ -45,6 +45,10 @@ import numpy as np
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+import sys
+from pathlib import Path as _Path
+sys.path.insert(0, str(_Path(__file__).resolve().parents[1]))
+from scripts import figstyle as fs  # noqa: E402
 
 ROOT = Path("/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor")
 OUT_DIR = ROOT / "experiments/kimetal2024/figure_replicas"
@@ -58,9 +62,9 @@ plt.rcParams.update({
 KIM_TAU_PEAK = 1.8026e-3      # Pa
 KIM_EDISS_PEAK = 0.28655      # W/m^3
 
-RUNS = [("L8", "l8_coldstart_vid", "tab:orange"),
-        ("L9", "a34fc4d4", "seagreen"),
-        ("L10", "57f68830", "purple")]
+RUNS = [("L8", "l8_coldstart_vid", fs.level_colour(8)),
+        ("L9", "a34fc4d4", fs.level_colour(9)),
+        ("L10", "57f68830", fs.level_colour(10))]
 # Panels (b)/(c) need MANY distinct phases to locate the peak instant, and
 # 57f68830 samples exactly five however long it runs (its frame interval is
 # T_p/5 on the nose). runs/fig8_hist_l10 re-records the same converged state
@@ -206,7 +210,11 @@ def histogram_panel(values, lo, hi, fname, xlabel, color, n_bins=30):
     print(f"saved {fname}  ({outside*100:.2f}% of samples outside the window)")
 
 
+# One dataset, one quantity per panel: colour has no dimension left to
+# encode here, so both histograms are neutral and the axis label alone says
+# which quantity it is. Tinting them would imply a contrast that is not in
+# the figure.
 histogram_panel(tau_liquid, -15e-3, 15e-3, "replicated_Fig8_b.png",
-                r"$\tau_w'$ (Pa)", "royalblue")
+                r"$\tau_w'$ (Pa)", fs.NEUTRAL)
 histogram_panel(ediss_liquid, 0.0, 1.0, "replicated_Fig8_c.png",
-                r"$\epsilon_w'$ (W/m$^3$)", "firebrick")
+                r"$\epsilon_w'$ (W/m$^3$)", fs.NEUTRAL)

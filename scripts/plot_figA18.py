@@ -37,6 +37,7 @@ ROOT = Path("/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor")
 OUT = ROOT / "experiments/kimetal2024/figure_replicas/replicated_FigA18.png"
 sys.path.insert(0, str(ROOT))
 from scripts.postprocess import _t_scales  # noqa: E402
+from scripts import figstyle as fs  # noqa: E402
 
 plt.rcParams.update({
     "mathtext.fontset": "cm", "font.family": "serif", "axes.linewidth": 1.2,
@@ -46,7 +47,7 @@ plt.rcParams.update({
 _COL_T = 1
 _COL_RMS = {"x": 7, "y": 11, "z": 17}
 _COL_SAVG = {"x": 14, "y": 15, "z": 16}
-COMPONENT_COLOUR = {"x": "#0072B2", "y": "#D55E00", "z": "#009E73"}
+COMPONENT_COLOUR = fs.COMPONENT_COLOUR
 WINDOW_CYCLES = 2.0
 
 

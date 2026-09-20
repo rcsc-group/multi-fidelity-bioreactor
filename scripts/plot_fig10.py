@@ -37,6 +37,7 @@ OUT = ROOT / "experiments/kimetal2024/figure_replicas/replicated_Fig10.png"
 RUNS = ROOT / "runs"
 sys.path.insert(0, str(ROOT))
 from scripts.autoextend import tip_results  # noqa: E402
+from scripts import figstyle as fs  # noqa: E402
 
 plt.rcParams.update({
     "mathtext.fontset": "cm", "font.family": "serif", "axes.linewidth": 1.2,
@@ -44,10 +45,11 @@ plt.rcParams.update({
 })
 
 ANGLES = [2, 3, 4, 5, 6, 7]
-SERIES = [(9, "fig10_l9_th{v:g}", "#CC79A7")]
+SERIES = [(9, "fig10_l9_th{v:g}", fs.level_colour(9))]
 # Kim's angle block has a reference for chi = 0.50 only; the others are ours
 # alone and are printed rather than plotted.
-PLOTTED = [("dtmix_0.50", "v", 0.50, "dtmix_strict_0.5")]
+PLOTTED = [("dtmix_0.50", fs.threshold_marker("chi", 0.50), 0.50,
+            "dtmix_strict_0.5")]
 EXTRA = ["dtmix_0.75", "dtmix_0.95"]
 
 
@@ -89,10 +91,10 @@ def main() -> None:
     fig, ax = plt.subplots(figsize=(6.6, 4.4))
     ax2 = ax.twinx()
     for col, marker, thr, kim_col in PLOTTED:
-        ax.plot(kim["Angle_deg"], kim[kim_col], color="black", marker=marker,
+        ax.plot(kim["Angle_deg"], kim[kim_col], color=fs.KIM, marker=marker,
                 ms=6, lw=1.3, label=rf"Kim  $\chi={thr:.2f}$")
     ax2.plot(kim["Angle_deg"], kim["vor_meanabs_steady_streaming"],
-             color="#E69F00", marker="s", ms=6, lw=1.3, ls="--", mfc="w",
+             **fs.series_kw(fs.KIM, fs.MK["vorticity"], stat="mean"),
              label=r"Kim  $\langle|\bar\xi_b'|\rangle$")
 
     for level in sorted(ours["level"].unique()) if not ours.empty else []:
@@ -102,23 +104,23 @@ def main() -> None:
             d = sub.dropna(subset=[col])
             if d.empty:
                 continue
-            ax.plot(d["theta"], d[col], color=colour, marker=marker, ms=5,
-                    lw=1.1, ls=":", label=rf"L{int(level)}  $\chi={thr:.2f}$")
+            ax.plot(d["theta"], d[col],
+                    **fs.series_kw(colour, marker, stat="max", ours=True),
+                    label=rf"L{int(level)}  $\chi={thr:.2f}$")
         dv = sub.dropna(subset=["vor"])
         if not dv.empty:
-            ax2.plot(dv["theta"], dv["vor"], color=colour, marker="s", ms=4,
-                     lw=1.0, ls="-.", mfc="w",
+            ax2.plot(dv["theta"], dv["vor"],
+                     **fs.series_kw(colour, fs.MK["vorticity"], stat="mean",
+                                    ours=True),
                      label=rf"L{int(level)}  $\langle|\bar\xi_b'|\rangle$")
 
     ax.set_yscale("log")
     ax.set_xlabel(r"Rocking angle $\theta_{b,max}$ (deg)", fontsize=12)
     ax.set_ylabel("Mixing time (s)", fontsize=12)
-    ax2.set_ylabel(r"$\langle|\bar\xi_b'|\rangle$ (1/s)", fontsize=12,
-                   color="#E69F00")
-    ax2.tick_params(axis="y", colors="#E69F00")
+    ax2.set_ylabel(r"$\langle|\bar\xi_b'|\rangle$ (1/s)", fontsize=12)
     ax.tick_params(which="both", direction="in")
     ax2.tick_params(which="both", direction="in")
-    ax.grid(True, which="major", ls=":", alpha=0.4)
+    ax.grid(True, **fs.GRID_KW)
     ax.set_xticks(ANGLES)
     ax.set_title(r"$f_b=32.5$ rpm", loc="left", fontsize=10)
     h1, l1 = ax.get_legend_handles_labels()

@@ -44,6 +44,7 @@ RUNS = ROOT / "runs"
 OUT_DIR = ROOT / "experiments/kimetal2024/figure_replicas"
 sys.path.insert(0, str(ROOT))
 from scripts.postprocess import _t_scales  # noqa: E402
+from scripts import figstyle as fs  # noqa: E402
 
 plt.rcParams.update({
     "mathtext.fontset": "cm", "font.family": "serif", "axes.linewidth": 1.2,
@@ -118,9 +119,11 @@ def spectrum(t_tp, y):
 
 def main() -> None:
     fig, axes = plt.subplots(1, 2, figsize=(9.4, 3.6))
-    n_rpm = sweep_panel(axes[0], RPMS, RPM_TEMPLATE, "#0072B2", "o",
+    n_rpm = sweep_panel(axes[0], RPMS, RPM_TEMPLATE, fs.level_colour(9),
+                        fs.MK["elevation"],
                         r"Rocking frequency $f_b$ (rpm)")
-    n_ang = sweep_panel(axes[1], ANGLES, ANGLE_TEMPLATE, "#D55E00", "^",
+    n_ang = sweep_panel(axes[1], ANGLES, ANGLE_TEMPLATE, fs.level_colour(9),
+                        fs.MK["elevation"],
                         r"Rocking angle $\theta_{b,max}$ (deg)")
     for ax, letter in zip(axes, "ab"):
         ax.text(-0.14, 1.03, rf"$({letter})$", transform=ax.transAxes,

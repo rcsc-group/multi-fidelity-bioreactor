@@ -43,6 +43,7 @@ ROOT = Path("/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor")
 OUT = ROOT / "experiments/kimetal2024/figure_replicas/replicated_Fig2.png"
 sys.path.insert(0, str(ROOT))
 from scripts.postprocess import _t_scales  # noqa: E402
+from scripts import figstyle as fs  # noqa: E402
 
 plt.rcParams.update({
     "mathtext.fontset": "cm", "font.family": "serif", "axes.linewidth": 1.2,
@@ -89,9 +90,9 @@ def main() -> None:
         ax.plot(t_tp[m], theta_deg(t_tp[m], th_max) / th_max, color="0.55",
                 lw=1.6, label=r"$\theta_b/\theta_{b,max}$")
         bars = "" if signed else r"|"
-        ax.plot(t_tp[m], ux[m], color="#0072B2", lw=1.2,
+        ax.plot(t_tp[m], ux[m], color=fs.COMPONENT_COLOUR["x"], lw=1.2,
                 label=rf"$\langle {bars}u'_x{bars}\rangle/U_b$")
-        ax.plot(t_tp[m], uy[m], color="#D55E00", lw=1.2,
+        ax.plot(t_tp[m], uy[m], color=fs.COMPONENT_COLOUR["y"], lw=1.2,
                 label=rf"$\langle {bars}u'_y{bars}\rangle/U_b$")
         ax.set_xlim(lo, hi)
         ax.set_xlabel(r"$t/T_p$", fontsize=12)

@@ -53,20 +53,24 @@ OUT = ROOT / "experiments/kimetal2024/figure_replicas/replicated_Fig9.png"
 RUNS = ROOT / "runs"
 sys.path.insert(0, str(ROOT))
 from scripts.autoextend import tip_results  # noqa: E402
+from scripts import figstyle as fs  # noqa: E402
 
 RPMS = [15, 17.5, 20, 22.5, 25, 27.5, 30, 32.5, 35, 37.5]
 # (level, run_id template, colour). Ladder points are single-rpm probes;
 # sweep points use the fig9_ prefix.
 SERIES = [
-    (6, "fig9_validate_l6_rpm{rpm:g}", "darkorange"),
-    (7, "fig9_l7_rpm{rpm:g}", "seagreen"),
-    (7, "fig9_ladder_l7_rpm{rpm:g}", "seagreen"),
-    (8, "fig9_ladder_l8_rpm{rpm:g}", "darkred"),
-    (9, "fig9_ladder_l9_rpm{rpm:g}", "purple"),
-    (9, "fig9_l9_rpm{rpm:g}", "purple"),          # the sweep itself
+    (6, "fig9_validate_l6_rpm{rpm:g}", fs.level_colour(6)),
+    (7, "fig9_l7_rpm{rpm:g}", fs.level_colour(7)),
+    (7, "fig9_ladder_l7_rpm{rpm:g}", fs.level_colour(7)),
+    (8, "fig9_ladder_l8_rpm{rpm:g}", fs.level_colour(8)),
+    (9, "fig9_ladder_l9_rpm{rpm:g}", fs.level_colour(9)),
+    (9, "fig9_l9_rpm{rpm:g}", fs.level_colour(9)),   # the sweep itself
 ]
-THRESHOLDS = [("dtmix_0.95", "o", 0.95), ("dtmix_0.75", "^", 0.75),
-              ("dtmix_0.50", "v", 0.50)]
+# Marker ranks the homogeneity criterion (v -> ^ -> P with stringency) and is
+# shared with Fig 10; it never collides with a physical-quantity shape.
+THRESHOLDS = [("dtmix_0.95", fs.threshold_marker("chi", 0.95), 0.95),
+              ("dtmix_0.75", fs.threshold_marker("chi", 0.75), 0.75),
+              ("dtmix_0.50", fs.threshold_marker("chi", 0.50), 0.50)]
 
 
 def collect() -> pd.DataFrame:
@@ -115,11 +119,12 @@ def main() -> None:
     ax2 = ax.twinx()
 
     for col, marker, thr in THRESHOLDS:
-        ax.plot(kim["RPM"], kim[f"dtmix_strict_{thr:g}"], color="royalblue",
-                marker=marker, ms=6, lw=1.3,
+        ax.plot(kim["RPM"], kim[f"dtmix_strict_{thr:g}"],
+                **fs.series_kw(fs.KIM, marker, stat="max"),
                 label=rf"Kim  $\chi={thr:.2f}$")
-    ax2.plot(kim["RPM"], kim["vor_meanabs_steady_streaming"], color="orchid",
-             marker="s", ms=6, lw=1.3, ls="--", mfc="w",
+    # Steady-streaming vorticity is a time-and-space mean, so it is hollow.
+    ax2.plot(kim["RPM"], kim["vor_meanabs_steady_streaming"],
+             **fs.series_kw(fs.KIM, fs.MK["vorticity"], stat="mean"),
              label=r"Kim  $\langle|\bar\xi_b'|\rangle$")
 
     for level in sorted(ours["level"].unique()):
@@ -129,29 +134,54 @@ def main() -> None:
             d = sub.dropna(subset=[col])
             if d.empty:
                 continue
-            ax.plot(d["rpm"], d[col], color=colour, marker=marker, ms=5,
-                    lw=1.1, ls=":", label=rf"L{level}  $\chi={thr:.2f}$")
+            ax.plot(d["rpm"], d[col],
+                    **fs.series_kw(colour, marker, stat="max", ours=True),
+                    label=rf"L{level}  $\chi={thr:.2f}$")
         dv = sub.dropna(subset=["vor_mean"])
         if not dv.empty:
-            ax2.plot(dv["rpm"], dv["vor_mean"], color=colour, marker="s", ms=4,
-                     lw=1.0, ls="-.", mfc="w", label=rf"L{level}  $\langle|\bar\xi_b'|\rangle$")
+            ax2.plot(dv["rpm"], dv["vor_mean"],
+                     **fs.series_kw(colour, fs.MK["vorticity"], stat="mean",
+                                    ours=True),
+                     label=rf"L{level}  $\langle|\bar\xi_b'|\rangle$")
 
     ax.set_yscale("log")
     ax.set_xlabel(r"Rocking frequency $f_b$ (rpm)", fontsize=12)
-    ax.set_ylabel("Mixing time (s)", fontsize=12, color="royalblue")
-    ax2.set_ylabel(r"$\langle|\bar\xi_b'|\rangle$ (1/s)", fontsize=12, color="orchid")
-    ax.tick_params(axis="y", colors="royalblue")
-    ax2.tick_params(axis="y", colors="orchid")
+    ax.set_ylabel("Mixing time (s)", fontsize=12)
+    ax2.set_ylabel(r"$\langle|\bar\xi_b'|\rangle$ (1/s)", fontsize=12)
     ax.tick_params(which="both", direction="in")
     ax2.tick_params(which="both", direction="in")
-    ax.grid(True, which="major", ls=":", alpha=0.4)
+    ax.grid(True, **fs.GRID_KW)
     ax.set_xticks(RPMS)
     ax.set_title(r"$\theta_{b,max}=7^\circ$", loc="left", fontsize=10)
 
-    h1, l1 = ax.get_legend_handles_labels()
-    h2, l2 = ax2.get_legend_handles_labels()
-    fig.legend(h1 + h2, l1 + l2, fontsize=7.5, loc="center left",
-               bbox_to_anchor=(1.0, 0.5), frameon=False)
+    # Three small decoder blocks rather than one enumerated list, matching
+    # Fig 13. Enumerating every (dataset x threshold) pair costs fourteen
+    # entries to say what three keys say once each, and it hides the fact
+    # that the encoding is the same in both figures.
+    from matplotlib.lines import Line2D
+    levels_shown = sorted(ours["level"].unique())
+    ds = [Line2D([], [], color=fs.KIM, lw=fs.LW_KIM, label="Kim et al.")]
+    ds += [Line2D([], [], color=fs.level_colour(lv), lw=fs.LW_OURS, ls=":",
+                  label=f"L{int(lv)}") for lv in levels_shown]
+    enc = [Line2D([], [], color="0.3", marker=m, ls="none", mfc="0.3", ms=6,
+                  label=rf"$\chi={thr:.2f}$")
+           for _, m, thr in THRESHOLDS]
+    enc.append(Line2D([], [], color="0.3", marker=fs.MK["vorticity"],
+                      ls="none", mfc="w", mec="0.3", ms=6,
+                      label=r"$\langle|\bar\xi_b'|\rangle$  (hollow: a mean)"))
+    prov = [Line2D([], [], color="0.3", ls="-", lw=fs.LW_KIM,
+                   label="Kim et al."),
+            Line2D([], [], color="0.3", ls=":", lw=fs.LW_OURS,
+                   label="this work")]
+    legs = []
+    for handles, title, y in ((ds, "dataset", 0.95), (enc, "marker / fill", 0.58),
+                              (prov, "line", 0.22)):
+        lg = fig.legend(handles=handles, fontsize=8.5, loc="upper left",
+                        bbox_to_anchor=(1.0, y), frameon=False, title=title)
+        lg.get_title().set_fontsize(8.5)
+        legs.append(lg)
+    for lg in legs[:-1]:
+        fig.add_artist(lg)
     fig.tight_layout()
     fig.savefig(OUT, dpi=150, bbox_inches="tight")
     print(f"\nsaved {OUT}")

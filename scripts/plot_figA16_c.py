@@ -44,6 +44,10 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
+import sys
+from pathlib import Path as _Path
+sys.path.insert(0, str(_Path(__file__).resolve().parents[1]))
+from scripts import figstyle as fs  # noqa: E402
 
 ROOT = Path("/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor")
 RUNS = ROOT / "runs"
@@ -124,16 +128,18 @@ def main() -> None:
 
     n_l = [2 ** r[0] for r in rows]
     fig, ax = plt.subplots(figsize=(5.0, 4.2))
-    ax.plot(n_l, [r[1] for r in rows], color="crimson", marker="o", ms=6,
+    ax.plot(n_l, [r[1] for r in rows], color=fs.COMPONENT_COLOUR["x"],
+            marker=fs.MK["l2"], ms=6,
             lw=1.3, label=r"$e_{x,L_2}$")
-    ax.plot(n_l, [r[2] for r in rows], color="mediumorchid", marker="s", ms=6,
+    ax.plot(n_l, [r[2] for r in rows], color=fs.COMPONENT_COLOUR["y"],
+            marker=fs.MK["l2"], ms=6, mfc="w",
             lw=1.3, label=r"$e_{y,L_2}$")
     ax.set_xscale("log", base=2)
     ax.set_yscale("log")
     ax.set_xlabel(r"$n_L$", fontsize=13)
     ax.set_ylabel(r"$e_{i,L_2}$", fontsize=13)
     ax.tick_params(which="both", direction="in")
-    ax.grid(True, which="major", ls=":", alpha=0.4)
+    ax.grid(True, **fs.GRID_KW)
     ax.legend(fontsize=10, frameon=False, loc="upper left",
               bbox_to_anchor=(1.02, 1.0))
     ax.text(-0.18, 1.02, r"$(c)$", transform=ax.transAxes, fontsize=15,

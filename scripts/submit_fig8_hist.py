@@ -43,7 +43,7 @@ from scripts.simulate import submit_slurm               # noqa: E402
 # the off-period cadence (ff57efe), the bag-mask fix (d566037) and the
 # Kim-exact tau/EDR columns (4b3a435) -- recording with one of those would
 # reproduce the very sampling and masking defects this run exists to remove.
-BINARY = "/oscar/scratch/eaguerov/BioReactor-mpi-video-25dbf66"
+BINARY = "/oscar/scratch/eaguerov/BioReactor-mpi-video-ad14e94"
 SEED_RUN = "57f68830"          # converged L10 at 7 deg, 32.5 rpm
 RPM, LEVEL, NTASKS = 32.5, 10, 32
 N_CYCLES = 10
@@ -96,8 +96,12 @@ def main() -> None:
     print(f"Fig 8(b,c) L10 re-record: {a.cycles:g} cycles, "
           f"{FRAMES_PER_PERIOD} frames/period "
           f"(~{a.cycles * FRAMES_PER_PERIOD:.0f} distinct phases)")
-    print(f"  from {SEED_RUN} at t={t_ck:.4f}, t_end={params['t_end']}, "
-          f"walltime={walltime}")
+    # t_end is a RELATIVE duration -- BioReactor.c:542 forms
+    # t_end_abs = t_checkpoint + t_end -- so print both. Printing only the
+    # relative value next to the restart instant reads like the run ends
+    # before it starts.
+    print(f"  from {SEED_RUN} at t={t_ck:.4f}, +{params['t_end']} "
+          f"-> ends at t={t_ck + params['t_end']:.4f}, walltime={walltime}")
     if a.dry_run:
         print("  DRY RUN -- not submitted")
         return

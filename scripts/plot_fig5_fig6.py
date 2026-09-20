@@ -40,6 +40,7 @@ from scripts.fields import (  # noqa: E402
     cell_centres, liquid_mask, load_snapshot, nearest_snapshot,
 )
 from scripts.postprocess import _COL_F_LIQ, _joined_cols, _t_scales  # noqa: E402
+from scripts import figstyle as fs  # noqa: E402
 
 plt.rcParams.update({
     "mathtext.fontset": "cm", "font.family": "serif", "axes.linewidth": 1.2,
@@ -48,10 +49,11 @@ plt.rcParams.update({
 
 # tracer key -> (sum column, sum^2 column, Kim's label, colour, linestyle)
 TRACERS = {
-    "c2": (8,  9,  "top half",  "#0072B2", "--"),
-    "c1": (6,  7,  "left half", "#D55E00", "-."),
-    "c3": (10, 11, "circle",    "#009E73", (0, (3, 1, 1, 1, 1, 1))),
-    "c":  (4,  5,  "line",      "#E69F00", (0, (5, 2))),
+    "c2": (8,  9,  "top half",  fs.TRACER_COLOUR["c2"], "--"),
+    "c1": (6,  7,  "left half", fs.TRACER_COLOUR["c1"], "-."),
+    "c3": (10, 11, "circle",    fs.TRACER_COLOUR["c3"],
+           (0, (3, 1, 1, 1, 1, 1))),
+    "c":  (4,  5,  "line",      fs.TRACER_COLOUR["c"], (0, (5, 2))),
 }
 MARKS = [(1.00, "-", "perfectly mixed"), (0.95, "--", "mixing time"),
          (0.50, ":", "partially mixed")]

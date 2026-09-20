@@ -36,19 +36,23 @@ RUNS = ROOT / "runs"
 OUT_DIR = ROOT / "experiments/kimetal2024/figure_replicas"
 sys.path.insert(0, str(ROOT))
 from scripts.autoextend import tip_results  # noqa: E402
+from scripts import figstyle as fs  # noqa: E402
 
 plt.rcParams.update({
     "mathtext.fontset": "cm", "font.family": "serif", "axes.linewidth": 1.2,
     "xtick.direction": "in", "ytick.direction": "in",
 })
 
-C_KIM = "black"
-LEVEL_COLOUR = {6: "#E69F00", 7: "#009E73", 8: "#0072B2", 9: "#CC79A7",
-                10: "#D55E00"}
-# (our key, Kim's column, marker, label)
-THRESHOLDS = [("kLa_10", "kLa_exp5pts_10", "o", r"$C^*=10\%$"),
-              ("kLa_25", "kLa_exp5pts_25", "^", r"$C^*=25\%$"),
-              ("kLa_50", "kLa_exp5pts_50", "v", r"$C^*=50\%$")]
+C_KIM = fs.KIM
+LEVEL_COLOUR = fs.LEVEL_COLOUR
+# (our key, Kim's column, marker, label). The C* family is ordered to match
+# Fig 9's chi family, so the loosest criterion is "v" in both.
+THRESHOLDS = [("kLa_10", "kLa_exp5pts_10", fs.threshold_marker("cstar", 10),
+               r"$C^*=10\%$"),
+              ("kLa_25", "kLa_exp5pts_25", fs.threshold_marker("cstar", 25),
+               r"$C^*=25\%$"),
+              ("kLa_50", "kLa_exp5pts_50", fs.threshold_marker("cstar", 50),
+               r"$C^*=50\%$")]
 
 FIG11 = {
     "csv": "mixing_kla_vs_frequency.csv", "x": "RPM",
@@ -110,8 +114,8 @@ def draw(spec: dict) -> None:
         if kim_col not in kim.columns:
             continue
         d = kim.dropna(subset=[kim_col])
-        ax.plot(d[spec["x"]], d[kim_col], color=C_KIM, marker=marker, ms=6,
-                lw=1.3)
+        ax.plot(d[spec["x"]], d[kim_col],
+                **fs.series_kw(C_KIM, marker, stat="max"))
     for level in sorted(ours["level"].unique()) if not ours.empty else []:
         sub = ours[ours["level"] == level]
         colour = LEVEL_COLOUR[int(level)]
@@ -119,25 +123,37 @@ def draw(spec: dict) -> None:
             d = sub.dropna(subset=[our_col])
             if d.empty:
                 continue
-            ax.plot(d["x"], d[our_col], color=colour, marker=marker, ms=5,
-                    lw=1.1, ls=":")
+            ax.plot(d["x"], d[our_col],
+                    **fs.series_kw(colour, marker, stat="max", ours=True))
 
-    # Two small legends rather than one of 15 entries: colour names the
-    # dataset, marker names the threshold, and crossing them once each says
-    # everything the crossed product would.
+    # Three small decoder blocks rather than one of 15 entries, and the same
+    # three blocks in the same order as Figs 9 and 13: colour names the
+    # dataset, marker the threshold, linestyle the provenance.
     from matplotlib.lines import Line2D
-    datasets = [Line2D([], [], color=C_KIM, lw=1.3, label="Kim")]
-    datasets += [Line2D([], [], color=LEVEL_COLOUR[int(lv)], lw=1.1, ls=":",
+    datasets = [Line2D([], [], color=C_KIM, lw=fs.LW_KIM,
+                       label="Kim et al.")]
+    datasets += [Line2D([], [], color=LEVEL_COLOUR[int(lv)], lw=fs.LW_OURS,
+                        ls=":",
                         label=f"L{int(lv)}")
                  for lv in (sorted(ours["level"].unique())
                             if not ours.empty else [])]
     marks = [Line2D([], [], color="0.35", marker=m, ls="none", ms=6, label=lab)
              for _, kim_col, m, lab in THRESHOLDS if kim_col in kim.columns]
-    first = ax.legend(handles=datasets, fontsize=8, frameon=False,
-                      loc="upper left", bbox_to_anchor=(1.02, 1.0))
-    ax.add_artist(first)
-    ax.legend(handles=marks, fontsize=8, frameon=False,
-              loc="lower left", bbox_to_anchor=(1.02, 0.0))
+    prov = [Line2D([], [], color="0.3", ls="-", lw=fs.LW_KIM,
+                   label="Kim et al."),
+            Line2D([], [], color="0.3", ls=":", lw=fs.LW_OURS,
+                   label="this work")]
+    blocks = []
+    for handles, title, y in ((datasets, "dataset", 1.0),
+                              (marks, "marker", 0.58),
+                              (prov, "line", 0.22)):
+        lg = ax.legend(handles=handles, fontsize=8, frameon=False,
+                       loc="upper left", bbox_to_anchor=(1.02, y),
+                       title=title)
+        lg.get_title().set_fontsize(8)
+        blocks.append(lg)
+    for lg in blocks[:-1]:
+        ax.add_artist(lg)
 
     # Log: a coarse grid over-predicts kLa by an order of magnitude (L6 is
     # 10x Kim at 32.5 rpm), and on a linear axis that single point flattens
@@ -147,7 +163,7 @@ def draw(spec: dict) -> None:
     ax.set_ylabel(r"$k_La$ (h$^{-1}$)", fontsize=12)
     ax.set_xticks(spec["values"])
     ax.tick_params(which="both", direction="in")
-    ax.grid(True, which="major", ls=":", alpha=0.4)
+    ax.grid(True, **fs.GRID_KW)
     ax.set_title(spec["title"], loc="left", fontsize=10)
     fig.tight_layout()
     fig.savefig(OUT_DIR / spec["out"], dpi=150, bbox_inches="tight")

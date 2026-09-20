@@ -36,7 +36,11 @@ import json, math
 import numpy as np, pandas as pd
 import matplotlib; matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from scripts import figstyle as fs  # noqa: E402
 
 ROOT = Path(__file__).parent.parent
 CSV_RPM = ROOT/'experiments/kimetal2024/csv_raw/shear_ediss_vs_frequency.csv'
@@ -169,16 +173,20 @@ l10=from_timeseries('l10_fig13a_xlevel_rpm')
 # spatially-averaged series was hollow. Axis labels are neutral now: with
 # colour meaning dataset, colouring them blue/red would point at nothing.
 #
-# Okabe-Ito, distinguishable in common colour-vision deficiencies.
-C_KIM, C_L6, C_L8, C_L9, C_L10 = ("black", "#E69F00", "#0072B2",
-                                  "#009E73", "#CC79A7")
-MK_TAU, MK_EPS = "o", "s"
+# Hues, shapes and the fill/linestyle rules now come from scripts/figstyle,
+# so they cannot drift from the other replicas. Linestyle used to encode the
+# STATISTIC here (solid max, dashed mean), which left nothing to mark Kim's
+# rows; under the shared grammar fill carries the statistic alone and
+# linestyle is free to say whose data it is.
+C_KIM = fs.KIM
+C_L6, C_L8, C_L9, C_L10 = (fs.level_colour(l) for l in (6, 8, 9, 10))
+MK_TAU, MK_EPS = fs.MK["tau"], fs.MK["ediss"]
 
 
-def _series(axis, x, y, colour, marker, filled, lw=1.2, ms=5.5):
-    axis.plot(x, y, color=colour, marker=marker, ms=ms, lw=lw,
-              ls="-" if filled else "--",
-              mfc=colour if filled else "w", mec=colour, mew=1.1)
+def _series(axis, x, y, colour, marker, filled, ours=False):
+    axis.plot(x, y, **fs.series_kw(colour, marker,
+                                   stat="max" if filled else "mean",
+                                   ours=ours))
 
 
 fig,(ax,ax2)=plt.subplots(1,2,figsize=(13.5,4.8))
@@ -197,16 +205,16 @@ def panel(a, kx, kdf, ours, xlabel, xticks):
     for d, colour in ours:
         if d.empty:
             continue
-        _series(a,  d["x"], d["tau_max"],  colour, MK_TAU, True)
-        _series(a,  d["x"], d["tau_mean"], colour, MK_TAU, False)
-        _series(a2, d["x"], d["ed_mean"],  colour, MK_EPS, False)
+        _series(a,  d["x"], d["tau_max"],  colour, MK_TAU, True,  ours=True)
+        _series(a,  d["x"], d["tau_mean"], colour, MK_TAU, False, ours=True)
+        _series(a2, d["x"], d["ed_mean"],  colour, MK_EPS, False, ours=True)
     a.set_yscale("log"); a2.set_yscale("log")
     a.set_xlabel(xlabel, fontsize=11)
     a.set_ylabel(r"Shear stress $\tau'_w$ (Pa)   $\bullet$ circles", fontsize=11)
     a2.set_ylabel(r"EDR $\epsilon'_w$ (W/m$^3$)   $\blacksquare$ squares", fontsize=11)
     a.tick_params(which="both", direction="in")
     a2.tick_params(which="both", direction="in")
-    a.grid(True, which="major", ls=":", alpha=0.35)
+    a.grid(True, **fs.GRID_KW)
     a.set_xticks(xticks)
     return a2
 
@@ -225,21 +233,29 @@ from matplotlib.lines import Line2D
 ds = [Line2D([], [], color=c, lw=1.4, label=l) for c, l in
       [(C_KIM, "Kim et al."), (C_L6, "L6"), (C_L8, "L8"), (C_L9, "L9"),
        (C_L10, "L10  (Kim's mesh)")]]
-enc = [Line2D([], [], color="0.3", marker=MK_TAU, ls="-",  mfc="0.3", ms=6,
+enc = [Line2D([], [], color="0.3", marker=MK_TAU, ls="none", mfc="0.3", ms=6,
               label=r"$\tau'_{w,max}$   (absolute max)"),
-       Line2D([], [], color="0.3", marker=MK_TAU, ls="--", mfc="w",   ms=6,
-              label=r"$\langle\tau'_w\rangle$   (max of spatial mean)"),
-       Line2D([], [], color="0.3", marker=MK_EPS, ls="-",  mfc="0.3", ms=6,
+       Line2D([], [], color="0.3", marker=MK_TAU, ls="none", mfc="w", mec="0.3",
+              ms=6, label=r"$\langle\tau'_w\rangle$   (max of spatial mean)"),
+       Line2D([], [], color="0.3", marker=MK_EPS, ls="none", mfc="0.3", ms=6,
               label=r"$\epsilon'_{w,max}$   (absolute max)"),
-       Line2D([], [], color="0.3", marker=MK_EPS, ls="--", mfc="w",   ms=6,
-              label=r"$\langle\epsilon'_w\rangle$   (max of spatial mean)")]
+       Line2D([], [], color="0.3", marker=MK_EPS, ls="none", mfc="w", mec="0.3",
+              ms=6, label=r"$\langle\epsilon'_w\rangle$   (max of spatial mean)")]
+# Linestyle is the third channel and needs its own key now that it means
+# provenance rather than statistic.
+prov = [Line2D([], [], color="0.3", ls="-", lw=fs.LW_KIM, label="Kim et al."),
+        Line2D([], [], color="0.3", ls=":", lw=fs.LW_OURS, label="this work")]
 leg1 = fig.legend(handles=ds, fontsize=8.5, loc="upper left",
                   bbox_to_anchor=(1.0, 0.93), frameon=False, title="dataset")
 leg2 = fig.legend(handles=enc, fontsize=8.5, loc="upper left",
-                  bbox_to_anchor=(1.0, 0.63), frameon=False, title="marker / fill")
-for lg in (leg1, leg2):
+                  bbox_to_anchor=(1.0, 0.63), frameon=False,
+                  title="marker / fill")
+leg3 = fig.legend(handles=prov, fontsize=8.5, loc="upper left",
+                  bbox_to_anchor=(1.0, 0.24), frameon=False, title="line")
+for lg in (leg1, leg2, leg3):
     lg.get_title().set_fontsize(8.5)
-fig.add_artist(leg1)
+for lg in (leg1, leg2):
+    fig.add_artist(lg)
 
 fig.tight_layout()
 fig.savefig(OUT, dpi=150, bbox_inches="tight")
