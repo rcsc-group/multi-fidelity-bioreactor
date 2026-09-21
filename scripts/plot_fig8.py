@@ -64,7 +64,13 @@ KIM_EDISS_PEAK = 0.28655      # W/m^3
 
 RUNS = [("L8", "l8_coldstart_vid", fs.level_colour(8)),
         ("L9", "a34fc4d4", fs.level_colour(9)),
-        ("L10", "57f68830", fs.level_colour(10))]
+        ("L10", ("fig8_hist_l10"
+                 if (ROOT / "runs" / "fig8_hist_l10" / "frames_tau").is_dir()
+                 else "57f68830"), fs.level_colour(10))]
+# L10 follows the same switch as HIST_RUN below. 57f68830 samples exactly five
+# phases however long it runs (frame interval T_p/5 on the nose), which in
+# panel (a) draws as five points joined by straight lines against L8's smooth
+# 150-frame curve -- the sampling artifact, not the physics.
 # Panels (b)/(c) need MANY distinct phases to locate the peak instant, and
 # 57f68830 samples exactly five however long it runs (its frame interval is
 # T_p/5 on the nose). runs/fig8_hist_l10 re-records the same converged state
