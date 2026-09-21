@@ -43,7 +43,7 @@ from scripts.simulate import submit_slurm               # noqa: E402
 # the off-period cadence (ff57efe), the bag-mask fix (d566037) and the
 # Kim-exact tau/EDR columns (4b3a435) -- recording with one of those would
 # reproduce the very sampling and masking defects this run exists to remove.
-BINARY = "/oscar/scratch/eaguerov/BioReactor-mpi-video-ad14e94"
+BINARY = "/oscar/scratch/eaguerov/BioReactor-mpi-video-f1c11e0"
 SEED_RUN = "57f68830"          # converged L10 at 7 deg, 32.5 rpm
 RPM, LEVEL, NTASKS = 32.5, 10, 32
 N_CYCLES = 10

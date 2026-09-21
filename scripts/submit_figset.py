@@ -48,7 +48,7 @@ from scripts.cost_model import min_per_cycle      # noqa: E402
 from scripts.simulate import submit_slurm         # noqa: E402
 
 # EXTRA_TRACERS=1 build: Figs 5 and 6 need all four initial configurations.
-BINARY = "/oscar/scratch/eaguerov/BioReactor-mpi-figset-3645d13"
+BINARY = "/oscar/scratch/eaguerov/BioReactor-mpi-figset-f1c11e0"
 RPM = 32.5
 SPINUP = 80                 # Kim's release instant, t/T_p = 80
 SNAP_START, SNAP_END = 79.0, 110.0

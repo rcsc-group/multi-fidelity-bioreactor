@@ -56,7 +56,12 @@ LEAN_BINARY = "/oscar/scratch/eaguerov/BioReactor-mpi-lean"
 # Production binary for the Fig 9 sweep, built from 4b3a435 with
 # -DEXTRA_TRACERS=0: lean (1.69x), Kim-exact tau/EDR columns, and the
 # steady-streaming vorticity accumulator.
-PROD_BINARY = "/oscar/scratch/eaguerov/BioReactor-mpi-prod-4b3a435"
+# Rebuilt at f1c11e0 (2026-09-21) so the run checkpoints before a
+# walltime kill instead of losing everything. Same flavour as
+# prod-4b3a435 (-DEXTRA_TRACERS=0); every commit between the two adds
+# outputs that are gated off in this build, so the solved physics is
+# unchanged and points already computed stay comparable.
+PROD_BINARY = "/oscar/scratch/eaguerov/BioReactor-mpi-lean-f1c11e0"
 
 KIM_CSV = ROOT / "experiments/kimetal2024/csv_raw/mixing_kla_vs_frequency.csv"
 SPINUP_CYCLES = 80     # Kim's tracer release instant, t/T_p = 80

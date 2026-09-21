@@ -33,7 +33,7 @@ from scripts.simulate import submit_slurm         # noqa: E402
 
 # Lean build (one tracer): these runs release nothing, so the extra tracer
 # configurations would be advected for nothing.
-BINARY = "/oscar/scratch/eaguerov/BioReactor-mpi-lean-3645d13"
+BINARY = "/oscar/scratch/eaguerov/BioReactor-mpi-lean-f1c11e0"
 LEVEL, NTASKS = 9, 32
 N_CYCLES = 20                # 5 discarded as soft start, 15 for the spectrum
 RPMS = [15, 17.5, 20, 22.5, 25, 27.5, 30, 32.5, 35, 37.5]

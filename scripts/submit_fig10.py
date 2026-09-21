@@ -49,7 +49,7 @@ KIM_CSV = ROOT / "experiments/kimetal2024/csv_raw/mixing_kla_vs_angle.csv"
 # Lean build (one tracer) at 3645d13. Newer than prod-4b3a435 in one way that
 # matters here: it writes posY_left/posY_right, so the angle sweep also feeds
 # Figs. 14(b) and 15(d-f) instead of needing its own re-run.
-BINARY = "/oscar/scratch/eaguerov/BioReactor-mpi-lean-3645d13"
+BINARY = "/oscar/scratch/eaguerov/BioReactor-mpi-lean-f1c11e0"
 
 RPM = 32.5
 LEVEL, NTASKS = 9, 32
