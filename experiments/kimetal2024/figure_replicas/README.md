@@ -39,7 +39,7 @@ the bag, so A.16's `n_L = 2^8` is L8 and carries L8's colour.
 | 1 | the two frames of reference | schematic, no run | exact — every number is a parameter |
 | 2 | rocking angle and mean velocities | `fig9_l9_rpm32.5` | good |
 | 7, A.17 | oxygen transfer and the kLa fit | `fig9_l9_rpm32.5` | good |
-| 8(a) | τ and EDR against time, 3 cycles | `fig8_hist_l10` | structure matches; **EDR is 1.7× Kim** |
+| 8(a) | τ and EDR against time, 3 cycles | `fig8_hist_l10` | **do not present — transient, see below** |
 | 8(b,c) | τ and EDR distributions at the peak instant | `fig8_hist_l10` | good |
 | 9 | mixing time against rpm | 6 of 10 L9 points | **partial, and see the caveat** |
 | 11 | kLa against rpm | same 6 points | **partial, not grid-converged** |
@@ -65,21 +65,47 @@ t/T_p = 47, not 80, and for a settled periodic flow any three consecutive
 settled cycles are equivalent; relabelling them 80–83 would assert a
 correspondence with Kim's tracer protocol that this run does not have.
 
-**Two quantitative gaps in Fig 8, both open.** Our τ amplitude matches (±2.2e-3
+**Fig 8 is not settled, and that explains the rest of it.** Kim's ⟨τ'_w⟩(t) is
+very nearly a pure sinusoid; ours is visibly distorted. Half-period
+antisymmetry forbids EVEN harmonics in a settled signed wall shear, and
+`fig8_hist_l10` has a large one that DECAYS through the run — 2×/1× = 0.880,
+0.440, 0.228 over cycles 0–4, 4–7, 7–11 after its restart, halving every ~3.5
+cycles and still 0.228 at the end. So the waveform is the run relaxing after
+its warm start, not L10's shape, and the frames the figure uses are all
+contaminated. `fig8_hist_l10b` re-records with 20 cycles (~15 to settle, the
+tail to record).
+
+Two claims made earlier and withdrawn: that the phase-fold scatter was genuine
+cycle-to-cycle variability of the flow (it is this transient), and that L8
+provided a clean sinusoidal control (L8 samples exactly 5.00 frames/cycle,
+Nyquist 2.5, so it is structurally blind to a 2nd harmonic — its higher
+harmonics fit as nonsense, 5×/1× = 501.8, which is how the rank deficiency
+shows). Only a recording denser than ~8 frames/cycle can measure waveform
+shape at all, and until `fig8_hist_l10b` lands we have exactly one such
+recording and it is the unsettled one.
+
+**Two quantitative gaps in Fig 8, probably the same cause.** Our τ amplitude matches (±2.2e-3
 vs his ±2.0e-3 Pa) and EDR shows his two-peaks-per-cycle correctly, but our
 EDR peaks near 0.68 W/m³ against his 0.40 — a factor 1.7 — and the shape is
 spikier where his is smooth. Separately, our τ *distribution* at the peak
 instant spans ±0.49 Pa while his histogram fits inside ±0.015: the means agree
 while our tails are ~30× wider, and 7.5% of samples fall outside his window.
-Wide tails in a wall quantity with a correct mean is the signature of
-grid-scale noise near the embedded boundary, which is exactly what the project
-has been burned by before — it needs a volume metric (dissipation), not
-another wall number, to diagnose. Not yet investigated.
+Both are most likely the settling transient above rather than a separate
+defect, and the re-record tests that directly: if EDR falls to ~0.4 and the
+tails narrow once the even harmonic is gone, there is nothing else to chase.
+If they do not, a correct wall mean hiding wide tails is the grid-scale-noise
+signature this project has been caught by before, and diagnosing it needs a
+volume metric, not another wall number.
 
-**The time axis is under-sampled for a smooth curve.** 41 frames over three
-cycles is ~14 per cycle, so panel (a) reads as a polygon where Kim's is
-smooth. Cosmetic, fixed by a denser `frames_per_period` on the next
-re-record.
+**Panel (a) keeps colour on the refinement level**, against Kim, who spends it
+on the quantity (blue τ, red EDR) because he draws one dataset. Colour meaning
+level is a project-wide convention a reader carries across all eighteen
+figures, and it is worth more than matching one panel's palette; quantity is
+separated by axis and line style instead — solid left is τ, dashed right is
+EDR. Levels whose recordings cover different cycles simply do not appear.
+
+L8's curve is triangular because it samples 5 frames per cycle; that is its
+recording, not its physics.
 
 **`diagnostic_Fig8_phasefold_*.png` are not replicas.** They fold all cycles
 onto one period to show cycle-to-cycle repeatability, which Kim's panel does

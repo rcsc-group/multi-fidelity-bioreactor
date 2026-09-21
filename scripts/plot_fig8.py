@@ -45,6 +45,7 @@ import numpy as np
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
 import sys
 from pathlib import Path as _Path
 sys.path.insert(0, str(_Path(__file__).resolve().parents[1]))
@@ -159,44 +160,67 @@ def time_panel(lvl="L10", n_cycles=3.0):
     relabelling them 80-83 would assert a correspondence with Kim's tracer
     protocol that this run does not have.
 
-    Colour here means QUANTITY, not dataset -- one run, two quantities, so
-    the dataset channel is unused and Kim's own blue/red is followed.
+    COLOUR STAYS ON THE LEVEL. Kim draws one dataset and spends colour on the
+    quantity (blue tau, red EDR), and copying that here would break the
+    project convention that colour means refinement level -- an established
+    convention worth more than matching one panel's palette, because a reader
+    carries it across all eighteen figures. So every level present is drawn
+    in its own hue and the QUANTITY is separated by the axis it belongs to
+    and by line style: solid on the left axis is tau, dashed on the right is
+    EDR. The axis labels are tinted neutral rather than per-quantity for the
+    same reason.
     """
-    d = series.get(lvl)
-    if d is None or not len(d.get("cyc", [])):
+    ref = series.get(lvl)
+    if ref is None or not len(ref.get("cyc", [])):
         print(f"time_panel: no data for {lvl}")
         return
-    c, tau, eps = d["cyc"], d["tau_t"], d["ediss_t"]
-    t1 = float(c.max())
-    t0 = max(float(c.min()), t1 - n_cycles)
-    m = (c >= t0) & (c <= t1)
-    if m.sum() < 8:
-        print(f"time_panel: only {m.sum()} frames in the window")
+    # Window set by the reference level, so every series shows the SAME three
+    # cycles of its own record rather than three arbitrary different ones.
+    t1 = float(ref["cyc"].max())
+    t0 = max(float(ref["cyc"].min()), t1 - n_cycles)
+
+    fig, ax = plt.subplots(figsize=(6.2, 3.4))
+    ax2 = ax.twinx()
+    shown = []
+    for name, _, col in RUNS:
+        d = series.get(name)
+        if d is None or not len(d.get("cyc", [])):
+            continue
+        c = d["cyc"]
+        m = (c >= t0) & (c <= t1)
+        if m.sum() < 8:
+            continue
+        ax.plot(c[m], d["tau_t"][m], color=col, lw=1.4, ls="-")
+        ax2.plot(c[m], d["ediss_t"][m], color=col, lw=1.1, ls="--")
+        shown.append((name, col))
+        if name == lvl:
+            # Peak instants of the reference level: these are what panels
+            # (b) and (c) take their distributions at.
+            tt, ee = d["tau_t"][m], d["ediss_t"][m]
+            ax.annotate("(b)", xy=(c[m][int(np.argmax(tt))], tt.max()),
+                        xytext=(0, 11), textcoords="offset points",
+                        color=col, fontsize=10, ha="center")
+            ax2.annotate("(c)", xy=(c[m][int(np.argmax(ee))], ee.max()),
+                         xytext=(0, 11), textcoords="offset points",
+                         color=col, fontsize=10, ha="center")
+    if not shown:
+        plt.close(fig)
+        print("time_panel: no level had frames in the window")
         return
 
-    fig, ax = plt.subplots(figsize=(5.8, 3.4))
-    ax2 = ax.twinx()
-    c_tau, c_eps = fs.COMPONENT_COLOUR["x"], fs.COMPONENT_COLOUR["y"]
-    ax.plot(c[m], tau[m], color=c_tau, lw=1.4)
-    ax2.plot(c[m], eps[m], color=c_eps, lw=1.4)
-
-    # Mark the peak of each average: these are the instants panels (b) and
-    # (c) take their distributions at, so the three panels are one statement.
-    i_tau = int(np.argmax(tau[m]))
-    i_eps = int(np.argmax(eps[m]))
-    ax.annotate("(b)", xy=(c[m][i_tau], tau[m][i_tau]),
-                xytext=(0, 12), textcoords="offset points",
-                color=c_tau, fontsize=10, ha="center")
-    ax2.annotate("(c)", xy=(c[m][i_eps], eps[m][i_eps]),
-                 xytext=(0, 12), textcoords="offset points",
-                 color=c_eps, fontsize=10, ha="center")
-
+    tau, eps = ref["tau_t"], ref["ediss_t"]
+    m = (ref["cyc"] >= t0) & (ref["cyc"] <= t1)
     ax.set_xlabel(r"$t/T_p$", fontsize=12)
-    ax.set_ylabel(r"$\langle\tau'_w\rangle$ (Pa)", fontsize=12, color=c_tau)
-    ax2.set_ylabel(r"$\langle\epsilon'_w\rangle$ (W/m$^3$)", fontsize=12,
-                   color=c_eps)
-    ax.tick_params(axis="y", colors=c_tau)
-    ax2.tick_params(axis="y", colors=c_eps)
+    ax.set_ylabel(r"$\langle\tau'_w\rangle$ (Pa)   (solid)", fontsize=11)
+    ax2.set_ylabel(r"$\langle\epsilon'_w\rangle$ (W/m$^3$)   (dashed)",
+                   fontsize=11)
+    # Only levels actually drawn in this window. A level whose recording
+    # covers different cycles has no curve here, and listing it would promise
+    # a series the reader then hunts for.
+    lv = [Line2D([], [], color=c, lw=1.4, label=n) for n, c in shown]
+    lg = ax.legend(handles=lv, fontsize=8, frameon=False, loc="upper left",
+                   bbox_to_anchor=(1.10, 1.0), title="level")
+    lg.get_title().set_fontsize(8)
     ax.set_xlim(t0, t1)
     # eps is a dissipation and cannot be negative; Kim's right axis starts
     # at 0 and the left is symmetric about it.
