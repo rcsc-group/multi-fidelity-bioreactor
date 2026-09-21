@@ -39,7 +39,7 @@ the bag, so A.16's `n_L = 2^8` is L8 and carries L8's colour.
 | 1 | the two frames of reference | schematic, no run | exact — every number is a parameter |
 | 2 | rocking angle and mean velocities | `fig9_l9_rpm32.5` | good |
 | 7, A.17 | oxygen transfer and the kLa fit | `fig9_l9_rpm32.5` | good |
-| 8(a) | ⟨τ⟩ against rocking phase | L8, L9, `fig8_hist_l10` | good — see the note below |
+| 8(a) | τ and EDR against time, 3 cycles | `fig8_hist_l10` | structure matches; **EDR is 1.7× Kim** |
 | 8(b,c) | τ and EDR distributions at the peak instant | `fig8_hist_l10` | good |
 | 9 | mixing time against rpm | 6 of 10 L9 points | **partial, and see the caveat** |
 | 11 | kLa against rpm | same 6 points | **partial, not grid-converged** |
@@ -55,7 +55,35 @@ signal, not scatter. Fig 11 is worse — the L6→L7→L8 column at 32.5 rpm run
 10.1× → 5.1× → 2.2× Kim, still falling with refinement, so L9 at 1.1× is
 probably not converged either. Do not present these as settled.
 
-**Fig 8(a): L8 looks smoother than L10 and contains less information.** L8's
+**Fig 8(a) was drawn on the wrong axis until 2026-09-21.** Kim's panel is a
+time evolution over three unfolded cycles (t/T_p = 80–83) with both quantities
+on one axes, τ left in blue and EDR right in red. Ours folded x mod 1, split
+the two quantities into separate panels, and coloured by refinement level —
+three departures at once. Now corrected. The cycle NUMBERS still differ and
+are not forced to match: `fig8_hist_l10` continues a converged state at
+t/T_p = 47, not 80, and for a settled periodic flow any three consecutive
+settled cycles are equivalent; relabelling them 80–83 would assert a
+correspondence with Kim's tracer protocol that this run does not have.
+
+**Two quantitative gaps in Fig 8, both open.** Our τ amplitude matches (±2.2e-3
+vs his ±2.0e-3 Pa) and EDR shows his two-peaks-per-cycle correctly, but our
+EDR peaks near 0.68 W/m³ against his 0.40 — a factor 1.7 — and the shape is
+spikier where his is smooth. Separately, our τ *distribution* at the peak
+instant spans ±0.49 Pa while his histogram fits inside ±0.015: the means agree
+while our tails are ~30× wider, and 7.5% of samples fall outside his window.
+Wide tails in a wall quantity with a correct mean is the signature of
+grid-scale noise near the embedded boundary, which is exactly what the project
+has been burned by before — it needs a volume metric (dissipation), not
+another wall number, to diagnose. Not yet investigated.
+
+**The time axis is under-sampled for a smooth curve.** 41 frames over three
+cycles is ~14 per cycle, so panel (a) reads as a polygon where Kim's is
+smooth. Cosmetic, fixed by a denser `frames_per_period` on the next
+re-record.
+
+**`diagnostic_Fig8_phasefold_*.png` are not replicas.** They fold all cycles
+onto one period to show cycle-to-cycle repeatability, which Kim's panel does
+not ask. Kept because they answer a question worth asking. In them: L8's
 frames are spaced 0.2006 T_p, so they pile into five narrow arcs — largest gap
 in phase coverage 0.106 against 0.007 for uniform sampling — and within an arc
 consecutive points are consecutive cycles, so cycle-to-cycle variation reads as

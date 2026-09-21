@@ -131,9 +131,84 @@ for lvl, run, col in RUNS:
     T_per_nd = (2 * math.pi / omega_b) / T_bio
     phase = (np.array(times) / T_per_nd) % 1.0
     o = np.argsort(phase)
+    tt = np.array(times) / T_per_nd            # absolute t/T_p, unsorted
+    k = np.argsort(tt)
     series[lvl] = dict(phase=phase[o], tau=np.array(tau_mean)[o],
-                       ediss=np.array(ediss_mean)[o], col=col, n=len(o))
+                       ediss=np.array(ediss_mean)[o], col=col, n=len(o),
+                       cyc=tt[k], tau_t=np.array(tau_mean)[k],
+                       ediss_t=np.array(ediss_mean)[k])
     print(f"{lvl}: {len(o)} frames, {len(set(np.round(phase, 6)))} distinct phases")
+
+
+def time_panel(lvl="L10", n_cycles=3.0):
+    """Kim's Fig 8(a): the TIME EVOLUTION, both quantities on one axes.
+
+    His panel runs t/T_p = 80 to 83 -- three unfolded cycles -- with
+    <tau'_w> on the left axis in blue and <eps'_w> on the right in red, and
+    the instants where each average peaks labelled (b) and (c), which is what
+    panels (b)/(c) are histograms of.
+
+    Our earlier version folded the x axis mod 1, split the two quantities
+    across separate panels, and coloured by refinement level. The fold and
+    the split were both departures from the paper, and the level comparison
+    is what Fig 13 is for.
+
+    The cycle NUMBERS differ and are not forced to match. fig8_hist_l10
+    continues a converged state at t/T_p = 47, not 80; for a settled periodic
+    flow any three consecutive settled cycles are the same three cycles, and
+    relabelling them 80-83 would assert a correspondence with Kim's tracer
+    protocol that this run does not have.
+
+    Colour here means QUANTITY, not dataset -- one run, two quantities, so
+    the dataset channel is unused and Kim's own blue/red is followed.
+    """
+    d = series.get(lvl)
+    if d is None or not len(d.get("cyc", [])):
+        print(f"time_panel: no data for {lvl}")
+        return
+    c, tau, eps = d["cyc"], d["tau_t"], d["ediss_t"]
+    t1 = float(c.max())
+    t0 = max(float(c.min()), t1 - n_cycles)
+    m = (c >= t0) & (c <= t1)
+    if m.sum() < 8:
+        print(f"time_panel: only {m.sum()} frames in the window")
+        return
+
+    fig, ax = plt.subplots(figsize=(5.8, 3.4))
+    ax2 = ax.twinx()
+    c_tau, c_eps = fs.COMPONENT_COLOUR["x"], fs.COMPONENT_COLOUR["y"]
+    ax.plot(c[m], tau[m], color=c_tau, lw=1.4)
+    ax2.plot(c[m], eps[m], color=c_eps, lw=1.4)
+
+    # Mark the peak of each average: these are the instants panels (b) and
+    # (c) take their distributions at, so the three panels are one statement.
+    i_tau = int(np.argmax(tau[m]))
+    i_eps = int(np.argmax(eps[m]))
+    ax.annotate("(b)", xy=(c[m][i_tau], tau[m][i_tau]),
+                xytext=(0, 12), textcoords="offset points",
+                color=c_tau, fontsize=10, ha="center")
+    ax2.annotate("(c)", xy=(c[m][i_eps], eps[m][i_eps]),
+                 xytext=(0, 12), textcoords="offset points",
+                 color=c_eps, fontsize=10, ha="center")
+
+    ax.set_xlabel(r"$t/T_p$", fontsize=12)
+    ax.set_ylabel(r"$\langle\tau'_w\rangle$ (Pa)", fontsize=12, color=c_tau)
+    ax2.set_ylabel(r"$\langle\epsilon'_w\rangle$ (W/m$^3$)", fontsize=12,
+                   color=c_eps)
+    ax.tick_params(axis="y", colors=c_tau)
+    ax2.tick_params(axis="y", colors=c_eps)
+    ax.set_xlim(t0, t1)
+    # eps is a dissipation and cannot be negative; Kim's right axis starts
+    # at 0 and the left is symmetric about it.
+    lim = float(np.max(np.abs(tau[m]))) * 1.25
+    ax.set_ylim(-lim, lim)
+    ax2.set_ylim(0.0, float(np.max(eps[m])) * 1.25)
+    ax.tick_params(which="both", direction="in")
+    fig.tight_layout()
+    fig.savefig(OUT_DIR / "replicated_Fig8_a.png", dpi=150,
+                bbox_inches="tight")
+    print(f"saved replicated_Fig8_a.png  ({lvl}, t/T_p {t0:.2f}-{t1:.2f}, "
+          f"{m.sum()} frames)")
 
 
 def _phase_binned(phase, value, nbins=18, min_per_bin=2):
@@ -213,9 +288,16 @@ def phase_panel(key, fname, ylabel, ylim, kim_peak, symmetric):
     print("saved", fname)
 
 
-phase_panel("tau", "replicated_Fig8_a1.png", r"$\langle\tau_w'\rangle$ (Pa)",
+# Panel (a) as Kim draws it: one axes, three unfolded cycles, both
+# quantities. The phase-folded level comparison that used to stand in for it
+# is kept as a diagnostic, not as a replica -- it answers "how repeatable is
+# this cycle to cycle", which the paper's panel does not ask.
+time_panel("L10")
+phase_panel("tau", "diagnostic_Fig8_phasefold_tau.png",
+            r"$\langle\tau_w'\rangle$ (Pa)",
             (-3e-3, 3e-3), KIM_TAU_PEAK, symmetric=True)
-phase_panel("ediss", "replicated_Fig8_a2.png", r"$\langle\epsilon_w'\rangle$ (W/m$^3$)",
+phase_panel("ediss", "diagnostic_Fig8_phasefold_ediss.png",
+            r"$\langle\epsilon_w'\rangle$ (W/m$^3$)",
             (0.0, 0.4), KIM_EDISS_PEAK, symmetric=False)
 
 
