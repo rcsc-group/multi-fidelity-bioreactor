@@ -136,23 +136,62 @@ for lvl, run, col in RUNS:
     print(f"{lvl}: {len(o)} frames, {len(set(np.round(phase, 6)))} distinct phases")
 
 
+def _phase_binned(phase, value, nbins=18, min_per_bin=2):
+    """Mean and standard deviation of `value` in equal phase bins.
+
+    Returns empty arrays when the coverage is too clustered to bin -- L8's
+    five arcs leave most bins empty, and interpolating across a 0.106-wide
+    gap would draw a curve through phases that were never sampled.
+    """
+    import numpy as _np
+    edges = _np.linspace(0.0, 1.0, nbins + 1)
+    idx = _np.digitize(phase, edges) - 1
+    pm, mu, sd = [], [], []
+    for b in range(nbins):
+        m = idx == b
+        if m.sum() < min_per_bin:
+            continue
+        pm.append(0.5 * (edges[b] + edges[b + 1]))
+        mu.append(_np.mean(_np.asarray(value)[m]))
+        sd.append(_np.std(_np.asarray(value)[m]))
+    if len(pm) < nbins * 0.6:        # too gappy to represent as a curve
+        return _np.array([]), _np.array([]), _np.array([])
+    return _np.array(pm), _np.array(mu), _np.array(sd)
+
+
 def phase_panel(key, fname, ylabel, ylim, kim_peak, symmetric):
     fig, ax = plt.subplots(figsize=(5.6, 3.4))
-    # Mark size and line weight follow the SAMPLE DENSITY, because these runs
-    # predate the off-period frame cadence and so differ wildly in it:
-    # L8's frame spacing is 0.2006 T_p (slightly OFF commensurate), so its
-    # phase creeps ~0.0006/cycle and 150 frames fill in 150 distinct phases --
-    # it genuinely traces the curve. L9 (0.2000) pins to 16 phases and L10 to
-    # just 5, however long they run. Drawn at one size, L8's 150 markers
-    # clumped into drifting arcs and read as a heavy dashed rule rather than
-    # as the densest, most informative series on the panel.
+    # Each series is drawn as its samples PLUS a phase-binned mean, because
+    # the three sampling patterns are not comparable as raw scatter and
+    # reading them as if they were inverts the conclusion.
+    #
+    # Measured on the settled half: L8's frames are spaced 0.2006 T_p, so
+    # they pile into five narrow arcs with a largest phase gap of 0.106
+    # against 0.007 for uniform coverage. Within an arc, consecutive points
+    # are consecutive CYCLES, so cycle-to-cycle variation shows up as a
+    # gentle drift along the curve. L10 on the off-period cadence covers
+    # phase uniformly (largest gap 0.016 vs 0.013 uniform), so neighbouring
+    # points come from different cycles and the SAME variability appears as
+    # scatter. L8 therefore looks smoother than L10 while containing strictly
+    # less information -- it hides the spread rather than lacking it.
+    #
+    # The binned mean is what the panel is actually about (the phase
+    # dependence); the band is the cycle-to-cycle spread, ~15% of peak at
+    # L10, which is a property of the flow and not of the sampling.
     for lvl, _, col in RUNS:
         d = series[lvl]
         dense = d["n"] > 60
-        ax.plot(d["phase"], d[key], color=col,
-                lw=1.0 if dense else 0.9,
-                marker="o", ms=1.8 if dense else 4.2,
-                alpha=0.55 if dense else 0.95, label=lvl, zorder=2 if dense else 3)
+        ax.plot(d["phase"], d[key], color=col, ls="none",
+                marker="o", ms=1.8 if dense else 3.6,
+                alpha=0.30 if dense else 0.55, zorder=2)
+        pm, mu, sd = _phase_binned(d["phase"], d[key])
+        if pm.size:
+            ax.plot(pm, mu, color=col, lw=1.4, label=lvl, zorder=4)
+            ax.fill_between(pm, mu - sd, mu + sd, color=col, alpha=0.15,
+                            lw=0, zorder=1)
+        else:
+            ax.plot(d["phase"], d[key], color=col, lw=1.0, label=lvl,
+                    zorder=3)
     # NO Kim series on this panel, and no horizontal reference line either.
     #
     # Kim's Fig 8(a) is a TIME SERIES over the rocking phase, but we do not
