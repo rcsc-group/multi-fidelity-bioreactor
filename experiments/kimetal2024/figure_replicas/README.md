@@ -104,8 +104,17 @@ figures, and it is worth more than matching one panel's palette; quantity is
 separated by axis and line style instead — solid left is τ, dashed right is
 EDR. Levels whose recordings cover different cycles simply do not appear.
 
-L8's curve is triangular because it samples 5 frames per cycle; that is its
-recording, not its physics.
+**Panel (a) reads shear_stress.dat, not the frames.** Kim's panel is a time
+series of spatial means, which is exactly what that file logs; the frames
+exist for panels (b)/(c), which need per-cell fields, and are sparse in time
+by design because each is ~10 MB. Switching source took L10 from 13.6 to 30.7
+samples per cycle and L8 from 5 to a smooth sinusoid — L8's triangular look
+was entirely its frame cadence, not its physics, which also settles that L8
+looks smooth because it is smooth at this resolution.
+
+The file is NON-DIMENSIONAL and needs the same ρU² / ρU³L⁻¹ factors the
+frames path applies; omitting them rescaled τ by 6× and was caught only
+because the peak moved from 2.2e-3 to 3e-4 Pa when the source changed.
 
 **`diagnostic_Fig8_phasefold_*.png` are not replicas.** They fold all cycles
 onto one period to show cycle-to-cycle repeatability, which Kim's panel does

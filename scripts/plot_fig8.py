@@ -50,6 +50,7 @@ import sys
 from pathlib import Path as _Path
 sys.path.insert(0, str(_Path(__file__).resolve().parents[1]))
 from scripts import figstyle as fs  # noqa: E402
+from scripts.postprocess import _t_scales  # noqa: E402
 
 ROOT = Path("/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor")
 OUT_DIR = ROOT / "experiments/kimetal2024/figure_replicas"
@@ -141,6 +142,53 @@ for lvl, run, col in RUNS:
     print(f"{lvl}: {len(o)} frames, {len(set(np.round(phase, 6)))} distinct phases")
 
 
+def _shear_series(run):
+    """(t/T_p, <tau>, <eps>) from shear_stress.dat -- the DENSE series.
+
+    Panel (a) used to be built from frames_tau, which is the wrong source
+    twice over. Kim's panel is a time series of SPATIAL MEANS, and that is
+    exactly what this file logs; the frames exist for panels (b)/(c), which
+    need the per-cell fields. And the frames are sparse in time by design --
+    each is ~10 MB, so the cadence is a storage decision -- giving 13.6
+    samples per cycle against this file's 30.4, which is why the curve read
+    as a polygon. On L8 the gap is far wider: 5 frames per cycle against
+    1823 rows here.
+
+    Columns are read by NAME. tau_kim_mean / ediss_kim_mean use Kim's exact
+    mask and exist only from 4b3a435; older runs fall back to the project's
+    own signed mean, which on fig8_hist_l10 agrees with the Kim-masked
+    column to three digits (2x/1x of 0.221 vs 0.222).
+    """
+    d = ROOT / "runs" / run
+    f = d / "shear_stress.dat"
+    if not f.exists():
+        return None
+    head = f.open().readline().split()
+    a = np.loadtxt(f, skiprows=1)
+    if a.ndim != 2 or len(a) < 10:
+        return None
+
+    def col(*names):
+        for n in names:
+            if n in head:
+                return a[:, head.index(n)]
+        return None
+
+    t = col("t")
+    tau = col("tau_kim_mean", "tau_mean_signed")
+    eps = col("ediss_kim_mean", "ediss_mean")
+    if t is None or tau is None or eps is None:
+        return None
+    params = json.loads((d / "params.json").read_text())
+    _, T_per_nd = _t_scales(params)
+    # shear_stress.dat is NON-DIMENSIONAL (postprocess.py:719). The frames
+    # path applies these same factors, so omitting them here silently
+    # rescaled the panel by rho*U^2 -- caught only because the tau peak moved
+    # from 2.2e-3 to 3e-4 Pa when the data source changed.
+    _, tau_scale, ediss_scale, _, _ = scales(run)
+    return t / T_per_nd, tau * tau_scale, eps * ediss_scale
+
+
 def time_panel(lvl="L10", n_cycles=3.0):
     """Kim's Fig 8(a): the TIME EVOLUTION, both quantities on one axes.
 
@@ -170,33 +218,37 @@ def time_panel(lvl="L10", n_cycles=3.0):
     EDR. The axis labels are tinted neutral rather than per-quantity for the
     same reason.
     """
-    ref = series.get(lvl)
-    if ref is None or not len(ref.get("cyc", [])):
-        print(f"time_panel: no data for {lvl}")
+    dense = {}
+    for name, run, col in RUNS:
+        got = _shear_series(run)
+        if got is not None:
+            dense[name] = (got, col)
+    if lvl not in dense:
+        print(f"time_panel: no shear_stress.dat for {lvl}")
         return
+    (rc, _, _), _ = dense[lvl]
     # Window set by the reference level, so every series shows the SAME three
     # cycles of its own record rather than three arbitrary different ones.
-    t1 = float(ref["cyc"].max())
-    t0 = max(float(ref["cyc"].min()), t1 - n_cycles)
+    t1 = float(rc.max())
+    t0 = max(float(rc.min()), t1 - n_cycles)
 
     fig, ax = plt.subplots(figsize=(6.2, 3.4))
     ax2 = ax.twinx()
     shown = []
-    for name, _, col in RUNS:
-        d = series.get(name)
-        if d is None or not len(d.get("cyc", [])):
+    for name, _, _ in RUNS:
+        if name not in dense:
             continue
-        c = d["cyc"]
+        (c, tau, eps), col = dense[name]
         m = (c >= t0) & (c <= t1)
-        if m.sum() < 8:
+        if m.sum() < 20:
             continue
-        ax.plot(c[m], d["tau_t"][m], color=col, lw=1.4, ls="-")
-        ax2.plot(c[m], d["ediss_t"][m], color=col, lw=1.1, ls="--")
+        ax.plot(c[m], tau[m], color=col, lw=1.4, ls="-")
+        ax2.plot(c[m], eps[m], color=col, lw=1.1, ls="--")
         shown.append((name, col))
         if name == lvl:
             # Peak instants of the reference level: these are what panels
             # (b) and (c) take their distributions at.
-            tt, ee = d["tau_t"][m], d["ediss_t"][m]
+            tt, ee = tau[m], eps[m]
             ax.annotate("(b)", xy=(c[m][int(np.argmax(tt))], tt.max()),
                         xytext=(0, 11), textcoords="offset points",
                         color=col, fontsize=10, ha="center")
@@ -208,8 +260,9 @@ def time_panel(lvl="L10", n_cycles=3.0):
         print("time_panel: no level had frames in the window")
         return
 
-    tau, eps = ref["tau_t"], ref["ediss_t"]
-    m = (ref["cyc"] >= t0) & (ref["cyc"] <= t1)
+    (rc, rtau, reps), _ = dense[lvl]
+    m = (rc >= t0) & (rc <= t1)
+    tau, eps = rtau, reps
     ax.set_xlabel(r"$t/T_p$", fontsize=12)
     ax.set_ylabel(r"$\langle\tau'_w\rangle$ (Pa)   (solid)", fontsize=11)
     ax2.set_ylabel(r"$\langle\epsilon'_w\rangle$ (W/m$^3$)   (dashed)",
@@ -232,7 +285,7 @@ def time_panel(lvl="L10", n_cycles=3.0):
     fig.savefig(OUT_DIR / "replicated_Fig8_a.png", dpi=150,
                 bbox_inches="tight")
     print(f"saved replicated_Fig8_a.png  ({lvl}, t/T_p {t0:.2f}-{t1:.2f}, "
-          f"{m.sum()} frames)")
+          f"{m.sum()} samples, {m.sum()/n_cycles:.1f}/cycle)")
 
 
 def _phase_binned(phase, value, nbins=18, min_per_bin=2):
