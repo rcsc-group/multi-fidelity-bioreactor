@@ -81,11 +81,37 @@ if [ ! -f "$BINARY" ]; then
 fi
 
 unset DISPLAY
+
+# [PROJECT ADDED, 2026-09-21] Tell the solver how much wall clock it has, so
+# it can checkpoint and stop instead of being killed mid-run.
+#
+# event dump_checkpoint fires exactly ONCE, at t_end. Before this, a job that
+# ran out of clock first lost everything it had computed: on 2026-09-21
+# fig9_l9_rpm20 was 49% through 24 h of L9 with no checkpoint on disk, and
+# SLURM refuses to raise TimeLimit on a RUNNING job, so there was no recovery.
+#
+# Read from SLURM's own EndTime rather than from --time, because a job that
+# was requeued or had its limit changed while pending has a --time that no
+# longer matches when it will actually be killed. Computed immediately before
+# srun so the figure is the time the SOLVER has, not the time the script had.
+JOB_END=$(scontrol show job "$SLURM_JOB_ID" 2>/dev/null | grep -oP 'EndTime=\K\S+' | head -1)
+if [ -n "${JOB_END:-}" ] && [ "$JOB_END" != "Unknown" ]; then
+    _END_EPOCH=$(date -d "$JOB_END" +%s 2>/dev/null || echo "")
+    if [ -n "$_END_EPOCH" ]; then
+        export BIOREACTOR_MAXRUNTIME_S=$(( _END_EPOCH - $(date +%s) ))
+        echo "Walltime left: ${BIOREACTOR_MAXRUNTIME_S}s (solver reserves 300s to checkpoint)"
+    fi
+fi
+# --export is a whitelist: a variable not named here does not reach the ranks,
+# which would leave the deadline unset and silently restore the old behaviour.
+SRUN_EXPORT="HOME"
+[ -n "${BIOREACTOR_MAXRUNTIME_S:-}" ] && SRUN_EXPORT="HOME,BIOREACTOR_MAXRUNTIME_S"
+
 if [ -n "${DUMP:-}" ]; then
-    srun --mpi=pmix --mem=0 --chdir="$SCRATCH_RUN" --export=HOME \
+    srun --mpi=pmix --mem=0 --chdir="$SCRATCH_RUN" --export="$SRUN_EXPORT" \
         "$BINARY" "$PARAMS" "$DUMP"
 else
-    srun --mpi=pmix --mem=0 --chdir="$SCRATCH_RUN" --export=HOME \
+    srun --mpi=pmix --mem=0 --chdir="$SCRATCH_RUN" --export="$SRUN_EXPORT" \
         "$BINARY" "$PARAMS"
 fi
 
@@ -145,6 +171,12 @@ if [ -n "$NEXT_RUN" ]; then
         CURR_CKPT="${CANON_RUN:+$CANON_RUN/checkpoint.dump}"
         [ -z "$CURR_CKPT" ] && CURR_CKPT="$SCRATCH_RUN/checkpoint.dump"
         cp "$CURR_CKPT" "$NEXT_SCRATCH/checkpoint.dump" 2>/dev/null || true
+        # checkpoint.phase must travel WITH the dump: without it the next
+        # segment falls back to inferring the phase by rounding to the
+        # nearest period boundary, which is wrong by up to half a period for
+        # any dump not taken at a zero-crossing (i.e. every emergency one).
+        cp "$(dirname "$CURR_CKPT")/checkpoint.phase" \
+           "$NEXT_SCRATCH/checkpoint.phase" 2>/dev/null || true
         # Stamp _canonical_run_dir into the copy so THIS segment's own
         # results-copy-back (top of this script, next time it runs) and its
         # own self-submission of the segment after it both work too --

@@ -297,6 +297,30 @@ static double t_ramp_start      = 0.0;   // simulation time when the current ram
 // restart that changes omega_b or theta_max; see the derivation in main().
 static double t_phase_offset    = 0.0;
 static double t_dump_checkpoint = 0.0;   // simulation time to write checkpoint.dump
+
+// [PROJECT ADDED, 2026-09-21] Graceful stop before the queueing system kills
+// us. `event dump_checkpoint` fires exactly once, at t_end, so a run that
+// runs out of clock before reaching it loses everything it has computed --
+// measured 2026-09-21, when fig9_l9_rpm20 was 49% through 24 h of L9 with no
+// checkpoint on disk and SLURM refused to raise TimeLimit on a RUNNING job.
+//
+// Modelled on Basilisk's own src/maxruntime.h: a deadline, not a signal.
+// A deadline needs no async-signal-safe handler and does not depend on the
+// queueing system delivering a signal to every MPI rank at a comparable
+// timestep -- and the MPI_MAX reduction below makes all ranks agree on the
+// same step for free. One rank entering the collective dump() alone would
+// hang the job until the very kill this exists to pre-empt.
+//
+// The limit is declared through the environment rather than argv because
+// argv[2] is already the restart file and the submit path is shared by every
+// sweep script; the template exports it from SLURM's own accounting.
+#define MAXRUNTIME_RESERVE_S 300   // time left for the dump: a 196 MB L10
+                                   // checkpoint at 32 ranks writes in ~40 s,
+                                   // and a truncated dump is worse than none
+                                   // because it still looks resumable
+static double _maxruntime_s   = HUGE;
+static int    _emergency_dump = 0;   // set once, so we dump at most once
+
 static const char * restart_file = NULL; // argv[2] if this is a restart run
 // Upstream declares these for its `#if AMR` adaptive-refinement path (see
 // upstream BioReactor.c:141,160-162,445-448). Upstream itself runs with
@@ -506,8 +530,36 @@ int main(int argc, char * argv[]){
           t_ck = t_dumped;
         fclose (fp_ck);
       }
+      // Nearest-boundary inference. Valid only for a checkpoint written
+      // AT a zero-crossing, which every planned dump is; an emergency dump
+      // is not, and says so in checkpoint.phase, read just below.
       t_phase_offset      = T_per_st*round (t_ck/T_per_st) - t_ck;
       params.t_checkpoint = t_ck;
+
+      // [PROJECT ADDED, 2026-09-21] A recorded phase beats an inferred one.
+      // Absent (every checkpoint written before 2026-09-21) we keep the
+      // inference above, so old dumps restore exactly as they always did.
+      {
+        FILE *fp_ph = fopen ("checkpoint.phase", "r");
+        if (fp_ph) {
+          char buf[512];
+          if (fgets (buf, sizeof buf, fp_ph)) {
+            const char *k = strstr (buf, "\"t_phase_offset\"");
+            const char *c = k ? strchr (k, ':') : NULL;
+            if (c) {
+              double rec = atof (c + 1);
+              // The writer's forcing argument was w*(t + rec). Reproducing it
+              // exactly is the whole point, so take it verbatim rather than
+              // re-deriving anything from t_ck.
+              t_phase_offset = rec;
+              if (pid() == 0)
+                fprintf (ferr, "restart: using recorded phase offset "
+                         "%.6f from checkpoint.phase\n", rec);
+            }
+          }
+          fclose (fp_ph);
+        }
+      }
     }
     // Smooth-step interpolation starts AT the checkpoint and runs N_RAMP_CYCLES forward.
     // alpha goes 0→1 over [t_checkpoint, t_checkpoint + N_RAMP_CYCLES*T_per_st].
@@ -549,6 +601,23 @@ int main(int argc, char * argv[]){
     int n_per = (int)(t_end / T_per_st) + 1;
     t_dump_checkpoint = n_per * T_per_st;
     t_end = t_dump_checkpoint;
+  }
+
+  // [PROJECT ADDED, 2026-09-21] Walltime deadline, if the queueing system
+  // told us one. Absent (interactive runs, tests that do not set it) the
+  // limit stays HUGE and the deadline event never fires, so behaviour is
+  // exactly as before.
+  {
+    const char *s = getenv ("BIOREACTOR_MAXRUNTIME_S");
+    if (s && *s) {
+      double v = atof (s);
+      if (v > 0.) {
+        _maxruntime_s = v;
+        if (pid() == 0)
+          fprintf (ferr, "maxruntime: will checkpoint and stop %d s before "
+                   "%.0f s of wall clock\n", MAXRUNTIME_RESERVE_S, v);
+      }
+    }
   }
 
   // Dimensionless numbers
@@ -1905,6 +1974,69 @@ static void write_uv_field (double t_nd)
   free (bux); free (buy); free (bf); free (bcs);
 }
 
+// [PROJECT ADDED, 2026-09-21] Record the phase this checkpoint was written
+// at, next to the checkpoint itself.
+//
+// The restart path INFERS the writer's phase by snapping to the nearest
+// period boundary (t_phase_offset = T_per_st*round(t_ck/T_per_st) - t_ck).
+// That is correct only because every checkpoint so far is written AT a
+// zero-crossing. An emergency dump lands wherever the clock ran out, and
+// snapping it moves the forcing by up to half a period -- the bag resumes at
+// a different angle than it stopped at, which is the "escape" failure
+// documented above at the t_phase_offset derivation.
+//
+// So the writer writes its phase down. A sidecar rather than a field inside
+// the dump: `dump()` serialises the grid, and adding a scalar to it would
+// change the checkpoint format and break every existing checkpoint on disk.
+// JSON because params_read.h already parses JSON and the file is read once.
+static void write_phase_sidecar (double t_now)
+{
+  if (pid() != 0)
+    return;
+  FILE *fp = fopen ("checkpoint.phase", "w");
+  if (!fp) {
+    fprintf (ferr, "WARNING: cannot write checkpoint.phase; a restart from "
+             "this dump will have to infer its phase\n");
+    return;
+  }
+  // t_phase_offset is THIS run's offset; a reader resuming from here needs
+  // the total, so it can reproduce the same forcing argument w*(t + offset).
+  fprintf (fp, "{\"t\": %.17g, \"t_phase_offset\": %.17g, "
+           "\"T_per_st\": %.17g}\n", t_now, t_phase_offset, T_per_st);
+  fclose (fp);
+}
+
+// Stop cleanly when the wall clock is nearly gone.
+//
+// i += 10 rather than i++ so the reduction is not paid every step; at L10 a
+// step is seconds, so ten steps is far finer than the 300 s reserve.
+event maxruntime_stop (i += 10) {
+  if (_maxruntime_s == HUGE || _emergency_dump)
+    return 0;
+  double wall = perf.t;
+  // Every rank must reach the same verdict on the same step: dump() is
+  // collective.
+  mpi_all_reduce (wall, MPI_DOUBLE, MPI_MAX);
+  if (wall < _maxruntime_s - MAXRUNTIME_RESERVE_S)
+    return 0;
+
+  _emergency_dump = 1;
+  if (pid() == 0)
+    fprintf (ferr, "maxruntime: %.0f s of %.0f s used -- checkpointing at "
+             "t=%.6f (phase %.4f of a period) and stopping\n",
+             wall, _maxruntime_s, t,
+             fmod ((t + t_phase_offset) / T_per_st, 1.0));
+  write_uv_field (t);
+  p.nodump = pf.nodump = false;
+  dump (file = "checkpoint.dump");
+  p.nodump = pf.nodump = true;
+  write_phase_sidecar (t);
+  // Nonzero stops run()'s event loop; main()'s fclose() calls still run, so
+  // every .dat file is flushed and the run is postprocessable as far as it
+  // got. Never a bare `return;` -- see CLAUDE.md.
+  return 1;
+}
+
 // Write a Basilisk checkpoint at the first complete period boundary after t_end.
 // The checkpoint is always at θ=0 (zero-crossing) — clean phase alignment for
 // the next segment's soft-start ramp.  Controlled by t_dump_checkpoint global.
@@ -1920,6 +2052,13 @@ event dump_checkpoint (t = t_dump_checkpoint) {
   write_restart_diagnostic ("pre_dump");
   dump (file = "checkpoint.dump");
   p.nodump = pf.nodump = true;
+  // [PROJECT ADDED, 2026-09-21] A planned dump is at a zero-crossing, so the
+  // reader's nearest-boundary inference would get it right -- but only if it
+  // knows which kind of dump this is, and it cannot. Writing the sidecar
+  // unconditionally makes the recorded phase the single path for every
+  // checkpoint, so the inference is a fallback for OLD dumps alone rather
+  // than a branch that has to be chosen correctly at read time.
+  write_phase_sidecar (t);
   // acceleration(i++) and oxygen(t=t_mix;i++) are unconditional (no t<=t_end
   // bound), so Basilisk's events() never marks them done and run() keeps
   // stepping forever past t_dump_checkpoint once every t<=t_end-bounded event

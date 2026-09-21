@@ -1,5 +1,6 @@
 import sys
 import json
+import os
 import shutil
 import subprocess
 import pathlib
@@ -63,7 +64,9 @@ def ensure_binaries_current():
 
 
 def run_bioreactor(params: dict, tmp_path: pathlib.Path, timeout: int = 300,
-                   restart_from: pathlib.Path | None = None) -> pathlib.Path:
+                   restart_from: pathlib.Path | None = None,
+                   env: dict | None = None,
+                   extra_files: list[pathlib.Path] | None = None) -> pathlib.Path:
     """Write params.json into a fresh run dir, execute BioReactor, return run_dir.
 
     Does not assert returncode — caller is responsible.  TimeoutExpired is caught
@@ -72,6 +75,15 @@ def run_bioreactor(params: dict, tmp_path: pathlib.Path, timeout: int = 300,
     restart_from: a checkpoint.dump to restore. Passed as argv[2], which is how
     the driver takes it (src/BioReactor.c:398, `restart_file = argv[2]`); the
     checkpoint's own time is read back out of the dump, not from params.json.
+
+    env: extra environment variables, merged over the caller's. Needed for
+    BIOREACTOR_MAXRUNTIME_S, which is how the walltime deadline is declared —
+    the queueing system sets it in production and a test sets it to a few
+    seconds to exercise the same path without waiting out a real walltime.
+
+    extra_files: copied into the run dir alongside the checkpoint. A restart
+    needs checkpoint.phase next to the dump; without it the reader falls back
+    to inferring the phase, which is exactly the path under test.
     """
     if not BINARY.exists():
         pytest.skip(f"BioReactor binary not found at {BINARY}; run 'make build' first")
@@ -82,8 +94,13 @@ def run_bioreactor(params: dict, tmp_path: pathlib.Path, timeout: int = 300,
     if restart_from is not None:
         shutil.copy(restart_from, run_dir / "restart.dump")
         cmd.append("restart.dump")
+    for extra in (extra_files or []):
+        if pathlib.Path(extra).exists():
+            shutil.copy(extra, run_dir / pathlib.Path(extra).name)
+    run_env = {**os.environ, **(env or {})}
     try:
-        subprocess.run(cmd, cwd=run_dir, capture_output=True, text=True, timeout=timeout)
+        subprocess.run(cmd, cwd=run_dir, capture_output=True, text=True,
+                       timeout=timeout, env=run_env)
     except subprocess.TimeoutExpired:
         pass
     return run_dir
