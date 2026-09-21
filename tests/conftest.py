@@ -66,7 +66,8 @@ def ensure_binaries_current():
 def run_bioreactor(params: dict, tmp_path: pathlib.Path, timeout: int = 300,
                    restart_from: pathlib.Path | None = None,
                    env: dict | None = None,
-                   extra_files: list[pathlib.Path] | None = None) -> pathlib.Path:
+                   extra_files: list[pathlib.Path] | None = None,
+                   require_complete: bool = False) -> pathlib.Path:
     """Write params.json into a fresh run dir, execute BioReactor, return run_dir.
 
     Does not assert returncode — caller is responsible.  TimeoutExpired is caught
@@ -80,6 +81,11 @@ def run_bioreactor(params: dict, tmp_path: pathlib.Path, timeout: int = 300,
     BIOREACTOR_MAXRUNTIME_S, which is how the walltime deadline is declared —
     the queueing system sets it in production and a test sets it to a few
     seconds to exercise the same path without waiting out a real walltime.
+
+    require_complete: fail the test if the run was killed by `timeout` or
+    exited nonzero, instead of returning a partial run dir. Off by default
+    because several tests deliberately inspect incomplete runs; on for any
+    run used as a reference to compare something else against.
 
     extra_files: copied into the run dir alongside the checkpoint. A restart
     needs checkpoint.phase next to the dump; without it the reader falls back
@@ -98,11 +104,27 @@ def run_bioreactor(params: dict, tmp_path: pathlib.Path, timeout: int = 300,
         if pathlib.Path(extra).exists():
             shutil.copy(extra, run_dir / pathlib.Path(extra).name)
     run_env = {**os.environ, **(env or {})}
+    timed_out, result = False, None
     try:
-        subprocess.run(cmd, cwd=run_dir, capture_output=True, text=True,
-                       timeout=timeout, env=run_env)
+        result = subprocess.run(cmd, cwd=run_dir, capture_output=True,
+                                text=True, timeout=timeout, env=run_env)
     except subprocess.TimeoutExpired:
-        pass
+        timed_out = True
+    # A silently truncated run is the worst kind of test input: it still
+    # produces every output file, just fewer rows, so a test comparing
+    # against it measures the truncation and blames the physics. Callers that
+    # use a run as a REFERENCE should pass require_complete=True.
+    if require_complete:
+        if timed_out:
+            pytest.fail(
+                f"{params['run_id']}: killed by the {timeout}s test timeout "
+                f"before finishing, so its output is truncated and cannot be "
+                f"used as a reference. Raise the timeout or shorten the run.")
+        if result is not None and result.returncode != 0:
+            pytest.fail(
+                f"{params['run_id']}: exited {result.returncode}\n"
+                f"stderr tail:\n" + "\n".join(
+                    result.stderr.strip().splitlines()[-15:]))
     return run_dir
 
 

@@ -133,13 +133,23 @@ def test_kla_survives_a_restart_only_when_segments_are_stitched(tmp_path):
     from scripts.postprocess import _compute_c_star, _kla_5pt_at_threshold
 
     NC = 20
-    cont = run_bioreactor(_params("k_cont", NC), tmp_path, timeout=1200)
-    seg1 = run_bioreactor(_params("k_s1", NC // 2), tmp_path, timeout=1200)
+    # require_complete on all three: this test compares runs against each
+    # other, so a truncated one makes the comparison meaningless rather than
+    # merely noisy. CI failed here from 2026-09-16 with continuous=1.057 vs
+    # stitched=1.928 while the same test passed locally at ratio 1.000, and
+    # the continuous run -- the only one of the three that is a single long
+    # process -- is the one a slow runner would truncate first.
+    cont = run_bioreactor(_params("k_cont", NC), tmp_path, timeout=1800,
+                          require_complete=True)
+    seg1 = run_bioreactor(_params("k_s1", NC // 2), tmp_path, timeout=1800,
+                          require_complete=True)
     ck = seg1 / "checkpoint.dump"
     assert ck.exists(), "segment 1 wrote no checkpoint.dump"
     t_ck = dump_fields(ck)[0]["t"]
-    seg2 = run_bioreactor(_params("k_s2", NC // 2, restart_continue=1, t_checkpoint=t_ck),
-                          tmp_path, timeout=1200, restart_from=ck)
+    seg2 = run_bioreactor(_params("k_s2", NC // 2, restart_continue=1,
+                                  t_checkpoint=t_ck),
+                          tmp_path, timeout=1800, restart_from=ck,
+                          require_complete=True)
 
     tc, cc = _compute_c_star(cont)
     t1, c1 = _compute_c_star(seg1)
@@ -162,7 +172,13 @@ def test_kla_survives_a_restart_only_when_segments_are_stitched(tmp_path):
         if a != a:
             continue
         assert b == pytest.approx(a, rel=0.10), (
-            f"kLa_{int(thr*100)}: continuous={a:.4g} vs stitched={b:.4g}")
+            f"kLa_{int(thr*100)}: continuous={a:.4g} vs stitched={b:.4g}\n"
+            f"  continuous: {len(tc)} samples, t in [{tc[0]:.4f}, {tc[-1]:.4f}], "
+            f"C* in [{cc.min():.4f}, {cc.max():.4f}]\n"
+            f"  stitched:   {len(ts)} samples, t in [{ts[0]:.4f}, {ts[-1]:.4f}], "
+            f"C* in [{cs.min():.4f}, {cs.max():.4f}]\n"
+            f"  seam at t={t1[-1]:.4f}; if the two t-ranges differ the runs "
+            f"are not the same experiment and the kLa gap is a symptom")
 
     # (c) the trap: a later segment ALONE must not be treated as a kLa run
     solo = [_kla_5pt_at_threshold(t2, c2, thr) for thr in (0.10, 0.25)]
