@@ -41,19 +41,38 @@ the bag, so A.16's `n_L = 2^8` is L8 and carries L8's colour.
 | 7, A.17 | oxygen transfer and the kLa fit | `fig9_l9_rpm32.5` | good |
 | 8(a) | τ and EDR against time, 3 cycles | `fig8_hist_l10` | **do not present — transient, see below** |
 | 8(b,c) | τ and EDR distributions at the peak instant | `fig8_hist_l10` | good |
-| 9 | mixing time against rpm | 6 of 10 L9 points | **partial, and see the caveat** |
-| 11 | kLa against rpm | same 6 points | **partial, not grid-converged** |
+| 9 | mixing time against rpm | 9 of 10 L9 points | good shape; two outliers |
+| 10 | mixing time against angle | 2 of 6 L9 points | **very partial** |
+| 11 | kLa against rpm | same 9 points | **not grid-converged** |
+| 12 | kLa against angle | 2 of 6 L9 points | **very partial** |
 | 13 | τ and EDR against rpm and angle | L6/L8/L9/L10 | strongest agreement in the set |
 | A.16(a,b) | velocity convergence with mesh | L6/L8/L10 | good |
 
 ## Caveats worth saying out loud
 
-**Fig 9 and 11 are six of ten points and do not behave.** L9 crosses Kim's
-curves rather than paralleling them: 27.5 rpm gives dt₉₅/Kim = 1.15 while
-30 rpm, its neighbour, gives 0.67. Non-monotone neighbours that far apart is a
-signal, not scatter. Fig 11 is worse — the L6→L7→L8 column at 32.5 rpm runs
-10.1× → 5.1× → 2.2× Kim, still falling with refinement, so L9 at 1.1× is
-probably not converged either. Do not present these as settled.
+**Fig 9 reads much better at nine points than it did at six, and the earlier
+verdict here was too harsh.** With only the high-rpm half present, L9 appeared
+to cross Kim's curves; with 15–37.5 rpm in hand it tracks them in parallel
+over most of the range. dt₉₅/Kim by rpm:
+
+    15    17.5   22.5   25     27.5   30     32.5   35     37.5
+    0.72  0.74   0.66   1.05   1.15   0.67   0.70   0.95   1.53
+
+Most points sit at 0.66–0.74, a consistent offset rather than scatter. Three
+do not: 25 and 27.5 rpm jump to ~1.1 while their neighbours stay near 0.7, and
+37.5 reaches 1.53. Those are the open question, not the whole curve. 20 rpm is
+still running.
+
+**Fig 11 is the weak one, and it is a convergence problem, not a sampling
+one.** The L6→L7→L8 column at 32.5 rpm runs 10.1× → 5.1× → 2.2× Kim, still
+falling with refinement, so L9 at 1.13× is probably not converged either. Its
+rpm dependence is also erratic where Kim's is smooth (2.96, 3.50, 1.96, 3.39,
+3.70, 1.35, 1.13, 1.53, 1.56 against his values). Do not present as settled.
+
+**Figs 10 and 12 are two of six angle points** (θ = 7 and 6) with θ = 5, 4, 3,
+2 queued. Two points do not make a trend; they are here because the scripts
+run and the numbers are reasonable (dt₅₀/Kim = 0.64 and 0.58; kLa₂₅ ratios
+1.14 and 1.07), not because the figures are ready.
 
 **Fig 8(a) was drawn on the wrong axis until 2026-09-21.** Kim's panel is a
 time evolution over three unfolded cycles (t/T_p = 80–83) with both quantities
