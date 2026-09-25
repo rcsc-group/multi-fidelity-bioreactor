@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+# Refuse commits that change code while the lab notebook is stale.
+#
+#   diary.md   (gitignored, local): must be edited since the last commit, or
+#              within DIARY_MAX_AGE_H hours -- whichever is more lenient.
+#   BACKLOG.md (tracked): staged now, or committed within BACKLOG_MAX_AGE_D days.
+#
+# Only commits touching src/ scripts/ config/ tests/ are checked; docs-only
+# and figure-only commits pass. Deliberate override, one commit at a time:
+#   NOTEBOOK_OK="reason" git commit ...
+# Installed by `make hooks`; the tracked copy is scripts/hooks/pre-commit.
+set -euo pipefail
+
+DIARY_MAX_AGE_H=${DIARY_MAX_AGE_H:-2}
+BACKLOG_MAX_AGE_D=${BACKLOG_MAX_AGE_D:-7}
+root=$(git rev-parse --show-toplevel)
+
+if ! git diff --cached --name-only | grep -qE '^(src|scripts|config|tests)/'; then
+    exit 0
+fi
+if [ -n "${NOTEBOOK_OK:-}" ]; then
+    echo "pre-commit: notebook check overridden -- $NOTEBOOK_OK" >&2
+    exit 0
+fi
+
+now=$(date +%s)
+fail=0
+
+diary="$root/diary.md"
+if [ ! -f "$diary" ]; then
+    echo "pre-commit: diary.md is missing." >&2
+    fail=1
+else
+    d_mtime=$(stat -c %Y "$diary")
+    head_t=$(git log -1 --format=%ct 2>/dev/null || echo 0)
+    if [ "$d_mtime" -lt "$head_t" ] && [ $((now - d_mtime)) -gt $((DIARY_MAX_AGE_H * 3600)) ]; then
+        echo "pre-commit: diary.md last edited $(( (now - d_mtime) / 3600 )) h ago, before the" >&2
+        echo "  previous commit. Record what this change found or decided." >&2
+        fail=1
+    fi
+fi
+
+if ! git diff --cached --name-only | grep -qx 'BACKLOG.md'; then
+    b_t=$(git log -1 --format=%ct -- BACKLOG.md 2>/dev/null || true)
+    if [ -z "$b_t" ] || [ $((now - b_t)) -gt $((BACKLOG_MAX_AGE_D * 86400)) ]; then
+        echo "pre-commit: BACKLOG.md not touched in over $BACKLOG_MAX_AGE_D days. Delete what" >&2
+        echo "  landed, add what this work surfaced." >&2
+        fail=1
+    fi
+fi
+
+if [ "$fail" -ne 0 ]; then
+    echo "  Override for one commit: NOTEBOOK_OK=\"why\" git commit ..." >&2
+fi
+exit "$fail"

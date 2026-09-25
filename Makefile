@@ -20,6 +20,9 @@
 #       $ make submit PARAMS=runs/my_run/params.json
 #       $ make submit PARAMS=runs/my_run/params.json DRYRUN=1   # dry-run only
 #
+#  NOTEBOOK HOOK ──────────────────────────────────────────────────────────────
+#       $ make hooks        # install pre-commit check for diary.md / BACKLOG.md
+#
 #  HOUSE-KEEPING ───────────────────────────────────────────────────────────────
 #       $ make clean        # remove build artifacts
 #       $ make deepclean    # nuke build/, patched headers, logs
@@ -337,3 +340,14 @@ convergence-fill-l7:
 # ── overlay ───────────────────────────────────────────────────────────────────
 overlay:
 	$(UV) $(SC)/plot_kim_overlay_tau.py
+
+
+# ==========================================================
+#  Git hooks
+#  Copies the tracked hook into .git/hooks (no git config change). Re-run
+#  after editing scripts/hooks/pre-commit.
+# ==========================================================
+.PHONY: hooks
+hooks:
+	install -m 755 scripts/hooks/pre-commit $$(git rev-parse --git-path hooks)/pre-commit
+	@echo "installed pre-commit (diary.md / BACKLOG.md freshness)"
