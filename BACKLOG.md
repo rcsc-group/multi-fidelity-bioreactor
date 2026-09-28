@@ -30,9 +30,19 @@ item starts, give it a diary entry; when it lands, delete it here.
 
 ## Figures / runs
 
+- **Fig 8(b) tau tails ~13x Kim's** after the transient cleared. Test for
+  grid-scale noise with a volume metric (EDR field spectrum / |grad u|^2
+  distribution) at L8/L9/L10 before touching anything near the wall.
+- `submit_fig8_hist.py` still restarts from zero forcing: set every `*_prev`
+  to the current condition (as submit_fig11_l10_kla.py does). Cost of not
+  doing it: ~15 cycles of L10 (~15 h) per re-record.
+- Fig 9 L10 anchor (32.5 rpm): segment 2 running (job 6763888); ~4
+  segments total. Add the chain to plot_fig9/plot_fig11 when it lands.
+- MF tau_rpm: replace the 6-cycle L10 HF points at 35/37.5 with the ~30-40
+  L10 cycles logged by fig11_l10_rpm35/37.5 (pre-release window).
+
 - L6->L7->L8 kLa ladder at one bad L9 point (27.5 rpm or theta=4): does it
   converge toward Kim like 32.5 rpm, or stay anomalous?
-- Figs 10/12: regenerate now that theta=2 has results (6/6 angles).
 - `make replicas` target wrapping the README's regenerate list.
 - Unsubmitted: `submit_figset.py` (Figs 2-7), `submit_fig14.py` (14/15),
   `submit_figA18.py`. Parked by request: A.16(c).

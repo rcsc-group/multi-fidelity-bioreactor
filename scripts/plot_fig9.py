@@ -65,6 +65,9 @@ SERIES = [
     (8, "fig9_ladder_l8_rpm{rpm:g}", fs.level_colour(8)),
     (9, "fig9_ladder_l9_rpm{rpm:g}", fs.level_colour(9)),
     (9, "fig9_l9_rpm{rpm:g}", fs.level_colour(9)),   # the sweep itself
+    # L10 kLa points (submit_fig11_l10_kla.py) carry the tracer too. They
+    # release 5 cycles after a warm restart, not at absolute cycle 80.
+    (10, "fig11_l10_rpm{rpm:g}", fs.level_colour(10)),
 ]
 # Marker ranks the homogeneity criterion (v -> ^ -> P with stringency) and is
 # shared with Fig 10; it never collides with a physical-quantity shape.

@@ -64,22 +64,28 @@ plt.rcParams.update({
 KIM_TAU_PEAK = 1.8026e-3      # Pa
 KIM_EDISS_PEAK = 0.28655      # W/m^3
 
+def _l10_source() -> str:
+    """Newest L10 recording on the off-period cadence.
+
+    fig8_hist_l10b re-records for 20 cycles because fig8_hist_l10 ended with
+    its restart transient still present (2x/1x harmonic of signed <tau> 0.23;
+    half-period antisymmetry forbids it in a settled flow). l10b decays to
+    0.05 by cycles 17-20. 57f68830 samples exactly five phases (T_p/5 on the
+    nose) and is the last resort.
+    """
+    for run in ("fig8_hist_l10b", "fig8_hist_l10"):
+        if (ROOT / "runs" / run / "frames_tau").is_dir():
+            return run
+    return "57f68830"
+
+
 RUNS = [("L8", "l8_coldstart_vid", fs.level_colour(8)),
         ("L9", "a34fc4d4", fs.level_colour(9)),
-        ("L10", ("fig8_hist_l10"
-                 if (ROOT / "runs" / "fig8_hist_l10" / "frames_tau").is_dir()
-                 else "57f68830"), fs.level_colour(10))]
-# L10 follows the same switch as HIST_RUN below. 57f68830 samples exactly five
-# phases however long it runs (frame interval T_p/5 on the nose), which in
-# panel (a) draws as five points joined by straight lines against L8's smooth
-# 150-frame curve -- the sampling artifact, not the physics.
-# Panels (b)/(c) need MANY distinct phases to locate the peak instant, and
-# 57f68830 samples exactly five however long it runs (its frame interval is
-# T_p/5 on the nose). runs/fig8_hist_l10 re-records the same converged state
-# on the off-period cadence -- ~130 phases -- and is used as soon as it exists.
-HIST_RUN = ("fig8_hist_l10"
-            if (ROOT / "runs" / "fig8_hist_l10" / "frames_tau").is_dir()
-            else "57f68830")
+        ("L10", _l10_source(), fs.level_colour(10))]
+HIST_RUN = _l10_source()
+# Fraction of HIST_RUN's frames kept for (b)/(c), from the END. l10b's even
+# harmonic is <= 0.09 only over its last ~6 of 21 cycles.
+HIST_TAIL = 0.25 if HIST_RUN == "fig8_hist_l10b" else 0.5
 
 
 def load_frame(path):
@@ -382,7 +388,7 @@ phase_panel("ediss", "diagnostic_Fig8_phasefold_ediss.png",
 b_hi, tau_scale, ediss_scale, _, _ = scales(HIST_RUN)
 frames = [load_frame(p) for p in
           sorted((ROOT / "runs" / HIST_RUN / "frames_tau").glob("frame_*.bin"))]
-frames = frames[len(frames) // 2:]
+frames = frames[int(len(frames) * (1 - HIST_TAIL)):]
 
 tau_means = [tau[bag_mask(f, b_hi)].mean() for _, f, tau, _ in frames]
 ediss_means = [ed[bag_mask(f, b_hi)].mean() for _, f, _, ed in frames]

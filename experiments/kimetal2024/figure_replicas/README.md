@@ -39,16 +39,33 @@ the bag, so A.16's `n_L = 2^8` is L8 and carries L8's colour.
 | 1 | the two frames of reference | schematic, no run | exact — every number is a parameter |
 | 2 | rocking angle and mean velocities | `fig9_l9_rpm32.5` | good |
 | 7, A.17 | oxygen transfer and the kLa fit | `fig9_l9_rpm32.5` | good |
-| 8(a) | τ and EDR against time, 3 cycles | `fig8_hist_l10` | **do not present — transient, see below** |
-| 8(b,c) | τ and EDR distributions at the peak instant | `fig8_hist_l10` | good |
-| 9 | mixing time against rpm | 9 of 10 L9 points | good shape; two outliers |
-| 10 | mixing time against angle | 2 of 6 L9 points | **very partial** |
-| 11 | kLa against rpm | same 9 points | **not grid-converged** |
-| 12 | kLa against angle | 2 of 6 L9 points | **very partial** |
+| 8(a) | τ and EDR against time, 3 cycles | `fig8_hist_l10b`, cycles 18–21 | good: τ peak within 2% of Kim, EDR ~1.1× |
+| 8(b,c) | τ and EDR distributions at the peak instant | `fig8_hist_l10b`, last quarter of frames | tails still ~13× Kim's, see below |
+| 9 | mixing time against rpm | 10/10 L9, plus L10 at 35 and 37.5 | good shape; outliers at 25, 27.5, 37.5 |
+| 10 | mixing time against angle | 6/6 L9 | complete at L9 |
+| 11 | kLa against rpm | 10/10 L9, plus L10 at 35 and 37.5 | L9 not converged; L10 closes most of the gap |
+| 12 | kLa against angle | 6/6 L9 | complete at L9; 1.1–5.7× Kim |
 | 13 | τ and EDR against rpm and angle | L6/L8/L9/L10 | strongest agreement in the set |
 | A.16(a,b) | velocity convergence with mesh | L6/L8/L10 | good |
 
 ## Caveats worth saying out loud
+
+**L10 at 35 and 37.5 rpm (2026-09-28) moves Fig 11 most of the way to Kim.**
+kLa25/Kim: 0.99 at 35 rpm (L9: 1.53) and 1.31 at 37.5 (L9: 1.56). dt95/Kim at
+37.5: 0.86 (L9: 1.53). Both runs warm-start from the settled L10 Fig 13 state
+at the same rpm and release oxygen and tracer 5 cycles after the restart, not
+at Kim's absolute cycle 80 -- a stated protocol deviation. 35 rpm stopped at
+its walltime before chi = 0.95, so Fig 9 has only its chi = 0.50 point.
+
+**Fig 8 re-record landed and settled.** `fig8_hist_l10b` restarted from zero
+forcing (its submit script predates setting the `*_prev` fields), so the even
+harmonic started at 4.3 and decayed to 0.05 by cycles 17-20. Panel (a) uses
+those cycles; (b)/(c) use the last quarter of frames. tau peak 1.83e-3 Pa vs
+Kim 1.80e-3; EDR 0.29-0.32 vs 0.29 (was 0.68). The tau distribution narrowed
+from +/-0.49 to +/-0.19 Pa but is still ~13x Kim's +/-0.015 -- the transient
+was part of it, not all. A correct mean with wide tails is the grid-scale
+noise signature; it needs a volume metric, not another wall number.
+
 
 **Fig 9 reads much better at nine points than it did at six, and the earlier
 verdict here was too harsh.** With only the high-rpm half present, L9 appeared
@@ -162,7 +179,6 @@ Axis ranges still follow his PDF exactly.
 | figure | needs | state |
 |---|---|---|
 | 3, 4, 5, 6 | `submit_figset.py`, ~28 h | not submitted |
-| 10, 12 | angle sweep, 6 jobs | **running** (submitted 2026-09-21) |
 | 14, 15 | `submit_fig14.py`, ~23 h | not submitted |
 | A.16(c) | `submit_figA16_c.py`, ~32 h | parked by request |
 | A.18 | `submit_figA18.py`, ~6 h | not submitted |
