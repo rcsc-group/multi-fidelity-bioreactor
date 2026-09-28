@@ -57,9 +57,7 @@ THRESHOLDS = [("kLa_10", "kLa_exp5pts_10", fs.threshold_marker("cstar", 10),
 FIG11 = {
     "csv": "mixing_kla_vs_frequency.csv", "x": "RPM",
     "values": [15, 17.5, 20, 22.5, 25, 27.5, 30, 32.5, 35, 37.5],
-    "series": [(6, "fig9_validate_l6_rpm{v:g}"), (7, "fig9_ladder_l7_rpm{v:g}"),
-               (8, "fig9_ladder_l8_rpm{v:g}"), (9, "fig9_l9_rpm{v:g}"),
-               (10, "fig11_l10_rpm{v:g}")],
+    "series": [(9, "fig9_l9_rpm{v:g}"), (10, "fig11_l10_rpm{v:g}")],
     "xlabel": r"Rocking frequency $f_b$ (rpm)",
     "title": r"$\theta_{b,max}=7^\circ$", "out": "replicated_Fig11.png",
 }

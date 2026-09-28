@@ -46,3 +46,4 @@ item starts, give it a diary entry; when it lands, delete it here.
 - `make replicas` target wrapping the README's regenerate list.
 - Unsubmitted: `submit_figset.py` (Figs 2-7), `submit_fig14.py` (14/15),
   `submit_figA18.py`. Parked by request: A.16(c).
+- Convergence-aware MF: q_N = q_inf + C h_N^p per x, GP over (x, h^p). Error model = SE (+) GCI. Blocked for tau_max: R>1 at all rpm (diag_richardson_tau.py). Next: log argmax location of tau (contact-line hypothesis); run the same test on mean wall shear / <EDR> / kLa (L8/L9/L10).
