@@ -62,12 +62,14 @@ def fits(h, q):
     return best
 
 
-def uncertainty(levels, q):
+def uncertainty(levels, q, target=None):
+    """U at level `target` (default: the finest), from a fit over `levels`."""
+    target = levels[-1] if target is None else target
     h = np.array([2.0 ** (10 - N) for N in levels])
     q = np.array(q)
     name, p, f, us = fits(h, q)
-    q0 = f(0.0)
-    eps, dq, res = abs(q[-1] - q0), (q.max() - q.min()) / (len(q) - 1), abs(q[-1] - f(1.0))
+    q0, i, ht = f(0.0), list(levels).index(target), 2.0 ** (10 - target)
+    eps, dq, res = abs(q[i] - q0), (q.max() - q.min()) / (len(q) - 1), abs(q[i] - f(ht))
     if us < dq:
         U = (1.25 if 0.5 <= p < 2.1 else 3.0) * eps + us + res
     else:
@@ -75,19 +77,24 @@ def uncertainty(levels, q):
     return name, q0, U
 
 
-for col, kind in COLUMNS:
-    print(f"\n== {col}")
-    print(f"{'rpm':>5} {'L10':>9} {'SE10':>8} | {'fit':>7} {'q0':>9} {'U/L10':>6} "
-          f"| {'fit':>7} {'q0':>9} {'U/L10':>6}   (levels 6,8,9,10 | 8,9,10)")
-    for rpm in RPMS:
-        try:
-            m = {N: cycle_means(t.format(rpm), col, kind, s) for N, (t, s) in LEVELS.items()}
-        except (FileNotFoundError, KeyError, ValueError):
-            continue
-        q = {N: v.mean() for N, v in m.items()}
-        se = m[10].std(ddof=1) / math.sqrt(len(m[10]))
-        row = f"{rpm:5g} {q[10]:9.4g} {se:8.2g}"
-        for lv in ((6, 8, 9, 10), (8, 9, 10)):
-            name, q0, U = uncertainty(lv, [q[N] for N in lv])
-            row += f" | {name:>7} {q0:9.4g} {U / q[10]:6.1%}"
-        print(row)
+def main() -> None:
+  for col, kind in COLUMNS:
+      print(f"\n== {col}")
+      print(f"{'rpm':>5} {'L10':>9} {'SE10':>8} | {'fit':>7} {'q0':>9} {'U/L10':>6} "
+            f"| {'fit':>7} {'q0':>9} {'U/L10':>6}   (levels 6,8,9,10 | 8,9,10)")
+      for rpm in RPMS:
+          try:
+              m = {N: cycle_means(t.format(rpm), col, kind, s) for N, (t, s) in LEVELS.items()}
+          except (FileNotFoundError, KeyError, ValueError):
+              continue
+          q = {N: v.mean() for N, v in m.items()}
+          se = m[10].std(ddof=1) / math.sqrt(len(m[10]))
+          row = f"{rpm:5g} {q[10]:9.4g} {se:8.2g}"
+          for lv in ((6, 8, 9, 10), (8, 9, 10)):
+              name, q0, U = uncertainty(lv, [q[N] for N in lv])
+              row += f" | {name:>7} {q0:9.4g} {U / q[10]:6.1%}"
+          print(row)
+
+
+if __name__ == "__main__":
+    main()
