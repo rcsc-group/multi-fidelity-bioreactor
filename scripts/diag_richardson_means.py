@@ -54,25 +54,29 @@ def triplet(q1, q2, q3, r):
     return R, (-math.log(R) / math.log(r) if 0 < R < 1 else float("nan"))
 
 
-for col, kind in COLUMNS:
-    print(f"\n== {col}")
-    print(f"{'rpm':>5} {'L6':>9} {'L8':>9} {'L9':>9} {'L10':>9} {'SE10':>8} "
-          f"{'R_A':>6} {'p_A':>5} {'R_B':>6} {'p_B':>5} {'q_inf_B':>9} {'GCI_B':>8}")
-    for rpm in RPMS:
-        try:
-            m = {N: cycle_means(t.format(rpm), col, kind, s) for N, (t, s) in LEVELS.items()}
-        except (FileNotFoundError, KeyError, ValueError):
-            continue
-        q = {N: v.mean() for N, v in m.items()}
-        se10 = m[10].std(ddof=1) / math.sqrt(len(m[10]))
-        RA, pA = triplet(q[6], q[8], q[10], 4)
-        RB, pB = triplet(q[8], q[9], q[10], 2)
-        if 0 < RB < 1:
-            qi = q[10] + (q[10] - q[9]) / (2**pB - 1)
-            gci = 1.25 * abs(q[10] - q[9]) / (2**pB - 1)
-            tail = f"{qi:9.4g} {gci:8.2g}"
-        else:
-            tail = f"{'-':>9} {'-':>8}"
-        print(f"{rpm:5g} " + " ".join(f"{q[N]:9.4g}" for N in (6, 8, 9, 10))
-              + f" {se10:8.2g} {RA:6.2f} {pA:5.2f} {RB:6.2f} {pB:5.2f} " + tail)
-sys.exit(0)
+def main() -> None:
+    for col, kind in COLUMNS:
+      print(f"\n== {col}")
+      print(f"{'rpm':>5} {'L6':>9} {'L8':>9} {'L9':>9} {'L10':>9} {'SE10':>8} "
+            f"{'R_A':>6} {'p_A':>5} {'R_B':>6} {'p_B':>5} {'q_inf_B':>9} {'GCI_B':>8}")
+      for rpm in RPMS:
+          try:
+              m = {N: cycle_means(t.format(rpm), col, kind, s) for N, (t, s) in LEVELS.items()}
+          except (FileNotFoundError, KeyError, ValueError):
+              continue
+          q = {N: v.mean() for N, v in m.items()}
+          se10 = m[10].std(ddof=1) / math.sqrt(len(m[10]))
+          RA, pA = triplet(q[6], q[8], q[10], 4)
+          RB, pB = triplet(q[8], q[9], q[10], 2)
+          if 0 < RB < 1:
+              qi = q[10] + (q[10] - q[9]) / (2**pB - 1)
+              gci = 1.25 * abs(q[10] - q[9]) / (2**pB - 1)
+              tail = f"{qi:9.4g} {gci:8.2g}"
+          else:
+              tail = f"{'-':>9} {'-':>8}"
+          print(f"{rpm:5g} " + " ".join(f"{q[N]:9.4g}" for N in (6, 8, 9, 10))
+                + f" {se10:8.2g} {RA:6.2f} {pA:5.2f} {RB:6.2f} {pB:5.2f} " + tail)
+
+
+if __name__ == "__main__":
+    main()
