@@ -47,3 +47,5 @@ item starts, give it a diary entry; when it lands, delete it here.
 - Unsubmitted: `submit_figset.py` (Figs 2-7), `submit_fig14.py` (14/15),
   `submit_figA18.py`. Parked by request: A.16(c).
 - Convergence-aware MF: q_N = q_inf + C h_N^p per x, GP over (x, h^p). Error model = SE (+) GCI. Blocked for tau_max: R>1 at all rpm (diag_richardson_tau.py). Next: log argmax location of tau (contact-line hypothesis); run the same test on mean wall shear / <EDR> / kLa (L8/L9/L10).
+- Reproducibility of production kLa: at L4, OpenMP round-off moves kLa_50 by 2x (diag_omp_determinism.py). Test whether L7 kLa changes with MPI rank count (8 vs 16). If it does, kLa error bars need a round-off/chaos term.
+- t_end period extension int(t_end/T)+1 is decided by float jitter at exact boundaries; use floor(t_end/T + 1e-9)+1 at the next binary rebuild.
