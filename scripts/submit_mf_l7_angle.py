@@ -10,7 +10,7 @@ t_end). At (7, 8) 0.163 min/cycle measured at 32.5 rpm: ~13 min per angle.
 
 Usage:
     uv run python scripts/submit_mf_l7_angle.py --dry-run
-    uv run python scripts/submit_mf_l7_angle.py
+    uv run python scripts/submit_mf_l7_angle.py [--level 8]
 """
 from __future__ import annotations
 
@@ -24,7 +24,10 @@ sys.path.insert(0, str(ROOT))
 from scripts.simulate import submit_slurm    # noqa: E402
 
 BINARY = "/oscar/scratch/eaguerov/BioReactor-mpi-lean-f1c11e0"
-RPM, LEVEL, NTASKS, CYCLES = 32.5, 7, 8, 80
+RPM, CYCLES = 32.5, 80
+# level -> (ranks, walltime). L8 was added for Fig 13(b) <tau>, where L7 is an
+# uninformative LF (diary 2026-09-30).
+LEVELS = {7: (8, "01:00:00"), 8: (16, "04:00:00")}
 ANGLES = [7.0, 6.0, 5.0, 4.0, 3.0, 2.0]
 GEOMETRY = {"a": 0.25, "b": 0.03575, "n": 8.0}
 
@@ -40,11 +43,13 @@ def t_scales(theta: float) -> tuple[float, float]:
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--level", type=int, default=7, choices=sorted(LEVELS))
     a = ap.parse_args()
+    ntasks, walltime = LEVELS[a.level]
     for th in ANGLES:
         T_per, T_bio = t_scales(th)
         params = {
-            "run_id": f"mf_l7_th{th:g}", "fidelity": LEVEL,
+            "run_id": f"mf_l{a.level}_th{th:g}", "fidelity": a.level,
             "geometry": GEOMETRY, "fill_level": 0.5, "n_harmonics": 1,
             "theta_max": [th, 0.0, 0.0], "phi_angular": [0.0, 0.0, 0.0],
             "omega_b": RPM * 2 * math.pi / 60.0, "omega_h": 0.0,
@@ -57,9 +62,9 @@ def main() -> None:
         if a.dry_run:
             continue
         job = submit_slurm(params, project_root=ROOT, runs_root=ROOT / "runs",
-                           walltime="01:00:00",
+                           walltime=walltime,
                            template=ROOT / "config" / "slurm_mpi_template.sh",
-                           cpus=1, ntasks=NTASKS, mem="4G")
+                           cpus=1, ntasks=ntasks, mem="4G")
         print(f"    submitted job={job}")
 
 
