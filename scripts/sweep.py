@@ -51,6 +51,7 @@ from uuid import uuid4
 
 _PROJECT_ROOT = Path(__file__).parents[1]
 sys.path.insert(0, str(_PROJECT_ROOT))
+from scripts.periods import next_period_boundary  # noqa: E402
 
 
 # ── walltime estimation ───────────────────────────────────────────────────────
@@ -338,8 +339,7 @@ def build_segment_list(
 
         # Advance checkpoint time to next full period boundary after t_end
         t_end_abs = t_checkpoint + p["t_end"]
-        n_per = int(t_end_abs / T_per) + 1
-        t_checkpoint = n_per * T_per
+        _, t_checkpoint = next_period_boundary(t_end_abs, T_per)  # = the C rule
         prev = p
 
     return segments

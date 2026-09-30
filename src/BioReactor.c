@@ -335,6 +335,20 @@ int MINLEVEL, MAXLEVEL;    // Mesh refinement levels
 // ================================================================== //
 //                       MAIN FUNCTION                                //
 // ================================================================== //
+
+// [PROJECT FIX, 2026-09-30] The run stops at the SMALLEST period boundary at
+// or after the requested end: n = max(1, ceil(x - PERIOD_TOL)), x = t/T. The
+// old rule, (int)x + 1, gave k OR k+1 periods for a request of exactly k,
+// depending on the last bit of x. Measured: 10 requested -> 11, 20 -> 20 on
+// the same binary, which split test_restart_continue's two runs by 2 periods.
+// scripts/periods.py implements the same expression, and chain.py/sweep.py use
+// it to predict the dump time -- keep the two in step.
+#define PERIOD_TOL 1e-5
+static int next_period_count (double x) {
+  int n = (int) ceil (x - PERIOD_TOL);
+  return n < 1 ? 1 : n;
+}
+
 int main(int argc, char * argv[]){
 
   // [PROJECT CHANGED] Upstream: `double L_bio=atof(argv[1]); double ANGLE=
@@ -592,13 +606,13 @@ int main(int argc, char * argv[]){
       // this the fix would hand the next segment in a chain a checkpoint
       // that is itself off-phase, reintroducing the same bug one link down.
       double t_end_abs = params.t_checkpoint + params.t_end;
-      int n_per        = (int)((t_end_abs + t_phase_offset) / T_per_st) + 1;
+      int n_per        = next_period_count ((t_end_abs + t_phase_offset) / T_per_st);
       t_dump_checkpoint = n_per * T_per_st - t_phase_offset;
       t_end            = t_dump_checkpoint;
     }
   } else {
     // Fresh run: extend t_end to the next period boundary for clean phase alignment.
-    int n_per = (int)(t_end / T_per_st) + 1;
+    int n_per = next_period_count (t_end / T_per_st);
     t_dump_checkpoint = n_per * T_per_st;
     t_end = t_dump_checkpoint;
   }

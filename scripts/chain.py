@@ -35,6 +35,7 @@ import scripts.simulate as simulate
 from scripts.postprocess import validate_params
 from scripts.settling_model import settling_cycles, UnresolvedSettlingCondition
 from scripts.cost_model import min_per_cycle
+from scripts.periods import next_period_boundary
 
 _DEFAULT_TEMPLATE       = _PROJECT_ROOT / "config" / "slurm_template.sh"
 _DEFAULT_VIDEO_TEMPLATE = _PROJECT_ROOT / "config" / "slurm_video_template.sh"
@@ -215,8 +216,7 @@ def build_chain(cfg: dict) -> list[dict]:
 
         # Compute this segment's checkpoint time (for the next segment's t_checkpoint).
         t_end_abs = t_checkpoint + t_end
-        n_per = int(t_end_abs / T_per_nd) + 1
-        t_checkpoint = n_per * T_per_nd
+        _, t_checkpoint = next_period_boundary(t_end_abs, T_per_nd)  # = the C rule
         prev_omega_b = float(base["omega_b"])
         prev_motion  = base
 
