@@ -6,13 +6,13 @@ and 10 and 12 are another ("Fig. 10,12"), the same runs scored two ways.
 postprocess emits kLa alongside dtmix from every run, so neither figure here
 costs a single new cycle.
 
-Estimators map one-to-one onto Kim's columns, and the names were taken from
-his: our ``kLa_10/25/50`` is his ``kLa_exp5pts_*`` (a 5-point log-linear fit
-of ln(1-C*) around the crossing) and our ``kLa_inst_*`` is his ``kLa_inst_*``
-(a finite-difference dC*/dt at the crossing, divided by 1-C*). The panels draw
-the 5-point fit, which is the smoother of the two; the printed table carries
-both, because where they disagree the oxygen curve is noisy and neither number
-should be read as settled.
+Our points are the WHOLE-PERIOD kLa, ``kLa_1T_*``: a log-linear fit of
+ln(1-C*) over one full rocking period centred on the crossing, i.e. the
+cycle-averaged rate. Kim's curve is his ``kLa_exp5pts_*``, a 5-point fit. A
+5-point window spans ~0.13 of a period, and the transfer rate is modulated at 2 f_b,
+so that estimator is phase-locked: +-10-36% per point at L9/L10
+(scripts/diag_kla_phase_lock.py, 2026-10-01). Our own 5-point value
+(``kLa_25``) is printed beside it for the protocol-matched comparison.
 
 Marker shape is the saturation threshold and colour is the dataset, the same
 encoding as the Fig 9 replica. Levels are never blended: a coarser grid is a
@@ -47,11 +47,11 @@ C_KIM = fs.KIM
 LEVEL_COLOUR = fs.LEVEL_COLOUR
 # (our key, Kim's column, marker, label). The C* family is ordered to match
 # Fig 9's chi family, so the loosest criterion is "v" in both.
-THRESHOLDS = [("kLa_10", "kLa_exp5pts_10", fs.threshold_marker("cstar", 10),
+THRESHOLDS = [("kLa_1T_10", "kLa_exp5pts_10", fs.threshold_marker("cstar", 10),
                r"$C^*=10\%$"),
-              ("kLa_25", "kLa_exp5pts_25", fs.threshold_marker("cstar", 25),
+              ("kLa_1T_25", "kLa_exp5pts_25", fs.threshold_marker("cstar", 25),
                r"$C^*=25\%$"),
-              ("kLa_50", "kLa_exp5pts_50", fs.threshold_marker("cstar", 50),
+              ("kLa_1T_50", "kLa_exp5pts_50", fs.threshold_marker("cstar", 50),
                r"$C^*=50\%$")]
 
 FIG11 = {
@@ -83,9 +83,7 @@ def collect(spec: dict) -> pd.DataFrame:
                          "run_id": tmpl.format(v=v),
                          **{k: d.get(k, math.nan)
                             for k, _, _, _ in THRESHOLDS},
-                         **{f"inst_{k}": d.get(f"kLa_inst_{k.split('_')[1]}",
-                                               math.nan)
-                            for k, _, _, _ in THRESHOLDS}})
+                         "kLa_5pt_25": d.get("kLa_25", math.nan)})
     return pd.DataFrame(rows)
 
 
@@ -96,15 +94,15 @@ def draw(spec: dict) -> None:
 
     print(f"\n{spec['out']}")
     print(f"{'run':<28} {'lvl':>3} {'x':>6} "
-          f"{'kLa25':>8} {'inst25':>8} {'Kim25':>8} {'ratio':>7}")
+          f"{'1T_25':>8} {'5pt_25':>8} {'Kim25':>8} {'1T/Kim':>7} {'5pt/Kim':>7}")
     kim_idx = kim.set_index(spec["x"])
     for _, r in ours.iterrows():
         k25 = (float(kim_idx.loc[r["x"], "kLa_exp5pts_25"])
                if r["x"] in kim_idx.index
                and "kLa_exp5pts_25" in kim_idx.columns else math.nan)
         print(f"{r['run_id']:<28} {r['level']:>3.0f} {r['x']:>6.1f} "
-              f"{r['kLa_25']:>8.2f} {r['inst_kLa_25']:>8.2f} "
-              f"{k25:>8.2f} {r['kLa_25'] / k25:>7.3f}")
+              f"{r['kLa_1T_25']:>8.2f} {r['kLa_5pt_25']:>8.2f} "
+              f"{k25:>8.2f} {r['kLa_1T_25'] / k25:>7.3f} {r['kLa_5pt_25'] / k25:>7.3f}")
 
     fig, ax = plt.subplots(figsize=(6.4, 4.4))
     for _, kim_col, marker, label in THRESHOLDS:
@@ -136,8 +134,12 @@ def draw(spec: dict) -> None:
                         label=f"L{int(lv)}")
                  for lv in (sorted(ours["level"].unique())
                             if not ours.empty else [])]
+    # a threshold is keyed if EITHER dataset draws it (Kim's angle block has
+    # no 50% column, but our runs do)
     marks = [Line2D([], [], color="0.35", marker=m, ls="none", ms=6, label=lab)
-             for _, kim_col, m, lab in THRESHOLDS if kim_col in kim.columns]
+             for our_col, kim_col, m, lab in THRESHOLDS
+             if kim_col in kim.columns
+             or (not ours.empty and ours[our_col].notna().any())]
     prov = [Line2D([], [], color="0.3", ls="-", lw=fs.LW_KIM,
                    label="Kim et al."),
             Line2D([], [], color="0.3", ls=":", lw=fs.LW_OURS,

@@ -41,6 +41,13 @@ Each is estimated two ways:
   straight line to ln(1−C*) vs time over the 5 data points closest to the
   crossing.  Smoother, less sensitive to noise.
 
+- **Whole-period fit** (``kLa_1T_10``, ``kLa_1T_25``, ``kLa_1T_50``): the
+  same log-linear fit over ONE full rocking period centred on the crossing.
+  This is the cycle-averaged rate. The 5-point fit spans ~0.13 of a period
+  and is phase-locked to the in-cycle modulation (+-10-36% at L9/L10,
+  scripts/diag_kla_phase_lock.py). The 5-point value is kept for
+  protocol-matched comparison with Kim et al.
+
 - **Instantaneous** (``kLa_inst_10``, ``kLa_inst_25``, ``kLa_inst_50``):
   computes dC*/dt at the crossing point via finite differences, then divides by
   (1−C*).  Faster but noisier.
@@ -388,6 +395,40 @@ def _kla_5pt_at_threshold(t: np.ndarray, c_star: np.ndarray,
     cs_win = np.clip(c_star[lo:hi], 0.0, 1.0 - 1e-10)
     y = np.log(1.0 - cs_win)
     slope, _ = np.polyfit(t_win, y, 1)
+    return float(-slope)
+
+
+def _kla_period_at_threshold(t: np.ndarray, c_star: np.ndarray,
+                             threshold: float, T_per_nd: float,
+                             n_periods: int = 1) -> float:
+    """kLa from a log-linear fit over WHOLE rocking periods centred on the crossing.
+
+    Same model as _kla_5pt_at_threshold, ln(1 - C*) = -kLa t + const, fitted over
+    every output sample with |t - t_cross| <= n_periods*T/2, where t_cross is the
+    first sample with C* >= threshold. The 5-sample window spans only ~0.13 of a
+    period (t_out = 0.02, T = 0.607), and oxygen transfer is modulated at 2 f_b
+    within each cycle. Measured on the L9/L10 runs (scripts/diag_kla_phase_lock.py,
+    2026-10-01): the sliding 5-sample kLa oscillates by 8-40%, the 5-sample /
+    one-period ratio spans 0.83-1.36, and two round-off repeats differ by 30%
+    (5-sample) vs 6.8% (one period).
+
+    Returns NaN if the threshold is never reached, or if the window would reach
+    past the end of the series or back before the release (C* still zero),
+    rather than silently fitting a truncated window.
+    """
+    if len(t) < MIN_WINDOW:
+        return math.nan
+    k = int(np.argmax(c_star >= threshold))
+    if c_star[k] < threshold:
+        return math.nan
+    half = 0.5 * n_periods * T_per_nd
+    t_lo, t_hi = t[k] - half, t[k] + half
+    released = np.nonzero(c_star > 0.0)[0]
+    if t_hi > t[-1] or not released.size or t_lo < t[released[0]]:
+        return math.nan
+    m = (t >= t_lo) & (t <= t_hi)
+    y = np.log(1.0 - np.clip(c_star[m], 0.0, 1.0 - 1e-10))
+    slope, _ = np.polyfit(t[m], y, 1)
     return float(-slope)
 
 
@@ -892,6 +933,7 @@ def main(run_dir: str, params: dict | None = None) -> dict:
     nan_base = {
         "kLa_10": math.nan, "kLa_25": math.nan, "kLa_50": math.nan,
         "kLa_inst_10": math.nan, "kLa_inst_25": math.nan, "kLa_inst_50": math.nan,
+        "kLa_1T_10": math.nan, "kLa_1T_25": math.nan, "kLa_1T_50": math.nan,
         "dtmix_0.50": math.nan, "dtmix_0.75": math.nan, "dtmix_0.95": math.nan,
         "vor_mean": math.nan,
         "vor_streaming": math.nan,
@@ -911,7 +953,7 @@ def main(run_dir: str, params: dict | None = None) -> dict:
         (path / "results.json").write_text(json.dumps(nan_base, indent=2))
         return nan_base
 
-    T_bio, _ = _t_scales(params)
+    T_bio, T_per_nd = _t_scales(params)
     kla_to_h = 3600.0 / T_bio   # 1/t_nd → h⁻¹  (t_nd = t_dim/T_bio, so kLa_nd/T_bio = kLa_s)
 
     results = {
@@ -921,6 +963,10 @@ def main(run_dir: str, params: dict | None = None) -> dict:
         "kLa_inst_10": _kla_inst_at_threshold(t, c_star, 0.10) * kla_to_h,
         "kLa_inst_25": _kla_inst_at_threshold(t, c_star, 0.25) * kla_to_h,
         "kLa_inst_50": _kla_inst_at_threshold(t, c_star, 0.50) * kla_to_h,
+        # whole-period fits: the cycle-averaged rate (see _kla_period_at_threshold)
+        "kLa_1T_10":   _kla_period_at_threshold(t, c_star, 0.10, T_per_nd) * kla_to_h,
+        "kLa_1T_25":   _kla_period_at_threshold(t, c_star, 0.25, T_per_nd) * kla_to_h,
+        "kLa_1T_50":   _kla_period_at_threshold(t, c_star, 0.50, T_per_nd) * kla_to_h,
     }
     results.update(_compute_mixing_metrics(path, params))
     results["vor_mean"]          = _compute_vor_mean(path, params)
@@ -992,6 +1038,7 @@ def _register_to_experiment_store(run_dir: Path, params: dict,
     row_out = {k: results.get(k, float("nan")) for k in (
         "kLa_10", "kLa_25", "kLa_50",
         "kLa_inst_10", "kLa_inst_25", "kLa_inst_50",
+        "kLa_1T_10", "kLa_1T_25", "kLa_1T_50",
         "dtmix_0.50", "dtmix_0.75", "dtmix_0.95",
         "vor_mean",
         "vel_rms_qss", "kla_fit_rmse_25",
