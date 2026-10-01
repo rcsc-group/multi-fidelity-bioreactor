@@ -34,5 +34,6 @@ __pycache__/
 !experiments/multifidelity/mf_edr_mean_angle.png
 !experiments/multifidelity/mf_h1_early_to_late.png
 !experiments/multifidelity/mf_h2_l7_to_l9.png
+!experiments/multifidelity/grid_ladder_32p5.png
 !experiments/canonical_case/**/*.mp4
 !docs_site/assets/**
