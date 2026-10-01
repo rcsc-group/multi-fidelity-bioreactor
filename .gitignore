@@ -28,5 +28,6 @@ __pycache__/
 *.mp4
 !experiments/kimetal2024/**/*.mp4
 !experiments/kimetal2024/**/*.png
+!experiments/multifidelity/mf_fig13[ab]_means.png
 !experiments/canonical_case/**/*.mp4
 !docs_site/assets/**
