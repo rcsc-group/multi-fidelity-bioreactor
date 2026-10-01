@@ -83,6 +83,10 @@ RUNS = [("L8", "l8_coldstart_vid", fs.level_colour(8)),
         ("L9", "a34fc4d4", fs.level_colour(9)),
         ("L10", _l10_source(), fs.level_colour(10))]
 HIST_RUN = _l10_source()
+# Phase-folded level comparisons are diagnostics, not panels of Kim's figure
+# (his Fig 8(a) is an unfolded time series), so they live outside the replica
+# folder and can't be mistaken for part of Fig 8.
+DIAG_DIR = ROOT / "experiments" / "diagnostics" / "fig8"
 # Fraction of HIST_RUN's frames kept for (b)/(c), from the END. l10b's even
 # harmonic is <= 0.09 only over its last ~6 of 21 cycles.
 HIST_TAIL = 0.25 if HIST_RUN == "fig8_hist_l10b" else 0.5
@@ -195,7 +199,15 @@ def _shear_series(run):
     return t / T_per_nd, tau * tau_scale, eps * ediss_scale
 
 
-def time_panel(lvl="L10", n_cycles=3.0):
+def panel_window(lvl="L10", n_cycles=3.0):
+    """The last n_cycles of the reference level's shear_stress.dat, in t/T_p."""
+    got = _shear_series(dict((n, r) for n, r, _ in RUNS)[lvl])
+    c = got[0]
+    t1 = float(c.max())
+    return max(float(c.min()), t1 - n_cycles), t1
+
+
+def time_panel(lvl, t_b, t_c, n_cycles=3.0):
     """Kim's Fig 8(a): the TIME EVOLUTION, both quantities on one axes.
 
     His panel runs t/T_p = 80 to 83 -- three unfolded cycles -- with
@@ -232,11 +244,9 @@ def time_panel(lvl="L10", n_cycles=3.0):
     if lvl not in dense:
         print(f"time_panel: no shear_stress.dat for {lvl}")
         return
-    (rc, _, _), _ = dense[lvl]
     # Window set by the reference level, so every series shows the SAME three
     # cycles of its own record rather than three arbitrary different ones.
-    t1 = float(rc.max())
-    t0 = max(float(rc.min()), t1 - n_cycles)
+    t0, t1 = panel_window(lvl, n_cycles)
 
     fig, ax = plt.subplots(figsize=(6.2, 3.4))
     ax2 = ax.twinx()
@@ -252,15 +262,15 @@ def time_panel(lvl="L10", n_cycles=3.0):
         ax2.plot(c[m], eps[m], color=col, lw=1.1, ls="--")
         shown.append((name, col))
         if name == lvl:
-            # Peak instants of the reference level: these are what panels
-            # (b) and (c) take their distributions at.
-            tt, ee = tau[m], eps[m]
-            ax.annotate("(b)", xy=(c[m][int(np.argmax(tt))], tt.max()),
-                        xytext=(0, 11), textcoords="offset points",
-                        color=col, fontsize=10, ha="center")
-            ax2.annotate("(c)", xy=(c[m][int(np.argmax(ee))], ee.max()),
-                         xytext=(0, 11), textcoords="offset points",
-                         color=col, fontsize=10, ha="center")
+            # (b) and (c) mark the EXACT field frames the histograms are taken
+            # from (t_b, t_c), not peaks of this curve, so the labels and the
+            # distributions refer to the same instants. Arrows as in Kim's panel.
+            for lab, tx, axis, y in (("(b)", t_b, ax, tau), ("(c)", t_c, ax2, eps)):
+                yv = float(np.interp(tx, c, y))
+                axis.annotate(lab, xy=(tx, yv), xytext=(0, 22),
+                              textcoords="offset points", color=col,
+                              fontsize=10, ha="center",
+                              arrowprops=dict(arrowstyle="->", color=col, lw=0.9))
     if not shown:
         plt.close(fig)
         print("time_panel: no level had frames in the window")
@@ -281,11 +291,11 @@ def time_panel(lvl="L10", n_cycles=3.0):
                    bbox_to_anchor=(1.10, 1.0), title="level")
     lg.get_title().set_fontsize(8)
     ax.set_xlim(t0, t1)
-    # eps is a dissipation and cannot be negative; Kim's right axis starts
-    # at 0 and the left is symmetric about it.
-    lim = float(np.max(np.abs(tau[m]))) * 1.25
-    ax.set_ylim(-lim, lim)
-    ax2.set_ylim(0.0, float(np.max(eps[m])) * 1.25)
+    # Kim's own limits, so the two panels can be laid side by side:
+    # +-3e-3 Pa (scaled x10^-3, as he draws it) and 0-0.4 W/m^3.
+    ax.set_ylim(-3e-3, 3e-3)
+    ax.ticklabel_format(axis="y", style="sci", scilimits=(-3, -3), useMathText=True)
+    ax2.set_ylim(0.0, 0.4)
     ax.tick_params(which="both", direction="in")
     fig.tight_layout()
     fig.savefig(OUT_DIR / "replicated_Fig8_a.png", dpi=150,
@@ -367,15 +377,15 @@ def phase_panel(key, fname, ylabel, ylim, kim_peak, symmetric):
     ax.set_ylim(*ylim)
     ax.legend(fontsize=8, frameon=False, loc="upper left", bbox_to_anchor=(1.01, 1.0))
     fig.tight_layout()
-    fig.savefig(OUT_DIR / fname, dpi=150, bbox_inches="tight")
-    print("saved", fname)
+    DIAG_DIR.mkdir(parents=True, exist_ok=True)
+    fig.savefig(DIAG_DIR / fname, dpi=150, bbox_inches="tight")
+    print("saved", DIAG_DIR / fname)
 
 
 # Panel (a) as Kim draws it: one axes, three unfolded cycles, both
 # quantities. The phase-folded level comparison that used to stand in for it
 # is kept as a diagnostic, not as a replica -- it answers "how repeatable is
 # this cycle to cycle", which the paper's panel does not ask.
-time_panel("L10")
 phase_panel("tau", "diagnostic_Fig8_phasefold_tau.png",
             r"$\langle\tau_w'\rangle$ (Pa)",
             (-3e-3, 3e-3), KIM_TAU_PEAK, symmetric=True)
@@ -388,12 +398,21 @@ phase_panel("ediss", "diagnostic_Fig8_phasefold_ediss.png",
 b_hi, tau_scale, ediss_scale, _, _ = scales(HIST_RUN)
 frames = [load_frame(p) for p in
           sorted((ROOT / "runs" / HIST_RUN / "frames_tau").glob("frame_*.bin"))]
-frames = frames[int(len(frames) * (1 - HIST_TAIL)):]
+# Only frames inside panel (a)'s window, so (b) and (c) are instants the reader
+# can see there. The window is the run's last 3 cycles, inside the settled tail
+# that HIST_TAIL was chosen for.
+_, _, _, T_bio_h, omega_h = scales(HIST_RUN)
+T_per_h = (2 * math.pi / omega_h) / T_bio_h
+w0, w1 = panel_window("L10")
+frames = [fr for fr in frames[int(len(frames) * (1 - HIST_TAIL)):]
+          if w0 <= fr[0] / T_per_h <= w1]
 
 tau_means = [tau[bag_mask(f, b_hi)].mean() for _, f, tau, _ in frames]
 ediss_means = [ed[bag_mask(f, b_hi)].mean() for _, f, _, ed in frames]
-i_tau = int(np.argmax(np.abs(tau_means)))
+# Kim's (b) is the POSITIVE peak of the signed mean (his arrow sits on a crest).
+i_tau = int(np.argmax(tau_means))
 i_ediss = int(np.argmax(ediss_means))
+time_panel("L10", frames[i_tau][0] / T_per_h, frames[i_ediss][0] / T_per_h)
 
 _, f_t, tau_field, _ = frames[i_tau]
 _, f_e, _, ediss_field = frames[i_ediss]
