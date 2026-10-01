@@ -26,6 +26,7 @@ sys.path.insert(0, str(ROOT))
 from scripts.diag_mf_early_late import one_case       # noqa: E402
 
 RPMS = [15, 17.5, 20, 22.5, 25, 27.5, 30, 32.5, 35, 37.5]
+LF_LEVEL = int(sys.argv[1]) if len(sys.argv) > 1 else 7   # 7 or 8
 TARGETS = ["kLa_1T_10", "kLa_1T_25", "kLa_1T_50", "dtmix_0.50", "dtmix_0.75", "dtmix_0.95"]
 
 
@@ -37,14 +38,14 @@ def val(run, key):
 def main() -> None:
     verdicts = {}
     for key in TARGETS:
-        rows = [(r, val(f"kmix_l7_rpm{r:g}", key), val(f"fig9_l9_rpm{r:g}", key)) for r in RPMS]
+        rows = [(r, val(f"kmix_l{LF_LEVEL}_rpm{r:g}", key), val(f"fig9_l9_rpm{r:g}", key)) for r in RPMS]
         a = np.array([q for q in rows if all(np.isfinite(q))], float)
         if len(a) < 6:
             print(f"\n== {key}: only {len(a)} rpm with both levels")
             continue
         x, lf, hf = a[:, 0], a[:, 1], a[:, 2]
-        print(f"\n== {key}   n={len(x)}  corr(log L7, log L9) = "
-              f"{np.corrcoef(np.log(lf), np.log(hf))[0, 1]:+.2f}  L9/L7 ratio "
+        print(f"\n== {key}   n={len(x)}  corr(log LF, log L9) = "
+              f"{np.corrcoef(np.log(lf), np.log(hf))[0, 1]:+.2f}  L9/LF ratio "
               f"{(hf / lf).min():.2f}-{(hf / lf).max():.2f}")
         res = {}
         for mid in x[1:-1]:

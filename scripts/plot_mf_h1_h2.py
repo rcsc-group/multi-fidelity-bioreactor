@@ -119,19 +119,20 @@ def main() -> None:
         out = "mf_h1_early_to_late.png"
     else:
         keys = ["kLa_1T_10", "kLa_1T_25", "kLa_1T_50", "dtmix_0.50", "dtmix_0.75", "dtmix_0.95"]
-        pairs = [(k, "kmix_l7_rpm{:g}", k, "fig9_l9_rpm{:g}") for k in keys]
+        lfl = int(sys.argv[2]) if len(sys.argv) > 2 else 7
+        pairs = [(k, f"kmix_l{lfl}_rpm{{:g}}", k, "fig9_l9_rpm{:g}") for k in keys]
         fig, axes = plt.subplots(2, 3, figsize=(13.0, 7.0))
         for ax, a, key in zip(axes.ravel(), data(pairs), keys):
             if len(a) < 5:
                 ax.set_title(f"{LABEL[key]}: not enough data", loc="left", fontsize=9)
                 continue
-            panel(ax, a[:, 0], a[:, 1], a[:, 2], "L7", "L9", fs.level_colour(7),
+            panel(ax, a[:, 0], a[:, 1], a[:, 2], f"L{lfl}", "L9", fs.level_colour(lfl),
                   fs.level_colour(9), key)
             ax.set_title(LABEL[key], loc="left", fontsize=10)
             ax.set_ylabel(UNIT[key[0]])
         for ax in axes[-1]:
             ax.set_xlabel("rocking frequency [rpm]")
-        out = "mf_h2_l7_to_l9.png"
+        out = f"mf_h2_l{lfl}_to_l9.png"
     h, lab = axes.ravel()[0].get_legend_handles_labels()
     fig.legend(h, lab, loc="upper left", bbox_to_anchor=(1.0, 0.95), frameon=False, fontsize=8)
     fig.tight_layout()
