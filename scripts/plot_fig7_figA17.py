@@ -159,7 +159,7 @@ def main() -> None:
         ax.set_title(rf"$C^*={thr:.2f}$", fontsize=9)
         ax.tick_params(which="both", direction="in", labelsize=7)
     fig.tight_layout()
-    out7 = OUT_DIR / "replicated_Fig7.png"
+    out7 = OUT_DIR / "replicated_Fig07.png"
     fig.savefig(out7, dpi=150, bbox_inches="tight")
     print(f"saved {out7}")
 

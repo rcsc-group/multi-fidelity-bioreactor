@@ -32,6 +32,12 @@ on dtmix_0.95, a per-level gain of 1.98 that extrapolates to parity at
 Levels are therefore plotted separately and never blended, and the L-vs-Kim
 ratio is only a convergence statement, never an error.
 
+Drawing (2026-10-01): Kim's own encoding, not the project's level colours --
+colour+marker name the threshold, hollow purple squares the vorticity, log-log
+axes over his ranges. Only the L9 sweep is drawn and named in the key; Kim is
+markers only, L9 the same markers joined by a dotted line. The printed table
+still lists every level.
+
 Usage:  uv run python scripts/plot_fig9.py
 """
 from __future__ import annotations
@@ -49,7 +55,7 @@ import pandas as pd
 
 ROOT = Path("/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor")
 KIM_CSV = ROOT / "experiments/kimetal2024/csv_raw/mixing_kla_vs_frequency.csv"
-OUT = ROOT / "experiments/kimetal2024/figure_replicas/replicated_Fig9.png"
+OUT = ROOT / "experiments/kimetal2024/figure_replicas/replicated_Fig09.png"
 RUNS = ROOT / "runs"
 sys.path.insert(0, str(ROOT))
 from scripts.autoextend import tip_results  # noqa: E402
@@ -118,73 +124,62 @@ def main() -> None:
         print("no fig9 runs with results.json yet")
         return
 
-    fig, ax = plt.subplots(figsize=(7.0, 4.6))
+    # Kim's Fig 9(a) encoding, exactly (Figures/Fig_dtmix_rpm.pdf): colour and
+    # marker name the THRESHOLD -- chi=0.95 blue circles, 0.75 red up-triangles,
+    # 0.50 green down-triangles -- and the vorticity is hollow purple squares on
+    # a purple right axis. Log-log, f_b 10-100 rpm, dtmix 1-1000 s, vorticity
+    # 0.1-10. Kim draws markers only; ours repeat his markers joined by a
+    # dotted line, which is what tells the two datasets apart.
+    # One level only (L9, the full sweep), named in the key.
+    sweep = ours[ours["run_id"].str.startswith("fig9_l9_rpm")]
+    enc = {0.95: ("#1f5fa8", "o"), 0.75: ("#d62728", "^"), 0.50: ("#2ca02c", "v")}
+    purple = "#9b4f9b"
+    plt.rcParams.update(fs.rcparams())
+    fig, ax = plt.subplots(figsize=(5.6, 4.4))
     ax2 = ax.twinx()
+    for col, _, thr in THRESHOLDS:
+        c, m = enc[thr]
+        ax.plot(kim["RPM"], kim[f"dtmix_strict_{thr:g}"], ls="none", marker=m,
+                color=c, ms=7)
+        d = sweep.dropna(subset=[col])
+        ax.plot(d["rpm"], d[col], ls=":", lw=1.1, marker=m, color=c, ms=5.5)
+    ax2.plot(kim["RPM"], kim["vor_meanabs_steady_streaming"], ls="none",
+             marker="s", mfc="w", mec=purple, mew=1.3, ms=7)
+    dv = sweep.dropna(subset=["vor_mean"])
+    ax2.plot(dv["rpm"], dv["vor_mean"], ls=":", lw=1.1, color=purple,
+             marker="s", mfc="w", mec=purple, mew=1.1, ms=5.5)
 
-    for col, marker, thr in THRESHOLDS:
-        ax.plot(kim["RPM"], kim[f"dtmix_strict_{thr:g}"],
-                **fs.series_kw(fs.KIM, marker, stat="max"),
-                label=rf"Kim  $\chi={thr:.2f}$")
-    # Steady-streaming vorticity is a time-and-space mean, so it is hollow.
-    ax2.plot(kim["RPM"], kim["vor_meanabs_steady_streaming"],
-             **fs.series_kw(fs.KIM, fs.MK["vorticity"], stat="mean"),
-             label=r"Kim  $\langle|\bar\xi_b'|\rangle$")
+    for a_ in (ax, ax2):
+        a_.set_xscale("log")
+        a_.set_yscale("log")
+        a_.tick_params(which="both", direction="in")
+    from matplotlib.ticker import NullFormatter
+    ax.xaxis.set_minor_formatter(NullFormatter())   # decades only, as Kim
+    ax.set_xlim(10, 100)
+    ax.set_ylim(1, 1000)
+    ax2.set_ylim(0.1, 10)
+    ax.set_xlabel(r"$f_b$ (rpm)", fontsize=12)
+    ax.set_ylabel(r"$\Delta t_{\mathrm{mix}}$ (s)", fontsize=12)
+    ax2.set_ylabel(r"$\langle|\overline{\xi_b'}|\rangle$ (1/s)", fontsize=12,
+                   color=purple)
+    ax2.tick_params(axis="y", which="both", colors=purple)
+    ax2.spines["right"].set_color(purple)
 
-    for level in sorted(ours["level"].unique()):
-        sub = ours[ours["level"] == level]
-        colour = sub["colour"].iloc[0]
-        for col, marker, thr in THRESHOLDS:
-            d = sub.dropna(subset=[col])
-            if d.empty:
-                continue
-            ax.plot(d["rpm"], d[col],
-                    **fs.series_kw(colour, marker, stat="max", ours=True),
-                    label=rf"L{level}  $\chi={thr:.2f}$")
-        dv = sub.dropna(subset=["vor_mean"])
-        if not dv.empty:
-            ax2.plot(dv["rpm"], dv["vor_mean"],
-                     **fs.series_kw(colour, fs.MK["vorticity"], stat="mean",
-                                    ours=True),
-                     label=rf"L{level}  $\langle|\bar\xi_b'|\rangle$")
-
-    ax.set_yscale("log")
-    ax.set_xlabel(r"Rocking frequency $f_b$ (rpm)", fontsize=12)
-    ax.set_ylabel("Mixing time (s)", fontsize=12)
-    ax2.set_ylabel(r"$\langle|\bar\xi_b'|\rangle$ (1/s)", fontsize=12)
-    ax.tick_params(which="both", direction="in")
-    ax2.tick_params(which="both", direction="in")
-    ax.grid(True, **fs.GRID_KW)
-    ax.set_xticks(RPMS)
-    ax.set_title(r"$\theta_{b,max}=7^\circ$", loc="left", fontsize=10)
-
-    # Three small decoder blocks rather than one enumerated list, matching
-    # Fig 13. Enumerating every (dataset x threshold) pair costs fourteen
-    # entries to say what three keys say once each, and it hides the fact
-    # that the encoding is the same in both figures.
     from matplotlib.lines import Line2D
-    levels_shown = sorted(ours["level"].unique())
-    ds = [Line2D([], [], color=fs.KIM, lw=fs.LW_KIM, label="Kim et al.")]
-    ds += [Line2D([], [], color=fs.level_colour(lv), lw=fs.LW_OURS, ls=":",
-                  label=f"L{int(lv)}") for lv in levels_shown]
-    enc = [Line2D([], [], color="0.3", marker=m, ls="none", mfc="0.3", ms=6,
-                  label=rf"$\chi={thr:.2f}$")
-           for _, m, thr in THRESHOLDS]
-    enc.append(Line2D([], [], color="0.3", marker=fs.MK["vorticity"],
-                      ls="none", mfc="w", mec="0.3", ms=6,
-                      label=r"$\langle|\bar\xi_b'|\rangle$  (hollow: a mean)"))
-    prov = [Line2D([], [], color="0.3", ls="-", lw=fs.LW_KIM,
-                   label="Kim et al."),
-            Line2D([], [], color="0.3", ls=":", lw=fs.LW_OURS,
-                   label="this work")]
-    legs = []
-    for handles, title, y in ((ds, "dataset", 0.95), (enc, "marker / fill", 0.58),
-                              (prov, "line", 0.22)):
-        lg = fig.legend(handles=handles, fontsize=8.5, loc="upper left",
-                        bbox_to_anchor=(1.0, y), frameon=False, title=title)
-        lg.get_title().set_fontsize(8.5)
-        legs.append(lg)
-    for lg in legs[:-1]:
-        fig.add_artist(lg)
+    quantity = [Line2D([], [], ls="none", marker=enc[t][1], color=enc[t][0],
+                       ms=6.5, label=rf"$\chi={t:.2f}$") for _, _, t in THRESHOLDS]
+    quantity.append(Line2D([], [], ls="none", marker="s", mfc="w", mec=purple,
+                           mew=1.3, ms=6.5,
+                           label=r"$\langle|\overline{\xi_b'}|\rangle$"))
+    dataset = [Line2D([], [], ls="none", marker="o", color="0.3", ms=6.5,
+                      label="Kim et al."),
+               Line2D([], [], ls=":", lw=1.1, marker="o", color="0.3", ms=5,
+                      label="L9")]
+    lg1 = fig.legend(handles=quantity, fontsize=9, frameon=False,
+                     loc="upper left", bbox_to_anchor=(1.0, 0.95))
+    fig.add_artist(lg1)
+    fig.legend(handles=dataset, fontsize=9, frameon=False,
+               loc="upper left", bbox_to_anchor=(1.0, 0.55))
     fig.tight_layout()
     fig.savefig(OUT, dpi=150, bbox_inches="tight")
     print(f"\nsaved {OUT}")

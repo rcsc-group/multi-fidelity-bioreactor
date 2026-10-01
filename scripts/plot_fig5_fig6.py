@@ -108,7 +108,7 @@ def fig5(run_dir: Path, T_per_nd: float) -> dict:
     ax.tick_params(which="both", direction="in")
     ax.legend(fontsize=8.5, frameon=False, loc="lower right")
     fig.tight_layout()
-    out = OUT_DIR / "replicated_Fig5.png"
+    out = OUT_DIR / "replicated_Fig05.png"
     fig.savefig(out, dpi=150, bbox_inches="tight")
     print(f"saved {out}")
     return t_half
@@ -152,7 +152,7 @@ def fig6(run_dir: Path, t_half: dict, t_inj_nd: float) -> None:
     axes[0, 0].set_title(r"$\chi=0$", fontsize=10)
     axes[0, 1].set_title(r"$\chi=0.5$", fontsize=10)
     fig.tight_layout()
-    out = OUT_DIR / "replicated_Fig6.png"
+    out = OUT_DIR / "replicated_Fig06.png"
     fig.savefig(out, dpi=150, bbox_inches="tight")
     print(f"saved {out}")
 

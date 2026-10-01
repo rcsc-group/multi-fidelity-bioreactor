@@ -114,7 +114,7 @@ def fig3(run_dir: Path, T_per_nd: float) -> None:
         drawn += 1
     axes[-1].set_xlabel(r"$x'/L_b$", fontsize=11)
     fig.tight_layout()
-    out = OUT_DIR / "replicated_Fig3.png"
+    out = OUT_DIR / "replicated_Fig03.png"
     fig.savefig(out, dpi=150, bbox_inches="tight")
     print(f"saved {out}  ({drawn}/{len(PHASES)} phases)")
 
@@ -147,7 +147,7 @@ def fig4(run_dir: Path) -> None:
                 fontsize=13, style="italic")
     axes[1].set_xlabel(r"$x'/L_b$", fontsize=11)
     fig.tight_layout()
-    out = OUT_DIR / "replicated_Fig4.png"
+    out = OUT_DIR / "replicated_Fig04.png"
     fig.savefig(out, dpi=150, bbox_inches="tight")
     print(f"saved {out}  (window {d['window_dt']:.4f}, t={d['t']:.4f})")
 

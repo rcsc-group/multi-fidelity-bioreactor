@@ -6,7 +6,7 @@ THESE ARE NOT REPLICAS. This script reads zero of our runs -- it contains no
 simulation output whatsoever. Output therefore goes to ../kim_redrawn/ as
 `kim_Fig*.png`, NOT to ../figure_replicas/ as `replicated_Fig*.png`.
 
-[2026-09-15] It previously wrote `replicated_Fig9..13.png` into
+[2026-09-15] It previously wrote `replicated_Fig09..13.png` into
 figure_replicas/, next to genuine replicas, where four Kim-only redraws sat
 for six weeks looking like replicated results -- and where its Fig13 output
 collided with the real replica written by scripts/plot_fig13.py, so running

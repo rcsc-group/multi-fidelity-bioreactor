@@ -26,7 +26,7 @@ import numpy as np
 from matplotlib.patches import Arc, FancyArrow, Rectangle
 
 ROOT = Path("/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor")
-OUT = ROOT / "experiments/kimetal2024/figure_replicas/replicated_Fig1.png"
+OUT = ROOT / "experiments/kimetal2024/figure_replicas/replicated_Fig01.png"
 
 plt.rcParams.update({
     "mathtext.fontset": "cm", "font.family": "serif", "axes.linewidth": 1.2,
