@@ -1,10 +1,11 @@
 """MF test: predict the C*=50% quantity from C*=10% runs (L9, rpm sweep, 7 deg).
 
 The advisor's proposal one step down (no run reaches 90%): LF = the cheap
-early-saturation value at every rpm, HF = the late value at 3 rpm. Two
+early-saturation value at every rpm, HF = the late value at 3 rpm. Three
 targets:
   kLa : kLa_1T_10 -> kLa_1T_50          (whole-period fits, h^-1)
   time: cycles to C*=10% -> cycles to C*=50%  (after release)
+  mix : dtmix at chi=0.50 -> dtmix at chi=0.95 (s)
 Training sets: both endpoints (15, 37.5 rpm) + one interior rpm, all 7
 choices; the other 6 rpm are scored. Same model as the Fig 13 MF panels
 (plot_mf_fig13_unc: LOO-KRR on LF, then universal kriging with known noise, by REML).
@@ -39,7 +40,8 @@ def data():
         d = json.load(open(ROOT / "runs" / run / "results.json"))
         t10, _ = cycles_to(run, 0.10)
         t50, _ = cycles_to(run, 0.50)
-        rows.append((r, d.get("kLa_1T_10", math.nan), d.get("kLa_1T_50", math.nan), t10, t50))
+        rows.append((r, d.get("kLa_1T_10", math.nan), d.get("kLa_1T_50", math.nan), t10, t50,
+                     d.get("dtmix_0.50", math.nan), d.get("dtmix_0.95", math.nan)))
     a = np.array(rows, float)
     return a[np.all(np.isfinite(a), axis=1)]
 
@@ -69,7 +71,8 @@ def main() -> None:
     x = a[:, 0]
     print(f"rpm with both ends: {list(x)}")
     for label, lf, hf in (("kLa 10% -> 50%", a[:, 1], a[:, 2]),
-                          ("cycles to 10% -> to 50%", a[:, 3], a[:, 4])):
+                          ("cycles to 10% -> to 50%", a[:, 3], a[:, 4]),
+                          ("dtmix chi 0.50 -> 0.95", a[:, 5], a[:, 6])):
         print(f"\n== {label}   corr(log LF, log HF) = {np.corrcoef(np.log(lf), np.log(hf))[0, 1]:+.2f}")
         res = {}
         for mid in x[1:-1]:
