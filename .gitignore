@@ -29,5 +29,8 @@ __pycache__/
 !experiments/kimetal2024/**/*.mp4
 !experiments/kimetal2024/**/*.png
 !experiments/multifidelity/mf_fig13[ab]_means.png
+!experiments/multifidelity/mf_tau_max_rpm.png
+!experiments/multifidelity/mf_edr_max_angle.png
+!experiments/multifidelity/mf_edr_mean_angle.png
 !experiments/canonical_case/**/*.mp4
 !docs_site/assets/**
