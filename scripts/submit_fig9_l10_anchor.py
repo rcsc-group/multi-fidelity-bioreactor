@@ -66,6 +66,8 @@ def main() -> None:
     ap.add_argument("--segment", type=int, required=True)
     ap.add_argument("--from-run", help="previous segment's run_id (segments >1)")
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--prefix", default="fig9_l10",
+                    help="run_id prefix; fig9_l10b = the redo with *_prev set")
     a = ap.parse_args()
 
     T_per, T_bio = t_scales()
@@ -106,7 +108,7 @@ def main() -> None:
         raise SystemExit(f"checkpoint {ckpt} reports t={t_ck}; cannot arm a restart")
 
     params = {
-        "run_id": f"fig9_l10_seg{a.segment}", "fidelity": 10,
+        "run_id": f"{a.prefix}_seg{a.segment}", "fidelity": 10,
         "t_checkpoint": t_ck,
         "geometry": GEOMETRY, "fill_level": 0.5, "n_harmonics": 1,
         "theta_max": THETA, "phi_angular": [0.0, 0.0, 0.0],
@@ -117,6 +119,16 @@ def main() -> None:
         "restart_continue": cont,
         "_binary": BINARY,
     }
+    # [FIX 2026-10-01] Every segment is a SAME-condition restart, so every
+    # *_prev equals the current condition and the restart ramp is a no-op.
+    # Unset, they made each seam inject a transient: at the seg1->seg2 seam of
+    # the first anchor the signed mean-shear amplitude jumped 1.7-2x and
+    # relaxed over ~8 cycles, exactly while C* crossed 10% and 25%, so that
+    # chain's kLa is contaminated (diary 2026-10-01).
+    omega = RPM * 2 * math.pi / 60.0
+    params.update(omega_b_prev=omega, theta_max_prev=THETA,
+                  phi_angular_prev=[0.0, 0.0, 0.0], amplitude_h_prev=[0.0, 0.0, 0.0],
+                  phi_horizontal_prev=[0.0, 0.0, 0.0], omega_h_prev=0.0)
     # postprocess walks _parent_run backwards and joins the raw series before
     # computing dtmix or kLa. Without it a segment is scored in isolation, which
     # for a continuation is meaningless: oxygen starts saturated so every kLa
