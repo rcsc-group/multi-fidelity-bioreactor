@@ -49,3 +49,5 @@ item starts, give it a diary entry; when it lands, delete it here.
 - Convergence-aware MF: q_N = q_inf + C h_N^p per x, GP over (x, h^p). Error model = SE (+) GCI. Blocked for tau_max: R>1 at all rpm (diag_richardson_tau.py). Next: log argmax location of tau (contact-line hypothesis); run the same test on mean wall shear / <EDR> / kLa (L8/L9/L10).
 - Reproducibility of production kLa: at L4, OpenMP round-off moves kLa_50 by 2x (diag_omp_determinism.py). Test whether L7 kLa changes with MPI rank count (8 vs 16). If it does, kLa error bars need a round-off/chaos term.
 - t_end period rounding: FIXED in source (2026-09-30). Production scratch binaries still use the old rule; picked up at the next production rebuild.
+- Fig 13 MF figures still use the old buggy 3-grid u_bar (0.24/0.30). Faithful E&H gives 0.5-1.5 (diag_eh_ubar.py). Decide: apply it, or get L11 grids.
+- kLa 5-sample fit window = 0.13 rocking periods (potential BUG, phase-locked estimator). Test: refit over whole periods / over C* in [0.1, 0.5] on existing runs; compare with Kim's own postprocessing.
