@@ -74,8 +74,6 @@ def panel(ax, x, lf, hf, lf_lab, hf_lab, c_lf, c_hf, kim_key):
     ax.fill_between(xg, np.maximum(mu - 1.96 * sd, 1e-6), mu + 1.96 * sd,
                     color=c_hf, alpha=0.15, lw=0, label="MF 95%")
     ax.plot(xg, mu, color=c_hf, lw=1.4, ls="--", label="MF")
-    ax.plot(xg, mu_s, color="0.45", lw=1.0, ls="--", label=f"GP on {hf_lab} only")
-    ax.plot(xg, ratio * f_lf(xg), color="0.45", lw=1.0, ls=":", label=f"{lf_lab} x ratio")
     ax.plot(x, lf, ls="none", marker="o", color=c_lf, ms=4, label=lf_lab)
     ax.errorbar(x[train], hf[train], yerr=1.96 * REL_NOISE * hf[train], fmt="o",
                 color=c_hf, ms=5, capsize=2, label=f"{hf_lab}, training")
