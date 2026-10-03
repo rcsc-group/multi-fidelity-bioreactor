@@ -38,5 +38,8 @@ __pycache__/
 !experiments/multifidelity/grid_ladder_32p5.png
 !experiments/multifidelity/joint_rate_chi075.png
 !experiments/multifidelity/chi_tail_evidence_l9.png
+!experiments/multifidelity/chi_decay_rate_shape.png
+!experiments/multifidelity/cost_per_level.png
+!experiments/multifidelity/h_kernel_test_chi*.png
 !experiments/canonical_case/**/*.mp4
 !docs_site/assets/**
