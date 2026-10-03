@@ -1,8 +1,8 @@
 # Yi-h: grid-convergent multi-fidelity learning (problem definition, algorithm, assumptions)
 
-Draft 10, 2026-10-03. This draft makes the method an extension of Yi et al. (2024), generic for engineering QoIs, with the bioreactor as a worked example only.
+Draft 11, 2026-10-03. This draft makes the method an extension of Yi et al. (2024), generic for engineering QoIs, with the bioreactor as a worked example only.
 
-**History.** Drafts 2–6 went through 5 rounds of adversarial review; the reviewer approved draft 6. Draft 8 rewrote the structure after the user's direction of 2026-10-03. A fresh reviewer rejected draft 8 (6 major holes) and draft 9 (2 major holes). Draft 10 closes them.
+**History.** Drafts 2–6 went through 5 rounds of adversarial review; the reviewer approved draft 6. Draft 8 rewrote the structure after the user's direction of 2026-10-03. A fresh reviewer rejected draft 8 (6 major holes) and draft 9 (2 major holes), and approved draft 10 with 6 minor holes. Draft 11 closes those.
 
 **Status labels:**
 - **[lit]**: I read it in the cited paper.
@@ -53,8 +53,8 @@ Optional modules use special structure when a problem has it (Section 4). The bi
 | \(f(x)\), \(m_y(x)\) | the converged value (median run outcome at \(h = 0\)), and its posterior median | — |
 | \(\sigma_{epi}(x)\) | epistemic: uncertainty about \(f(x)\); more runs reduce it | it decreases as data are added |
 | \(s_0(x)\) | aleatoric: run-to-run spread at \(h = 0\) | no trend is imposed (Section 2.4) |
-| \(\sigma_{env}(x, h)\) | fidelity envelope: the sd of the random part of the error of level \(h\), averaged over the posterior hyperparameters (Section 2.8) | **yes**, monotone to 0 by construction (Fig. E, curve 1) |
-| \(\sigma_{fid}(x, h)\) | posterior RMS error of level \(h\) against \(f(x)\) | it is 0 at \(h = 0\) and tends to the true error \(\lvert\delta(x,h)\rvert\), so it is monotone only if the true convergence is monotone (Fig. E, curve 2) |
+| \(\sigma_{env}(x, h)\) | fidelity envelope, in \(\Lambda\) units: the RMS size of the error of level \(h\) under the posterior error model, mean and random part (Section 2.8) | **yes**, monotone to 0 by construction (Fig. E, curve 1) |
+| \(\sigma_{fid}(x, h)\) | posterior RMS error of level \(h\) against \(f(x)\), on the physical scale | it is 0 at \(h = 0\) and tends to the true error \(\lvert\delta(x,h)\rvert\), so it is monotone only if the true convergence is monotone (Fig. E, curve 2) |
 | \(\sigma_{know}(x, h)\) | knowledge: the posterior sd of \(f(x, h)\) | **no**: it is small where data exist (Fig. E, curve 3) |
 
 **Problem P1.** Find a sequential policy that chooses batches of probes \(a_1, ..., a_N\) and stops, so that
@@ -74,7 +74,7 @@ Notes:
 ![Fig. E](../experiments/multifidelity/sigma_concepts.png)
 
 *Fig. E (synthetic, `scripts/plot_sigma_concepts.py`). Left: data at 4 levels and the posterior of \(f(h)\). Right, against \(h\):*
-- *(1) the prior sd of the error of level \(h\);*
+- *(1) the fidelity envelope \(\sigma_{env}\) (here \(\Lambda\) is the identity, so its units equal the physical scale);*
 - *(2) the posterior RMS error of level \(h\), which is \(\sigma_{fid}\);*
 - *(3) the posterior sd of \(f(h)\), which is \(\sigma_{know}\);*
 - *(4) the sd of \(f(0)\) after one more probe at \(h\).*
@@ -216,6 +216,7 @@ $$ \log_2 \kappa(u, h) = \kappa_0 + \sum_j \gamma_j \ell_j + \omega(u, h) + \eta
   - [lit] Yao, Vehtari, Simpson & Gelman 1704.02030 eq 2.2 (log score). They recommend stacking because BMA "is flawed in the M-open setting".
   - A Dirichlet(2, ..., 2) penalty regularises the weights. [lit] Their §4.1 suggests "a strong prior … to the weights".
 - **Cross-fitting:** the weights come from half of the held-out sites, and the calibration (Gate G1) from the other half; then swap.
+- **Minimum sample:** each half needs at least 6 held-out sites [assumption]. With fewer, the weights stay equal, and G1 is reported as "not testable", never as "passed". Today the finest level (L10) has 1 run, so this rule applies.
 - With only 2 levels left, \(p\) is not identifiable there. Then the weights stay equal and are flagged.
 
 ### 2.8 Prediction on the physical scale
@@ -228,10 +229,10 @@ $$ \log_2 \kappa(u, h) = \kappa_0 + \sum_j \gamma_j \ell_j + \omega(u, h) + \eta
 - \(\sigma_{fid}(x,h) = (E[(f(x,h) - f(x))^2 \mid D])^{1/2}\), computed from the same draws.
 - **Fidelity envelope**, in \(\Lambda\) units (relative error for \(\Lambda = \log\)):
 
-$$ \sigma_{env}^2(x, h) = E_{\vartheta \mid D} [ \sum_j \sigma_{\delta,j}^2 k_{x,j}(x, x) \bar h_j^{2 p_j(x)} ] $$
+$$ \sigma_{env}^2(x, h) = E_{\vartheta, c \mid D} [ \sum_j \bar h_j^{2 p_j(x)} ( (c_{0j} + c_{1j} m_b(x))^2 + \sigma_{\delta,j}^2 k_{x,j}(x, x) ) ] $$
 
-  - It is the GP part of the error only. Each posterior draw is monotone in the componentwise order, so the average is monotone too, and it is 0 at \(h = 0\).
-  - The mean term of \(\delta\) is left out on purpose. With several components, terms of mixed sign can cancel, which would break monotonicity, and under a flat prior on \(c\) its prior variance is infinite.
+  - It includes both the power-law mean of the error and its random part, so it does not understate the error when the mean explains most of it.
+  - It is a sum of per-component squares, so there are no cross terms that could cancel. Each posterior draw is monotone in the componentwise order, so the average is monotone too. It is 0 at \(h = 0\), and it is finite because the posterior of \(c\) is proper.
 - **Aleatoric spread on the physical scale:** \(s_0(x)\) is the quantile half-width \((q_{84} - q_{16})/2\) of \(\Lambda^{-1}(\Lambda(m_y) + e)\), with \(e \sim N(0, s^2(x, 0))\), over the posterior draws of \(s\). It is reported as "not identified" when replicates exist at fewer than 3 levels, or when the posterior sd of the trend \(b_s\) is more than half its prior sd.
 - \(\sigma_{tot}\) is the quantile spread of draws of \(\Lambda^{-1}\)(target + noise) at \(h = 0\). This is the only definition; it is not \(\sigma_{epi}\) and \(s_0\) added in quadrature, because they are on scales that do not add.
 
@@ -243,7 +244,11 @@ $$ \sigma_{env}^2(x, h) = E_{\vartheta \mid D} [ \sum_j \sigma_{\delta,j}^2 k_{x
 
 **Step 1, initial design.**
 - **Backbone:** a space-filling design of the cheapest source, as large as is cheap. This is Yi's abundant LF. Only a capped subsample of it enters the likelihood (Section 2.2).
-- **Prerequisite:** run the synthetic test of assumption A12 (Section 5) before the first real campaign. Step 5 values probes at unprobed finer levels correctly only if A12 holds.
+- **Prerequisite: the A12 test,** before the first real campaign. Step 5 values probes at unprobed finer levels correctly only if A12 holds.
+  - Synthetic truths: 20 random draws of \(f(x, h) = f_0(x) + a(x) \bar h^{p}\), with \(x\) in 2D and \(p\) drawn from [0.7, 2.5]. There is data at \(\bar h = 1, 1/2, 1/4\), and candidates also at \(\bar h = 1/8\) and \(1/16\), with cost \(\propto 2^{3\ell}\).
+  - Oracle: the value of each of the top 10 candidates, computed by full MCMC refits on its fantasy outcomes.
+  - Pass rule: the acquisition's top candidate is in the oracle's top 3 in at least 16 of 20 cases [assumption].
+  - If it fails: replace the reweighting by short MCMC refits for the 5 best candidates of each step. This costs more, and the cost must be measured.
 - **Ladder:** nested Sobol designs in \(u\) at the levels above it. [lit] Stacking designs eq 9 gives starting sizes.
 - **Replicates:** at 3 or more levels at 3 or more sites.
 - This minimum is necessary, not sufficient [inference].
@@ -254,7 +259,7 @@ $$ \sigma_{env}^2(x, h) = E_{\vartheta \mid D} [ \sum_j \sigma_{\delta,j}^2 k_{x
 
 | Gate | Test | Pass rule |
 |---|---|---|
-| G0 order | posterior of \(p_{j0}\); observed increment ratios | \(P(p_{j0} > 0.5) \ge 0.9\) **and** the posterior sd of \(\log p_{j0}\) is at most 0.5 (half its prior sd), so the prior cannot pass G0 alone (the prior already gives \(P(p > 0.5) = 0.76\)). When the posterior of \(\sigma_\pi\) is away from 0 (the order varies with \(x\)), it also needs \(P(p_j(x) > 0.5) \ge 0.9\) at every \(x \in \Sigma_N\). **A failure does not stop the method.** It means the limit is not yet identified, so \(\sigma_{epi}\) is large, and Step 5 then prefers finer levels if A12 holds. [lit] E&H treat \(p < 0.5\) as anomalous. |
+| G0 order | posterior of \(p_{j0}\); observed increment ratios | \(P(p_{j0} > 0.5) \ge 0.9\) **and** the posterior sd of \(\log p_{j0}\) is at most 0.5 (half its prior sd), so the prior cannot pass G0 alone (the prior already gives \(P(p > 0.5) = 0.76\)). When \(P(\sigma_\pi > 0.05 \mid D) \ge 0.9\) (the order varies with \(x\)), it also needs \(P(p_j(x) > 0.5) \ge 0.9\) at every \(x \in \Sigma_N\). **A failure does not stop the method.** It means the limit is not yet identified, so \(\sigma_{epi}\) is large, and Step 5 then prefers finer levels if A12 holds. [lit] E&H treat \(p < 0.5\) as anomalous. |
 | G1 level hold-out | cross-fitted prediction of the finest level | 95% coverage within binomial limits; no sign bias; \(C_{LOO}\) near 1 [lit: Bachoc 1301.4320 eq 6; Oliver 1311.0828 eq 17] |
 | G2 block LOO | leave out whole runs | z ~ N(0, 1); U statistic [lit: Overstall & Woods eq 10] |
 | G3 noise | replicate spread against \(s^2\) | chi-square, p > 0.05 |
@@ -274,6 +279,7 @@ $$ \sigma_{env}^2(x, h) = E_{\vartheta \mid D} [ \sum_j \sigma_{\delta,j}^2 k_{x
   - Simulate the greedy policy of Step 5 with 20 fixed posterior samples (spread over the structures by their weights), for at most 50 steps or until success. Use variance-only updates and the expected reached set, with no fantasies and no reweighting.
   - Judge success on \(\sigma_{epi}\) of the **pooled** 20 samples, so the spread between samples and between structures (for example the 2–4× kernel spread of F6) stays in. Variance-only updates cannot shrink that spread, so the forecast is conservative about success.
   - Cost: about \(2 \times 10^8\) flops per sample and step (120 candidates, rank-10 updates at 400 data), so about \(2 \times 10^{11}\) flops for 20 samples and 50 steps.
+  - **Known limit:** variance-only updates cannot shrink the spread between structures. When that spread exceeds \(\varepsilon\), the forecast says "P1 infeasible" from the first step and carries no information. A better forecast would also simulate how finer-level fantasies change the stacking weights. That is future work.
   - If the probability of exceeding \(C\) is above 0.5, tell the user the forecast. This is a report, not a stop: the method continues with the P2 criterion of Step 5.
 
 **Step 5, acquisition: maximum uncertainty reduction per cost.**
@@ -385,6 +391,7 @@ Each module is generic. The core (Sections 1–3) works without any of them. A m
 **What the method will do with this** [inference]:
 - G0 fails today, so \(\sigma_{epi}\) at \(h = 0\) is large.
 - If assumption A12 holds (its synthetic test is a prerequisite), the acquisition will then value L10 probes, which are the only way to identify the limit.
+- The Step 4 forecast will be uninformative here: the kernel spread (2–4×, F6) is far above \(\varepsilon_{rel} = 0.10\), so it will report "P1 infeasible" at once and the P2 criterion will start. That is the known limit stated in Step 4, not a finding about the problem.
 - An L10 probe to \(\Delta t_{0.95}\) costs about 3,600 core-h at 32.5 rpm (spin-up included) and much more at low rpm. So within 52,000 core-h the method can buy roughly 5–14 of them, mostly at high rpm.
 - [inference] With a Péclet number of about \(10^7\) (\(D = 0.44 \times 10^{-9}\) m²/s, `src/BioReactor.c:201`), the Batchelor scale is about 50 µm, against 0.49 mm at L9. If the asymptotic range starts only near that scale (L12–L13), the method will end in P2 with an honest, large \(\sigma_{epi}\). If L10 already shows convergence, it can succeed.
 - Module S4 (a scalar grid finer than the flow grid on a stored converged periodic flow) could make the fine scalar levels much cheaper. It fits the general framework as a second resolution component. It needs a replay solver, which is in BACKLOG and is untested.
