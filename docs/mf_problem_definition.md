@@ -1,6 +1,6 @@
 # Multi-fidelity prediction of a grid-converged quantity: problem definition and algorithm
 
-Draft 4, 2026-10-03. It replaces draft 1 (chat, 2026-10-02), draft 2 (review round 1: rejected, 1 fatal and 6 major holes) and draft 3 (round 2: rejected, 3 major holes). All are addressed below.
+Draft 5, 2026-10-03. It replaces draft 1 (chat, 2026-10-02) and drafts 2–4, which the reviewer rejected in rounds 1–3: 1 fatal and 6 major holes, then 3 major, then 2 major. All are addressed below.
 
 **Status labels:**
 - **[lit]**: I read it in the cited paper in this session.
@@ -35,14 +35,18 @@ Details of F1:
 
 *Fig. A. The period-averaged decay rate \(\lambda(\chi)/\lambda(0.5)\), with \(\lambda = -d\ln(1-\chi)/dt\), for L6–L9.*
 
-**Consequence:** the method must first decide whether its target is identifiable (Gate G0, Section 4). Section 8 shows that, for mixing time at \(h = 0\), it is not, with L6–L9.
+**Consequence:** the method must first decide whether its target is identifiable (Gate G0, Section 4). Section 8 shows that, for mixing time at \(h = 0\) with L6–L9:
+- two of the three transforms fail G0;
+- the third (the rate) can pass G0, but its limit is not bounded away from zero, so the Step 4 forecast is expected to report infeasibility.
+
+Both statements are provisional until the pooled fit (action 1).
 
 ---
 
 ## 1. Setting and notation
 
 - \(x \in X \subset R^d\): the QoI coordinates. \(\Sigma \subset X\) is the region of interest. \(\Sigma_N\) is a scrambled Sobol set of \(100 \cdot d\) points in \(\Sigma\). All "max over \(\Sigma\)" values are computed on \(\Sigma_N\) [assumption].
-- \(h\): the cell size, normalised by a reference cell. The levels are \(h_\ell = h_0 2^{-\ell}\). \(h_{min}\) is the finest level that has data.
+- \(h\): the cell size divided by one fixed reference cell \(h_{ref}\) (in the example, the L10 cell, so L6 has \(h = 16\)). The levels are \(h_\ell = h_0 2^{-\ell}\). \(h_{min}\) is the finest level that has data. \(h_c\) is the coarsest level of any candidate level set.
 - **Target resolution \(h^\star\).** The default is \(h^\star = 0\), the grid-converged value. The method also supports \(h^\star > 0\), for example the resolution of a reference study. Then the target is \(f(x, h^\star)\).
 - A **probe** is one run, \(a = (u, h, T)\): controls \(u\), level \(h\), run length \(T\).
   - It returns a vector \(y_a\) at the coordinate set \(O(a) \subset X\).
@@ -75,12 +79,13 @@ $$ \mu \sim GP(\phi(x)^T \beta, \; \sigma_\mu^2 k_\mu(x, x')) $$
 
 - \(\beta\) has a flat prior (universal kriging).
 - \(k_\mu\) is a Matérn-5/2 kernel with one length scale per input dimension (ARD) [assumption]. The same choice is used for \(k_x\) below.
+- **Known admissible range goes into the prior, not into a gate.** If the converged value must lie in a known range, write \(\mu = \psi(\tilde\mu)\) with a link \(\psi\) and a GP on \(\tilde\mu\). For example, for \(g = -1/\Delta t\) the converged rate must be positive, so \(\mu = -\exp(\tilde\mu)\). \(\delta\) stays additive in \(g\)-space. The likelihood is then not Gaussian in \(\tilde\mu\), and Section 2.5 samples it.
 
 ### 2.3 Discretisation error
 
 $$ \delta \sim GP(0, \; \sigma_\delta^2 k_x(x, x') k_h(h, h')) $$
 
-There are two candidate families for \(k_h\). Gate G1 selects between them (Section 2.6).
+There are two candidate families for \(k_h\). Section 2.6 weights them.
 
 - **TWY2 (Richardson type):** \(k_h = (h h')^p c_\nu(h - h'; \ell_h)\), with \(c_\nu\) a Matérn correlation.
   - [lit] Bect et al. 2103.14559 §3 and Prop. 3: \(\delta(h) = A h^p + o(h^p)\) almost surely. This is the E&H power law with an amplitude \(a(x)\) that is a GP in \(x\).
@@ -102,9 +107,9 @@ $$ e_a \sim N(0, S_a), \quad S_a = D_a R_a D_a $$
 
 - Runs are independent. \(D_a\) is the diagonal of the noise standard deviations \(s(x_k, h_a)\). \(R_a\) holds the correlations between the outputs of one run.
   - [lit] One run then counts as one correlated vector: Overstall & Woods 1506.04489 eq 2 (matrix normal). A separable form would force the noise correlation to equal the signal correlation, so \(R\) is kept separate.
-- **Log-variance model.** \(\log s^2(x, h) = m_s + b_s h + \zeta(x, h)\), where \(\zeta\) is a latent GP (Matérn-5/2 in \(x\) and in \(h\)). Here \(h\) is normalised so that the coarsest level used has \(h = 1\).
+- **Log-variance model.** \(\log s^2(x, h) = m_s + b_s h + \zeta(x, h)\), where \(\zeta\) is a latent GP (Matérn-5/2 in \(x\) and in \(h\)).
   - [lit] hetGP, 1611.05902 eq 14, smooths latent log-variances, so it works with few replicates.
-  - The trend \(b_s\) has a symmetric prior \(N(0, \tau_b^2)\) with \(\tau_b = \log 4\) [assumption]: one prior sd lets \(s\) change by a factor 2 between the coarsest level and \(h = 0\). The spread may grow or shrink as \(h \to 0\).
+  - The trend \(b_s\) has a symmetric prior \(N(0, \tau_b^2)\) with \(\tau_b = \log 4 / h_c\) [assumption]: one prior sd lets \(s\) change by a factor 2 between \(h_c\) and \(h = 0\). It uses the fixed \(h_c\), so the prior is the same for every candidate structure. The spread may grow or shrink as \(h \to 0\).
   - The prior sd of \(m_s\) is 1.4 [assumption]: one sd is a factor 2 in \(s\).
   - [lit] Analogous evidence: in an LES study, the Lyapunov growth rate *increases* on finer meshes (1801.03046 §4.2: 285, 517, 589 per second). That is a turbulent flow, not ours, so it only motivates the symmetric prior.
   - [lit] Stroh 1605.02561 eq 3 and 1709.06896 eq 7e correlate the log-variances across levels; we keep that as the prior centre.
@@ -112,24 +117,31 @@ $$ e_a \sim N(0, S_a), \quad S_a = D_a R_a D_a $$
 - **Replicates.** The solver is deterministic, so a replicate is a run with a small perturbation (here, a shifted tracer-release cycle). \(s\) is the sensitivity of the QoI to that perturbation. Whether it equals the spread of a physical experiment is **untested** [assumption A7].
 - \(s_0(x) = s(x, h^\star)\) is reported only if replicates exist at 3 or more levels, including the finest. Otherwise it is reported as "not identified".
 
-### 2.5 Hyperparameters: MCMC for the continuous ones
+### 2.5 Posterior sampling
 
-- The MCMC state is \(\vartheta = (\beta, p, \sigma_\delta, \ell_x, \ell_h \text{ or } \gamma, \sigma_\mu, \ell_\mu, m_s, b_s, \zeta, R)\).
-- It is sampled by adaptive Metropolis–Hastings.
-  - [lit] Stroh 1709.06896 samples all hyperparameters, including the rate and the noise variances.
-  - [lit] Oliver 1311.0828 eq 13 marginalises \(p\).
-- Why MCMC: [lit] ML-II "underestimate[s] prediction uncertainty" (Lalchand & Rasmussen 1912.13440 §1). MAP gave zero-width intervals in Stroh 1709.06896 §4.
+- The state is \(\vartheta\): the hyperparameters \((\beta, p, \sigma_\delta, \ell_x, \ell_h\) or \(\gamma, \sigma_\mu, \ell_\mu, m_s, b_s, R)\), plus the latent fields \(\zeta\) (about one value per distinct \((x, h)\), so about 400) and \(\tilde\mu\) if a link is used, plus the censored values.
+- **Sampler: Gibbs with three blocks.**
+  1. Latent Gaussian fields (\(\zeta\), \(\tilde\mu\)) are updated by **elliptical slice sampling**. [lit] Murray, Adams & MacKay 1001.0175 (abstract): it is for "models with multivariate Gaussian priors", "has no free parameters", and "works well for a variety of Gaussian process based models".
+  2. The hyperparameters are updated by slice or adaptive Metropolis–Hastings steps, conditional on the latent fields. [lit] Stroh 1709.06896 samples the rate and noise hyperparameters this way, but without latent fields.
+  3. Censored values are drawn from their truncated conditional (data augmentation) [inference].
+  - HMC/NUTS is an alternative that I have not evaluated.
+- **Convergence rule.** Run 4 chains. Use the draws only if the rank-normalised split-\(\hat R\) is below 1.01 and the effective sample size is above 400 for every reported quantity. [lit] Vehtari et al. 1903.08008 §1 ("only using the sample if \(\hat R < 1.01\)") and §4 (ESS "less than 400" indicates convergence problems). The Monte Carlo error of \(\sigma_{epi}\), a quantile spread, uses their quantile MCSE, and it must be below 5% of \(\varepsilon\) [assumption]. If the rule fails, run longer. Never report draws that fail it.
+- Why sample at all: [lit] ML-II "underestimate[s] prediction uncertainty" (Lalchand & Rasmussen 1912.13440 §1), and MAP gave zero-width intervals in Stroh 1709.06896 §4.
 
-### 2.6 Discrete structure: G0 filters, then weighted averaging
+### 2.6 Discrete structure: G0 filters, then stacking on an extrapolation score
 
 - The structure index is \(M = (k_h\) family, \(g\), set of levels used\()\).
-- **Order.**
-  1. Gate G0 runs on every candidate \(M\) and removes the ones that fail.
-  2. Among the survivors, the weights are \(w_M \propto \exp(\mathrm{elpd}_M)\). Here elpd is the block leave-one-run-out log predictive density (Gate G2 data), on the physical scale, with the Jacobian of \(g\) included [inference].
-  3. Gate G1 then checks calibration of the averaged predictive on the held-out finest level. These are different data, so selection and calibration do not reuse the same hold-out.
-  4. If no \(M\) survives G0, the method stops (Section 4).
-- **Why averaging.** Our kernel evidence differs by about 2 nats. So the weaker family keeps a weight of about 0.12, and the families differ 2–4× at \(h = 0\) (Fig. B). Selecting one would make \(\sigma_{epi}\) overconfident.
-- The averaged posterior can be multimodal. Section 2.7 defines centre and spread by quantiles, so they stay correct for any shape. Gate G6 reports the shape.
+- **Order:**
+  1. Gate G0 runs on every candidate \(M\). The candidates that fail it are removed. If none survive, the method stops (Section 4).
+  2. **Extrapolation fits.** Fit every surviving \(M\) without the finest level, \(L_{max}\). The score is the density of the held-out \(L_{max}\) runs, so it tests extrapolation by one level in \(h\). This is where the families differ. Leave-one-run-out would mostly test interpolation, because the same \(u\) stays in at other levels.
+  3. **Cross-fitting.** Split the \(L_{max}\) sites into two halves A and B, balanced in \(u\).
+     - On A, compute stacking weights. [lit] Yao, Vehtari, Simpson & Gelman 1704.02030, eq 2.2 with the log score: \(\max_w \sum_i \log \sum_M w_M p(y_i \mid D_{-max}, M)\) with \(w \ge 0\) and \(\sum w = 1\).
+     - With those weights, run the calibration Gate G1 on B. Then swap A and B. G1 passes only if both folds pass. So the weights and the calibration check never use the same runs.
+  4. **Final weights** for the prediction: stacking on all \(L_{max}\) runs. Then refit every \(M\) on all the data.
+- **Why stacking.** [lit] Yao et al. (abstract): BMA "is flawed in the M-open setting", and they "recommend stacking of predictive distributions". Our G1 failures (Section 8) suggest that no candidate is true.
+- **Why not selection.** In the level hold-out (Fig. B), the families differ by only about 2 nats in total log density, and their answers at \(h = 0\) differ 2–4×. Selecting one would hide that spread.
+- **Assumption A13:** weights that are good for extrapolating one level beyond the data are also good for extrapolating to \(h^\star\). This cannot be tested without a finer level.
+- With 4 levels, the extrapolation fits use only 3 levels. This is the price of a held-out level, and it is a reason to add levels.
 
 ### 2.7 Prediction on the physical scale (quantile based)
 
@@ -188,8 +200,8 @@ Notes:
 
 | Gate | Test | Pass rule | Source |
 |---|---|---|---|
-| **G0 identifiability** (only if \(h^\star < h_{min}\); run on **each** candidate \(M\)) | (i) Fit with the wide prior \(\log p \sim N(0, 1)\). (ii) Check that the target lies in the admissible range (for example, a rate > 0). Also report the observed increment ratios R. | (i) \(P(p > 0.5 \mid D) \ge 0.9\); (ii) \(P(\)admissible\() \ge 0.95\). Both thresholds are [assumption]. | [lit] E&H 2014 treat \(p < 0.5\) as anomalous; [data] Fig. D |
-| G1 level hold-out | Refit without the finest level; predict its runs with noise, using the averaged predictive. Calibration only; the weights come from G2. | 95% coverage within binomial limits; sign test on z, p > 0.05; \(C_{LOO} = n^{-1}\sum z_i^2\) near 1 | [lit] Oliver 1311.0828 eq 17; Bachoc 1301.4320 eq 6 |
+| **G0 identifiability** (only if \(h^\star < h_{min}\); run on **each** candidate \(M\)) | Fit with the wide prior \(\log p \sim N(0, 1)\). Also report the observed increment ratios R. A known admissible range is in the prior (Section 2.2), so it is not tested here. | \(P(p > 0.5 \mid D) \ge 0.9\) [assumption] | [lit] E&H 2014 treat \(p < 0.5\) as anomalous; [data] Fig. D |
+| G1 level hold-out | The cross-fitted test of Section 2.6, step 3: predict the held-out \(L_{max}\) runs of one half with the weights of the other half, including noise. Calibration only. | 95% coverage within binomial limits; sign test on z, p > 0.05; \(C_{LOO} = n^{-1}\sum z_i^2\) near 1 | [lit] Oliver 1311.0828 eq 17; Bachoc 1301.4320 eq 6 |
 | G2 block LOO | Leave out one run (all its outputs), or one replicate set | z ~ N(0,1); Q–Q plot; the statistic \(U = \lvert I + E^T E \rvert^{-1}\) of Overstall & Woods eq 10 | [lit] Bachoc Prop. 3.1 (block form [inference]) |
 | G3 noise | Replicate variance against the predicted \(s^2\) | chi-square test, p > 0.05 | [inference] |
 | G4 pre-asymptotic | Refit without the coarsest level | the target moves less than \(\sigma_{epi}\) | [inference] |
@@ -198,16 +210,17 @@ Notes:
 
 **Repair rule.** When a gate fails, act in this order:
 1. If G4 flags the coarsest level, remove it.
-2. Recompute the weights \(w_M\) (Section 2.6).
+2. Recompute the stacking weights \(w_M\) (Section 2.6).
 3. Buy a finer-level probe where \(|z|\) is largest.
 
-Stop after **at most 2 repair cycles per gate**. If the gate still fails, the output is "uncalibrated". **If G0 fails for every candidate \(M\), the method stops and returns to the user** with four options:
+Stop after **at most 2 repair cycles per gate**. If the gate still fails, the output is "uncalibrated". **If G0 fails for every candidate \(M\), the method stops and returns to the user** with five options (the same letters are used in Section 8 and Q3):
 - (a) a finite \(h^\star\);
-- (b) the cost forecast for the next finer level;
-- (c) a different QoI or fidelity variable (Section 8);
-- (d) the E&H fallback. [lit] For \(p < 0.5\), E&H do not stop: they fit fixed orders (\(p = 1\), \(p = 2\), and the two-term form) with \(F_s = 3\). In our method, this is a prior concentrated on those orders, with its uncertainty reported. [data] For \(\Delta t\), per-rpm E&H gave \(U/\phi_0 \approx 0.9\)–\(1.4\) (diary 2026-10-02), which is far above \(\varepsilon = 10\%\).
+- (b) a finer level, with its cost forecast;
+- (c) two fidelity indices;
+- (d) a different QoI;
+- (e) the E&H fallback. [lit] For \(p < 0.5\), E&H do not stop: they fit fixed orders (\(p = 1\), \(p = 2\), and the two-term form) with \(F_s = 3\). In our method, this is a prior concentrated on those orders, with its uncertainty reported. [data] For \(\Delta t\), per-rpm E&H gave \(U/\phi_0 \approx 0.9\)–\(1.4\) (diary 2026-10-02), which is far above \(\varepsilon = 10\%\).
 
-**Deviation from R3.** E&H always return an estimate. Our default stops when G0 fails, and option (d) restores E&H behaviour on request.
+**Deviation from R3.** E&H always return an estimate. Our default stops when G0 fails, and option (e) restores E&H behaviour on request.
 
 \(\varepsilon\) is never widened without the user.
 
@@ -309,6 +322,9 @@ $$ a^\star = \arg\max_{a \in A} \; (H_n - E J_n(a)) / E c(a), \qquad H_n = \sum_
 - Mixing example: about 40 runs × 10 outputs = 400 data. One GP solve costs about \(400^3/3 \approx 2 \times 10^7\) flops.
 - MCMC: \(10^4\) samples × 4 structures, which is minutes on one node.
 - Acquisition: about 120 candidates (10 \(u\) × 4 levels × 3 action types) × 16 fantasies × 200 thinned samples. Each needs a rank-10 update of \(O(n^2 m) \approx 2 \times 10^6\) flops. That is about \(8 \times 10^{11}\) flops, which is minutes to an hour on one node. This is negligible against one L8 run.
+- **Quantile spreads:** for each candidate and fantasy, about 800 pooled draws (4 structures × 200 samples) at about 300 points of \(\Sigma_N\), then a sort: about \(10^7\) operations, so \(2 \times 10^{10}\) in total. This is small against the GP updates.
+- **Number of fantasies \(F\)** [assumption]: start with \(F = 16\). Double \(F\), up to 256, until the Monte Carlo standard error of \(H_n - E J_n(a)\) for the best candidate is below 10% of the gap to the second-best candidate. The quantile spread is robust to heavy tails, which helps.
+- **MCMC** (Section 2.5): latent fields make each chain slower. The time must be measured, and the estimate above (minutes) is only for the hyperparameters.
 - **Forecast (Step 4):** a greedy plan of about 20 steps at the full cost would be about 20 acquisitions. To keep it cheap, the forecast uses 20 fixed \(\vartheta\) samples, no reweighting, and the expected reached set. This is an approximation, and the realised cost is compared with it after each batch.
 
 **Step 6, run.**
@@ -316,7 +332,7 @@ $$ a^\star = \arg\max_{a \in A} \; (H_n - E J_n(a)) / E c(a), \qquad H_n = \sum_
 - Otherwise keep the censored value \(\tau > T\) in the likelihood. [lit] Hutter 1310.1947: a capped run gives a lower bound. Data augmentation in the MCMC is [inference].
 - Go to Step 2.
 
-**Output.** For each \(x \in \Sigma\): \(m_y\), \(\sigma_{epi}\), \(s_0\) (or "not identified"), and \(\sigma_{tot}\). Also: the selected \(M\), the posterior of \(p\), the gate table, the cost and the allocation per level.
+**Output.** For each \(x \in \Sigma\): \(m_y\), \(\sigma_{epi}\), \(s_0\) (or "not identified"), and \(\sigma_{tot}\). Also: the stacking weights \(w_M\), the posterior of \(p\), the gate table, the cost and the allocation per level.
 
 **Novelty check.** [lit, negative] No paper read in this session combines all four of these: a Richardson-type or LB kernel with an \(x\)-dependent amplitude; a marginalised \(p\); heteroscedastic noise that is correlated inside a run; and nested outputs whose cost depends on the output.
 
@@ -338,12 +354,14 @@ $$ a^\star = \arg\max_{a \in A} \; (H_n - E J_n(a)) / E c(a), \qquad H_n = \sum_
 | \(\sigma^2_{max}\) | the tracer variance at release; exact value 0.25 (top-half release); a run is accepted if it is within ±20%, that is [0.20, 0.30] | `scripts/postprocess.py` (`_SIGMA2_MAX_TOL = 0.20`) |
 
 **Gate status with the data we have (per-rpm fits, no pooling; `scripts/diag_h_kernel_test.py`, `scripts/diag_observed_order.py`):**
-- **G0 fails for \(h^\star = 0\) for every candidate \(M\) (provisional: per-rpm and pooled-rate evidence; the pooled G0 is action 1).**
-  - \(g\) = identity: R = 0.2–0.4, so the increments grow. Fails (i).
-  - \(g = \log\): R ≈ 1 (0.6–1.2), so there is no convergence. Fails (i).
-  - \(g\) = rate: \(p\) is identified when pooled (1.41 ± 0.31), so (i) may pass. But \(r_\infty < 0\) at 9 of 22 per-rpm triplets, and the pooled \(r_\infty\) is not bounded away from 0. Fails (ii).
-  - Level sets: removing L6 does not help. On L7–L9 alone, \(\log\) has R = 0.97–1.24, and the rate limits above already use L7–L9 only.
-  - Both kernel families: G0 depends on the data through \(p\) and the limit, so the kernel does not change these verdicts [inference].
+- **G0 at \(h^\star = 0\)** (provisional: per-rpm triplets and the parametric pooled rate fit; G0 under the GP kernels is **untested** and is action 1):
+  - \(g\) = identity: R = 0.2–0.4, so the increments grow. Expected to fail.
+  - \(g = \log\): R ≈ 1 (0.6–1.2), so there is no convergence. Expected to fail.
+  - Level sets: removing L6 does not help. On L7–L9 alone, \(\log\) has median R = 0.89–1.24.
+  - \(g\) = rate, with positivity in the prior (\(\mu = -\exp(\tilde\mu)\)): the parametric pooled fit identifies \(p = 1.41 \pm 0.31\), so it may pass G0.
+    - But the data put \(r_\infty\) near 0: the per-rpm Richardson limits are negative at 9 of 22 triplets. With positivity in the prior, the posterior of the rate then piles near 0, and the upper quantiles of \(\Delta t\) become very large.
+    - So the method goes on to the Step 4 forecast. That forecast is expected to report "probably infeasible" for \(\varepsilon_{rel} = 0.10\) [inference; action 1 computes it].
+  - The verdicts depend on two choices: positivity in the prior, and the G0 threshold.
 - **G1 fails.** In log space, 29/29 BM z-scores and 28/29 TWY2 z-scores are positive (fit L6–L8, predict L9). This is consistent with F1.
 - **[data]** L6 loses 7–10% of the tracer mass (L7 3%, L8 0.7%, L9 under 0.4%). So G4 will probably remove L6.
 
@@ -357,13 +375,15 @@ $$ a^\star = \arg\max_{a \in A} \; (H_n - E J_n(a)) / E c(a), \qquad H_n = \sum_
 - It was a warm-start chain with 33 cycles before release. L9 was a cold start with 80 cycles.
 - It is not used until test A11 removes the protocol confound.
 
-**Options when G0 fails** (the user decides, Q3):
+**Options when G0 fails or the forecast says infeasible** (the user decides, Q3; the letters match Section 4):
 
 | Option | What it is | Status |
 |---|---|---|
 | (a) Finite target \(h^\star\) | Inside or one level beyond the data, G0 is not needed or is weaker. | Fig. B: the BM band at L10 is still 56–290 s, so more L9/L10 data are needed even for this. Also: the upstream Kim code sets `MAXLEVEL = 9` (`tests/fixtures/kim_upstream/BioReactor.c:180`), but our notes call L10 "Kim's grid". This must be resolved before we choose \(h^\star\). |
-| (b) Two fidelity indices | Use \(h = (h_{flow}, h_{scalar})\): the passive tracer on a finer grid, on a replayed flow period. | [lit] CONFIG eq 19 has a kernel for several fidelity parameters. The replay solver is in BACKLOG and is untested. |
-| (c) A different QoI | A mixing measure that is less sensitive to diffusion. | Not read; I would read sources first. |
+| (b) A finer level | Add L10 runs. | [data] Per probe, the cost to \(\Delta t_{0.95}\) grew 50× from L8 to L9 (Fig. C); one more level is of the order of \(10^4\) core-h per probe [inference, extrapolated]. |
+| (c) Two fidelity indices | Use \(h = (h_{flow}, h_{scalar})\): the passive tracer on a finer grid, on a replayed flow period. | [lit] CONFIG eq 19 has a kernel for several fidelity parameters. The replay solver is in BACKLOG and is untested. |
+| (d) A different QoI | A mixing measure that is less sensitive to diffusion. | Not read; I would read sources first. |
+| (e) E&H fallback | Fixed orders with \(F_s = 3\) (Section 4). | [data] per-rpm \(U/\phi_0 \approx 0.9\)–\(1.4\), far above 10%. |
 
 **First actions, in order:**
 1. **Pooled fit, no compute.** Run G0 and G1 on all L6–L9 × 10 rpm × 10 χ values, with the generic model, for \(\Delta t\) (log, rate) and kLa (identity, log). Pooling may identify \(p\) where per-rpm fits cannot. If G0 still fails, F1 is confirmed for the generic model.
@@ -388,6 +408,7 @@ $$ a^\star = \arg\max_{a \in A} \; (H_n - E J_n(a)) / E c(a), \qquad H_n = \sum_
 | A10 | The coarsest level is asymptotic | [data] doubtful for L6 | G4 |
 | A11 | Spin-up length does not change \(\Delta t\) | untested; the L10 point conflicts with it | action 2 |
 | A12 | Fantasy reweighting values \(p\)-reducing probes correctly | [inference] | synthetic test |
+| A13 | Stacking weights for one-level extrapolation transfer to \(h^\star\) | untestable without a finer level | a finer level |
 
 ---
 
@@ -399,7 +420,7 @@ $$ a^\star = \arg\max_{a \in A} \; (H_n - E J_n(a)) / E c(a), \qquad H_n = \sum_
   - Do you accept the Gaussian \(N(m_y, \sigma_y^2)\) built from the median and the 68% quantile spread, instead of the mean and the variance (Section 2.7)? With \(g = \log\), the underlying posterior is lognormal.
   - Do you accept averaging over structures (Section 2.6) instead of choosing one?
 - **Q2.** What are the \(\theta_{max}\) range, the budget \(C\), and the batch size \(q\)? You wrote "cost scales with \(2^N\)". The data say \(2^{\gamma N}\) with \(\gamma\) = 2.9–4.4 per level (Fig. C). May \(\gamma\) be learned?
-- **Q3.** G0 fails for mixing time at \(h = 0\). Which target do you want: (a) a finite \(h^\star\), (b) two fidelity indices, or (c) a different QoI? And which grid did Kim use: L9 (the upstream code) or L10 (our notes)?
+- **Q3.** For mixing time at \(h = 0\), G0 fails or the forecast is expected to say infeasible (Section 8). Which option do you want: (a) a finite \(h^\star\), (b) a finer level, (c) two fidelity indices, (d) a different QoI, or (e) the E&H fallback? And which grid did Kim use: L9 (the upstream code) or L10 (our notes)?
 - **Q4.** Do you accept Yi et al. as a baseline and special case (Section 5)?
 - **Q5.** Is model-form error (2D vs 3D) in scope? If yes, which experimental data can we use?
 - **Q6.** May I run actions 2 and 3 (about 120 core-h, or about 720 with the L9 pair)?
