@@ -228,7 +228,7 @@ $$ \log_2 \kappa(u, h) = \kappa_0 + \sum_j \gamma_j \ell_j + \omega(u, h) + \eta
 - \(\sigma_{fid}(x,h) = (E[(f(x,h) - f(x))^2 \mid D])^{1/2}\), computed from the same draws.
 - **Fidelity envelope**, in \(\Lambda\) units (relative error for \(\Lambda = \log\)):
 
-$$ \sigma_{env}^2(x, h) = E_{\vartheta \mid D} \Big[ \sum_j \sigma_{\delta,j}^2 k_{x,j}(x, x) \bar h_j^{2 p_j(x)} \Big] $$
+$$ \sigma_{env}^2(x, h) = E_{\vartheta \mid D} [ \sum_j \sigma_{\delta,j}^2 k_{x,j}(x, x) \bar h_j^{2 p_j(x)} ] $$
 
   - It is the GP part of the error only. Each posterior draw is monotone in the componentwise order, so the average is monotone too, and it is 0 at \(h = 0\).
   - The mean term of \(\delta\) is left out on purpose. With several components, terms of mixed sign can cancel, which would break monotonicity, and under a flat prior on \(c\) its prior variance is infinite.
