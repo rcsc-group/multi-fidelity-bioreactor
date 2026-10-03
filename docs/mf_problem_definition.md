@@ -1,6 +1,6 @@
 # Multi-fidelity prediction of a grid-converged quantity: problem definition and algorithm
 
-Draft 6, 2026-10-03. It replaces draft 1 (chat, 2026-10-02) and drafts 2–5, which the reviewer rejected in rounds 1–4: 1 fatal and 6 major holes, then 3, 2 and 2 major holes. All are addressed below.
+Draft 7, 2026-10-03. It replaces draft 1 (chat, 2026-10-02) and drafts 2–6. The adversarial reviewer rejected drafts 2–5 in rounds 1–4 (1 fatal and 6 major holes, then 3, 2 and 2 major holes) and approved draft 6 in round 5 with 6 minor holes. Draft 7 closes those minor holes.
 
 **Status labels:**
 - **[lit]**: I read it in the cited paper in this session.
@@ -79,7 +79,8 @@ $$ g(y_{a,k}) = \mu(x_k) + \delta(x_k, h_a) + e_{a,k} $$
 
 $$ \mu \sim GP(\phi(x)^T \beta, \; \sigma_\mu^2 k_\mu(x, x')) $$
 
-- \(\beta\) has a flat prior (universal kriging) **only when there is no link**. Then the likelihood is Gaussian in \(\beta\), and the posterior is proper when the design has at least \(\dim \phi\) distinct sites.
+- \(\beta\) has a flat prior (universal kriging) **only when there is no link**. Then the likelihood is Gaussian in \(\beta\), and the posterior is proper when the basis matrix \(F\) (rows \(\phi(x_i)^T\) at the data sites) has full column rank.
+  - A basis term that does not vary in the data, for example \(\log \theta_{max}\) when all runs have one angle, is collinear with the intercept. Its coefficient then gets a proper \(N(0, 1)\) prior until the term varies at 2 or more levels.
 - \(k_\mu\) is a Matérn-5/2 kernel with one length scale per input dimension (ARD) [assumption]. The same choice is used for \(k_x\) below.
 - **Known admissible range goes into the prior, not into a gate.** If the converged value must lie in a known range, write \(\mu = \psi(\tilde\mu)\) with a link \(\psi\) and a GP on \(\tilde\mu\). For example, for \(g = -1/\Delta t\) the converged rate must be positive, so \(\mu = -\exp(\tilde\mu)\). \(\delta\) stays additive in \(g\)-space. The likelihood is then not Gaussian in \(\tilde\mu\), and Section 2.5 samples it.
   - **With a link, \(\beta\) must have a proper prior.** With a flat \(\beta\), the intercept can go to \(-\infty\): then \(\mu \to 0\) everywhere, the likelihood tends to a positive constant, and the posterior is improper. We use \(\beta \sim N(b_{phys}, \mathrm{diag}(s_b^2))\), with \(b_{phys}\) from a physical estimate (Section 8).
@@ -145,7 +146,7 @@ $$ e_a \sim N(0, S_a), \quad S_a = D_a R_a D_a $$
      - With those weights, run the calibration Gate G1 on B. Then swap A and B. G1 passes only if both folds pass. So the weights and the calibration check never use the same runs.
   4. **Final weights** for the prediction: stacking on all \(L_{max}\) runs. Then refit every \(M\) on all the data.
 - **Why stacking.** [lit] Yao et al. (abstract): BMA "is flawed in the M-open setting", and they "recommend stacking of predictive distributions". Our G1 failures (Section 8) suggest that no candidate is true.
-- **Why not selection.** In the level hold-out (Fig. B), the families differ by only about 2 nats in total log density, and their answers at \(h = 0\) differ 2–4×. Selecting one would hide that spread.
+- **Why not selection.** In the level hold-out (Fig. B), the families differ by only about 2 nats in total log density, and their answers at \(h = 0\) differ 2–4×. Selecting one would hide that spread. (The 2 nats compare TWY2 with BM. LB with \(\gamma \neq 0.5\) is untested and can differ.)
 - **Assumption A13:** weights that are good for extrapolating one level beyond the data are also good for extrapolating to \(h^\star\). This cannot be tested without a finer level.
 - With 4 levels, the extrapolation fits use only 3 levels. This is the price of a held-out level, and it is a reason to add levels.
 - **If only 2 levels remain** for the extrapolation fits (for example after G4 removes L6), \(p\) is not identifiable there. Then stacking is skipped, the weights stay equal over the G0 survivors (the prior), the output is flagged "weights prior-driven", and G1 cannot run, so the output is "uncalibrated" until a level is added.
@@ -170,7 +171,7 @@ All the priors are proper. The scales marked "§8" are problem-specific (R7).
 |---|---|---|
 | \(\beta\), no link | flat | universal kriging; the posterior is proper (Section 2.2) |
 | \(\beta\), with link | \(N(b_{phys}, \mathrm{diag}(s_b^2))\); \(b_{phys}\) and \(s_b\) from §8 | required for a proper posterior |
-| \((\sigma_\mu, \ell_\mu)\) | PC prior per input dimension: \(P(\ell < 0.1) = 0.05\), \(P(\sigma_\mu > S_\mu) = 0.05\); \(S_\mu\) from §8 | [lit] Fuglstad et al. 1503.00256 Thm 2.6 (joint PC prior for Matérn range and sd, \(d \le 3\)); applying it per ARD dimension with \(d = 1\) is [inference] |
+| \((\sigma_\mu, \ell_\mu)\) | PC prior per input dimension: \(P(\ell < 0.1) = 0.05\), \(P(\sigma_\mu > S_\mu) = 0.05\); \(S_\mu\) from §8 | [lit] Fuglstad et al. 1503.00256 Thm 2.6 (joint PC prior for Matérn range and sd, \(d \le 3\)). Their range is \(\rho = \sqrt{8\nu}/\kappa\). With the Matérn form \(\kappa = \sqrt{2\nu}/\ell\), \(\rho = 2\ell\), so \(P(\ell < 0.1) = 0.05\) is \(P(\rho < 0.2) = 0.05\). [inference]: independent \(d = 1\) range priors per ARD dimension times one PC prior on \(\sigma\); and the use on the stationary factor of TWY2 |
 | \((\sigma_\delta, \ell_x)\) | same PC form; \(P(\sigma_\delta > S_\delta) = 0.05\). \(\sigma_\delta\) is the error sd at \(h_c\), because \(\bar h = 1\) there. \(S_\delta\) from §8 | same |
 | \(\ell_h\) (TWY2) | PC range prior, \(d = 1\): \(P(\ell_h < 0.1) = 0.05\) | same |
 | \(\gamma\) (LB) | Uniform(0, 1) | [assumption] |
@@ -180,7 +181,8 @@ All the priors are proper. The scales marked "§8" are problem-specific (R7).
 | \(\ell_\rho\) | PC range prior on the problem-specific output coordinate of \(R\) (§8), scaled to [0, 1] | as above |
 | stacking weights | Dirichlet(2, ..., 2) penalty | Section 2.6 |
 
-**Prior sensitivity (Gate G7).** Refit with each problem-specific scale (\(S_\mu\), \(S_\delta\), \(s_b\), the sd of \(\log p\)) halved and doubled, one at a time. The target is prior-dominated if, at any \(x \in \Sigma_N\), \(m_y\) moves by more than \(0.5 \sigma_{epi}\) or \(\sigma_{epi}\) changes by more than 20% [assumption]. A prior-dominated target is treated like a G0 failure: the method returns to the user.
+**Prior sensitivity (Gate G7).** Reweight (or refit) with each problem-specific scale (\(S_\mu\), \(S_\delta\), \(s_b\), the sd of \(\log p\)) halved and doubled, one at a time. The target is prior-dominated if, at any \(x \in \Sigma_N\), \(m_y\) moves by more than \(0.5 \sigma_{epi}\) or \(\sigma_{epi}\) changes by more than 20% [assumption]. A prior-dominated target is treated like a G0 failure: the method returns to the user.
+- **Cost of G7:** 8 variants per surviving structure. Use importance reweighting of the base chains by the prior ratio [inference]. Accept the reweighted result only if the effective sample size of the weights is above 400. Otherwise run a full MCMC refit.
 
 ## 3. Bounded and reported quantities
 
@@ -353,6 +355,7 @@ $$ a^\star = \arg\max_{a \in A} \; (H_n - E J_n(a)) / E c(a), \qquad H_n = \sum_
 - **Quantile spreads:** for each candidate and fantasy, about 800 pooled draws (4 structures × 200 samples) at about 300 points of \(\Sigma_N\), then a sort: about \(10^7\) operations, so \(2 \times 10^{10}\) in total. This is small against the GP updates.
 - **Number of fantasies \(F\)** [assumption]: start with \(F = 16\). Double \(F\), up to 256, until the Monte Carlo standard error of \(H_n - E J_n(a)\) for the best candidate is below 10% of the gap to the second-best candidate. The quantile spread is robust to heavy tails, which helps.
 - **MCMC** (Section 2.5): latent fields make each chain slower. The time must be measured, and the estimate above (minutes) is only for the hyperparameters.
+- **G7:** 8 reweightings per surviving structure, which is cheap; a full refit only where the weight ESS is below 400.
 - **Forecast (Step 4):** a greedy plan of about 20 steps at the full cost would be about 20 acquisitions. To keep it cheap, the forecast uses 20 fixed \(\vartheta\) samples, no reweighting, and the expected reached set. This is an approximation, and the realised cost is compared with it after each batch.
 
 **Step 6, run.**
@@ -379,7 +382,7 @@ $$ a^\star = \arg\max_{a \in A} \; (H_n - E J_n(a)) / E c(a), \qquad H_n = \sum_
 | noise | \(m_s \sim N(\log 0.03^2, 1.4^2)\), \(\tau_b = \log 4\) | [assumption]; replicates must replace it |
 | \(S_\mu\), \(g = \log\) | 1 (\(\mu\) varies by up to a factor \(e^2\) over \(\Sigma\) at 2 sd) | [assumption] |
 | \(S_\delta\), \(g = \log\) | 4 (the error at L6 can be a factor 50) | [assumption], **set after seeing L6–L9** (×40–60 from L6 to L9) and justified by the Péclet argument of F1; G7 tests its influence |
-| rate link: \(b_{phys}\), \(s_b\) | \(\tilde\mu = \log\) rate. Intercept: \(\Delta t_{0.95}\) = 30 rocking periods at 25 rpm, with \(s_b = 2\) (a factor 7.4 per sd). Slopes: −1 on \(\log(-\ln(1-\chi))\) (single exponential), +1 on \(\log rpm\) (time in periods), 0 on \(\log \theta_{max}\); each with \(s_b = 1\). | [assumption]; Kim's values are **not** used, so the comparison with Kim stays independent |
+| rate link: \(b_{phys}\), \(s_b\) | \(\tilde\mu = \log\) rate. Intercept: \(\Delta t_{0.95}\) = 30 rocking periods at 25 rpm, with \(s_b = 2\) (a factor 7.4 per sd). **No source:** this is a guess, and it conflicts with the data (L9 at 25 rpm is 304 s, about 126 periods, and every ladder grows with refinement). So it leans toward a short, finite limit. G7 tests its influence. A sourced value is needed (Q1). Slopes: −1 on \(\log(-\ln(1-\chi))\) (single exponential), +1 on \(\log rpm\) (time in periods), 0 on \(\log \theta_{max}\); each with \(s_b = 1\). | [assumption]; Kim's values are **not** used, so the comparison with Kim stays independent |
 | \(S_\mu\), \(S_\delta\), rate link | \(S_\mu = 1\) on \(\tilde\mu\); \(S_\delta = 40 r_{ref}\), with \(r_{ref}\) the rate of the \(b_{phys}\) intercept | [assumption], set after seeing the data, as above |
 | \(R\) coordinate | \(\psi = \log(-\ln(1-\chi))\), scaled to [0, 1] over \(\Sigma\) | |
 | cost features | \(\kappa_1(u) = k \log rpm\) | [data] cost per cycle changes 4× across rpm at L10 (`scripts/cost_model.py`) |
@@ -419,7 +422,7 @@ $$ a^\star = \arg\max_{a \in A} \; (H_n - E J_n(a)) / E c(a), \qquad H_n = \sum_
 | (e) E&H fallback | Fixed orders with \(F_s = 3\) (Section 4). | [data] per-rpm \(U/\phi_0 \approx 0.9\)–\(1.4\), far above 10%. |
 
 **First actions, in order:**
-1. **Pooled fit, no compute.** Run G0 and G1 on all L6–L9 × 10 rpm × 10 χ values, with the generic model, for \(\Delta t\) (log, rate) and kLa (identity, log). Pooling may identify \(p\) where per-rpm fits cannot. If G0 still fails, F1 is confirmed for the generic model.
+1. **Pooled fit, no compute.** Run G0 and G1 on all L6–L9 × 10 rpm × 10 χ values (plus the `kmix_l7_th2`–`th6` angle runs, so that \(\theta_{max}\) varies), with the generic model, for \(\Delta t\) (log, rate) and kLa (identity, log). Pooling may identify \(p\) where per-rpm fits cannot. If G0 still fails, F1 is confirmed for the generic model.
 2. **Test A11, about 20 core-h.** L8 at 32.5 rpm with a 33-cycle spin-up, against the existing 80-cycle run. This decides whether the L10 point is usable and whether warm starts are allowed.
 3. **Replicates, about 100 core-h at L7/L8.** Add about 600 core-h for one L9 pair. Shift the release by a few cycles. This gives \(s(x,h)\) at 3 levels, its trend, and \(R\).
 
@@ -452,6 +455,7 @@ $$ a^\star = \arg\max_{a \in A} \; (H_n - E J_n(a)) / E c(a), \qquad H_n = \sum_
   - Do you accept that the posterior \(\sigma(x,h)\) is not monotone (Fig. B), while the prior discretisation variance is?
   - Do you accept the Gaussian \(N(m_y, \sigma_y^2)\) built from the median and the 68% quantile spread, instead of the mean and the variance (Section 2.7)? With \(g = \log\), the underlying posterior is lognormal.
   - Do you accept averaging over structures (Section 2.6) instead of choosing one?
+  - Some prior scales (\(S_\delta\), and \(S_\mu\) for the rate) were set after seeing L6–L9. That uses the data twice, a small deviation from fully Bayesian; G7 tests its influence. Do you accept this, or can you give physical values? The same applies to the rate-link intercept (30 periods), which has no source.
 - **Q2.** What are the \(\theta_{max}\) range, the budget \(C\), and the batch size \(q\)? You wrote "cost scales with \(2^N\)". The data say \(2^{\gamma N}\) with \(\gamma\) = 2.9–4.4 per level (Fig. C). May \(\gamma\) be learned?
 - **Q3.** For mixing time at \(h = 0\), G0 fails or the forecast is expected to say infeasible (Section 8). Which option do you want: (a) a finite \(h^\star\), (b) a finer level, (c) two fidelity indices, (d) a different QoI, or (e) the E&H fallback? And which grid did Kim use: L9 (the upstream code) or L10 (our notes)?
 - **Q4.** Do you accept Yi et al. as a baseline and special case (Section 5)?
