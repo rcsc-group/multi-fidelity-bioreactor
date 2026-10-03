@@ -190,19 +190,28 @@ def test_emergency_checkpoint_preserves_phase(tmp_path):
     # hard-coded: the same fraction holds whatever the machine's speed, and a
     # fixed number would either let the run finish (no interruption, nothing
     # tested) or stop it before the ramp ends.
-    deadline = RESERVE_S + max(3.0, 0.30 * whole_s)
-    part = {**base, "run_id": "phase_part",
-            "t_end": round(cycles * T_PER_ND, 6)}
-    part_dir = run_bioreactor(part, tmp_path, timeout=900,
-                              env={ENV_DEADLINE: f"{deadline:.0f}"})
-    assert (part_dir / "checkpoint.dump").exists(), "no emergency checkpoint"
-    assert (part_dir / PHASE_SIDECAR).exists(), "no phase sidecar"
-    side = json.loads((part_dir / PHASE_SIDECAR).read_text())
-    t_ck = float(side["t"])
-    # The whole point: this dump is NOT on a period boundary.
-    off = abs((t_ck / T_PER_ND) % 1.0 - 0.5)
-    assert off < 0.49, ("emergency dump landed on a period boundary by luck; "
-                        "the adversarial case was not exercised")
+    #
+    # Where the cut lands depends on wall-clock speed, so about 2% of runs
+    # land within 1% of a period boundary by chance (CI run 37143967433).
+    # That is a failed PRECONDITION, not a failed feature: retry with a
+    # different deadline fraction, and fail only if every attempt lands on a
+    # boundary.
+    for k, frac in enumerate((0.30, 0.37, 0.44)):
+        deadline = RESERVE_S + max(3.0, frac * whole_s)
+        part = {**base, "run_id": f"phase_part{k}",
+                "t_end": round(cycles * T_PER_ND, 6)}
+        part_dir = run_bioreactor(part, tmp_path, timeout=900,
+                                  env={ENV_DEADLINE: f"{deadline:.0f}"})
+        assert (part_dir / "checkpoint.dump").exists(), "no emergency checkpoint"
+        assert (part_dir / PHASE_SIDECAR).exists(), "no phase sidecar"
+        side = json.loads((part_dir / PHASE_SIDECAR).read_text())
+        t_ck = float(side["t"])
+        # The whole point: this dump is NOT on a period boundary.
+        off = abs((t_ck / T_PER_ND) % 1.0 - 0.5)
+        if off < 0.49:
+            break
+    assert off < 0.49, ("emergency dump landed on a period boundary in every "
+                        "attempt; the adversarial case was not exercised")
 
     resumed = {**base, "run_id": "phase_resume",
                "t_checkpoint": t_ck, "restart_continue": 1,
