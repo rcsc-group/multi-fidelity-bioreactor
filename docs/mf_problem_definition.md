@@ -1,6 +1,6 @@
 # Multi-fidelity prediction of a grid-converged quantity: problem definition and algorithm
 
-Draft 3, 2026-10-03. It replaces draft 1 (chat, 2026-10-02) and draft 2 (reviewed: rejected, 1 fatal and 6 major holes; all are addressed below).
+Draft 4, 2026-10-03. It replaces draft 1 (chat, 2026-10-02), draft 2 (review round 1: rejected, 1 fatal and 6 major holes) and draft 3 (round 2: rejected, 3 major holes). All are addressed below.
 
 **Status labels:**
 - **[lit]**: I read it in the cited paper in this session.
@@ -14,8 +14,8 @@ Draft 3, 2026-10-03. It replaces draft 1 (chat, 2026-10-02) and draft 2 (reviewe
 
 | # | Finding | Evidence |
 |---|---|---|
-| F1 | **The grid-converged mixing time is not identifiable from L6–L9.** For three consecutive levels the increment ratio \(R = (z_2 - z_1)/(z_3 - z_2)\) must be about \(2^p > 1\) for convergence (see the note below the table). | [data] Fig. D, `scripts/diag_observed_order.py` |
-| F2 | kLa (no transform) does converge on L7–L9: R = 1.3–3.2 at C* = 25 and 50%, with 56–100% of rpm monotone. So convergence depends on the QoI and on the transform. The method must test it for each QoI. | [data] `observed_order_kla.png` |
+| F1 | **Provisional: the grid-converged mixing time is not identifiable from L6–L9.** For three consecutive levels the increment ratio \(R = (z_2 - z_1)/(z_3 - z_2)\) must be about \(2^p > 1\) for convergence (see the note below the table). This uses per-rpm triplets. The pooled G0 test of Section 4 is first action 1 and has not run yet. | [data] Fig. D; `scripts/diag_observed_order.py` prints R and \(r_\infty\) |
+| F2 | For kLa (no transform), convergence is **plausible, not shown**. L6–L8 is monotone at 90–100% of rpm (C* = 25, 50%). L7–L9 is monotone at only 56–60%, and 4 of 10 rpm are oscillatory. So convergence depends on the QoI and on the transform, and the method must test it for each QoI. | [data] `observed_order_kla.png` |
 | F3 | "Kink at χ ≈ 0.75" (draft 1) is **falsified**. The late/early decay-rate ratio is 0.36–3.65, and its direction changes with rpm and with level. | [data] Fig. A |
 | F4 | Stopping at χ = 0.5 saves only 1.2–1.5× (L8) and 1.5–2.2× (L9), not 3–9×. The cause is the 80-cycle spin-up, which is 40–55% of an L9 run. | [data] diary 2026-10-03 |
 | F5 | The cost per level is steep. Per simulated second: ×7, ×9, ×21. Per probe to \(\Delta t_{0.95}\): ×17, ×24, ×50. The second set is larger because \(\Delta t\) also grows. | [data] Fig. C |
@@ -23,7 +23,8 @@ Draft 3, 2026-10-03. It replaces draft 1 (chat, 2026-10-02) and draft 2 (reviewe
 Details of F1:
 - \(z = \Delta t\): R = 0.2–0.4 (median), so the increments grow.
 - \(z = \log \Delta t\): R = 0.6–1.2, so the increments are constant. This is the transform that predicts the next level best (Fig. B).
-- \(z = 1/\Delta t\): R = 1.5–3.4, monotone at 70–89% of rpm. But the Richardson limit \(r_\infty / r_{L9}\) from L7–L9 is −2.3 to 0.98 across rpm (medians 0.05, 0.30 and 0.46 at χ = 0.50, 0.75 and 0.95). Many values are unphysical (negative). So the limit is compatible with \(r_\infty = 0\), which means an infinite mixing time.
+- \(z = 1/\Delta t\): R = 1.5–3.4, monotone at 70–89% of rpm. But the Richardson limit \(r_\infty / r_{L9}\) from L7–L9 is −2.3 to 0.98 across rpm (medians 0.05, 0.30 and 0.46 at χ = 0.50, 0.75 and 0.95). 9 of 22 values are negative, which is unphysical. So the limit is compatible with \(r_\infty = 0\), which means an infinite mixing time.
+- The pooled rate fit with one shared \(p\) (diary 2026-10-02) identifies \(p = 1.41 \pm 0.31\) (χ = 0.95), but its \(r_\infty\) is small against its uncertainty and negative at some rpm. So pooling identifies \(p\) but not an admissible limit.
 - **[inference]** One possible cause is physical. With \(D = 0.44 \times 10^{-9}\) m²/s (`src/BioReactor.c:201`) and \(L = 0.25\) m, the Péclet number is about \(10^7\). The Batchelor scale is then about 50 µm, against an L9 cell of 0.49 mm. On every level we run, numerical diffusion may set the final mixing. If so, the asymptotic range starts near L12–L13, which we cannot afford (F5).
 
 ![Fig. D](../experiments/multifidelity/observed_order_dtmix.png)
@@ -89,6 +90,7 @@ There are two candidate families for \(k_h\). Gate G1 selects between them (Sect
   - [lit] Its parameter \(\gamma \in (0,1)\) "controls the correlation between increments". The Brownian kernel of Tuo–Wu–Yu, \(\min(h,h')^{2p}\), is the case \(\gamma = 0.5\), and only that case has independent increments.
   - [lit] For BM, Bect Prop. 2: the Richardson form "does not hold" a.s. Bect §2.2: the extrapolation "coincides with the observation of highest fidelity".
   - [lit] Boutelet Fig. 1: increments were positively correlated for an "average"-type QoI, and "somewhat uncorrelated or negatively correlated" for a "maximum"-type QoI. One fixed increment structure is therefore not generic, and LB learns it through \(\gamma\).
+  - Our own evidence (Fig. B) is for BM, the case \(\gamma = 0.5\), only. LB with other values of \(\gamma\) is untested on our data.
 
 Properties:
 - The prior variance is \(Var[\delta(x,h)] = \sigma_\delta^2 k_x(x,x) h^{2p}\). It goes to 0 as \(h \to 0\) and is monotone in \(h\). This is the requirement "\(\sigma(x,h)\) decreases monotonically", applied to the discretisation error of a probe.
@@ -100,12 +102,13 @@ $$ e_a \sim N(0, S_a), \quad S_a = D_a R_a D_a $$
 
 - Runs are independent. \(D_a\) is the diagonal of the noise standard deviations \(s(x_k, h_a)\). \(R_a\) holds the correlations between the outputs of one run.
   - [lit] One run then counts as one correlated vector: Overstall & Woods 1506.04489 eq 2 (matrix normal). A separable form would force the noise correlation to equal the signal correlation, so \(R\) is kept separate.
-- **Log-variance model.** \(\log s^2(x, h) = m_s + b_s h + \zeta(x, h)\), where \(\zeta\) is a latent GP (Matérn-5/2 in \(x\) and in \(h\)).
+- **Log-variance model.** \(\log s^2(x, h) = m_s + b_s h + \zeta(x, h)\), where \(\zeta\) is a latent GP (Matérn-5/2 in \(x\) and in \(h\)). Here \(h\) is normalised so that the coarsest level used has \(h = 1\).
   - [lit] hetGP, 1611.05902 eq 14, smooths latent log-variances, so it works with few replicates.
-  - The trend \(b_s\) has a symmetric prior \(N(0, \tau_b^2)\). The spread may grow or shrink as \(h \to 0\).
+  - The trend \(b_s\) has a symmetric prior \(N(0, \tau_b^2)\) with \(\tau_b = \log 4\) [assumption]: one prior sd lets \(s\) change by a factor 2 between the coarsest level and \(h = 0\). The spread may grow or shrink as \(h \to 0\).
+  - The prior sd of \(m_s\) is 1.4 [assumption]: one sd is a factor 2 in \(s\).
   - [lit] Analogous evidence: in an LES study, the Lyapunov growth rate *increases* on finer meshes (1801.03046 §4.2: 285, 517, 589 per second). That is a turbulent flow, not ours, so it only motivates the symmetric prior.
   - [lit] Stroh 1605.02561 eq 3 and 1709.06896 eq 7e correlate the log-variances across levels; we keep that as the prior centre.
-- **The latent field \(\zeta\) is part of the MCMC state**, not a plug-in.
+- **The latent field \(\zeta\) is part of the MCMC state**, not a plug-in. At a new \((x, h)\), \(\zeta\) is drawn from its GP conditional on the current sample.
 - **Replicates.** The solver is deterministic, so a replicate is a run with a small perturbation (here, a shifted tracer-release cycle). \(s\) is the sensitivity of the QoI to that perturbation. Whether it equals the spread of a physical experiment is **untested** [assumption A7].
 - \(s_0(x) = s(x, h^\star)\) is reported only if replicates exist at 3 or more levels, including the finest. Otherwise it is reported as "not identified".
 
@@ -117,32 +120,39 @@ $$ e_a \sim N(0, S_a), \quad S_a = D_a R_a D_a $$
   - [lit] Oliver 1311.0828 eq 13 marginalises \(p\).
 - Why MCMC: [lit] ML-II "underestimate[s] prediction uncertainty" (Lalchand & Rasmussen 1912.13440 §1). MAP gave zero-width intervals in Stroh 1709.06896 §4.
 
-### 2.6 Discrete structure: selection, not averaging
+### 2.6 Discrete structure: G0 filters, then weighted averaging
 
-- The model index is \(M = (k_h\) family, \(g\), set of levels used\()\).
-- Gate G1 selects \(M\) by the held-out log predictive density on the physical scale, with the Jacobian of \(g\) included.
-- Reason: the two kernel families give answers at \(h = 0\) that differ by 2–4× (Fig. B). Averaging them gives a bimodal mixture, and a Gaussian moment match misrepresents that.
+- The structure index is \(M = (k_h\) family, \(g\), set of levels used\()\).
+- **Order.**
+  1. Gate G0 runs on every candidate \(M\) and removes the ones that fail.
+  2. Among the survivors, the weights are \(w_M \propto \exp(\mathrm{elpd}_M)\). Here elpd is the block leave-one-run-out log predictive density (Gate G2 data), on the physical scale, with the Jacobian of \(g\) included [inference].
+  3. Gate G1 then checks calibration of the averaged predictive on the held-out finest level. These are different data, so selection and calibration do not reuse the same hold-out.
+  4. If no \(M\) survives G0, the method stops (Section 4).
+- **Why averaging.** Our kernel evidence differs by about 2 nats. So the weaker family keeps a weight of about 0.12, and the families differ 2–4× at \(h = 0\) (Fig. B). Selecting one would make \(\sigma_{epi}\) overconfident.
+- The averaged posterior can be multimodal. Section 2.7 defines centre and spread by quantiles, so they stay correct for any shape. Gate G6 reports the shape.
 
-### 2.7 Prediction on the physical scale
+### 2.7 Prediction on the physical scale (quantile based)
 
-- For each MCMC sample, compute the GP posterior of \(\mu(x) + \delta(x, h^\star)\) (with \(\delta = 0\) at \(h^\star = 0\)). Draw from it and back-transform with \(g^{-1}\).
-- This gives \(m_y(x)\) and \(\sigma_y(x)\), the mean and standard deviation of the target on the physical scale.
-- The Gaussian requirement is met by moment matching: \(N(m_y, \sigma_y^2)\). The moment-matched \(\sigma_y\) includes the spread between modes, so it is conservative for a multimodal posterior.
-- Gate G6 compares the sample quantiles with the Gaussian ones.
-- With \(g = \log\), the posterior is lognormal before the moment match (question Q1).
-
----
+- For each structure \(M\) and each MCMC sample:
+  - draw \(\mu(x) + \delta(x, h^\star)\) from the GP posterior, with \(\delta = 0\) at \(h^\star = 0\);
+  - back-transform with \(g^{-1}\);
+  - pool the draws over \(M\) with the weights \(w_M\).
+- **Centre:** \(m_y(x)\) is the median of the pooled draws.
+- **Spread:** \(\sigma_y(x) = (q_{84} - q_{16})/2\), from the 15.9% and 84.1% quantiles. For a Gaussian this equals the standard deviation.
+- **Why quantiles.** Some back-transforms have no finite moments. If the rate \(z = -1/\Delta t\) is Gaussian, \(\Delta t\) has no finite mean or variance, because the density of \(z\) at 0 is not zero. Quantiles always exist.
+- The Gaussian requirement is met by \(N(m_y, \sigma_y^2)\). Gate G6 compares the 2.5% and 97.5% quantiles with \(m_y \pm 1.96 \sigma_y\).
+- With \(g = \log\), the posterior is lognormal before this match (question Q1).
 
 ## 3. Bounded and reported quantities
 
-All of these are on the physical scale, with \(\vartheta\) marginalised for the selected \(M\).
+All of these are on the physical scale, with \(\vartheta\) and \(M\) marginalised (Sections 2.6 and 2.7).
 
 | Symbol | Definition | Type |
 |---|---|---|
 | \(\sigma_{epi}(x)\) | \(\sigma_y(x)\) of the target \(f(x, h^\star)\) | epistemic; more runs reduce it |
 | \(s_0(x)\) | noise sd at \(h^\star\), back-transformed, with its band | aleatoric; compute cannot reduce it |
 | \(\sigma(x,h)\) | sd of a new probe at \(h\): the posterior of \(f(x,h)\) plus the noise | the requirement's \(\sigma(x,h)\) |
-| \(\sigma_{tot}(x)\) | \((\sigma_{epi}^2 + s_0^2)^{1/2}\) | the predictive for one new realisation |
+| \(\sigma_{tot}(x)\) | the quantile spread of draws of \(g^{-1}(\mu + \delta + e)\) at \(h^\star\), with the noise added in \(g\)-space before the back-transform | the predictive for one new realisation; exact for any \(g\) |
 
 - **The constraint bounds \(\sigma_{epi}\).** [lit] Design criteria use the de-noised variance because the noise is irreducible: Binois et al. 1710.03206 eq 2; 2412.07306 §2.1.
 - A bound on \(\sigma_{tot}\) is infeasible if \(s_0 > \varepsilon\). The algorithm checks this (Step 4).
@@ -164,7 +174,7 @@ All of these are on the physical scale, with \(\vartheta\) marginalised for the 
 
 $$ \min \sum_i c(a_i) \quad \mathrm{s.t.} \quad \max_{x \in \Sigma_N} \sigma_{epi}(x \mid D_N) / \varepsilon(x) \le 1, \quad \sum_i c(a_i) \le C $$
 
-and gates G0–G6 pass on \(D_N\). Here \(\varepsilon(x) = \varepsilon_{rel} m_y(x)\) or \(\varepsilon_{abs}\).
+and gates G0–G6 pass on \(D_N\). Here \(\varepsilon(x) = \varepsilon_{rel} m_y(x)\) (with \(m_y\) the median) or \(\varepsilon_{abs}\).
 
 **P2.** If P1 is infeasible within \(C\): minimise \(\max_{\Sigma_N} \sigma_{epi}/\varepsilon\) subject to \(\sum c \le C\). Report "failed", the value reached, and where.
 - A P2 result is reported as a prediction only if G0 and G1 pass. Otherwise it is reported as "uncalibrated".
@@ -178,8 +188,8 @@ Notes:
 
 | Gate | Test | Pass rule | Source |
 |---|---|---|---|
-| **G0 identifiability** (only if \(h^\star < h_{min}\)) | (i) Fit with the wide prior \(\log p \sim N(0, 1)\). (ii) Check that the target lies in the admissible range (for example, a rate > 0). Also report the observed increment ratios R. | (i) \(P(p > 0.5 \mid D) \ge 0.9\); (ii) \(P(\)admissible\() \ge 0.95\) | [lit] E&H 2014: \(p < 0.5\) is anomalous; [data] Fig. D |
-| G1 level hold-out | Refit without the finest level; predict its runs with noise | 95% coverage within binomial limits; sign test on z, p > 0.05; \(C_{LOO} = n^{-1}\sum z_i^2\) near 1 | [lit] Oliver 1311.0828 eq 17; Bachoc 1301.4320 eq 6 |
+| **G0 identifiability** (only if \(h^\star < h_{min}\); run on **each** candidate \(M\)) | (i) Fit with the wide prior \(\log p \sim N(0, 1)\). (ii) Check that the target lies in the admissible range (for example, a rate > 0). Also report the observed increment ratios R. | (i) \(P(p > 0.5 \mid D) \ge 0.9\); (ii) \(P(\)admissible\() \ge 0.95\). Both thresholds are [assumption]. | [lit] E&H 2014 treat \(p < 0.5\) as anomalous; [data] Fig. D |
+| G1 level hold-out | Refit without the finest level; predict its runs with noise, using the averaged predictive. Calibration only; the weights come from G2. | 95% coverage within binomial limits; sign test on z, p > 0.05; \(C_{LOO} = n^{-1}\sum z_i^2\) near 1 | [lit] Oliver 1311.0828 eq 17; Bachoc 1301.4320 eq 6 |
 | G2 block LOO | Leave out one run (all its outputs), or one replicate set | z ~ N(0,1); Q–Q plot; the statistic \(U = \lvert I + E^T E \rvert^{-1}\) of Overstall & Woods eq 10 | [lit] Bachoc Prop. 3.1 (block form [inference]) |
 | G3 noise | Replicate variance against the predicted \(s^2\) | chi-square test, p > 0.05 | [inference] |
 | G4 pre-asymptotic | Refit without the coarsest level | the target moves less than \(\sigma_{epi}\) | [inference] |
@@ -188,13 +198,16 @@ Notes:
 
 **Repair rule.** When a gate fails, act in this order:
 1. If G4 flags the coarsest level, remove it.
-2. Re-select \(M\) (Section 2.6).
+2. Recompute the weights \(w_M\) (Section 2.6).
 3. Buy a finer-level probe where \(|z|\) is largest.
 
-Stop after **at most 2 repair cycles per gate**. If the gate still fails, the output is "uncalibrated". **If G0 fails, the method stops and returns to the user** with three options:
+Stop after **at most 2 repair cycles per gate**. If the gate still fails, the output is "uncalibrated". **If G0 fails for every candidate \(M\), the method stops and returns to the user** with four options:
 - (a) a finite \(h^\star\);
 - (b) the cost forecast for the next finer level;
-- (c) a different QoI or fidelity variable (Section 8).
+- (c) a different QoI or fidelity variable (Section 8);
+- (d) the E&H fallback. [lit] For \(p < 0.5\), E&H do not stop: they fit fixed orders (\(p = 1\), \(p = 2\), and the two-term form) with \(F_s = 3\). In our method, this is a prior concentrated on those orders, with its uncertainty reported. [data] For \(\Delta t\), per-rpm E&H gave \(U/\phi_0 \approx 0.9\)–\(1.4\) (diary 2026-10-02), which is far above \(\varepsilon = 10\%\).
+
+**Deviation from R3.** E&H always return an estimate. Our default stops when G0 fails, and option (d) restores E&H behaviour on request.
 
 \(\varepsilon\) is never widened without the user.
 
@@ -226,13 +239,13 @@ $$ c(a) = \kappa(u, h) \, (T_{spin}(a) + T_{obs}(a)) + c_0 $$
 
 \(\kappa\) is the cost in core-s per simulated second:
 
-$$ \log_2 \kappa = \kappa_0 + \gamma \ell + \gamma_2 (\ell - \bar\ell)^2 + \kappa_1 \log rpm + \eta, \quad \eta \sim N(0, s_c^2) $$
+$$ \log_2 \kappa = \kappa_0 + \gamma \ell + \gamma_2 (\ell - \bar\ell)^2 + \kappa_1(u) + \eta, \quad \eta \sim N(0, s_c^2) $$
 
 - **Priors [assumption]:**
   - \(\kappa_0\): flat.
-  - \(\gamma \sim N(3, 1)\). In 2D, a level gives 4× the cells and about 2× the time steps (`scripts/cost_model.py` measured 2.8×).
+  - \(\gamma \sim N(3, 1)\), so the cost scales as \(2^{\gamma \ell}\), not \(2^\ell\) (question Q2). In 2D, a level gives 4× the cells and about 2× the time steps (`scripts/cost_model.py` measured 2.8×).
   - \(\gamma_2 \sim N(0, 0.5^2)\).
-  - \(\kappa_1 \sim N(0, 1)\). The cost per cycle depends on rpm: 4× across the range at L10 (`cost_model.py`).
+  - \(\kappa_1(u)\) is linear in problem-specific features of \(u\) with \(N(0, 1)\) coefficients (Section 8 uses \(\log rpm\)).
   - \(s_c\): half-normal with scale 0.5.
   - The fit is Bayesian linear regression.
 - **[lit]** Guinet 2011.11456: simple low-variance cost models beat GPs. Snoek 1206.2944 §3.2 and taKG 1903.04703 §2.1 model the log cost.
@@ -292,6 +305,12 @@ $$ a^\star = \arg\max_{a \in A} \; (H_n - E J_n(a)) / E c(a), \qquad H_n = \sum_
 - **Run length.** \(T\) is the 0.95 predictive quantile of the time to the last needed output. [lit] taKG §2.3 charges the cost at the largest trace point; the shorter outputs come free.
 - **Batch of \(q\).** Choose greedily, and condition each choice on the pending runs. [lit] Takeno 1901.08275 eq 7–8; Kathuria 1611.04088.
 
+**Computational cost of Steps 2–5 [inference, order of magnitude].**
+- Mixing example: about 40 runs × 10 outputs = 400 data. One GP solve costs about \(400^3/3 \approx 2 \times 10^7\) flops.
+- MCMC: \(10^4\) samples × 4 structures, which is minutes on one node.
+- Acquisition: about 120 candidates (10 \(u\) × 4 levels × 3 action types) × 16 fantasies × 200 thinned samples. Each needs a rank-10 update of \(O(n^2 m) \approx 2 \times 10^6\) flops. That is about \(8 \times 10^{11}\) flops, which is minutes to an hour on one node. This is negligible against one L8 run.
+- **Forecast (Step 4):** a greedy plan of about 20 steps at the full cost would be about 20 acquisitions. To keep it cheap, the forecast uses 20 fixed \(\vartheta\) samples, no reweighting, and the expected reached set. This is an approximation, and the realised cost is compared with it after each batch.
+
 **Step 6, run.**
 - If an output is not reached by \(T\), extend the run from its checkpoint. [lit] Freeze-thaw, Swersky 1406.3896 Alg. 1.
 - Otherwise keep the censored value \(\tau > T\) in the likelihood. [lit] Hutter 1310.1947: a capped run gives a lower bound. Data augmentation in the MCMC is [inference].
@@ -313,14 +332,18 @@ $$ a^\star = \arg\max_{a \in A} \; (H_n - E J_n(a)) / E c(a), \qquad H_n = \sum_
 | \(\varepsilon\) | \(\varepsilon_{rel} = 0.10\) | user |
 | \(\phi\) | \((1, \log(-\ln(1-\chi)), \log rpm, \log \theta_{max})\) | A single exponential gives the second term. Fig. A shows that \(\lambda\) changes 0.3–3.7× along a curve, so this is a mean trend only. |
 | \(p\) | the G0 prior \(\log p \sim N(0, 1)\) | [assumption] |
-| noise | \(m_s\) centred on \(\log 0.03^2\) | [assumption]; replicates must replace it |
+| noise | \(m_s \sim N(\log 0.03^2, 1.4^2)\), \(\tau_b = \log 4\) | [assumption]; replicates must replace it |
+| cost features | \(\kappa_1(u) = k \log rpm\) | [data] cost per cycle changes 4× across rpm at L10 (`scripts/cost_model.py`) |
 | \(R\) | \(\exp(-\lvert \psi_k - \psi_{k'} \rvert / \ell_\rho)\), with \(\psi_k = \log(-\ln(1-\chi_k))\) | [assumption]; G2 tests it |
-| \(\sigma^2_{max}\) | the tracer variance at release; exact value 0.25 (top-half release) | `scripts/postprocess.py` |
+| \(\sigma^2_{max}\) | the tracer variance at release; exact value 0.25 (top-half release); a run is accepted if it is within ±20%, that is [0.20, 0.30] | `scripts/postprocess.py` (`_SIGMA2_MAX_TOL = 0.20`) |
 
 **Gate status with the data we have (per-rpm fits, no pooling; `scripts/diag_h_kernel_test.py`, `scripts/diag_observed_order.py`):**
-- **G0 fails for \(h^\star = 0\).**
-  - With \(\log \Delta t\), R ≈ 1, so there is no convergence.
-  - With the rate, the limit is not admissible at many rpm: \(r_\infty < 0\) at 9 of 22 finite triplets.
+- **G0 fails for \(h^\star = 0\) for every candidate \(M\) (provisional: per-rpm and pooled-rate evidence; the pooled G0 is action 1).**
+  - \(g\) = identity: R = 0.2–0.4, so the increments grow. Fails (i).
+  - \(g = \log\): R ≈ 1 (0.6–1.2), so there is no convergence. Fails (i).
+  - \(g\) = rate: \(p\) is identified when pooled (1.41 ± 0.31), so (i) may pass. But \(r_\infty < 0\) at 9 of 22 per-rpm triplets, and the pooled \(r_\infty\) is not bounded away from 0. Fails (ii).
+  - Level sets: removing L6 does not help. On L7–L9 alone, \(\log\) has R = 0.97–1.24, and the rate limits above already use L7–L9 only.
+  - Both kernel families: G0 depends on the data through \(p\) and the limit, so the kernel does not change these verdicts [inference].
 - **G1 fails.** In log space, 29/29 BM z-scores and 28/29 TWY2 z-scores are positive (fit L6–L8, predict L9). This is consistent with F1.
 - **[data]** L6 loses 7–10% of the tracer mass (L7 3%, L8 0.7%, L9 under 0.4%). So G4 will probably remove L6.
 
@@ -356,7 +379,7 @@ $$ a^\star = \arg\max_{a \in A} \; (H_n - E J_n(a)) / E c(a), \qquad H_n = \sum_
 | A1 | \(g(y)\) is Gaussian | untested | G6; Q–Q plots of the G2 residuals |
 | A2 | The code converges, \(\delta(x,0) = 0\), within the affordable levels | [data] **fails** for \(\Delta t\) on L6–L9 (F1); plausible for kLa (F2) | G0 |
 | A3 | Leading power law with one \(p\) over \(X\) | [data] it fails for \(\log \Delta t\); [lit] Bect Prop. 3 under TWY2 | G0; then let \(p\) vary with \(x\) |
-| A4 | \(k_h\) family | [data] not separable yet (~2 nats) | G1 |
+| A4 | \(k_h\) family | [data] TWY2 vs BM (LB with \(\gamma = 0.5\)) not separable yet (~2 nats); LB with other \(\gamma\) untested | G2 weights, G1 |
 | A5 | Separable \(k_x k_h\) | untested | G2 residuals against \(x\) |
 | A6 | Noise trend in \(h\) of either sign | [lit] analogy only | replicates (action 3) |
 | A7 | A release-shift replicate represents physical spread | untested | experimental replicates (outside scope) |
@@ -373,8 +396,9 @@ $$ a^\star = \arg\max_{a \in A} \; (H_n - E J_n(a)) / E c(a), \qquad H_n = \sum_
 - **Q1.**
   - May the constraint bound \(\sigma_{epi}\) and report \(s_0\) separately?
   - Do you accept that the posterior \(\sigma(x,h)\) is not monotone (Fig. B), while the prior discretisation variance is?
-  - Do you accept a lognormal posterior that is moment-matched to a Gaussian on the physical scale?
-- **Q2.** What are the \(\theta_{max}\) range, the budget \(C\), and the batch size \(q\)?
+  - Do you accept the Gaussian \(N(m_y, \sigma_y^2)\) built from the median and the 68% quantile spread, instead of the mean and the variance (Section 2.7)? With \(g = \log\), the underlying posterior is lognormal.
+  - Do you accept averaging over structures (Section 2.6) instead of choosing one?
+- **Q2.** What are the \(\theta_{max}\) range, the budget \(C\), and the batch size \(q\)? You wrote "cost scales with \(2^N\)". The data say \(2^{\gamma N}\) with \(\gamma\) = 2.9–4.4 per level (Fig. C). May \(\gamma\) be learned?
 - **Q3.** G0 fails for mixing time at \(h = 0\). Which target do you want: (a) a finite \(h^\star\), (b) two fidelity indices, or (c) a different QoI? And which grid did Kim use: L9 (the upstream code) or L10 (our notes)?
 - **Q4.** Do you accept Yi et al. as a baseline and special case (Section 5)?
 - **Q5.** Is model-form error (2D vs 3D) in scope? If yes, which experimental data can we use?

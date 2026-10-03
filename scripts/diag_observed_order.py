@@ -51,6 +51,16 @@ def main():
                     R.append((z[1] - z[0]) / (z[2] - z[1]))
                 R = np.array(R)
                 ok = np.isfinite(R)
+                if name.startswith("1/") and QOI == "dtmix":
+                    # Richardson limit of the rate with the observed ratio, relative to the finest level
+                    lim = []
+                    for r in RPMS:
+                        q = g(np.array([value(l, r, chi) for l in trip]))
+                        Rr = (q[1] - q[0]) / (q[2] - q[1])
+                        lim.append((q[2] - (q[1] - q[2]) / (Rr - 1)) / q[2] if Rr > 1 else np.nan)
+                    lim = np.array(lim)
+                    if trip[0] == 7:
+                        print(f"   r_inf / r_L9 (L7-L9): {np.round(lim, 2)}; negative {np.sum(lim < 0)} of {np.sum(np.isfinite(lim))}")
                 print(f"chi={chi} {name:9s} L{trip[0]}-{trip[2]}: median R = {np.nanmedian(R):6.2f}, "
                       f"monotone-convergent (R>1) {np.mean(R[ok] > 1):.0%}, "
                       f"median p_obs (R>1 only) = {np.median(np.log2(R[ok & (R > 1)])) if (R[ok] > 1).any() else np.nan:.2f}")
