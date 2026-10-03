@@ -1,8 +1,8 @@
 # Yi-h: grid-convergent multi-fidelity learning (problem definition, algorithm, assumptions)
 
-Draft 8, 2026-10-03. This draft makes the method an extension of Yi et al. (2024), generic for engineering QoIs, with the bioreactor as a worked example only.
+Draft 9, 2026-10-03. This draft makes the method an extension of Yi et al. (2024), generic for engineering QoIs, with the bioreactor as a worked example only.
 
-**History.** Drafts 2–6 went through 5 rounds of adversarial review. The reviewer approved draft 6 in round 5, and draft 7 closed its minor holes. Draft 8 rewrites the structure after the user's direction of 2026-10-03.
+**History.** Drafts 2–6 went through 5 rounds of adversarial review; the reviewer approved draft 6. Draft 8 rewrote the structure after the user's direction of 2026-10-03. A fresh reviewer rejected draft 8 (6 major holes). Draft 9 closes them.
 
 **Status labels:**
 - **[lit]**: I read it in the cited paper.
@@ -16,7 +16,7 @@ Draft 8, 2026-10-03. This draft makes the method an extension of Yi et al. (2024
 
 **The engineering problem.** A simulation code computes a quantity of interest (QoI) \(y(x, h)\) at inputs \(x\) and numerical resolution \(h\). Examples are mean or maximum wall shear, a mass-transfer coefficient, or a mixing time.
 - Finer resolution costs much more (often \(2^{\gamma}\) per halving of \(h\), with \(\gamma\) from 2 to 5).
-- The engineer wants the converged value \(f(x) = \lim_{h \to 0} E[y(x,h)]\) over a design region, with a stated uncertainty, inside a compute-time budget.
+- The engineer wants the converged value \(f(x)\) over a design region, with a stated uncertainty, inside a compute-time budget. \(f(x)\) is the median outcome of a run as \(h \to 0\). This equals the mean when the run-to-run spread is symmetric, as a Gaussian assumption implies (Section 2.2 gives the reason for the median).
 - Today, the standard practice is one of two:
   - a grid-convergence study at a few points (Eça & Hoekstra 2014), which is deterministic, per point, and needs at least 4 grids at each point;
   - a two-level multi-fidelity surrogate, which predicts the high-fidelity level, not the converged value.
@@ -38,8 +38,9 @@ Optional modules use special structure when a problem has it (Section 4). The bi
   - \(\Sigma \subset X\) is the region of interest. \(\Sigma_N\) is a scrambled Sobol set of \(100 d\) points in \(\Sigma\), on which every "max over \(\Sigma\)" is computed.
   - All coordinates are scaled to [0, 1] over \(\Sigma\) inside the kernels.
 - **Resolution:** a vector \(h = (h_1, ..., h_k) \in (0, \infty)^k\), with \(k \ge 1\). Examples: a cell size, a time step, the cell size of a scalar solved on its own grid.
-  - Each component takes discrete values \(h_{j,\ell} = h_{j,0} 2^{-\ell}\). Finer values are always allowed; the budget is the only limit.
-  - Inside the kernels, \(\bar h_j = h_j / h_{j,c}\), where \(h_{j,c}\) is the coarsest value used.
+  - Each component takes discrete values with any refinement ratio, \(h_{j,\ell+1} = h_{j,\ell}/r_{j,\ell}\) with \(r_{j,\ell} > 1\). Finer values are always allowed; the budget is the only limit.
+  - Inside the kernels, \(\bar h_j = h_j / h_{j,c}\), where \(h_{j,c}\) is fixed at Step 0 (the coarsest candidate value). It does not change when a level is removed later, so the priors keep their meaning.
+  - Vectors are ordered componentwise: \(h \le h'\) when \(h_j \le h_j'\) for every \(j\).
   - \(h = 0\) means the exact solution of the model equations.
 - **Probe:** one run \(a = (u, h, T)\), with run length or other run setting \(T\). It returns a vector \(y_a\) at the coordinates \(O(a) \subset X\). In the generic case \(O(a) = \{u\}\).
 - **Cost:** \(c(a) > 0\), in core-hours. It is unknown and is learned.
@@ -49,10 +50,11 @@ Optional modules use special structure when a problem has it (Section 4). The bi
 
 | Symbol | Meaning | Decreases as \(h \to 0\)? |
 |---|---|---|
-| \(f(x)\), \(m_y(x)\) | the converged mean, and its posterior median | — |
+| \(f(x)\), \(m_y(x)\) | the converged value (median run outcome at \(h = 0\)), and its posterior median | — |
 | \(\sigma_{epi}(x)\) | epistemic: uncertainty about \(f(x)\); more runs reduce it | it decreases as data are added |
 | \(s_0(x)\) | aleatoric: run-to-run spread at \(h = 0\) | no trend is imposed (Section 2.4) |
-| \(\sigma_{fid}(x, h)\) | fidelity: the posterior RMS error of level \(h\) against \(f(x)\) | **yes**, to 0 (Fig. E, curve 2) |
+| \(\sigma_{env}(x, h)\) | fidelity envelope: the prior sd of the error of level \(h\) | **yes**, monotone to 0 by construction (Fig. E, curve 1) |
+| \(\sigma_{fid}(x, h)\) | posterior RMS error of level \(h\) against \(f(x)\) | it is 0 at \(h = 0\) and tends to the true error \(\lvert\delta(x,h)\rvert\), so it is monotone only if the true convergence is monotone (Fig. E, curve 2) |
 | \(\sigma_{know}(x, h)\) | knowledge: the posterior sd of \(f(x, h)\) | **no**: it is small where data exist (Fig. E, curve 3) |
 
 **Problem P1.** Find a sequential policy that chooses batches of probes \(a_1, ..., a_N\) and stops, so that
@@ -77,7 +79,7 @@ Notes:
 - *(3) the posterior sd of \(f(h)\), which is \(\sigma_{know}\);*
 - *(4) the sd of \(f(0)\) after one more probe at \(h\).*
 
-*(1) and (2) go to 0 monotonically: "finer is closer to the truth". (4) decreases for finer probes: "finer is more informative". Only (3) is not monotone, because it describes what we know about each level, and we know most where we measured.*
+*(1) goes to 0 monotonically by construction: "finer is closer to the truth" is in the prior. (2) is monotone here because the synthetic truth converges monotonically. With an oscillating truth, \(1 + 0.4 h^{1.5} \cos(2\pi h)\), the reviewer measured (2) = 0.186 at \(\bar h = 0.5\) and 0.117 at 0.75. Oscillatory convergence is real (Fig. D, 37.5 rpm). (4) decreases for finer probes: "finer is more informative". (3) is not monotone, because it describes what we know about each level, and we know most where we measured.*
 
 ---
 
@@ -95,29 +97,39 @@ Notes:
 
 For output \(k\) of probe \(a\):
 
-$$ g(y_{a,k}) = \rho_0 + \rho_1 m_b(x_k) + r(x_k) + \delta(x_k, h_a) + e_{a,k} $$
+$$ \Lambda(y_{a,k}) = \rho_0 + \rho_1 m_b(x_k) + r(x_k) + \delta(x_k, h_a) + e_{a,k} $$
 
 | Term | Role | Relation to Yi |
 |---|---|---|
-| \(m_b(x)\) | **Backbone:** a KRR fit of abundant cheap data. That can be the coarsest level, or any cheap model (a reduced model, a correlation). | Yi's LF model, unchanged. The backbone data enter only through \(m_b\), as in Yi. They are not in the likelihood, so they are not used twice. |
+| \(m_b(x)\) | **Backbone:** a KRR fit of abundant cheap data, from any cheap source (a reduced model, a correlation, or the coarsest level). **If the source is a level of the ladder,** its runs are split at random: half build \(m_b\), and half enter the likelihood with their own \(\delta(x, h_b)\). So every level is in the likelihood, and no datum is used twice. | Yi's LF model, unchanged: deterministic, as Yi designed it. \(m_b\) is then a fixed basis function. Its fit uncertainty is not propagated, and \(r\) absorbs its errors. This is a deliberate deviation from "fully Bayesian" (question Q-c). |
 | \(\rho_0 + \rho_1 m_b\) | linear transfer; the polynomial form of Yi eq 4 is allowed | Yi's LR step, now with a prior (Section 2.5) |
 | \(r(x)\) | GP residual of the **converged** value | Yi's \(r\), moved to \(h = 0\) |
 | \(\delta(x, h)\) | discretisation error of the levels above the backbone; \(\delta(x, 0) = 0\) | **new** |
 | \(e_a\) | run-to-run noise vector, heteroscedastic, correlated inside a run | generalises Yi's homoscedastic noise |
-| \(g\) | output transform (identity, log, reciprocal, ...) | new; chosen per QoI (Section 2.7) |
+| \(\Lambda\) | monotone output transform (identity, log, reciprocal, ...). Named \(\Lambda\) because Yi's \(g\) is the transfer model. | new; chosen per QoI (Section 2.7) |
 
-- **Target:** \(f(x) = g^{-1}(\rho_0 + \rho_1 m_b(x) + r(x))\), on the physical scale through Section 2.8.
+- **Target:** \(f(x) = \Lambda^{-1}(\rho_0 + \rho_1 m_b(x) + r(x))\).
+  - The noise is symmetric with zero median in \(\Lambda\)-space, and \(\Lambda\) is monotone. So \(f(x)\) is the **median** run outcome at \(h = 0\) for **every** transform, because a median does not change under a monotone map.
+  - So all candidate structures estimate the same quantity, and Section 2.7 can pool them.
+  - A mean would differ between transforms. For example \(\exp(\mu + s_0^2/2)\) under \(\log\), and under the reciprocal it may not exist.
 - **Prior mean of the error** (the LR idea applied to the error amplitude):
 
-$$ E[\delta(x, h)] = \sum_{j=1}^{k} \bar h_j^{p_j} (c_{0j} + c_{1j} m_b(x)) $$
+$$ E[\delta(x, h)] = \sum_{j=1}^{k} \bar h_j^{p_j(x)} (c_{0j} + c_{1j} m_b(x)) $$
 
   The error then can scale with the size of the QoI, as numerical diffusion often does.
 
 **Yi is the special case [inference, by construction].** Fit data at one level \(h_1\) only, and take \(f(x, h_1)\) as the target. Then \(\delta(\cdot, h_1)\) is a GP in \(x\) with a mean that is linear in \(m_b\). It merges with \(\rho\) and \(r\):
 
-$$ g(y)(x, h_1) = \rho_0' + \rho_1' m_b(x) + r'(x) + e $$
+$$ \Lambda(y)(x, h_1) = \rho_0' + \rho_1' m_b(x) + r'(x) + e $$
 
-This is Yi eq 2–4 with a linear \(g\), a GP residual and Gaussian noise. With two or more levels and the target at \(h = 0\), the model is new.
+This is Yi's eq 2–4 (linear transfer, GP residual, Gaussian noise) when all of these hold:
+- \(\Lambda\) is the identity;
+- the residual kernel is Yi's RBF (Yi eq 5) instead of Matérn;
+- the noise is homoscedastic and uncorrelated (\(R = I\), \(\zeta \equiv 0\), \(b_s = 0\));
+- \(\rho\) has a flat prior;
+- the hyperparameters are found by ML-II with the concentrated likelihood (Yi Algorithm 1, step 2.2) instead of MCMC.
+
+With two or more levels and the target at \(h = 0\), the model is new.
 
 **Why keep Yi's backbone** [inference]:
 - It is the scalability lever. Cheap data carry the \(x\)-shape, so the expensive levels only need to resolve \(r\) and \(\delta\).
@@ -126,11 +138,13 @@ This is Yi eq 2–4 with a linear \(g\), a GP residual and Gaussian noise. With 
 
 ### 2.3 Convergence covariance in \(h\)
 
+For one resolution component:
+
 $$ \delta - E[\delta] \sim GP(0, \; \sigma_\delta^2 k_x(x, x') k_h(h, h')) $$
 
-Two families are candidates, and Section 2.7 weights them.
+Two families are candidates for \(k_h\), and Section 2.7 weights them. Several components and an order that varies with \(x\) follow below.
 
-- **TWY2 (Richardson type):** \(k_h = \prod_j (\bar h_j \bar h_j')^{p_j} c_\nu(\bar h_j - \bar h_j'; \ell_{h,j})\), with \(c_\nu\) a Matérn correlation.
+- **TWY2 (Richardson type)**, for one component: \(k_h = (\bar h \bar h')^{p} c_\nu(\bar h - \bar h'; \ell_h)\), with \(c_\nu\) a Matérn correlation with \(\nu = 3/2\). [lit] Bect §4.3 found \(\nu = 1/2\) or \(3/2\) good. Our diagnostic scripts used 5/2.
   - [lit] Bect et al. 2103.14559 Prop. 3 (one component): \(\delta(h) = A h^p + o(h^p)\) almost surely. This is the E&H power law, with the amplitude a GP in \(x\).
   - [lit] It has the same structure as PRE 2401.07562 eq 10.
   - [lit] Bect §4.3: TWY2 intervals were "simultaneously smaller than the GCI interval and with a good coverage".
@@ -138,12 +152,18 @@ Two families are candidates, and Section 2.7 weights them.
   - The Brownian kernel of Tuo–Wu–Yu, \(\min(h,h')^{2p}\), is \(\gamma = 0.5\).
   - [lit] Bect Prop. 2: in that case the Richardson form "does not hold".
   - [lit] Boutelet Fig. 1: increments are positive for an average-type QoI, and "somewhat uncorrelated or negatively correlated" for a maximum-type QoI.
-- **Several resolution components:**
-  - The product over \(j\) is [inference].
-  - [lit] CONFIG 2209.13748 eq 19 gives a kernel for several fidelity parameters (a sum inside a power). It is an alternative.
+- **Several resolution components: an additive error.**
+
+$$ \delta(x, h) - E[\delta] = \sum_{j=1}^{k} \delta_j(x, h_j), \quad \delta_j \sim GP(0, \; \sigma_{\delta,j}^2 k_{x,j}(x, x') k_{h,j}(h_j, h_j')) $$
+
+  - The \(\delta_j\) are independent. The error vanishes only when **every** component goes to 0. A product kernel would vanish when any one component goes to 0, so refining the flow grid alone would remove the scalar-grid error, which is wrong.
+  - [lit] Boutelet & Sung §2.1, citing Ji et al.: the error must stay non-negligible while any component is nonzero. CONFIG 2209.13748 eq 19 is an alternative.
+- **Order that can vary with \(x\)** (assumption A3): \(\delta_j = \bar h_j^{p_j(x)} e_j(x, h_j)\) with \(e_j\) a stationary GP, and \(\log p_j(x) = \log p_{j0} + \pi_j(x)\).
+  - \(\pi_j\) is a GP with a PC prior that shrinks its variance to 0, so the base model is one shared order [inference]. The data switch the variation on only if they need it.
+  - The covariance stays valid: \(b(z) b(z') k(z, z')\) is positive semi-definite for any function \(b\), here \(b = \bar h^{p(x)}\).
 - **Properties:**
-  - The prior variance of the error is \(\sigma_\delta^2 k_x(x,x) \prod_j \bar h_j^{2p_j}\). It goes to 0 and is monotone.
-  - The order \(p_j\) is learned (Section 2.5). One \(p_j\) is shared over \(X\) (assumption A3).
+  - The prior variance of the error is \(\sum_j \sigma_{\delta,j}^2 k_{x,j}(x,x) \bar h_j^{2p_j(x)}\). It goes to 0 as \(h \to 0\), and it is monotone in the componentwise order.
+  - The orders are learned (Section 2.5).
 
 ### 2.4 Noise
 
@@ -162,7 +182,8 @@ $$ e_a \sim N(0, S_a), \quad S_a = D_a R_a D_a $$
 | Parameter | Prior | Source |
 |---|---|---|
 | \(\rho\), \(c\) | flat if no link and the basis matrix has full column rank; else Gaussian, centred on a physical estimate | improper posterior otherwise [inference] |
-| \(p_j\) | \(\log p_j \sim N(0, 1)\) | wide; covers E&H's range |
+| \(p_{j0}\) | \(\log p_{j0} \sim N(0, 1)\) | wide; covers E&H's range |
+| \(\pi_j\) (variation of \(p\) with \(x\)) | PC prior: \(P(\sigma_\pi > 0.3) = 0.05\), \(P(\ell < 0.1) = 0.05\) | shrinks to one shared order [assumption] |
 | Matérn variance and range (\(r\), \(\delta\), \(\zeta\), \(R\)) | PC prior: \(P(\ell < 0.1) = 0.05\), \(P(\sigma > S) = 0.05\) | [lit] Fuglstad et al. 1503.00256 Thm 2.6. Their range parameter equals \(2\ell\) in our Matérn form. Use per ARD dimension: [inference] |
 | \(\gamma\) (LB) | Uniform(0, 1) | |
 | \(m_s\), \(b_{s,j}\) | Gaussian; \(b_{s,j}\) symmetric, with sd \(\log 4\) | [assumption] |
@@ -187,9 +208,10 @@ $$ \log_2 \kappa(u, h) = \kappa_0 + \sum_j \gamma_j \ell_j + \omega(u, h) + \eta
 
 ### 2.7 Several candidate structures
 
-- A structure is \(M = (k_h\) family, \(g\), set of levels used\()\).
+- A structure is \(M = (k_h\) family, \(\Lambda\), set of levels used\()\).
 - **Weights by stacking on an extrapolation score.**
   - Fit every \(M\) without the finest level, and score the held-out finest-level runs. This tests extrapolation in \(h\).
+  - The scores are log densities **on the physical scale**, with the Jacobian of \(\Lambda\) included, so structures with different transforms are compared fairly.
   - [lit] Yao, Vehtari, Simpson & Gelman 1704.02030 eq 2.2 (log score). They recommend stacking because BMA "is flawed in the M-open setting".
   - A Dirichlet(2, ..., 2) penalty regularises the weights. [lit] Their §4.1 suggests "a strong prior … to the weights".
 - **Cross-fitting:** the weights come from half of the held-out sites, and the calibration (Gate G1) from the other half; then swap.
@@ -197,13 +219,13 @@ $$ \log_2 \kappa(u, h) = \kappa_0 + \sum_j \gamma_j \ell_j + \omega(u, h) + \eta
 
 ### 2.8 Prediction on the physical scale
 
-- Pool the posterior draws over the structures with their weights, and back-transform them with \(g^{-1}\).
+- Pool the posterior draws over the structures with their weights, and back-transform them with \(\Lambda^{-1}\).
 - \(m_y\) is the median. \(\sigma_y = (q_{84} - q_{16})/2\).
 - Quantiles exist for every transform. For example, if a rate is Gaussian, the time \(1/\)rate has no finite moments.
 - The Gaussian of the requirement is \(N(m_y, \sigma_y^2)\). Gate G6 checks its shape.
 - \(\sigma_{epi}\) is \(\sigma_y\) of \(f(x)\).
 - \(\sigma_{fid}(x,h) = (E[(f(x,h) - f(x))^2 \mid D])^{1/2}\), computed from the same draws.
-- \(\sigma_{tot}\) is the spread of draws of \(g^{-1}\)(target + noise).
+- \(\sigma_{tot}\) is the spread of draws of \(\Lambda^{-1}\)(target + noise).
 
 ---
 
@@ -223,7 +245,7 @@ $$ \log_2 \kappa(u, h) = \kappa_0 + \sum_j \gamma_j \ell_j + \omega(u, h) + \eta
 
 | Gate | Test | Pass rule |
 |---|---|---|
-| G0 order | posterior of \(p_j\); observed increment ratios | \(P(p_j > 0.5) \ge 0.9\). **A failure does not stop the method.** It means the limit is not yet identified, so \(\sigma_{epi}\) is large, and Step 5 then prefers finer levels. [lit] E&H treat \(p < 0.5\) as anomalous. |
+| G0 order | posterior of \(p_{j0}\); observed increment ratios | \(P(p_{j0} > 0.5) \ge 0.9\) **and** the posterior sd of \(\log p_{j0}\) is at most 0.5 (half its prior sd), so the prior cannot pass G0 alone (the prior already gives \(P(p > 0.5) = 0.76\)). **A failure does not stop the method.** It means the limit is not yet identified, so \(\sigma_{epi}\) is large, and Step 5 then prefers finer levels. [lit] E&H treat \(p < 0.5\) as anomalous. |
 | G1 level hold-out | cross-fitted prediction of the finest level | 95% coverage within binomial limits; no sign bias; \(C_{LOO}\) near 1 [lit: Bachoc 1301.4320 eq 6; Oliver 1311.0828 eq 17] |
 | G2 block LOO | leave out whole runs | z ~ N(0, 1); U statistic [lit: Overstall & Woods eq 10] |
 | G3 noise | replicate spread against \(s^2\) | chi-square, p > 0.05 |
@@ -239,21 +261,29 @@ $$ \log_2 \kappa(u, h) = \kappa_0 + \sum_j \gamma_j \ell_j + \omega(u, h) + \eta
 **Step 4, stop or forecast.**
 - **Success:** P1 holds and the gates pass.
 - **Budget used:** report P2.
-- **Forecast:**
-  - Simulate the greedy policy of Step 5 on fantasy data, with 20 fixed posterior samples, until success. This gives a distribution of the cost to success.
-  - If the probability of exceeding \(C\) is above 0.5, tell the user the forecast. This is a report, not a stop: the method continues and minimises \(\max \sigma_{epi}/\varepsilon\) (P2) with the rest of the budget.
+- **Forecast** (bounded cost):
+  - Simulate the greedy policy of Step 5 with 20 fixed posterior samples, for at most 50 steps or until success. Use variance-only updates and the expected reached set, with no fantasies and no reweighting. Each step costs about \(10^{10}\) flops, so the forecast is bounded at about \(10^{12}\) flops. This gives a distribution of the cost to success.
+  - If the probability of exceeding \(C\) is above 0.5, tell the user the forecast. This is a report, not a stop: the method continues with the P2 criterion of Step 5.
 
 **Step 5, acquisition: maximum uncertainty reduction per cost.**
 
 $$ a^\star = \arg\max_{a \in A} \; (H_n - E J_n(a)) / E c(a), \qquad H_n = \sum_{x \in \Sigma_N} (\sigma_{epi}^2(x)/\varepsilon^2(x) - 1)_+ $$
 
 - [lit] The ratio is MR-SUR (Stroh et al. 2007.13553 eq 11). The hinge form of \(H_n\) is our change [inference]. It is zero exactly when P1 holds.
+- **P2 criterion.** When the forecast says P1 is infeasible, \(H_n\) becomes a soft maximum, \(\beta^{-1} \log \sum_{x \in \Sigma_N} \exp(\beta \sigma_{epi}^2/\varepsilon^2)\) with \(\beta = 20\) [inference]. This targets the max of P2 rather than a sum.
+- **Budget enforcement.**
+  - A candidate is admissible only if \(P(c(a) \le C_{rem}) \ge 0.95\) under the cost posterior. Here \(C_{rem}\) is the budget left after the spent and pending runs.
+  - Every run gets a hard cap equal to its admissible cost. A run that reaches the cap is stopped. Its full cost so far is counted, and the outputs it reached are kept (outputs not reached are censored, module S1). With module S2, it can be extended later if budget remains.
+  - So \(\sum c \le C\) holds by construction.
+- **Not optimal.** The policy is greedy, with a one-step look-ahead. It does not claim to minimise \(\sum c\) (P1) or to reach the P2 optimum. It is a heuristic in the class of MR-SUR.
 - **Candidates:** every \(u\) in a candidate set, **at every resolution, including resolutions finer than any run so far**, and every optional action of Section 4.
   - The cost model prices each candidate, and the acquisition chooses. So refinement happens when it is the best use of the budget (Fig. E, curve 4).
 - \(J_n(a)\) is a Monte Carlo average over 16–256 fantasies. Each fantasy:
   - draws the hyperparameters and the latent noise;
   - draws the outputs, including which nested outputs are reached and which are censored;
-  - reweights the posterior samples and recomputes \(H\).
+  - conditions each posterior draw's GP exactly on the fantasy outputs (Gaussian conditioning);
+  - reweights the hyperparameter draws by the fantasy likelihood. If the effective sample size of the weights falls below 50 [assumption], it keeps the current weights for that candidate. That is conservative: it ignores the value of reducing the uncertainty of \(p\). This happens most for probes at unprobed finer levels;
+  - keeps the stacking weights fixed [assumption], recomputes \(H\), and clips negative gains (Monte Carlo noise in a quantile spread) at 0.
   - [lit] Snoek 1206.2944 §3.3 uses Monte Carlo over pending outcomes.
   - The number of fantasies is doubled until the Monte Carlo error is below 10% of the gap between the two best candidates.
 - **Batches:** choose greedily, and condition on the pending runs. [lit] Takeno 1901.08275 eq 7–8; Kathuria 1611.04088.
@@ -287,9 +317,10 @@ Each module is generic. The core (Sections 1–3) works without any of them. A m
 
 | # | Assumption | Status | Test |
 |---|---|---|---|
-| A1 | \(g(y)\) is Gaussian | untested | G6; Q–Q plots of G2 |
+| A1 | \(\Lambda(y)\) is Gaussian | untested | G6; Q–Q plots of G2 |
+| A1b | The QoI types the method is meant for (mean or max shear, kLa, mixing time) follow A3 | tested here for \(\Delta t\) (fails on L6–L9) and kLa (plausible) only; untested for shear | G0 per QoI |
 | A2 | The code converges, \(\delta(x, 0) = 0\) | fundamental; the data can show convergence only within the levels run | G0 |
-| A3 | Leading power law, one \(p_j\) over \(X\) | [lit] Bect Prop. 3 | G0; let \(p\) vary with \(x\) |
+| A3 | Leading power law in \(h\), with an order that is shared over \(X\) unless the data need \(p(x)\) | [assumption]. Bect Prop. 3 supports the power law for one QoI at one \(x\); nothing supports sharing across \(x\). Fig. D shows R from below 0 to above 10 across rpm. | G0; posterior of \(\sigma_\pi\) (Section 2.3) |
 | A4 | The \(k_h\) family | stacking weights | G1 |
 | A5 | Separable \(k_x k_h\) | untested | G2 residuals against \(x\) |
 | A6 | Noise trend in \(h\) of either sign | [lit] analogy only | replicates |
@@ -357,3 +388,5 @@ Each module is generic. The core (Sections 1–3) works without any of them. A m
 
 - **Q-a.** Prior scales: some were chosen after seeing L6–L9, which uses the data twice; G7 tests their influence. Can you give physical values?
 - **Q-b.** Should module S4 (two resolution components with a replayed flow) be developed now, or after L10 probes show whether the scalar converges?
+- **Q-c.** The backbone \(m_b\) is Yi's deterministic KRR, used as a fixed basis. Its fit uncertainty is not propagated (Section 2.2). Is this deviation from "fully Bayesian" acceptable as the price of Yi's scalability? The alternative is a GP backbone in the likelihood (a recursive co-kriging), which loses that scalability.
+- **Q-d.** The target is the median run outcome at \(h = 0\), not the mean (Section 2.2). They are equal for a symmetric spread. Is the median acceptable?
