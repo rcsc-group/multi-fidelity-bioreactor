@@ -17,9 +17,10 @@ Draft 12, 2026-10-03. This draft makes the method an extension of Yi et al. (202
 **The engineering problem.** A simulation code computes a quantity of interest (QoI) \(y(x, h)\) at inputs \(x\) and numerical resolution \(h\). Examples are mean or maximum wall shear, a mass-transfer coefficient, or a mixing time.
 - Finer resolution costs much more (often \(2^{\gamma}\) per halving of \(h\), with \(\gamma\) from 2 to 5).
 - The engineer wants the converged value \(f(x)\) over a design region, with a stated uncertainty, inside a compute-time budget. \(f(x)\) is the median outcome of a run as \(h \to 0\). This equals the mean when the run-to-run spread is symmetric on the physical scale (Section 2.2 gives the reason for the median).
-- Today, the standard practice is one of two:
-  - a grid-convergence study at a few points (Eça & Hoekstra 2014), which is deterministic, per point, and needs at least 4 grids at each point;
-  - a two-level multi-fidelity surrogate, which predicts the high-fidelity level, not the converged value.
+- Two literatures each solve half of this problem (details and sources in the guide, Section 11):
+  - **Solution verification** (Eça & Hoekstra 2014; probabilistic Richardson extrapolation, 2401.07562) estimates the converged value at **one** condition.
+  - **Multi-fidelity regression** (Yi et al. 2407.15110, and the others read) predicts over **all** conditions, but its target is the most expensive fidelity that was run, not \(h = 0\).
+  - A small line of work joins the two halves (Tuo–Wu–Yu; CONFIG 2209.13748; Boutelet & Sung 2503.23158; DNA 2506.08328; Stroh et al.). In the papers read, none combines a learned rate, calibrated uncertainty at \(h = 0\), and sequential budget-aware design over a design region.
 
 **The method (Yi-h).** It keeps the structure of Yi et al.'s KRR-LR-GPR: abundant cheap data, a linear transfer between fidelities, and a Bayesian residual. It makes every part Bayesian, and it adds four things:
 1. Any number of resolution levels in one likelihood. No level is the truth.

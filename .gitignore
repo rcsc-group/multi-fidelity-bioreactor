@@ -44,5 +44,6 @@ __pycache__/
 !experiments/multifidelity/observed_order_*.png
 !experiments/multifidelity/sigma_concepts.png
 !experiments/multifidelity/spinup_test_l8_32p5.png
+!experiments/multifidelity/guide/*.png
 !experiments/canonical_case/**/*.mp4
 !docs_site/assets/**
