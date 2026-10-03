@@ -189,7 +189,7 @@ $$ \Lambda(y) = \rho_0(h) + \rho_1(h) \, \mu(x) + \delta(x, h) + e $$
 **Aleatoric uncertainty** is how much repeated runs scatter.
 - We measure it with **replicates**: the same run with the tracer released a few cycles later.
 - More compute cannot remove it, so we report it but do not bound it.
-- Our data (three runs per point, so each value is rough): at L6, the scatter of \(\Delta t_{0.95}\) is 17% at 17.5 rpm, 1.2% at 25 rpm and 0.25% at 32.5 rpm. From L6 to L8 it shrinks at 17.5 rpm (17% to 2%), but not at 25 or 32.5 rpm (0.15–2% at every level). So the size of the noise must be allowed to change with the condition, and with the grid in either direction.
+- Our data (three runs per point, so each value is rough): at L6, the scatter of \(\Delta t_{0.95}\) is 17% at 17.5 rpm, 1.2% at 25 rpm and 0.25% at 32.5 rpm. From L6 to L8 it shrinks at 17.5 rpm (17% to 2%), but not at 25 or 32.5 rpm (0.15–2% at every level). Values below about 0.5% are near the time resolution of \(\Delta t\) (one output step, about 1/30 of a cycle), so they are upper bounds. So the size of the noise must be allowed to change with the condition, and we do not assume a direction for its change with the grid.
 
 **What decreases as \(h \to 0\), and what does not (Fig. E).**
 
@@ -284,7 +284,7 @@ The core method needs none of these. Each one is optional, and each one states i
 **Mixing time does not converge yet on L6–L9 (Fig. D).** For three neighbouring grids, \(R\) is the ratio of their two differences (Section 2). Convergence with order \(p\) needs \(R \approx 2^p > 1\).
 - **\(\Delta t\) itself:** \(R\) is 0.2–0.4, so the differences **grow** with refinement.
 - **\(\log \Delta t\):** \(R \approx 1\), so the differences do not shrink.
-- **The rate \(1/\Delta t\):** \(R\) is 1.5–3.4, which looks like convergence. But in all 22 grid triplets (L7–L9), Richardson extrapolation gives a rate below the L9 rate, from 0.98 to −2.3 times it. In 9 triplets it is negative, which is impossible. So the power law does not hold yet on these grids, and the converged value is **not identified**: the data say only that the converged mixing time is longer than at L9, by a factor they cannot fix.
+- **The rate \(1/\Delta t\):** \(R\) is 1.5–3.4, which looks like convergence. But in all 22 L7–L9 triplets with \(R > 1\) (of 30), Richardson extrapolation gives a rate below the L9 rate, from 0.98 to −2.3 times it. In 9 triplets it is negative, which is impossible. So the power law does not hold yet on these grids, and the converged value is **not identified**: the data say only that the converged mixing time is longer than at L9, by a factor they cannot fix.
 
 **kLa converges plausibly** on the same grids.
 
