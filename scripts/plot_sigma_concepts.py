@@ -72,9 +72,9 @@ def main():
     a1.grid(**fs.GRID_KW)
     a1.legend(loc="upper left", frameon=False, fontsize=8)
 
-    a2.plot(hg, prior_sd, color="0.5", lw=1.2, label="(1) prior sd of the error of level h")
-    a2.plot(hg, rms_err, color="#2ca02c", lw=1.6, label="(2) posterior RMS error of level h")
-    a2.plot(hg, np.sqrt(v_f), color="#1f77b4", lw=1.6, label="(3) posterior sd of f(h)")
+    a2.plot(hg, prior_sd, color="0.5", lw=1.2, label=r"(1) fidelity envelope $\sigma_{env}$ of level h")
+    a2.plot(hg, rms_err, color="#2ca02c", lw=1.6, label=r"(2) posterior RMS error $\sigma_{fid}$ of level h")
+    a2.plot(hg, np.sqrt(v_f), color="#1f77b4", lw=1.6, label=r"(3) posterior sd of f(h), $\sigma_{know}$")
     a2.plot(hg[1:], sd_mu_next, color="#d62728", lw=1.6,
             label=r"(4) sd of $f(0)$ after one more probe at h")
     for h in HD:
