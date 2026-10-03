@@ -1,8 +1,8 @@
 # Yi-h: grid-convergent multi-fidelity learning (problem definition, algorithm, assumptions)
 
-Draft 11, 2026-10-03. This draft makes the method an extension of Yi et al. (2024), generic for engineering QoIs, with the bioreactor as a worked example only.
+Draft 12, 2026-10-03. This draft makes the method an extension of Yi et al. (2024), generic for engineering QoIs, with the bioreactor as a worked example only.
 
-**History.** Drafts 2–6 went through 5 rounds of adversarial review; the reviewer approved draft 6. Draft 8 rewrote the structure after the user's direction of 2026-10-03. A fresh reviewer rejected draft 8 (6 major holes) and draft 9 (2 major holes), and approved draft 10 with 6 minor holes. Draft 11 closes those.
+**History.** Drafts 2–6 went through 5 rounds of adversarial review; the reviewer approved draft 6. Draft 8 rewrote the structure after the user's direction of 2026-10-03. A fresh reviewer rejected draft 8 (6 major holes) and draft 9 (2 major holes), and approved draft 10 with 6 minor holes. Draft 11 closed those. Draft 12 makes the model fully Bayesian (user direction), rewrites the literature position, and adds the spin-up test.
 
 **Status labels:**
 - **[lit]**: I read it in the cited paper.
@@ -21,7 +21,7 @@ Draft 11, 2026-10-03. This draft makes the method an extension of Yi et al. (202
   - a grid-convergence study at a few points (Eça & Hoekstra 2014), which is deterministic, per point, and needs at least 4 grids at each point;
   - a two-level multi-fidelity surrogate, which predicts the high-fidelity level, not the converged value.
 
-**The method (Yi-h).** It keeps the three steps of Yi et al.'s KRR-LR-GPR: a deterministic regression of abundant cheap data, a linear transfer, and a Bayesian residual. It adds four things:
+**The method (Yi-h).** It keeps the structure of Yi et al.'s KRR-LR-GPR: abundant cheap data, a linear transfer between fidelities, and a Bayesian residual. It makes every part Bayesian, and it adds four things:
 1. Any number of resolution levels in one likelihood. No level is the truth.
 2. A covariance in \(h\) that encodes convergence (an E&H-type power law, \(h^p\), with \(p\) learned).
 3. The target is \(h = 0\). The uncertainty of that extrapolation is part of the answer.
@@ -93,55 +93,62 @@ Notes:
 - The setting is "scarce, resource-intensive high-fidelity data with abundant but less accurate low-fidelity data" (abstract).
 - There are two levels and no resolution variable. The target is \(f^h\).
 
-### 2.2 The extension
+### 2.2 The extension: Yi's transfer as a function of resolution
+
+User direction (2026-10-03): be more Bayesian than Yi, and accept the cost; the problems have at most about 10 inputs. So no part of the model is a deterministic plug-in.
 
 For output \(k\) of probe \(a\):
 
-$$ \Lambda(y_{a,k}) = \rho_0 + \rho_1 m_b(x_k) + r(x_k) + \delta(x_k, h_a) + e_{a,k} $$
+$$ \Lambda(y_{a,k}) = \rho_0(x_k, h_a) + \rho_1(x_k, h_a) \, \mu(x_k) + \delta(x_k, h_a) + e_{a,k} $$
+
+$$ \rho_0 = \sum_{j=1}^{k} c_{0j} \bar h_j^{p_j(x)}, \qquad \rho_1 = 1 + \sum_{j=1}^{k} c_{1j} \bar h_j^{p_j(x)} $$
 
 | Term | Role | Relation to Yi |
 |---|---|---|
-| \(m_b(x)\) | **Backbone:** a KRR fit of abundant cheap data, from any cheap source (a reduced model, a correlation, or the coarsest level). **If the source is a level of the ladder,** its runs are split at random. A subsample enters the likelihood with its own \(\delta(x, h_b)\); its size is capped at about the number of runs of the next ladder level, so the MCMC size does not grow with the backbone. All other runs build \(m_b\). So every level is in the likelihood, no datum is used twice, and Yi's scalability is kept. | Yi's LF model, unchanged: deterministic, as Yi designed it. \(m_b\) is then a fixed basis function. Its fit uncertainty is not propagated, and \(r\) absorbs its errors. This is a deliberate deviation from "fully Bayesian" (question Q-c). |
-| \(\rho_0 + \rho_1 m_b\) | linear transfer; the polynomial form of Yi eq 4 is allowed | Yi's LR step, now with a prior (Section 2.5) |
-| \(r(x)\) | GP residual of the **converged** value | Yi's \(r\), moved to \(h = 0\) |
-| \(\delta(x, h)\) | discretisation error of every ladder level in the likelihood, including the likelihood subsample of a backbone level; \(\delta(x, 0) = 0\) | **new** |
+| \(\mu(x)\) | the converged value in \(\Lambda\)-space; a GP with a linear mean \(\beta_0 + \beta^T x\) (or a physical basis) | Yi's high-fidelity target, moved to \(h = 0\) |
+| \(\rho_0, \rho_1\) | a linear transfer between the converged value and level \(h\). The coefficients go to \((0, 1)\) as \(h \to 0\) with the E&H power law. | Yi's linear transfer (eq 2, eq 4 with \(M = 2\)), made a function of \(h\) |
+| \(\delta(x, h)\) | GP residual of level \(h\), with the convergence kernel of Section 2.3; \(\delta(x, 0) = 0\) | Yi's residual \(r\), made a function of \(h\) |
 | \(e_a\) | run-to-run noise vector, heteroscedastic, correlated inside a run | generalises Yi's homoscedastic noise |
 | \(\Lambda\) | monotone output transform (identity, log, reciprocal, ...). Named \(\Lambda\) because Yi's \(g\) is the transfer model. | new; chosen per QoI (Section 2.7) |
 
-- **Target:** \(f(x) = \Lambda^{-1}(\rho_0 + \rho_1 m_b(x) + r(x))\).
-  - The noise is symmetric with zero median in \(\Lambda\)-space, and \(\Lambda\) is monotone. So \(f(x)\) is the **median** run outcome at \(h = 0\) for **every** transform, because a median does not change under a monotone map.
+- **Every level is in one likelihood**, the cheapest included. \(\mu\), \(\rho\), \(\delta\) and all hyperparameters are inferred jointly (Section 2.5).
+- **Exact inference:** for given \((c, p)\) and hyperparameters, the model is linear and Gaussian in \((\mu, \delta)\). So these two integrate out exactly, and the MCMC runs only over the low-dimensional rest.
+- **Cost:** at most about 10 inputs and a few thousand runs, so exact GP algebra is affordable. One solve with \(n = 2000\) costs about \(3 \times 10^9\) flops.
+- **Target:** \(f(x) = \Lambda^{-1}(\mu(x))\).
+  - The noise is symmetric with zero median in \(\Lambda\)-space, and \(\Lambda\) is monotone. So \(f(x)\) is the **median** run outcome at \(h = 0\) for **every** transform, because a median does not change under a monotone map. The user accepted the median (2026-10-03).
   - So all candidate structures estimate the same quantity, and Section 2.7 can pool them.
-  - A mean would differ between transforms. For example \(\exp(\mu + s_0^2/2)\) under \(\log\), and under the reciprocal it may not exist.
-- **Prior mean of the error** (the LR idea applied to the error amplitude):
+- **Optional external cheap source** (module S8): a different, cheaper model, not a resolution of this code (a reduced-order model, a correlation).
+  - Its data are \(y_s = f_s(x) + e_s\), with \(f_s\) a GP, and \(\mu(x) = \beta_s f_s(x) + r(x)\), all in the same likelihood.
+  - [lit] This is Yi eq 2 between the source and the converged value, with a GP for the low fidelity. Yi §2 describes this as the data-scarce literature's choice: "MF models use GPRs for both \(f^l(x)\) and \(r(x)\) and implicitly assume a linear transfer-learning model". Yi's own choice for that slot is a deterministic KRR.
 
-$$ E[\delta(x, h)] = \sum_{j=1}^{k} \bar h_j^{p_j(x)} (c_{0j} + c_{1j} m_b(x)) $$
+**Yi is a special case [inference, by construction].** Take two levels \(h_l > h_h\) with \(\Lambda\) the identity, and remove \(\mu\) from the two equations:
 
-  The error then can scale with the size of the QoI, as numerical diffusion often does.
+$$ f(x, h_h) = \rho_0' + \rho_1' \, f(x, h_l) + r'(x) $$
 
-**Yi is the special case [inference, by construction].** Fit data at one level \(h_1\) only, and take \(f(x, h_1)\) as the target. Then \(\delta(\cdot, h_1)\) is a GP in \(x\) with a mean that is linear in \(m_b\). It merges with \(\rho\) and \(r\):
+- Here \(\rho_1' = \rho_1(h_h)/\rho_1(h_l)\) and \(\rho_0' = \rho_0(h_h) - \rho_1' \rho_0(h_l)\).
+- \(r' = \delta(x, h_h) - \rho_1' \delta(x, h_l)\) is a GP.
+- This is Yi's eq 2 (and eq 4 with \(M = 2\)) when all of these also hold:
+  - the orders \(p_j\) do not vary with \(x\), so \(\rho'\) is constant;
+  - \(f(x, h_l)\) is replaced by a deterministic KRR fit (Yi's LF model);
+  - the residual kernel is Yi's RBF (Yi eq 5);
+  - the noise is homoscedastic and uncorrelated (\(R = I\), \(\zeta \equiv 0\), \(b_s = 0\));
+  - the coefficients have a flat prior;
+  - the hyperparameters come from ML-II with the concentrated likelihood (Yi Algorithm 1, step 2.2);
+  - the target is \(f(x, h_h)\), not \(f(x, 0)\).
 
-$$ \Lambda(y)(x, h_1) = \rho_0' + \rho_1' m_b(x) + r'(x) + e $$
-
-This is Yi's eq 2–4 (linear transfer, GP residual, Gaussian noise) when all of these hold:
-- \(\Lambda\) is the identity;
-- the residual kernel is Yi's RBF (Yi eq 5) instead of Matérn;
-- the noise is homoscedastic and uncorrelated (\(R = I\), \(\zeta \equiv 0\), \(b_s = 0\));
-- \(\rho\) has a flat prior;
-- the hyperparameters are found by ML-II with the concentrated likelihood (Yi Algorithm 1, step 2.2) instead of MCMC;
-- if the backbone source is a ladder level, its likelihood subsample is empty.
-
-With two or more levels and the target at \(h = 0\), the model is new.
-
-**Why keep Yi's backbone** [inference]:
-- It is the scalability lever. Cheap data carry the \(x\)-shape, so the expensive levels only need to resolve \(r\) and \(\delta\).
-- If the backbone is not informative, the posterior of \(\rho_1\) goes to 0. The model then becomes a plain multi-level GP, so it fails gracefully.
-- The posterior of \(\rho_1\) is reported.
+**What Yi-h adds to Yi:**
+- the transfer coefficients and the residual are functions of \(h\) that converge to the identity and to zero;
+- any number of levels in one likelihood;
+- the target at \(h = 0\);
+- full Bayesian inference, including the order \(p\);
+- heteroscedastic, within-run-correlated noise;
+- cost-aware design.
 
 ### 2.3 Convergence covariance in \(h\)
 
 For one resolution component:
 
-$$ \delta - E[\delta] \sim GP(0, \; \sigma_\delta^2 k_x(x, x') k_h(h, h')) $$
+$$ \delta \sim GP(0, \; \sigma_\delta^2 k_x(x, x') k_h(h, h')) $$
 
 Two families are candidates for \(k_h\), and Section 2.7 weights them. Several components and an order that varies with \(x\) follow below.
 
@@ -155,7 +162,7 @@ Two families are candidates for \(k_h\), and Section 2.7 weights them. Several c
   - [lit] Boutelet Fig. 1: increments are positive for an average-type QoI, and "somewhat uncorrelated or negatively correlated" for a maximum-type QoI.
 - **Several resolution components: an additive error.**
 
-$$ \delta(x, h) - E[\delta] = \sum_{j=1}^{k} \delta_j(x, h_j), \quad \delta_j \sim GP(0, \; \sigma_{\delta,j}^2 k_{x,j}(x, x') k_{h,j}(h_j, h_j')) $$
+$$ \delta(x, h) = \sum_{j=1}^{k} \delta_j(x, h_j), \quad \delta_j \sim GP(0, \; \sigma_{\delta,j}^2 k_{x,j}(x, x') k_{h,j}(h_j, h_j')) $$
 
   - The \(\delta_j\) are independent. The error vanishes only when **every** component goes to 0. A product kernel would vanish when any one component goes to 0, so refining the flow grid alone would remove the scalar-grid error, which is wrong.
   - [lit] Boutelet & Sung §2.1, citing Ji et al.: the error must stay non-negligible while any component is nonzero. CONFIG 2209.13748 eq 19 is an alternative.
@@ -182,7 +189,9 @@ $$ e_a \sim N(0, S_a), \quad S_a = D_a R_a D_a $$
 
 | Parameter | Prior | Source |
 |---|---|---|
-| \(\rho\), \(c\) | flat if no link and the basis matrix has full column rank; else Gaussian, centred on a physical estimate | improper posterior otherwise [inference] |
+| \(\beta\) (mean of \(\mu\)) | flat if no link and the basis matrix has full column rank; else Gaussian, centred on a physical estimate | improper posterior otherwise [inference] |
+| \(c_{0j}\), \(c_{1j}\) | Gaussian with sd \(S_c\): the plausible size of the coarsest-level error relative to the converged value, in \(\Lambda\) units | proper, because \(c_{1j}\) multiplies \(\mu\) |
+| \(\beta_s\) (module S8) | Gaussian | |
 | \(p_{j0}\) | \(\log p_{j0} \sim N(0, 1)\) | wide; covers E&H's range |
 | \(\pi_j\) (variation of \(p\) with \(x\)) | PC prior: \(P(\sigma_\pi > 0.3) = 0.05\), \(P(\ell < 0.1) = 0.05\) | shrinks to one shared order [assumption] |
 | Matérn variance and range (\(r\), \(\delta\), \(\zeta\), \(R\)) | PC prior: \(P(\ell < 0.1) = 0.05\), \(P(\sigma > S) = 0.05\) | [lit] Fuglstad et al. 1503.00256 Thm 2.6. Their range parameter equals \(2\ell\) in our Matérn form. Use per ARD dimension: [inference] |
@@ -190,7 +199,7 @@ $$ e_a \sim N(0, S_a), \quad S_a = D_a R_a D_a $$
 | \(m_s\), \(b_{s,j}\) | Gaussian; \(b_{s,j}\) symmetric, with sd \(\log 4\) | [assumption] |
 
 - The scales \(S\) are problem-specific, and they are the only problem-specific part (R7).
-- A **known admissible range** (for example a positive rate) goes into the prior through a link, \(\rho_0 + \rho_1 m_b + r = \psi(\tilde\mu)\). It does not go into a gate.
+- A **known admissible range** (for example a positive rate) goes into the prior through a link, \(\mu = \psi(\tilde\mu)\). It does not go into a gate.
 - **Sampling:** Gibbs.
   - Latent Gaussian fields use elliptical slice sampling. [lit] Murray, Adams & MacKay 1001.0175: it "has no free parameters".
   - Their hyperparameters use the surrogate-data slice sampler. [lit] Murray & Adams 1006.0868: it "requires little tuning while mixing well in both strong- and weak-data regimes".
@@ -229,9 +238,9 @@ $$ \log_2 \kappa(u, h) = \kappa_0 + \sum_j \gamma_j \ell_j + \omega(u, h) + \eta
 - \(\sigma_{fid}(x,h) = (E[(f(x,h) - f(x))^2 \mid D])^{1/2}\), computed from the same draws.
 - **Fidelity envelope**, in \(\Lambda\) units (relative error for \(\Lambda = \log\)):
 
-$$ \sigma_{env}^2(x, h) = E_{\vartheta, c \mid D} [ \sum_j \bar h_j^{2 p_j(x)} ( (c_{0j} + c_{1j} m_b(x))^2 + \sigma_{\delta,j}^2 k_{x,j}(x, x) ) ] $$
+$$ \sigma_{env}^2(x, h) = E_{\vartheta, c, \mu \mid D} [ \sum_j \bar h_j^{2 p_j(x)} ( (c_{0j} + c_{1j} \mu(x))^2 + \sigma_{\delta,j}^2 k_{x,j}(x, x) ) ] $$
 
-  - It includes both the power-law mean of the error and its random part, so it does not understate the error when the mean explains most of it.
+  - The error of level \(h\) is \(\rho_0 + (\rho_1 - 1)\mu + \delta\). The envelope includes both its power-law part and its random part, so it does not understate the error when the mean explains most of it.
   - It is a sum of per-component squares, so there are no cross terms that could cancel. Each posterior draw is monotone in the componentwise order, so the average is monotone too. It is 0 at \(h = 0\), and it is finite because the posterior of \(c\) is proper.
 - **Aleatoric spread on the physical scale:** \(s_0(x)\) is the quantile half-width \((q_{84} - q_{16})/2\) of \(\Lambda^{-1}(\Lambda(m_y) + e)\), with \(e \sim N(0, s^2(x, 0))\), over the posterior draws of \(s\). It is reported as "not identified" when replicates exist at fewer than 3 levels, or when the posterior sd of the trend \(b_s\) is more than half its prior sd.
 - \(\sigma_{tot}\) is the quantile spread of draws of \(\Lambda^{-1}\)(target + noise) at \(h = 0\). This is the only definition; it is not \(\sigma_{epi}\) and \(s_0\) added in quadrature, because they are on scales that do not add.
@@ -240,10 +249,10 @@ $$ \sigma_{env}^2(x, h) = E_{\vartheta, c \mid D} [ \sum_j \bar h_j^{2 p_j(x)} (
 
 ## 3. Algorithm
 
-**Step 0, set the problem.** Choose \(\Sigma\), \(\varepsilon\), \(C\) and the batch size \(q\). Choose the candidate transforms, the backbone source, the prior scales, and the optional modules of Section 4.
+**Step 0, set the problem.** Choose \(\Sigma\), \(\varepsilon\), \(C\) and the batch size \(q\). Choose the candidate transforms, an external cheap source if one exists (module S8), the prior scales, and the optional modules of Section 4.
 
 **Step 1, initial design.**
-- **Backbone:** a space-filling design of the cheapest source, as large as is cheap. This is Yi's abundant LF. Only a capped subsample of it enters the likelihood (Section 2.2).
+- **Cheapest level:** a space-filling design, as large as is useful. This is Yi's abundant LF, and all of it enters the likelihood.
 - **Prerequisite: the A12 test,** before the first real campaign. Step 5 values probes at unprobed finer levels correctly only if A12 holds.
   - Synthetic truths: 20 random draws of \(f(x, h) = f_0(x) + a(x) \bar h^{p}\), with \(x\) in 2D and \(p\) drawn from [0.7, 2.5]. There is data at \(\bar h = 1, 1/2, 1/4\), and candidates also at \(\bar h = 1/8\) and \(1/16\), with cost \(\propto 2^{3\ell}\).
   - Oracle: the value of each of the top 10 candidates, computed by full MCMC refits on its fantasy outcomes.
@@ -307,9 +316,9 @@ $$ a^\star = \arg\max_{a \in A} \; (H_n - E J_n(a)) / E c(a), \qquad H_n = \sum_
 
 **Step 6, run the batch, add the data, and go to Step 2.**
 
-**Computational cost** [inference, order of magnitude]: for about 400 data in the likelihood (the ladder plus the capped backbone subsample), about 120 candidates and 16 fantasies, the acquisition costs about \(10^{12}\) flops, which is minutes to an hour on one node. MCMC time must be measured.
+**Computational cost** [inference, order of magnitude]: for \(n\) up to about 2,000 data in the likelihood, about 120 candidates, 16 fantasies and 200 posterior samples, rank-10 updates cost about \(4 \times 10^7\) flops each, so one acquisition costs about \(10^{13}\) flops: hours on one node. This is small against one L9 run. MCMC time must be measured.
 
-**Output:** for each \(x \in \Sigma\): \(m_y\), \(\sigma_{epi}\), \(s_0\) (or "not identified"), and \(\sigma_{tot}\); \(\sigma_{env}(x, h)\) and \(\sigma_{fid}(x, h)\) for the levels used; the posteriors of \(p_j\) and \(\rho_1\); the stacking weights; the gate table; the spent cost and the allocation per level.
+**Output:** for each \(x \in \Sigma\): \(m_y\), \(\sigma_{epi}\), \(s_0\) (or "not identified"), and \(\sigma_{tot}\); \(\sigma_{env}(x, h)\) and \(\sigma_{fid}(x, h)\) for the levels used; the posteriors of \(p_j\) and \(c\); the stacking weights; the gate table; the spent cost and the allocation per level.
 
 ---
 
@@ -326,7 +335,7 @@ Each module is generic. The core (Sections 1–3) works without any of them. A m
 | S5 | Several QoIs per run | One run gives many QoIs. | The criterion sums over QoIs, with weights \(1/\varepsilon_q^2\). [lit] Giles 1304.5472 §7.4. | — | kLa, \(\Delta t_{mix}\) and shear from one run |
 | S6 | Known admissible range | The converged value must be in a known range. | a link in the prior (Section 2.5) | G7 | rates > 0 |
 | S7 | Monotone coordinate | \(f\) is monotone in one coordinate. | Gate G5; enforce only if it is violated. [lit] López-Lopera 1901.04827 eq 8. | G5 | \(\Delta t_{mix}\) increases with χ |
-| S8 | Dense cheap source | A cheap model gives abundant data with the right trends. | It is the backbone \(m_b\) (Yi's regime). | the posterior of \(\rho_1\) is away from 0 | L6 (0.015 core-h per run) |
+| S8 | Cheap external source | A different, cheaper model (not a resolution of this code) correlates with the QoI. | \(\mu = \beta_s f_s + r\), with \(f_s\) a GP and its data in the likelihood (Section 2.2). | the posterior of \(\beta_s\) is away from 0 | none yet; L6 is a resolution level, so it is in the ladder |
 
 ---
 
@@ -343,7 +352,7 @@ Each module is generic. The core (Sections 1–3) works without any of them. A m
 | A6 | Noise trend in \(h\) of either sign | [lit] analogy only | replicates |
 | A7 | A perturbed replicate represents the physical spread | untested | experimental replicates |
 | A8 | Stationary kernels in \(x\) | untested | G2 |
-| A9 | The backbone is informative | posterior of \(\rho_1\) | reported |
+| A9 | (with S8) the external source is informative | posterior of \(\beta_s\) | reported |
 | A10 | The coarsest ladder level is in the asymptotic range | per problem | G4 |
 | A11 | (with S3) The warm start does not change the QoI | per problem | a direct comparison |
 | A12 | Fantasy reweighting values the probes that reduce the uncertainty of \(p\) | [inference] | synthetic test |
@@ -370,7 +379,9 @@ Each module is generic. The core (Sections 1–3) works without any of them. A m
 | F4 | Cost per level: ×7, ×9, ×21 per simulated second. Per probe to \(\Delta t_{0.95}\): ~0.015, 0.25, 6 and 300 core-h at L6–L9. The 80-cycle spin-up is 40–55% of an L9 run. | [data] Fig. C |
 | F5 | L6 loses 7–10% of the tracer mass (L9: under 0.4%). | [data] diary 2026-10-03 |
 | F6 | Held-out L9 from L6–L8: in log space all z-scores are positive (systematic). The kernel choice changes \(f(0)\) by 2–4×. | [data] Fig. B |
-| F7 | Kim's manuscript says uniform \(n_L = 2^{10}\) (Main.tex:432). The shared code sets MAXLEVEL = 9 with a static band refinement, and was never changed in our history. Kim's 120 core-h is ~30× below our L10 cost. The evidence points to L9. | git `ea66816`, `tests/fixtures/kim_upstream/BioReactor.c:180` |
+| F7 | Kim et al. ran uniform L10 (\(n_L = 2^{10}\), 0.24 mm, Main.tex:432), with L11 as the convergence reference in their appendix (user, 2026-10-03). The `MAXLEVEL = 9` in the imported driver is a default that our runs do not use (the level comes from `params.json`). Still open: Kim reports 120 core-h for one case, about 30× below our measured L10 cost. | `experiments/kimetal2024/Main.tex:432`, `:717` |
+| F8 | **A short spin-up changes the QoIs** (test of A11; L8, 32.5 rpm). With release after 33 cycles: kLa +26% and \(\Delta t_{0.95}\) +12%. With release after 50 cycles: \(\Delta t_{0.75}\) +23%. These are against releases after 80–85 cycles, whose spread is under 1%. So the only L10 point, released after 33 cycles, is not comparable with the ladder, and a warm start needs a full settling period at the new level. | [data] Fig. F, `scripts/plot_spinup_test.py` |
+| F9 | **The run-to-run spread depends strongly on \(x\)** (L6, releases 80/82/85). The coefficient of variation of \(\Delta t_{0.95}\) is 17% at 17.5 rpm, 1.2% at 25 rpm and 0.2% at 32.5 rpm. So a single flat noise value is wrong somewhere, and the heteroscedastic noise model of Section 2.4 is needed. | [data] diary 2026-10-03 |
 
 ![Fig. D](../experiments/multifidelity/observed_order_dtmix.png)
 
@@ -396,9 +407,13 @@ Each module is generic. The core (Sections 1–3) works without any of them. A m
 - [inference] With a Péclet number of about \(10^7\) (\(D = 0.44 \times 10^{-9}\) m²/s, `src/BioReactor.c:201`), the Batchelor scale is about 50 µm, against 0.49 mm at L9. If the asymptotic range starts only near that scale (L12–L13), the method will end in P2 with an honest, large \(\sigma_{epi}\). If L10 already shows convergence, it can succeed.
 - Module S4 (a scalar grid finer than the flow grid on a stored converged periodic flow) could make the fine scalar levels much cheaper. It fits the general framework as a second resolution component. It needs a replay solver, which is in BACKLOG and is untested.
 
-**Runs in progress** (25 jobs, submitted 2026-10-03, same binaries and protocol as the ladder):
-- **Replicates:** tracer release at cycles 82 and 85 (and 80 at L7), at L6–L8 × 17.5/25/32.5 rpm and L9 × 25 rpm. They give \(s(x,h)\), its trend in \(h\), and \(R\).
-- **Spin-up test** (A11): L8 at 32.5 rpm, release after 33 and 50 cycles instead of 80. The only L10 data point was released after 33 cycles. This test tells whether that point is usable and whether warm starts (S3) are allowed.
+![Fig. F](../experiments/multifidelity/spinup_test_l8_32p5.png)
+
+*Fig. F. Change of each QoI against the mean of the releases after 80, 82 and 85 cycles, for L8 at 32.5 rpm.*
+
+**Runs** (25 jobs, submitted 2026-10-03, same binaries and protocol as the ladder):
+- **Replicates:** tracer release at cycles 82 and 85 (and 80 at L7), at L6–L8 × 17.5/25/32.5 rpm and L9 × 25 rpm. They give \(s(x,h)\), its trend in \(h\), and \(R\). L6 and most of L7/L8 are done (F9); L9 is running.
+- **Spin-up test** (A11): done, and it refutes A11 (F8).
 
 ---
 
@@ -406,5 +421,5 @@ Each module is generic. The core (Sections 1–3) works without any of them. A m
 
 - **Q-a.** Prior scales: some were chosen after seeing L6–L9, which uses the data twice; G7 tests their influence. Can you give physical values?
 - **Q-b.** Should module S4 (two resolution components with a replayed flow) be developed now, or after L10 probes show whether the scalar converges?
-- **Q-c.** The backbone \(m_b\) is Yi's deterministic KRR, used as a fixed basis. Its fit uncertainty is not propagated, and only a capped subsample of the backbone level is in the likelihood (Section 2.2). That keeps the MCMC size independent of the backbone size. Is this deviation from "fully Bayesian" acceptable as the price of Yi's scalability? The alternative is a GP backbone in the likelihood (a recursive co-kriging), which loses that scalability.
-- **Q-d.** The target is the median run outcome at \(h = 0\), not the mean (Section 2.2). They are equal for a symmetric spread. Is the median acceptable?
+- **Q-c, answered 2026-10-03:** fully Bayesian; no deterministic plug-in (Section 2.2).
+- **Q-d, answered 2026-10-03:** the median target is accepted.
