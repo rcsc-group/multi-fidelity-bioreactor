@@ -45,5 +45,6 @@ __pycache__/
 !experiments/multifidelity/sigma_concepts.png
 !experiments/multifidelity/spinup_test_l8_32p5.png
 !experiments/multifidelity/guide/*.png
+!experiments/multifidelity/replicate_cv.png
 !experiments/canonical_case/**/*.mp4
 !docs_site/assets/**

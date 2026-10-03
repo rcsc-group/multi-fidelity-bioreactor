@@ -93,7 +93,11 @@ $$ k(x, x') = 0.6^2 \exp(-(x - x')^2 / (2 \cdot 0.2^2)) $$
 
 *Fig. T3 (toy). Left: before data, four curves drawn from the prior, and the 95% band (mean ± 1.96 sd). Right: after five observations, curves drawn from the posterior. The band is narrow near the observations and wide between them.*
 
-**Where the formulas come from: one observation.** Take one observation \(y_1\) at \(x_1\). The values \(f(x)\) and \(y_1\) are jointly Gaussian. A standard property of Gaussians gives the mean of one value when the other is known:
+**Where the formulas come from: one observation.** Take one observation \(y_1\) at \(x_1\). The values \(f(x)\) and \(y_1\) are jointly Gaussian. For two jointly Gaussian values \(A\) and \(B\), knowing \(B = b\) changes the mean and the variance of \(A\) to
+
+$$ E[A \mid b] = E[A] + (b - E[B]) \, Cov(A, B) / Var(B), \qquad Var(A \mid b) = Var(A) - Cov(A, B)^2 / Var(B) $$
+
+Here \(A = f(x)\) and \(B = y_1\), with \(Cov(f(x), y_1) = k(x, x_1)\) and \(Var(y_1) = k(x_1, x_1) + s^2\). So:
 
 $$ m(x) = m_0 + k(x, x_1) (y_1 - m_0) / (k(x_1, x_1) + s^2) $$
 
@@ -132,7 +136,7 @@ In Yi's algorithm, the coefficients of step 2 are found together with the GP of 
 
 ![Fig. T4](../experiments/multifidelity/guide/g4_yi.png)
 
-*Fig. T4 (toy). Forty cheap runs on the coarsest grid and four expensive runs on the finest grid. The transfer alone (orange) gets the shape but is off at the ends. Adding the residual GP (red, with its 95% band) follows the true expensive level within its band.*
+*Fig. T4 (toy). Forty cheap runs on the coarsest grid and four expensive runs on the finest grid. The transfer alone (orange) is off by up to 0.27. The residual GP (red, with its 95% band) corrects it to within 0.03, and the true expensive level stays inside the band.*
 
 **What it does not do for our problem:**
 - It has two levels and no notion of a grid. In Yi's engineering example the two fidelities are different physics (Euler equations and RANS), not two grids.
@@ -151,7 +155,7 @@ $$ \Lambda(y) = \rho_0(h) + \rho_1(h) \, \mu(x) + \delta(x, h) + e $$
 |---|---|
 | \(y\) | the result of one run at condition \(x\) on grid \(h\) |
 | \(\Lambda\) | an optional transform, chosen per QoI. With \(\Lambda = \log\), a relative error ("10% too fast") becomes an additive one, which suits positive QoIs such as times and rates. |
-| \(\mu(x)\) | the exact answer we want, in \(\Lambda\) units. The reported answer is \(\Lambda^{-1}(\mu(x))\), which is the **median** result of a run at \(h = 0\). |
+| \(\mu(x)\) | the exact answer we want, in \(\Lambda\) units. The reported answer is \(\Lambda^{-1}(\mu(x))\), which is the **median** result of a run at \(h = 0\): the noise is symmetric in \(\Lambda\) units, so \(\mu\) is the median of \(\Lambda(y)\), and a monotone \(\Lambda^{-1}\) keeps medians. |
 | \(\rho_0(h) = c_0 \bar h^p\) | an offset that vanishes as \(h \to 0\) |
 | \(\rho_1(h) = 1 + c_1 \bar h^p\) | a scale that becomes 1 as \(h \to 0\) |
 | \(\delta(x, h)\) | the rest of the grid error, a GP that also shrinks like \(\bar h^p\) |
@@ -161,13 +165,13 @@ $$ \Lambda(y) = \rho_0(h) + \rho_1(h) \, \mu(x) + \delta(x, h) + e $$
 - \(c_0\), \(c_1\) and \(p\) are constants learned from the data.
 
 **Why both \(\rho\) and \(\delta\).**
-- \(\rho\) carries the part of the grid error that is **proportional to the answer**. For example, "the coarse grid mixes 30% too fast at every condition" is a scale \(\rho_1 = 0.7\).
+- \(\rho\) carries the part of the grid error that is **proportional to the answer**. For example, with \(\Lambda\) the identity, "the coarse grid gives a mixing time 30% too short at every condition" is a scale \(\rho_1 = 0.7\). (With \(\Lambda = \log\), the same error is an offset, \(\rho_0 = \log 0.7\).)
 - \(\delta\) carries the part whose **shape changes** with the condition. For example, the error is large at low rpm and small at high rpm.
 - Both vanish as \(h \to 0\), so the exact answer is \(\mu\).
 
 **Check with the toy of Fig. T1.** There, level \(h\) equals the exact curve plus \(h^{1.5}(0.6 + 0.3\cos 3x)\). This is the form above with \(\Lambda\) the identity, \(c_1 = 0\), \(\rho_0 = 0.6 \bar h^{1.5}\), \(\delta = 0.3 \cos(3x) \bar h^{1.5}\) and no noise. Note that the constant 0.6 could also sit inside \(\delta\). The data cannot tell these two apart, so only their sum is learned well. That is harmless, because the answer \(\mu\) does not depend on the split.
 
-**How this relates to Yi.** Take two grids, a coarse one and a fine one, and remove \(\mu\) from their two equations. The result has **Yi's form**: fine = \(\rho_0' + \rho_1'\) × coarse + residual. But the residual contains the coarse grid's own error, so it is correlated with the coarse result. Yi's model assumes a residual that is independent of the cheap fit. So Yi-h equals Yi's model only when the coarse grid's \(\delta\) is zero, or independent of the coarse result. Otherwise, Yi's fitted \(\rho\) absorbs part of the grid error. The specification lists the remaining conditions (Specification, Section 2.2).
+**How this relates to Yi.** Take two grids, a coarse one and a fine one, and remove \(\mu\) from their two equations. The result has **Yi's form**: fine = \(\rho_0' + \rho_1'\) × coarse + residual. But the residual contains the coarse grid's own error, so it is correlated with the coarse result. Yi's model assumes a residual that is independent of the cheap fit. So Yi-h equals Yi's model only when the coarse grid's \(\delta\) is zero, or when the residual happens to be uncorrelated with the coarse result. In kernel terms, the second case needs \(k_h(h_f, h_c) = \rho_1' k_h(h_c, h_c)\), and that does not hold in general. Otherwise, Yi's fitted \(\rho\) absorbs part of the grid error. The specification lists the remaining conditions (Specification, Section 2.2).
 
 **What Yi-h adds to Yi:**
 - any number of grids, all in one likelihood;
@@ -185,7 +189,7 @@ $$ \Lambda(y) = \rho_0(h) + \rho_1(h) \, \mu(x) + \delta(x, h) + e $$
 **Aleatoric uncertainty** is how much repeated runs scatter.
 - We measure it with **replicates**: the same run with the tracer released a few cycles later.
 - More compute cannot remove it, so we report it but do not bound it.
-- Our first data: at L6, the scatter of the mixing time is 17% at 17.5 rpm, 1.2% at 25 rpm and 0.2% at 32.5 rpm. So the size of the noise must be allowed to change with the condition.
+- Our data (three runs per point, so each value is rough): at L6, the scatter of \(\Delta t_{0.95}\) is 17% at 17.5 rpm, 1.2% at 25 rpm and 0.25% at 32.5 rpm. From L6 to L8 it shrinks at 17.5 rpm (17% to 2%), but not at 25 or 32.5 rpm (0.15–2% at every level). So the size of the noise must be allowed to change with the condition, and with the grid in either direction.
 
 **What decreases as \(h \to 0\), and what does not (Fig. E).**
 
@@ -280,7 +284,7 @@ The core method needs none of these. Each one is optional, and each one states i
 **Mixing time does not converge yet on L6–L9 (Fig. D).** For three neighbouring grids, \(R\) is the ratio of their two differences (Section 2). Convergence with order \(p\) needs \(R \approx 2^p > 1\).
 - **\(\Delta t\) itself:** \(R\) is 0.2–0.4, so the differences **grow** with refinement.
 - **\(\log \Delta t\):** \(R \approx 1\), so the differences do not shrink.
-- **The rate \(1/\Delta t\):** \(R\) is near 2.8, which looks like convergence. But Richardson extrapolation of the rate gives a **negative** limit at 9 of 22 grid triplets. A negative rate is impossible. So the rate is converging toward a limit near zero, which would mean a very long converged mixing time. The data cannot yet tell how long.
+- **The rate \(1/\Delta t\):** \(R\) is 1.5–3.4, which looks like convergence. But in all 22 grid triplets (L7–L9), Richardson extrapolation gives a rate below the L9 rate, from 0.98 to −2.3 times it. In 9 triplets it is negative, which is impossible. So the power law does not hold yet on these grids, and the converged value is **not identified**: the data say only that the converged mixing time is longer than at L9, by a factor they cannot fix.
 
 **kLa converges plausibly** on the same grids.
 
@@ -324,6 +328,8 @@ Our problem has two halves, and each half has its own literature. Every statemen
 - **Co-kriging for aerodynamic design** (Schouler et al., 2505.17279) uses a high-fidelity grid that was refined beforehand "until achieving grid convergence".
 - **Deep-GP multi-fidelity Bayesian optimisation** (Savage et al., 2210.17213) uses five mesh levels and optimises at the highest.
 - **Neural multi-fidelity models for PDE fields** (IFC 2207.00678; DGMF 2311.05606; DMFAL 2012.00901 and its budgeted batch version BMFAL-BC 2210.12704) treat fidelity as discrete levels or as a continuous variable. They predict the highest training fidelity. IFC tests extrapolation to one finer mesh, and the evidence is empirical only.
+
+**Terms used below:** co-kriging is a GP model of two fidelities linked by a linear transfer (the Kennedy–O'Hagan form). MLE, ML and REML are maximum-likelihood point estimates of the model settings (REML is a restricted variant). MR-SUR and MSUR choose the run with the largest expected reduction of uncertainty per unit of cost.
 
 **Joining the two halves: the target \(h = 0\) over a design region.** A small line of work makes the cell size an input of a GP, and predicts the converged value at all conditions:
 
