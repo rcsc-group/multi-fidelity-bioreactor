@@ -421,7 +421,15 @@ Each module is generic. The core (Sections 1–3) works without any of them. A m
 
 ## 7. Open questions
 
-- **Q-a.** Prior scales: some were chosen after seeing L6–L9, which uses the data twice; G7 tests their influence. Can you give physical values?
+- **Q-a. Physical prior values, one set per QoI.** Today some come from looking at L6–L9, which uses the data twice; G7 tests their influence. The values below are what I need. A rough range from your physical judgement or the literature is enough; a guess with a stated source is better than my data-driven value.
+
+| # | Quantity | Question | My current value (source) |
+|---|---|---|---|
+| 1 | \(S_\mu\) | Over \(\Sigma\), by what factor can the converged mixing time vary between its smallest and largest values (95% sure)? | a factor \(e^{2}\approx 7\) [assumption] |
+| 2 | \(S_c\) | By what factor can the coarsest level used (L6) be wrong against the converged value (95% sure)? | a factor 50 (set after seeing L6–L9) |
+| 3 | \(p\) | What convergence order do you expect for this QoI from the schemes (advection, VOF, embedded boundary)? | \(\log p \sim N(0, 1)\): median 1, 95% in [0.14, 7] [assumption] |
+| 4 | \(b_{phys}\) | Only for the rate link: a physical estimate of the mixing time in rocking cycles, from experiments | 30 cycles at 25 rpm (no source) |
+| 5 | noise | Run-to-run spread | **no longer needed**: measured (F9) |
 - **Q-b.** Should module S4 (two resolution components with a replayed flow) be developed now, or after L10 probes show whether the scalar converges?
 - **Q-c, answered 2026-10-03:** fully Bayesian; no deterministic plug-in (Section 2.2).
 - **Q-d, answered 2026-10-03:** the median target is accepted.
