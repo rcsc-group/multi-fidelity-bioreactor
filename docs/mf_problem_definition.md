@@ -194,17 +194,17 @@ $$ e_a \sim N(0, S_a), \quad S_a = D_a R_a D_a $$
 | \(\beta_s\) (module S8) | Gaussian | |
 | \(p_{j0}\) | \(\log p_{j0} \sim N(0, 1)\) | wide; covers E&H's range |
 | \(\pi_j\) (variation of \(p\) with \(x\)) | PC prior: \(P(\sigma_\pi > 0.3) = 0.05\), \(P(\ell < 0.1) = 0.05\) | shrinks to one shared order [assumption] |
-| Matérn variance and range (\(r\), \(\delta\), \(\zeta\), \(R\)) | PC prior: \(P(\ell < 0.1) = 0.05\), \(P(\sigma > S) = 0.05\) | [lit] Fuglstad et al. 1503.00256 Thm 2.6. Their range parameter equals \(2\ell\) in our Matérn form. Use per ARD dimension: [inference] |
+| Matérn variance and range (\(r\), \(\delta\), \(\zeta\), \(R\)) | PC prior: \(P(\ell < 0.1) = 0.05\), \(P(\sigma > S) = 0.05\) | [lit] Fuglstad et al. 1503.00256 Thm 2.6, for an isotropic Matérn with \(d \le 3\); the paper says this limit "cannot be removed" (§2.3). Their range parameter equals \(2\ell\) in our Matérn form. Our use, one \(d = 1\) prior per input of an ARD kernel with up to 10 inputs, is a **heuristic, not a derived PC prior** [assumption]. G7 tests its influence. |
 | \(\gamma\) (LB) | Uniform(0, 1) | |
 | \(m_s\), \(b_{s,j}\) | Gaussian; \(b_{s,j}\) symmetric, with sd \(\log 4\) | [assumption] |
 
 - The scales \(S\) are problem-specific, and they are the only problem-specific part (R7).
 - A **known admissible range** (for example a positive rate) goes into the prior through a link, \(\mu = \psi(\tilde\mu)\). It does not go into a gate.
 - **Sampling:** Gibbs.
-  - Latent Gaussian fields use elliptical slice sampling. [lit] Murray, Adams & MacKay 1001.0175: it "has no free parameters".
-  - Their hyperparameters use the surrogate-data slice sampler. [lit] Murray & Adams 1006.0868: it "requires little tuning while mixing well in both strong- and weak-data regimes".
+  - Latent Gaussian fields use elliptical slice sampling. [lit] Murray, Adams & MacKay 1001.0175: it "has no free parameters" (§2.4). It needs a zero-mean Gaussian prior with a fixed covariance during the update (§2), so the mean levels (for example \(m_s\)) are sampled as separate variables (§2.5). It is efficient mainly when the prior dominates the likelihood (§2.5).
+  - Their hyperparameters use the surrogate-data slice sampler. [lit] Murray & Adams 1006.0868 (abstract): it "requires little tuning while mixing well in both strong- and weak-data regimes". Its automatic form needs a likelihood that factorises over sites (§3.2). Given the other field, each of our two blocks does. The paper tested only fixed observation noise (§5), so its use with a latent log-variance field is [inference].
   - Censored values use data augmentation.
-- **Convergence rule:** 4 chains; rank-normalised split-\(\hat R < 1.01\) and ESS > 400 for every reported quantity. [lit] Vehtari et al. 1903.08008 §1 and §4.
+- **Convergence rule:** 4 chains. For every reported quantity, \(\hat R < 1.01\), where \(\hat R\) is the maximum of the rank-normalised split-\(\hat R\) and the folded split-\(\hat R\), and bulk-ESS > 400. [lit] Vehtari et al. 1903.08008 §2 and §4.1. We also require tail-ESS > 400 [assumption; the paper uses 400 for tail-ESS only in its examples].
 - Why sample at all: [lit] ML-II "underestimate[s] prediction uncertainty" (1912.13440 §1).
 
 ### 2.6 Cost model
@@ -223,7 +223,9 @@ $$ \log_2 \kappa(u, h) = \kappa_0 + \sum_j \gamma_j \ell_j + \omega(u, h) + \eta
   - Fit every \(M\) without the finest level, and score the held-out finest-level runs. This tests extrapolation in \(h\).
   - The scores are log densities **on the physical scale**, with the Jacobian of \(\Lambda\) included, so structures with different transforms are compared fairly.
   - [lit] Yao, Vehtari, Simpson & Gelman 1704.02030 eq 2.2 (log score). They recommend stacking because BMA "is flawed in the M-open setting".
-  - A Dirichlet(2, ..., 2) penalty regularises the weights. [lit] Their §4.1 suggests "a strong prior … to the weights".
+  - **Our adaptation** [inference]: Yao et al. define and justify eq 2.2 with leave-one-out densities (§2.1–2.2). They do not discuss extrapolation hold-outs. We score a held-out finer level instead, because that task (predict one level finer than the data) is the closest available match to the real task (predict \(h = 0\)). This needs its own validation; assumption A13 records it.
+  - Yao §2.3 warns that LOO "has large variance when the sample size is small". Our held-out sets are small, so the weights are noisy (see the minimum sample below).
+  - A Dirichlet(2, ..., 2) penalty regularises the weights. [lit] Their §4.1 suggests "a strong prior … to the weights"; the specific Dirichlet(2, ..., 2) is our choice [assumption].
 - **Cross-fitting:** the weights come from half of the held-out sites, and the calibration (Gate G1) from the other half; then swap.
 - **Minimum sample:** each half needs at least 6 held-out sites [assumption]. With fewer, the weights stay equal, and G1 is reported as "not testable", never as "passed". Today the finest level (L10) has 1 run, so this rule applies.
 - With only 2 levels left, \(p\) is not identifiable there. Then the weights stay equal and are flagged.
@@ -380,7 +382,7 @@ Each module is generic. The core (Sections 1–3) works without any of them. A m
 | F5 | L6 loses 7–10% of the tracer mass (L9: under 0.4%). | [data] diary 2026-10-03 |
 | F6 | Held-out L9 from L6–L8: in log space all z-scores are positive (systematic). The kernel choice changes \(f(0)\) by 2–4×. | [data] Fig. B |
 | F7 | Kim et al. ran uniform L10 (\(n_L = 2^{10}\), 0.24 mm, Main.tex:432), with L11 as the convergence reference in their appendix (user, 2026-10-03). The `MAXLEVEL = 9` in the imported driver is a default that our runs do not use (the level comes from `params.json`). Still open: Kim reports 120 core-h for one case, about 30× below our measured L10 cost. | `experiments/kimetal2024/Main.tex:432`, `:717` |
-| F8 | **A short spin-up changes the QoIs** (test of A11; L8, 32.5 rpm). With release after 33 cycles: kLa +26% and \(\Delta t_{0.95}\) +12%. With release after 50 cycles: \(\Delta t_{0.75}\) +23%. These are against releases after 80–85 cycles, whose spread is under 1%. So the only L10 point, released after 33 cycles, is not comparable with the ladder, and a warm start needs a full settling period at the new level. | [data] Fig. F, `scripts/plot_spinup_test.py` |
+| F8 | **A short spin-up changes the QoIs** (test of A11; L8, 32.5 rpm). With release after 33 cycles: kLa +26% and \(\Delta t_{0.95}\) +12%. With release after 50 cycles: \(\Delta t_{0.75}\) +23%. These are against releases after 80–85 cycles, whose spread is under 1%. A warm start therefore must not shorten the settling. The only L10 point was released at absolute cycle 80, but through two checkpoint restarts. The restart at cycle 47 (`fig9_l10_seg1`) had no `*_prev` settings, which inject a seam transient (diary 2026-10-01). A test now repeats that restart history at L8, with and without `*_prev` (`scripts/submit_restart_test_l8.py`). Until it reports, the L10 point is not used. | [data] Fig. F, `scripts/plot_spinup_test.py` |
 | F9 | **The run-to-run spread depends strongly on \(x\)** (L6, releases 80/82/85). The coefficient of variation of \(\Delta t_{0.95}\) is 17% at 17.5 rpm, 1.2% at 25 rpm and 0.2% at 32.5 rpm. So a single flat noise value is wrong somewhere, and the heteroscedastic noise model of Section 2.4 is needed. | [data] diary 2026-10-03 |
 
 ![Fig. D](../experiments/multifidelity/observed_order_dtmix.png)
