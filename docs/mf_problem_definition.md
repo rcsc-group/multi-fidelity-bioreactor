@@ -1,8 +1,8 @@
 # Yi-h: grid-convergent multi-fidelity learning (problem definition, algorithm, assumptions)
 
-Draft 9, 2026-10-03. This draft makes the method an extension of Yi et al. (2024), generic for engineering QoIs, with the bioreactor as a worked example only.
+Draft 10, 2026-10-03. This draft makes the method an extension of Yi et al. (2024), generic for engineering QoIs, with the bioreactor as a worked example only.
 
-**History.** Drafts 2–6 went through 5 rounds of adversarial review; the reviewer approved draft 6. Draft 8 rewrote the structure after the user's direction of 2026-10-03. A fresh reviewer rejected draft 8 (6 major holes). Draft 9 closes them.
+**History.** Drafts 2–6 went through 5 rounds of adversarial review; the reviewer approved draft 6. Draft 8 rewrote the structure after the user's direction of 2026-10-03. A fresh reviewer rejected draft 8 (6 major holes) and draft 9 (2 major holes). Draft 10 closes them.
 
 **Status labels:**
 - **[lit]**: I read it in the cited paper.
@@ -16,7 +16,7 @@ Draft 9, 2026-10-03. This draft makes the method an extension of Yi et al. (2024
 
 **The engineering problem.** A simulation code computes a quantity of interest (QoI) \(y(x, h)\) at inputs \(x\) and numerical resolution \(h\). Examples are mean or maximum wall shear, a mass-transfer coefficient, or a mixing time.
 - Finer resolution costs much more (often \(2^{\gamma}\) per halving of \(h\), with \(\gamma\) from 2 to 5).
-- The engineer wants the converged value \(f(x)\) over a design region, with a stated uncertainty, inside a compute-time budget. \(f(x)\) is the median outcome of a run as \(h \to 0\). This equals the mean when the run-to-run spread is symmetric, as a Gaussian assumption implies (Section 2.2 gives the reason for the median).
+- The engineer wants the converged value \(f(x)\) over a design region, with a stated uncertainty, inside a compute-time budget. \(f(x)\) is the median outcome of a run as \(h \to 0\). This equals the mean when the run-to-run spread is symmetric on the physical scale (Section 2.2 gives the reason for the median).
 - Today, the standard practice is one of two:
   - a grid-convergence study at a few points (Eça & Hoekstra 2014), which is deterministic, per point, and needs at least 4 grids at each point;
   - a two-level multi-fidelity surrogate, which predicts the high-fidelity level, not the converged value.
@@ -53,7 +53,7 @@ Optional modules use special structure when a problem has it (Section 4). The bi
 | \(f(x)\), \(m_y(x)\) | the converged value (median run outcome at \(h = 0\)), and its posterior median | — |
 | \(\sigma_{epi}(x)\) | epistemic: uncertainty about \(f(x)\); more runs reduce it | it decreases as data are added |
 | \(s_0(x)\) | aleatoric: run-to-run spread at \(h = 0\) | no trend is imposed (Section 2.4) |
-| \(\sigma_{env}(x, h)\) | fidelity envelope: the prior sd of the error of level \(h\) | **yes**, monotone to 0 by construction (Fig. E, curve 1) |
+| \(\sigma_{env}(x, h)\) | fidelity envelope: the sd of the random part of the error of level \(h\), averaged over the posterior hyperparameters (Section 2.8) | **yes**, monotone to 0 by construction (Fig. E, curve 1) |
 | \(\sigma_{fid}(x, h)\) | posterior RMS error of level \(h\) against \(f(x)\) | it is 0 at \(h = 0\) and tends to the true error \(\lvert\delta(x,h)\rvert\), so it is monotone only if the true convergence is monotone (Fig. E, curve 2) |
 | \(\sigma_{know}(x, h)\) | knowledge: the posterior sd of \(f(x, h)\) | **no**: it is small where data exist (Fig. E, curve 3) |
 
@@ -66,7 +66,7 @@ and the calibration gates pass (Section 3). Here \(\varepsilon(x) = \varepsilon_
 **Problem P2,** when P1 is infeasible within \(C\): minimise \(\max_{\Sigma_N} \sigma_{epi}/\varepsilon\) subject to \(\sum c \le C\). Report "not met", the value reached and where.
 
 Notes:
-- The constraint bounds \(\sigma_{epi}\), because compute can reduce only that part. \(s_0\) and \(\sigma_{tot} = (\sigma_{epi}^2 + s_0^2)^{1/2}\) are modelled and reported.
+- The constraint bounds \(\sigma_{epi}\), because compute can reduce only that part. \(s_0\) and \(\sigma_{tot}\) are modelled and reported (both defined on the physical scale in Section 2.8).
   - [lit] Design criteria use the de-noised variance for this reason: Binois et al. 1710.03206 eq 2.
 - The bound is pointwise. It is not a simultaneous band.
 - [lit] Stacking designs (Sung, Ji, Mak, Wang, Tang, 2211.00268 eq 6, 13) solves P1 for deterministic codes with known cost. Ehara & Guillas 2104.02037 Prop. 2 solves the budget form P2.
@@ -101,10 +101,10 @@ $$ \Lambda(y_{a,k}) = \rho_0 + \rho_1 m_b(x_k) + r(x_k) + \delta(x_k, h_a) + e_{
 
 | Term | Role | Relation to Yi |
 |---|---|---|
-| \(m_b(x)\) | **Backbone:** a KRR fit of abundant cheap data, from any cheap source (a reduced model, a correlation, or the coarsest level). **If the source is a level of the ladder,** its runs are split at random: half build \(m_b\), and half enter the likelihood with their own \(\delta(x, h_b)\). So every level is in the likelihood, and no datum is used twice. | Yi's LF model, unchanged: deterministic, as Yi designed it. \(m_b\) is then a fixed basis function. Its fit uncertainty is not propagated, and \(r\) absorbs its errors. This is a deliberate deviation from "fully Bayesian" (question Q-c). |
+| \(m_b(x)\) | **Backbone:** a KRR fit of abundant cheap data, from any cheap source (a reduced model, a correlation, or the coarsest level). **If the source is a level of the ladder,** its runs are split at random. A subsample enters the likelihood with its own \(\delta(x, h_b)\); its size is capped at about the number of runs of the next ladder level, so the MCMC size does not grow with the backbone. All other runs build \(m_b\). So every level is in the likelihood, no datum is used twice, and Yi's scalability is kept. | Yi's LF model, unchanged: deterministic, as Yi designed it. \(m_b\) is then a fixed basis function. Its fit uncertainty is not propagated, and \(r\) absorbs its errors. This is a deliberate deviation from "fully Bayesian" (question Q-c). |
 | \(\rho_0 + \rho_1 m_b\) | linear transfer; the polynomial form of Yi eq 4 is allowed | Yi's LR step, now with a prior (Section 2.5) |
 | \(r(x)\) | GP residual of the **converged** value | Yi's \(r\), moved to \(h = 0\) |
-| \(\delta(x, h)\) | discretisation error of the levels above the backbone; \(\delta(x, 0) = 0\) | **new** |
+| \(\delta(x, h)\) | discretisation error of every ladder level in the likelihood, including the likelihood subsample of a backbone level; \(\delta(x, 0) = 0\) | **new** |
 | \(e_a\) | run-to-run noise vector, heteroscedastic, correlated inside a run | generalises Yi's homoscedastic noise |
 | \(\Lambda\) | monotone output transform (identity, log, reciprocal, ...). Named \(\Lambda\) because Yi's \(g\) is the transfer model. | new; chosen per QoI (Section 2.7) |
 
@@ -127,7 +127,8 @@ This is Yi's eq 2–4 (linear transfer, GP residual, Gaussian noise) when all of
 - the residual kernel is Yi's RBF (Yi eq 5) instead of Matérn;
 - the noise is homoscedastic and uncorrelated (\(R = I\), \(\zeta \equiv 0\), \(b_s = 0\));
 - \(\rho\) has a flat prior;
-- the hyperparameters are found by ML-II with the concentrated likelihood (Yi Algorithm 1, step 2.2) instead of MCMC.
+- the hyperparameters are found by ML-II with the concentrated likelihood (Yi Algorithm 1, step 2.2) instead of MCMC;
+- if the backbone source is a ladder level, its likelihood subsample is empty.
 
 With two or more levels and the target at \(h = 0\), the model is new.
 
@@ -158,7 +159,7 @@ $$ \delta(x, h) - E[\delta] = \sum_{j=1}^{k} \delta_j(x, h_j), \quad \delta_j \s
 
   - The \(\delta_j\) are independent. The error vanishes only when **every** component goes to 0. A product kernel would vanish when any one component goes to 0, so refining the flow grid alone would remove the scalar-grid error, which is wrong.
   - [lit] Boutelet & Sung §2.1, citing Ji et al.: the error must stay non-negligible while any component is nonzero. CONFIG 2209.13748 eq 19 is an alternative.
-- **Order that can vary with \(x\)** (assumption A3): \(\delta_j = \bar h_j^{p_j(x)} e_j(x, h_j)\) with \(e_j\) a stationary GP, and \(\log p_j(x) = \log p_{j0} + \pi_j(x)\).
+- **Order that can vary with \(x\)** (assumption A3; **TWY2 only**): \(\delta_j = \bar h_j^{p_j(x)} e_j(x, h_j)\) with \(e_j\) a stationary GP, and \(\log p_j(x) = \log p_{j0} + \pi_j(x)\). LB keeps one shared order per component, because its order sits inside the kernel's power and no varying form was read for it.
   - \(\pi_j\) is a GP with a PC prior that shrinks its variance to 0, so the base model is one shared order [inference]. The data switch the variation on only if they need it.
   - The covariance stays valid: \(b(z) b(z') k(z, z')\) is positive semi-definite for any function \(b\), here \(b = \bar h^{p(x)}\).
 - **Properties:**
@@ -225,7 +226,14 @@ $$ \log_2 \kappa(u, h) = \kappa_0 + \sum_j \gamma_j \ell_j + \omega(u, h) + \eta
 - The Gaussian of the requirement is \(N(m_y, \sigma_y^2)\). Gate G6 checks its shape.
 - \(\sigma_{epi}\) is \(\sigma_y\) of \(f(x)\).
 - \(\sigma_{fid}(x,h) = (E[(f(x,h) - f(x))^2 \mid D])^{1/2}\), computed from the same draws.
-- \(\sigma_{tot}\) is the spread of draws of \(\Lambda^{-1}\)(target + noise).
+- **Fidelity envelope**, in \(\Lambda\) units (relative error for \(\Lambda = \log\)):
+
+$$ \sigma_{env}^2(x, h) = E_{\vartheta \mid D} \Big[ \sum_j \sigma_{\delta,j}^2 k_{x,j}(x, x) \bar h_j^{2 p_j(x)} \Big] $$
+
+  - It is the GP part of the error only. Each posterior draw is monotone in the componentwise order, so the average is monotone too, and it is 0 at \(h = 0\).
+  - The mean term of \(\delta\) is left out on purpose. With several components, terms of mixed sign can cancel, which would break monotonicity, and under a flat prior on \(c\) its prior variance is infinite.
+- **Aleatoric spread on the physical scale:** \(s_0(x)\) is the quantile half-width \((q_{84} - q_{16})/2\) of \(\Lambda^{-1}(\Lambda(m_y) + e)\), with \(e \sim N(0, s^2(x, 0))\), over the posterior draws of \(s\). It is reported as "not identified" when replicates exist at fewer than 3 levels, or when the posterior sd of the trend \(b_s\) is more than half its prior sd.
+- \(\sigma_{tot}\) is the quantile spread of draws of \(\Lambda^{-1}\)(target + noise) at \(h = 0\). This is the only definition; it is not \(\sigma_{epi}\) and \(s_0\) added in quadrature, because they are on scales that do not add.
 
 ---
 
@@ -234,7 +242,8 @@ $$ \log_2 \kappa(u, h) = \kappa_0 + \sum_j \gamma_j \ell_j + \omega(u, h) + \eta
 **Step 0, set the problem.** Choose \(\Sigma\), \(\varepsilon\), \(C\) and the batch size \(q\). Choose the candidate transforms, the backbone source, the prior scales, and the optional modules of Section 4.
 
 **Step 1, initial design.**
-- **Backbone:** a space-filling design of the cheapest source, as large as is cheap. This is Yi's abundant LF.
+- **Backbone:** a space-filling design of the cheapest source, as large as is cheap. This is Yi's abundant LF. Only a capped subsample of it enters the likelihood (Section 2.2).
+- **Prerequisite:** run the synthetic test of assumption A12 (Section 5) before the first real campaign. Step 5 values probes at unprobed finer levels correctly only if A12 holds.
 - **Ladder:** nested Sobol designs in \(u\) at the levels above it. [lit] Stacking designs eq 9 gives starting sizes.
 - **Replicates:** at 3 or more levels at 3 or more sites.
 - This minimum is necessary, not sufficient [inference].
@@ -245,7 +254,7 @@ $$ \log_2 \kappa(u, h) = \kappa_0 + \sum_j \gamma_j \ell_j + \omega(u, h) + \eta
 
 | Gate | Test | Pass rule |
 |---|---|---|
-| G0 order | posterior of \(p_{j0}\); observed increment ratios | \(P(p_{j0} > 0.5) \ge 0.9\) **and** the posterior sd of \(\log p_{j0}\) is at most 0.5 (half its prior sd), so the prior cannot pass G0 alone (the prior already gives \(P(p > 0.5) = 0.76\)). **A failure does not stop the method.** It means the limit is not yet identified, so \(\sigma_{epi}\) is large, and Step 5 then prefers finer levels. [lit] E&H treat \(p < 0.5\) as anomalous. |
+| G0 order | posterior of \(p_{j0}\); observed increment ratios | \(P(p_{j0} > 0.5) \ge 0.9\) **and** the posterior sd of \(\log p_{j0}\) is at most 0.5 (half its prior sd), so the prior cannot pass G0 alone (the prior already gives \(P(p > 0.5) = 0.76\)). When the posterior of \(\sigma_\pi\) is away from 0 (the order varies with \(x\)), it also needs \(P(p_j(x) > 0.5) \ge 0.9\) at every \(x \in \Sigma_N\). **A failure does not stop the method.** It means the limit is not yet identified, so \(\sigma_{epi}\) is large, and Step 5 then prefers finer levels if A12 holds. [lit] E&H treat \(p < 0.5\) as anomalous. |
 | G1 level hold-out | cross-fitted prediction of the finest level | 95% coverage within binomial limits; no sign bias; \(C_{LOO}\) near 1 [lit: Bachoc 1301.4320 eq 6; Oliver 1311.0828 eq 17] |
 | G2 block LOO | leave out whole runs | z ~ N(0, 1); U statistic [lit: Overstall & Woods eq 10] |
 | G3 noise | replicate spread against \(s^2\) | chi-square, p > 0.05 |
@@ -262,7 +271,9 @@ $$ \log_2 \kappa(u, h) = \kappa_0 + \sum_j \gamma_j \ell_j + \omega(u, h) + \eta
 - **Success:** P1 holds and the gates pass.
 - **Budget used:** report P2.
 - **Forecast** (bounded cost):
-  - Simulate the greedy policy of Step 5 with 20 fixed posterior samples, for at most 50 steps or until success. Use variance-only updates and the expected reached set, with no fantasies and no reweighting. Each step costs about \(10^{10}\) flops, so the forecast is bounded at about \(10^{12}\) flops. This gives a distribution of the cost to success.
+  - Simulate the greedy policy of Step 5 with 20 fixed posterior samples (spread over the structures by their weights), for at most 50 steps or until success. Use variance-only updates and the expected reached set, with no fantasies and no reweighting.
+  - Judge success on \(\sigma_{epi}\) of the **pooled** 20 samples, so the spread between samples and between structures (for example the 2–4× kernel spread of F6) stays in. Variance-only updates cannot shrink that spread, so the forecast is conservative about success.
+  - Cost: about \(2 \times 10^8\) flops per sample and step (120 candidates, rank-10 updates at 400 data), so about \(2 \times 10^{11}\) flops for 20 samples and 50 steps.
   - If the probability of exceeding \(C\) is above 0.5, tell the user the forecast. This is a report, not a stop: the method continues with the P2 criterion of Step 5.
 
 **Step 5, acquisition: maximum uncertainty reduction per cost.**
@@ -272,8 +283,8 @@ $$ a^\star = \arg\max_{a \in A} \; (H_n - E J_n(a)) / E c(a), \qquad H_n = \sum_
 - [lit] The ratio is MR-SUR (Stroh et al. 2007.13553 eq 11). The hinge form of \(H_n\) is our change [inference]. It is zero exactly when P1 holds.
 - **P2 criterion.** When the forecast says P1 is infeasible, \(H_n\) becomes a soft maximum, \(\beta^{-1} \log \sum_{x \in \Sigma_N} \exp(\beta \sigma_{epi}^2/\varepsilon^2)\) with \(\beta = 20\) [inference]. This targets the max of P2 rather than a sum.
 - **Budget enforcement.**
-  - A candidate is admissible only if \(P(c(a) \le C_{rem}) \ge 0.95\) under the cost posterior. Here \(C_{rem}\) is the budget left after the spent and pending runs.
-  - Every run gets a hard cap equal to its admissible cost. A run that reaches the cap is stopped. Its full cost so far is counted, and the outputs it reached are kept (outputs not reached are censored, module S1). With module S2, it can be extended later if budget remains.
+  - Every candidate gets a cap \(\bar c(a)\), the 0.95 quantile of its cost posterior. A candidate is admissible only if \(\bar c(a) \le C_{rem}\), where \(C_{rem}\) is the budget minus the spent cost and minus the caps of all pending runs (each pending run is reserved at its cap).
+  - A run that reaches its cap is stopped. Its cost is counted, and it is a right-censored cost datum: the cost model (Section 2.6) uses a censored (Tobit) likelihood for it. The outputs it reached are kept; outputs not reached are censored (module S1). In the generic case with one output, a capped run gives only the cost datum. With module S2, it can be extended later if budget remains.
   - So \(\sum c \le C\) holds by construction.
 - **Not optimal.** The policy is greedy, with a one-step look-ahead. It does not claim to minimise \(\sum c\) (P1) or to reach the P2 optimum. It is a heuristic in the class of MR-SUR.
 - **Candidates:** every \(u\) in a candidate set, **at every resolution, including resolutions finer than any run so far**, and every optional action of Section 4.
@@ -290,9 +301,9 @@ $$ a^\star = \arg\max_{a \in A} \; (H_n - E J_n(a)) / E c(a), \qquad H_n = \sum_
 
 **Step 6, run the batch, add the data, and go to Step 2.**
 
-**Computational cost** [inference, order of magnitude]: for 400 data, about 120 candidates and 16 fantasies, the acquisition costs about \(10^{12}\) flops, which is minutes to an hour on one node. MCMC time must be measured.
+**Computational cost** [inference, order of magnitude]: for about 400 data in the likelihood (the ladder plus the capped backbone subsample), about 120 candidates and 16 fantasies, the acquisition costs about \(10^{12}\) flops, which is minutes to an hour on one node. MCMC time must be measured.
 
-**Output:** for each \(x \in \Sigma\): \(m_y\), \(\sigma_{epi}\), \(s_0\) (or "not identified"), and \(\sigma_{tot}\); \(\sigma_{fid}(x, h)\) for the levels used; the posteriors of \(p_j\) and \(\rho_1\); the stacking weights; the gate table; the spent cost and the allocation per level.
+**Output:** for each \(x \in \Sigma\): \(m_y\), \(\sigma_{epi}\), \(s_0\) (or "not identified"), and \(\sigma_{tot}\); \(\sigma_{env}(x, h)\) and \(\sigma_{fid}(x, h)\) for the levels used; the posteriors of \(p_j\) and \(\rho_1\); the stacking weights; the gate table; the spent cost and the allocation per level.
 
 ---
 
@@ -373,7 +384,7 @@ Each module is generic. The core (Sections 1–3) works without any of them. A m
 
 **What the method will do with this** [inference]:
 - G0 fails today, so \(\sigma_{epi}\) at \(h = 0\) is large.
-- The acquisition will then value L10 probes, which are the only way to identify the limit.
+- If assumption A12 holds (its synthetic test is a prerequisite), the acquisition will then value L10 probes, which are the only way to identify the limit.
 - An L10 probe to \(\Delta t_{0.95}\) costs about 3,600 core-h at 32.5 rpm (spin-up included) and much more at low rpm. So within 52,000 core-h the method can buy roughly 5–14 of them, mostly at high rpm.
 - [inference] With a Péclet number of about \(10^7\) (\(D = 0.44 \times 10^{-9}\) m²/s, `src/BioReactor.c:201`), the Batchelor scale is about 50 µm, against 0.49 mm at L9. If the asymptotic range starts only near that scale (L12–L13), the method will end in P2 with an honest, large \(\sigma_{epi}\). If L10 already shows convergence, it can succeed.
 - Module S4 (a scalar grid finer than the flow grid on a stored converged periodic flow) could make the fine scalar levels much cheaper. It fits the general framework as a second resolution component. It needs a replay solver, which is in BACKLOG and is untested.
@@ -388,5 +399,5 @@ Each module is generic. The core (Sections 1–3) works without any of them. A m
 
 - **Q-a.** Prior scales: some were chosen after seeing L6–L9, which uses the data twice; G7 tests their influence. Can you give physical values?
 - **Q-b.** Should module S4 (two resolution components with a replayed flow) be developed now, or after L10 probes show whether the scalar converges?
-- **Q-c.** The backbone \(m_b\) is Yi's deterministic KRR, used as a fixed basis. Its fit uncertainty is not propagated (Section 2.2). Is this deviation from "fully Bayesian" acceptable as the price of Yi's scalability? The alternative is a GP backbone in the likelihood (a recursive co-kriging), which loses that scalability.
+- **Q-c.** The backbone \(m_b\) is Yi's deterministic KRR, used as a fixed basis. Its fit uncertainty is not propagated, and only a capped subsample of the backbone level is in the likelihood (Section 2.2). That keeps the MCMC size independent of the backbone size. Is this deviation from "fully Bayesian" acceptable as the price of Yi's scalability? The alternative is a GP backbone in the likelihood (a recursive co-kriging), which loses that scalability.
 - **Q-d.** The target is the median run outcome at \(h = 0\), not the mean (Section 2.2). They are equal for a symmetric spread. Is the median acceptable?
