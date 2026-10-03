@@ -42,5 +42,6 @@ __pycache__/
 !experiments/multifidelity/cost_per_level.png
 !experiments/multifidelity/h_kernel_test_chi*.png
 !experiments/multifidelity/observed_order_*.png
+!experiments/multifidelity/sigma_concepts.png
 !experiments/canonical_case/**/*.mp4
 !docs_site/assets/**
