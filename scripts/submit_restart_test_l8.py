@@ -36,9 +36,11 @@ BINARY = "/oscar/scratch/eaguerov/BioReactor-mpi-lean-f1c11e0"   # kmix_l8 binar
 GEOMETRY = {"a": 0.25, "b": 0.03575, "n": 8.0}
 THETA, RPM, LEVEL, NTASKS = 7.0, 32.5, 8, 16
 ZEROS = [0.0, 0.0, 0.0]
-# stage -> (parent stage, start cycle, end cycle, n_mix_cycles, restart_continue, set *_prev)
+# stage -> (parent stage, nominal start cycle, ABSOLUTE end cycle, n_mix_cycles, restart_continue,
+#           set *_prev). n_mix_cycles "rel80" = release at ABSOLUTE cycle 80 from the actual dump
+#           cycle (runs stop at period boundaries, so a dump can land up to one cycle late).
 STAGES = {"A": (None, 0, 37, 80, None, None), "B": ("A", 37, 47, 10, 0, True),
-          "C": ("B", 47, 85, 33, 0, False), "Cp": ("B", 47, 85, 33, 0, True),
+          "C": ("B", 47, 85, "rel80", 0, False), "Cp": ("B", 47, 85, "rel80", 0, True),
           "D": ("C", 85, 230, 1, 1, True), "Dp": ("Cp", 85, 230, 1, 1, True)}
 
 
@@ -69,8 +71,14 @@ def main() -> None:
         if not ckpt.exists():
             raise SystemExit(f"checkpoint not found: {ckpt}")
         t_ck = _dump_fields(ckpt)[0]["t"]
-        if abs(t_ck / T - c0) > 0.6:
-            raise SystemExit(f"parent dump at cycle {t_ck / T:.2f}, expected {c0}")
+        c_dump = t_ck / T
+        if abs(c_dump - c0) > 1.5:
+            raise SystemExit(f"parent dump at cycle {c_dump:.2f}, expected about {c0}")
+        if n_mix == "rel80":
+            n_mix = int(round(80 - c_dump))
+            p["n_mix_cycles"] = n_mix
+        p["t_end"] = round((c1 - c_dump) * T, 4)          # run to the ABSOLUTE end cycle
+        print(f"  parent dump at absolute cycle {c_dump:.2f}")
         p.update(t_checkpoint=t_ck, restart_continue=cont)
         if prev:
             p.update(omega_b_prev=omega, theta_max_prev=[THETA, 0.0, 0.0],

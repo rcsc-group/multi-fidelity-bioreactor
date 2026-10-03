@@ -127,8 +127,8 @@ $$ \rho_0 = \sum_{j=1}^{k} c_{0j} \bar h_j^{p_j(x)}, \qquad \rho_1 = 1 + \sum_{j
 $$ f(x, h_h) = \rho_0' + \rho_1' \, f(x, h_l) + r'(x) $$
 
 - Here \(\rho_1' = \rho_1(h_h)/\rho_1(h_l)\) and \(\rho_0' = \rho_0(h_h) - \rho_1' \rho_0(h_l)\).
-- \(r' = \delta(x, h_h) - \rho_1' \delta(x, h_l)\) is a GP.
-- This is Yi's eq 2 (and eq 4 with \(M = 2\)) when all of these also hold:
+- \(r' = \delta(x, h_h) - \rho_1' \delta(x, h_l)\) is a GP. It contains the coarse level's own error \(\delta(x, h_l)\), so it is **correlated with** \(f(x, h_l)\). Yi's residual is independent of the low-fidelity predictor. So the result has Yi's **form**, and it is Yi's **model** only if \(\delta(x, h_l) \equiv 0\) or \(\delta(x, h_l)\) is independent of \(f(x, h_l)\). Otherwise Yi's fitted \(\rho\) absorbs part of the grid error (a fresh reviewer found this on the guide's toy: correlation \(-0.93\)).
+- This is Yi's eq 2 (and eq 4 with \(M = 2\)) when that holds and all of these also hold:
   - the orders \(p_j\) do not vary with \(x\), so \(\rho'\) is constant;
   - \(f(x, h_l)\) is replaced by a deterministic KRR fit (Yi's LF model);
   - the residual kernel is Yi's RBF (Yi eq 5);

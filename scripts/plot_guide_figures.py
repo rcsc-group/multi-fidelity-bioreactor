@@ -109,25 +109,37 @@ def g3():
 
 
 def g4():
+    """Yi et al.'s three steps on a toy: KRR on cheap data; rho by GLS; GP on the residual."""
     rng = np.random.default_rng(7)
     x = np.linspace(0, 1, 200)
     lo = lambda z: level(z, 1.0)          # cheap: the coarsest grid
     hi = lambda z: level(z, 0.125)        # expensive: the finest grid
     xl = np.linspace(0, 1, 40)
     yl = lo(xl) + 0.02 * rng.standard_normal(xl.size)
-    xh = np.array([0.1, 0.45, 0.85])
+    xh = np.array([0.05, 0.35, 0.65, 0.95])
     yh = hi(xh) + 0.02 * rng.standard_normal(xh.size)
-    # Yi's steps on a toy: a smooth fit of the cheap data, then a linear transfer from 3 points
-    coef = np.polyfit(xl, yl, 7)
-    fl = np.polyval(coef, x)
-    A = np.column_stack([np.ones(xh.size), np.polyval(coef, xh)])
-    rho, *_ = np.linalg.lstsq(A, yh, rcond=None)
+    # step 1: kernel ridge regression of the cheap data (RBF kernel, ridge 1e-3)
+    kr = lambda a, b: np.exp(-0.5 * (a[:, None] - b[None, :]) ** 2 / 0.15 ** 2)
+    alpha = np.linalg.solve(kr(xl, xl) + 1e-3 * np.eye(xl.size), yl)
+    fl = lambda z: kr(z, xl) @ alpha
+    # steps 2-3: residual GP r ~ GP(0, k), noise 0.02; rho by generalised least squares
+    kres = lambda a, b: k(a, b, ell=0.3, s=0.3)
+    Kh = kres(xh, xh) + 0.02 ** 2 * np.eye(xh.size)
+    F = np.column_stack([np.ones(xh.size), fl(xh)])
+    Ki = np.linalg.inv(Kh)
+    rho = np.linalg.solve(F.T @ Ki @ F, F.T @ Ki @ yh)
+    res = yh - F @ rho
+    ks = kres(x, xh)
+    mean = rho[0] + rho[1] * fl(x) + ks @ Ki @ res
+    sd = np.sqrt(np.clip(0.3 ** 2 - np.einsum("ij,jk,ik->i", ks, Ki, ks), 0, None))
     fig, ax = plt.subplots(figsize=(6.4, 3.6))
-    ax.plot(xl, yl, ".", color="#9ecae1", ms=6, label="cheap runs (many)")
-    ax.plot(x, fl, color="#6baed6", lw=1.2, label="fit of cheap runs")
-    ax.plot(xh, yh, "o", color="#08306b", ms=7, label="expensive runs (three)")
-    ax.plot(x, rho[0] + rho[1] * fl, color="#d62728", lw=1.4,
-            label=rf"transfer $\rho_0 + \rho_1 \times$ cheap fit")
+    ax.plot(xl, yl, ".", color="#9ecae1", ms=6, label="cheap runs (40)")
+    ax.plot(x, fl(x), color="#6baed6", lw=1.2, label="step 1: KRR fit of cheap runs")
+    ax.plot(x, rho[0] + rho[1] * fl(x), color="#fdae6b", lw=1.2, ls="-.",
+            label="step 2: transfer only")
+    ax.fill_between(x, mean - 1.96 * sd, mean + 1.96 * sd, color="#d62728", alpha=0.15, lw=0)
+    ax.plot(x, mean, color="#d62728", lw=1.5, label="step 3: transfer + residual GP, 95%")
+    ax.plot(xh, yh, "o", color="#08306b", ms=7, label="expensive runs (4)")
     ax.plot(x, hi(x), "k--", lw=1.0, label="expensive level (true)")
     ax.set_xlabel("input x")
     ax.set_ylabel("QoI")
@@ -135,7 +147,9 @@ def g4():
     ax.legend(loc="upper left", bbox_to_anchor=(1.02, 1.0), frameon=False)
     fig.tight_layout()
     fig.savefig(OUT / "g4_yi.png", dpi=150, bbox_inches="tight")
-    print(f"G4: rho0 = {rho[0]:.3f}, rho1 = {rho[1]:.3f}")
+    err = np.abs(mean - hi(x)).max()
+    print(f"G4: rho0 = {rho[0]:.3f}, rho1 = {rho[1]:.3f}, max |error| of step 3 = {err:.3f}, "
+          f"true within band: {np.mean(np.abs(mean - hi(x)) <= 1.96 * sd):.0%}")
 
 
 if __name__ == "__main__":
