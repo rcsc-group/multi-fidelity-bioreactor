@@ -1,6 +1,6 @@
 # Multi-fidelity prediction of a grid-converged quantity: problem definition and algorithm
 
-Draft 5, 2026-10-03. It replaces draft 1 (chat, 2026-10-02) and drafts 2–4, which the reviewer rejected in rounds 1–3: 1 fatal and 6 major holes, then 3 major, then 2 major. All are addressed below.
+Draft 6, 2026-10-03. It replaces draft 1 (chat, 2026-10-02) and drafts 2–5, which the reviewer rejected in rounds 1–4: 1 fatal and 6 major holes, then 3, 2 and 2 major holes. All are addressed below.
 
 **Status labels:**
 - **[lit]**: I read it in the cited paper in this session.
@@ -46,7 +46,9 @@ Both statements are provisional until the pooled fit (action 1).
 ## 1. Setting and notation
 
 - \(x \in X \subset R^d\): the QoI coordinates. \(\Sigma \subset X\) is the region of interest. \(\Sigma_N\) is a scrambled Sobol set of \(100 \cdot d\) points in \(\Sigma\). All "max over \(\Sigma\)" values are computed on \(\Sigma_N\) [assumption].
-- \(h\): the cell size divided by one fixed reference cell \(h_{ref}\) (in the example, the L10 cell, so L6 has \(h = 16\)). The levels are \(h_\ell = h_0 2^{-\ell}\). \(h_{min}\) is the finest level that has data. \(h_c\) is the coarsest level of any candidate level set.
+- \(h\): the cell size. The levels are \(h_\ell = h_0 2^{-\ell}\). \(h_{min}\) is the finest level that has data. \(h_c\) is the coarsest level of any candidate level set (fixed for all structures).
+- **One normalisation:** inside every kernel and prior, \(h\) enters as \(\bar h = h/h_c \in (0, 1]\). Figures use \(h/h_{ref}\) with \(h_{ref}\) the L10 cell, for display only.
+- All coordinates of \(x\) are scaled to [0, 1] over \(\Sigma\) inside the kernels.
 - **Target resolution \(h^\star\).** The default is \(h^\star = 0\), the grid-converged value. The method also supports \(h^\star > 0\), for example the resolution of a reference study. Then the target is \(f(x, h^\star)\).
 - A **probe** is one run, \(a = (u, h, T)\): controls \(u\), level \(h\), run length \(T\).
   - It returns a vector \(y_a\) at the coordinate set \(O(a) \subset X\).
@@ -77,9 +79,11 @@ $$ g(y_{a,k}) = \mu(x_k) + \delta(x_k, h_a) + e_{a,k} $$
 
 $$ \mu \sim GP(\phi(x)^T \beta, \; \sigma_\mu^2 k_\mu(x, x')) $$
 
-- \(\beta\) has a flat prior (universal kriging).
+- \(\beta\) has a flat prior (universal kriging) **only when there is no link**. Then the likelihood is Gaussian in \(\beta\), and the posterior is proper when the design has at least \(\dim \phi\) distinct sites.
 - \(k_\mu\) is a Matérn-5/2 kernel with one length scale per input dimension (ARD) [assumption]. The same choice is used for \(k_x\) below.
 - **Known admissible range goes into the prior, not into a gate.** If the converged value must lie in a known range, write \(\mu = \psi(\tilde\mu)\) with a link \(\psi\) and a GP on \(\tilde\mu\). For example, for \(g = -1/\Delta t\) the converged rate must be positive, so \(\mu = -\exp(\tilde\mu)\). \(\delta\) stays additive in \(g\)-space. The likelihood is then not Gaussian in \(\tilde\mu\), and Section 2.5 samples it.
+  - **With a link, \(\beta\) must have a proper prior.** With a flat \(\beta\), the intercept can go to \(-\infty\): then \(\mu \to 0\) everywhere, the likelihood tends to a positive constant, and the posterior is improper. We use \(\beta \sim N(b_{phys}, \mathrm{diag}(s_b^2))\), with \(b_{phys}\) from a physical estimate (Section 8).
+  - The link constrains only \(\mu\). For a finite target \(h^\star > 0\), \(f(x, h^\star) = \psi(\tilde\mu) + \delta(x, h^\star)\) can still leave the range. The method reports the probability that \(f(x, h^\star)\) is outside the range, and flags values above 5%.
 
 ### 2.3 Discretisation error
 
@@ -107,9 +111,9 @@ $$ e_a \sim N(0, S_a), \quad S_a = D_a R_a D_a $$
 
 - Runs are independent. \(D_a\) is the diagonal of the noise standard deviations \(s(x_k, h_a)\). \(R_a\) holds the correlations between the outputs of one run.
   - [lit] One run then counts as one correlated vector: Overstall & Woods 1506.04489 eq 2 (matrix normal). A separable form would force the noise correlation to equal the signal correlation, so \(R\) is kept separate.
-- **Log-variance model.** \(\log s^2(x, h) = m_s + b_s h + \zeta(x, h)\), where \(\zeta\) is a latent GP (Matérn-5/2 in \(x\) and in \(h\)).
+- **Log-variance model.** \(\log s^2(x, h) = m_s + b_s \bar h + \zeta(x, h)\), where \(\zeta\) is a latent GP with variance \(\sigma_\zeta^2\) and Matérn-5/2 length scales \(\ell_\zeta\) in \(x\) and in \(\bar h\).
   - [lit] hetGP, 1611.05902 eq 14, smooths latent log-variances, so it works with few replicates.
-  - The trend \(b_s\) has a symmetric prior \(N(0, \tau_b^2)\) with \(\tau_b = \log 4 / h_c\) [assumption]: one prior sd lets \(s\) change by a factor 2 between \(h_c\) and \(h = 0\). It uses the fixed \(h_c\), so the prior is the same for every candidate structure. The spread may grow or shrink as \(h \to 0\).
+  - The trend is \(b_s \bar h\), with a symmetric prior \(b_s \sim N(0, \tau_b^2)\) and \(\tau_b = \log 4\) [assumption]. One prior sd lets \(s\) change by a factor 2 between \(h_c\) and \(h = 0\). \(\bar h\) uses the fixed \(h_c\), so the prior is the same for every candidate structure. The spread may grow or shrink as \(h \to 0\).
   - The prior sd of \(m_s\) is 1.4 [assumption]: one sd is a factor 2 in \(s\).
   - [lit] Analogous evidence: in an LES study, the Lyapunov growth rate *increases* on finer meshes (1801.03046 §4.2: 285, 517, 589 per second). That is a turbulent flow, not ours, so it only motivates the symmetric prior.
   - [lit] Stroh 1605.02561 eq 3 and 1709.06896 eq 7e correlate the log-variances across levels; we keep that as the prior centre.
@@ -119,10 +123,10 @@ $$ e_a \sim N(0, S_a), \quad S_a = D_a R_a D_a $$
 
 ### 2.5 Posterior sampling
 
-- The state is \(\vartheta\): the hyperparameters \((\beta, p, \sigma_\delta, \ell_x, \ell_h\) or \(\gamma, \sigma_\mu, \ell_\mu, m_s, b_s, R)\), plus the latent fields \(\zeta\) (about one value per distinct \((x, h)\), so about 400) and \(\tilde\mu\) if a link is used, plus the censored values.
+- The state is \(\vartheta\): the hyperparameters \((\beta, p, \sigma_\delta, \ell_x, \ell_h\) or \(\gamma, \sigma_\mu, \ell_\mu, m_s, b_s, \sigma_\zeta, \ell_\zeta, \ell_\rho)\), plus the latent fields \(\zeta\) (about one value per distinct \((x, h)\), so about 400) and \(\tilde\mu\) if a link is used, plus the censored values.
 - **Sampler: Gibbs with three blocks.**
   1. Latent Gaussian fields (\(\zeta\), \(\tilde\mu\)) are updated by **elliptical slice sampling**. [lit] Murray, Adams & MacKay 1001.0175 (abstract): it is for "models with multivariate Gaussian priors", "has no free parameters", and "works well for a variety of Gaussian process based models".
-  2. The hyperparameters are updated by slice or adaptive Metropolis–Hastings steps, conditional on the latent fields. [lit] Stroh 1709.06896 samples the rate and noise hyperparameters this way, but without latent fields.
+  2. The covariance hyperparameters of the latent fields are updated by the surrogate-data slice sampler of Murray & Adams. [lit] 1006.0868 (abstract): standard hyperparameter updates with non-Gaussian observations "require careful tuning and may converge slowly"; theirs "requires little tuning while mixing well in both strong- and weak-data regimes". The other hyperparameters use slice steps.
   3. Censored values are drawn from their truncated conditional (data augmentation) [inference].
   - HMC/NUTS is an alternative that I have not evaluated.
 - **Convergence rule.** Run 4 chains. Use the draws only if the rank-normalised split-\(\hat R\) is below 1.01 and the effective sample size is above 400 for every reported quantity. [lit] Vehtari et al. 1903.08008 §1 ("only using the sample if \(\hat R < 1.01\)") and §4 (ESS "less than 400" indicates convergence problems). The Monte Carlo error of \(\sigma_{epi}\), a quantile spread, uses their quantile MCSE, and it must be below 5% of \(\varepsilon\) [assumption]. If the rule fails, run longer. Never report draws that fail it.
@@ -136,12 +140,15 @@ $$ e_a \sim N(0, S_a), \quad S_a = D_a R_a D_a $$
   2. **Extrapolation fits.** Fit every surviving \(M\) without the finest level, \(L_{max}\). The score is the density of the held-out \(L_{max}\) runs, so it tests extrapolation by one level in \(h\). This is where the families differ. Leave-one-run-out would mostly test interpolation, because the same \(u\) stays in at other levels.
   3. **Cross-fitting.** Split the \(L_{max}\) sites into two halves A and B, balanced in \(u\).
      - On A, compute stacking weights. [lit] Yao, Vehtari, Simpson & Gelman 1704.02030, eq 2.2 with the log score: \(\max_w \sum_i \log \sum_M w_M p(y_i \mid D_{-max}, M)\) with \(w \ge 0\) and \(\sum w = 1\).
+     - **Regularisation.** We add the log of a Dirichlet(2, ..., 2) density to the objective, which pulls the weights toward equal. [lit] Yao et al. §4.1: with many models, "it can make sense to assign a strong prior … to the weights in estimation equation (2.2) to improve the regularization". The weight uncertainty is reported by a Bayesian bootstrap over the held-out sites [inference; Yao et al. use the Bayesian bootstrap for pseudo-BMA+].
+     - **Low power.** With about 10 \(L_{max}\) sites, each half has about 5 sites against up to 8 structures. The weights are noisy, and G1 has little power. The report states both.
      - With those weights, run the calibration Gate G1 on B. Then swap A and B. G1 passes only if both folds pass. So the weights and the calibration check never use the same runs.
   4. **Final weights** for the prediction: stacking on all \(L_{max}\) runs. Then refit every \(M\) on all the data.
 - **Why stacking.** [lit] Yao et al. (abstract): BMA "is flawed in the M-open setting", and they "recommend stacking of predictive distributions". Our G1 failures (Section 8) suggest that no candidate is true.
 - **Why not selection.** In the level hold-out (Fig. B), the families differ by only about 2 nats in total log density, and their answers at \(h = 0\) differ 2–4×. Selecting one would hide that spread.
 - **Assumption A13:** weights that are good for extrapolating one level beyond the data are also good for extrapolating to \(h^\star\). This cannot be tested without a finer level.
 - With 4 levels, the extrapolation fits use only 3 levels. This is the price of a held-out level, and it is a reason to add levels.
+- **If only 2 levels remain** for the extrapolation fits (for example after G4 removes L6), \(p\) is not identifiable there. Then stacking is skipped, the weights stay equal over the G0 survivors (the prior), the output is flagged "weights prior-driven", and G1 cannot run, so the output is "uncalibrated" until a level is added.
 
 ### 2.7 Prediction on the physical scale (quantile based)
 
@@ -154,6 +161,26 @@ $$ e_a \sim N(0, S_a), \quad S_a = D_a R_a D_a $$
 - **Why quantiles.** Some back-transforms have no finite moments. If the rate \(z = -1/\Delta t\) is Gaussian, \(\Delta t\) has no finite mean or variance, because the density of \(z\) at 0 is not zero. Quantiles always exist.
 - The Gaussian requirement is met by \(N(m_y, \sigma_y^2)\). Gate G6 compares the 2.5% and 97.5% quantiles with \(m_y \pm 1.96 \sigma_y\).
 - With \(g = \log\), the posterior is lognormal before this match (question Q1).
+
+### 2.8 Priors of every hyperparameter
+
+All the priors are proper. The scales marked "§8" are problem-specific (R7).
+
+| Parameter | Prior | Source |
+|---|---|---|
+| \(\beta\), no link | flat | universal kriging; the posterior is proper (Section 2.2) |
+| \(\beta\), with link | \(N(b_{phys}, \mathrm{diag}(s_b^2))\); \(b_{phys}\) and \(s_b\) from §8 | required for a proper posterior |
+| \((\sigma_\mu, \ell_\mu)\) | PC prior per input dimension: \(P(\ell < 0.1) = 0.05\), \(P(\sigma_\mu > S_\mu) = 0.05\); \(S_\mu\) from §8 | [lit] Fuglstad et al. 1503.00256 Thm 2.6 (joint PC prior for Matérn range and sd, \(d \le 3\)); applying it per ARD dimension with \(d = 1\) is [inference] |
+| \((\sigma_\delta, \ell_x)\) | same PC form; \(P(\sigma_\delta > S_\delta) = 0.05\). \(\sigma_\delta\) is the error sd at \(h_c\), because \(\bar h = 1\) there. \(S_\delta\) from §8 | same |
+| \(\ell_h\) (TWY2) | PC range prior, \(d = 1\): \(P(\ell_h < 0.1) = 0.05\) | same |
+| \(\gamma\) (LB) | Uniform(0, 1) | [assumption] |
+| \(p\) | \(\log p \sim N(0, 1)\) | G0 (Section 4) |
+| \(m_s\), \(b_s\) | Section 2.4 and §8 | |
+| \((\sigma_\zeta, \ell_\zeta)\) | PC prior: \(P(\sigma_\zeta > 1) = 0.05\), \(P(\ell_\zeta < 0.1) = 0.05\) | as above |
+| \(\ell_\rho\) | PC range prior on the problem-specific output coordinate of \(R\) (§8), scaled to [0, 1] | as above |
+| stacking weights | Dirichlet(2, ..., 2) penalty | Section 2.6 |
+
+**Prior sensitivity (Gate G7).** Refit with each problem-specific scale (\(S_\mu\), \(S_\delta\), \(s_b\), the sd of \(\log p\)) halved and doubled, one at a time. The target is prior-dominated if, at any \(x \in \Sigma_N\), \(m_y\) moves by more than \(0.5 \sigma_{epi}\) or \(\sigma_{epi}\) changes by more than 20% [assumption]. A prior-dominated target is treated like a G0 failure: the method returns to the user.
 
 ## 3. Bounded and reported quantities
 
@@ -186,7 +213,7 @@ All of these are on the physical scale, with \(\vartheta\) and \(M\) marginalise
 
 $$ \min \sum_i c(a_i) \quad \mathrm{s.t.} \quad \max_{x \in \Sigma_N} \sigma_{epi}(x \mid D_N) / \varepsilon(x) \le 1, \quad \sum_i c(a_i) \le C $$
 
-and gates G0–G6 pass on \(D_N\). Here \(\varepsilon(x) = \varepsilon_{rel} m_y(x)\) (with \(m_y\) the median) or \(\varepsilon_{abs}\).
+and gates G0–G7 pass on \(D_N\). Here \(\varepsilon(x) = \varepsilon_{rel} m_y(x)\) (with \(m_y\) the median) or \(\varepsilon_{abs}\).
 
 **P2.** If P1 is infeasible within \(C\): minimise \(\max_{\Sigma_N} \sigma_{epi}/\varepsilon\) subject to \(\sum c \le C\). Report "failed", the value reached, and where.
 - A P2 result is reported as a prediction only if G0 and G1 pass. Otherwise it is reported as "uncalibrated".
@@ -207,6 +234,7 @@ Notes:
 | G4 pre-asymptotic | Refit without the coarsest level | the target moves less than \(\sigma_{epi}\) | [inference] |
 | G5 structure | Posterior mean monotone along a coordinate that must be monotone (here \(\chi\)) | no violation on \(\Sigma_N\) | [lit] López-Lopera 1901.04827 eq 8 |
 | G6 Gaussianity | Sample 2.5/97.5% quantiles against \(m_y \pm 1.96\sigma_y\) | difference < 10% of \(\sigma_y\) | [inference] |
+| G7 prior sensitivity | Refit with each problem-specific prior scale halved and doubled (Section 2.8) | \(m_y\) moves < \(0.5\sigma_{epi}\) and \(\sigma_{epi}\) changes < 20% [assumption]; else treated like a G0 failure | [inference] |
 
 **Repair rule.** When a gate fails, act in this order:
 1. If G4 flags the coarsest level, remove it.
@@ -296,7 +324,7 @@ $$ E[T_{obs}] = \int_0^T P_n(\tau > t) \, dt $$
 
 **Step 2, fit.** Run MCMC over \(\vartheta\) for each candidate \(M\).
 
-**Step 3, gates.** Run G0–G6, then apply the repair rule.
+**Step 3, gates.** Run G0–G7, then apply the repair rule.
 
 **Step 4, stop and forecast.**
 - Success: P1 holds and the gates pass.
@@ -349,8 +377,13 @@ $$ a^\star = \arg\max_{a \in A} \; (H_n - E J_n(a)) / E c(a), \qquad H_n = \sum_
 | \(\phi\) | \((1, \log(-\ln(1-\chi)), \log rpm, \log \theta_{max})\) | A single exponential gives the second term. Fig. A shows that \(\lambda\) changes 0.3–3.7× along a curve, so this is a mean trend only. |
 | \(p\) | the G0 prior \(\log p \sim N(0, 1)\) | [assumption] |
 | noise | \(m_s \sim N(\log 0.03^2, 1.4^2)\), \(\tau_b = \log 4\) | [assumption]; replicates must replace it |
+| \(S_\mu\), \(g = \log\) | 1 (\(\mu\) varies by up to a factor \(e^2\) over \(\Sigma\) at 2 sd) | [assumption] |
+| \(S_\delta\), \(g = \log\) | 4 (the error at L6 can be a factor 50) | [assumption], **set after seeing L6–L9** (×40–60 from L6 to L9) and justified by the Péclet argument of F1; G7 tests its influence |
+| rate link: \(b_{phys}\), \(s_b\) | \(\tilde\mu = \log\) rate. Intercept: \(\Delta t_{0.95}\) = 30 rocking periods at 25 rpm, with \(s_b = 2\) (a factor 7.4 per sd). Slopes: −1 on \(\log(-\ln(1-\chi))\) (single exponential), +1 on \(\log rpm\) (time in periods), 0 on \(\log \theta_{max}\); each with \(s_b = 1\). | [assumption]; Kim's values are **not** used, so the comparison with Kim stays independent |
+| \(S_\mu\), \(S_\delta\), rate link | \(S_\mu = 1\) on \(\tilde\mu\); \(S_\delta = 40 r_{ref}\), with \(r_{ref}\) the rate of the \(b_{phys}\) intercept | [assumption], set after seeing the data, as above |
+| \(R\) coordinate | \(\psi = \log(-\ln(1-\chi))\), scaled to [0, 1] over \(\Sigma\) | |
 | cost features | \(\kappa_1(u) = k \log rpm\) | [data] cost per cycle changes 4× across rpm at L10 (`scripts/cost_model.py`) |
-| \(R\) | \(\exp(-\lvert \psi_k - \psi_{k'} \rvert / \ell_\rho)\), with \(\psi_k = \log(-\ln(1-\chi_k))\) | [assumption]; G2 tests it |
+| \(R\) | \(\exp(-\lvert \psi_k - \psi_{k'} \rvert / \ell_\rho)\) | [assumption]; G2 tests it |
 | \(\sigma^2_{max}\) | the tracer variance at release; exact value 0.25 (top-half release); a run is accepted if it is within ±20%, that is [0.20, 0.30] | `scripts/postprocess.py` (`_SIGMA2_MAX_TOL = 0.20`) |
 
 **Gate status with the data we have (per-rpm fits, no pooling; `scripts/diag_h_kernel_test.py`, `scripts/diag_observed_order.py`):**
