@@ -417,13 +417,17 @@ Each module is generic. The core (Sections 1–3) works without any of them. A m
 
 ---
 
-## 7. Open questions
+## 7. Prior values for the bioreactor (gcbml.priors.PriorScales)
 
-- **Q-a. Physical prior values, one set per QoI.** Today some come from looking at L6–L9, which uses the data twice; G7 tests their influence. A rough range from physical judgement or the literature is enough; a guess with a stated source is better than a value taken from the data.
+These are estimates, in \(\Lambda = \log\) units. Most of them are read from the L6 and L9 results, so they use the data twice [assumption]; gate G7 (halve and double each scale) measures how much the answer depends on them.
 
-| # | Quantity | Question | Current value (source) |
+| Scale | \(\Delta t_{0.95}\) | \(k_La\) | Basis |
 |---|---|---|---|
-| 1 | \(S_\mu\) | Over \(\Sigma\), by what factor can the converged mixing time vary between its smallest and largest values (95% sure)? | a factor \(e^{2}\approx 7\) [assumption] |
-| 2 | \(S_c\) | By what factor can the coarsest level used (L6) be wrong against the converged value (95% sure)? | a factor 50 (set after seeing L6–L9) |
-| 3 | \(p\) | What convergence order do you expect for this QoI from the schemes (advection, VOF, embedded boundary)? | \(\log p \sim N(0, 1)\): median 1, 95% in [0.14, 7] [assumption] |
-| 4 | \(b_{phys}\) | Only for the rate link: a physical estimate of the mixing time in rocking cycles, from experiments | 30 cycles at 25 rpm (no source) |
+| \(S_\mu\) (sd of the converged value over \(\Sigma\)) | 1.0 | 0.75 | L9 over 15–37.5 rpm at 7°: \(\Delta t_{0.95}\) 51–476 s (a factor 9), \(k_La\) 10–61 (a factor 6); the angle range 2–9° adds more; 95% of the prior then covers a factor \(e^{4} \approx 55\) for \(\Delta t\) |
+| \(S_c\) (sd of the coarsest-level transfer coefficients) | 2.0 | 1.5 | L6 against L9: \(\Delta t_{0.95}\) 8–24 s against 51–476 s (L6 is 5–30× too short), \(k_La\) 5–20× too high; the converged value lies beyond L9 by an unknown factor |
+| \(S_\delta\) (the part of the grid error that changes with \(x\)) | 1.0 | 0.75 | half of \(S_c\) [assumption] |
+| \(S_{noise}\) (typical run-to-run sd) | 0.02 | 0.02 | replicate CV 0.15–17%, typically about 2% (F9) |
+| \(\log p_0\) | \(N(0, 1)\) | \(N(0, 1)\) | median order 1, 95% in [0.14, 7]: first- and second-order schemes, with room for pre-asymptotic behaviour [assumption] |
+| \(\ell_0\) | 0.1 | 0.1 | generic (unit coordinates) |
+
+The rate link of module S6 (a physical mixing-time estimate) is not used: gcbml v1 implements the core and S1 only.
