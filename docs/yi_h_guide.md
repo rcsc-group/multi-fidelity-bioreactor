@@ -331,7 +331,7 @@ The core method needs none of these. Each one is optional, and each one states i
 
 ## 11. Where this sits in the literature
 
-Our problem has two halves, and each half has its own literature. Every statement below comes from the method sections of the cited papers, read in this project. "Not in the papers read" does not mean "nobody has done it".
+Our problem has two halves, and each half has its own literature.
 
 **Half 1: how far is one computed number from the converged value?** This is solution verification, at one fixed condition.
 - **Eça & Hoekstra (2014)** fit \(f_0 + a h^p\) by least squares over at least 4 grids, and add a safety factor (Section 2). The result is one number with an uncertainty, at one condition.
@@ -341,7 +341,7 @@ Our problem has two halves, and each half has its own literature. Every statemen
   - Design inputs enter only as an index on a fixed grid (its §2.10).
 - **Sparse PRE** (2604.02072) chooses the next resolutions one at a time under a cost budget, at one condition.
 
-**Half 2: how do we predict over all conditions from cheap and expensive runs?** This is multi-fidelity regression. **In every paper of this half that we read, the target is the most expensive fidelity that was run, not \(h = 0\).**
+**Half 2: how do we predict over all conditions from cheap and expensive runs?** This is multi-fidelity regression. **In every work of this half cited here, the target is the most expensive fidelity that was run, not \(h = 0\).**
 - **Yi et al. (2407.15110)** use two fidelities: KRR for the cheap one, a linear transfer, and a GP residual. Their engineering example has Euler as the cheap fidelity and RANS as the expensive one.
 - **Co-kriging for aerodynamic design** (Schouler et al., 2505.17279) uses a high-fidelity grid that was refined beforehand "until achieving grid convergence".
 - **Deep-GP multi-fidelity Bayesian optimisation** (Savage et al., 2210.17213) uses five mesh levels and optimises at the highest.
@@ -349,11 +349,10 @@ Our problem has two halves, and each half has its own literature. Every statemen
 
 **Terms used below:** co-kriging is a GP model of two fidelities linked by a linear transfer (the Kennedy–O'Hagan form). MLE, ML and REML are maximum-likelihood point estimates of the model settings (REML is a restricted variant). MR-SUR and MSUR choose the run with the largest expected reduction of uncertainty per unit of cost.
 
-**Joining the two halves: the target \(h = 0\) over a design region.** A small line of work makes the cell size an input of a GP, and predicts the converged value at all conditions:
+**Joining the two halves: the target \(h = 0\) over a design region.** A small line of work makes the cell size an input of a GP, and predicts the converged value at all conditions. It starts with Tuo, Wu & Yu (2014), restated in CONFIG §2.4 and in Bect et al. (2103.14559) §2.2. With their Brownian-type kernel, the extrapolation equals the finest grid (Bect et al. §2.2). Later work:
 
 | Work | Rate \(p\) | Inference | Sequential, cost-aware design | Noise model |
 |---|---|---|---|---|
-| Tuo, Wu & Yu 2014 (restated in CONFIG §2.4) | Brownian-type kernel; with it, the extrapolation equals the finest grid (Bect et al. 2103.14559 §2.2) | not checked (not on arXiv) | not checked | no (deterministic code) |
 | CONFIG, Ji et al. (2209.13748) | from numerical analysis, ML, or fully Bayesian | GP | no ("future work") | no |
 | Boutelet & Sung (2503.23158), **closest** | **fixed in advance** from numerical analysis | plug-in REML | yes: integrated variance reduction per cost, one run at a time | no |
 | DNA, Heo et al. (2506.08328) | none; a first-order error term remains | plug-in MLE | one-shot allocation | no |
@@ -361,7 +360,7 @@ Our problem has two halves, and each half has its own literature. Every statemen
 
 The Stroh models contain the \(h = 0\) limit, but the quantity they predict in their applications is at the finest level run (1707.08384 eq 1).
 
-**What Yi-h adds**, in the papers read, is the combination of four things that no single paper there has:
+**What Yi-h adds** is the combination of four things that no single work cited here has:
 1. a design region of up to about 10 inputs;
 2. a convergence rate that is learned, with its uncertainty carried into the answer;
 3. a Bayesian uncertainty of the \(h = 0\) value, checked by a proxy: the prediction of a held-out finer grid (Gate G1);
@@ -369,4 +368,4 @@ The Stroh models contain the \(h = 0\) limit, but the quantity they predict in t
 
 Yi-h also carries Yi's linear transfer into every grid, as \(\rho(h)\), and it lets the size of the noise change with the condition.
 
-None of the papers read reports how often the error bar of a predicted \(h = 0\) value covers the true limit, over a design region of a real simulator. That calibration is the hardest part to show. Gate G1 is our practical proxy, and whether a proxy at one finer grid carries over to \(h = 0\) is an assumption (A13 in the specification).
+None of the works cited here reports how often the error bar of a predicted \(h = 0\) value covers the true limit, over a design region of a real simulator. That calibration is the hardest part to show. Gate G1 is our practical proxy, and whether a proxy at one finer grid carries over to \(h = 0\) is an assumption (A13 in the specification).
