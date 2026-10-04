@@ -293,7 +293,7 @@ The core method needs none of these. Each one is optional, and each one states i
 - Releases after 80, 82 and 85 cycles agree within 1%.
 - So every run, including a run started from a coarser state, must settle for the full 80 cycles.
 
-**The one L10 run** gave about half the L9 mixing time. It reached its release through a checkpoint restart that is known to disturb the flow. A test at L8 with the same restart history is running.
+**The one old L10 run is contaminated, and we discard it.** It gave about half the L9 mixing time. It reached its release through checkpoint restarts, one of them without the settings that keep the forcing continuous. A test at L8 repeated that history. Without those settings, \(\Delta t\) changed by 28–57% and kLa by up to 39%. With them, the restarted run matched the continuous run within 2%. A clean L10 run (continuous from rest, release at cycle 80) is now running.
 
 **Cost** grows by 7× to 21× per grid level per simulated second, and by 17× to 50× per mixing-time run (Fig. C).
 
