@@ -153,11 +153,11 @@ $$ \delta \sim GP(0, \; \sigma_\delta^2 k_x(x, x') k_h(h, h')) $$
 
 Two families are candidates for \(k_h\), and Section 2.7 weights them. Several components and an order that varies with \(x\) follow below.
 
-- **TWY2 (Richardson type)**, for one component: \(k_h = (\bar h \bar h')^{p} c_\nu(\bar h - \bar h'; \ell_h)\), with \(c_\nu\) a Matérn correlation with \(\nu = 3/2\). [lit] Bect §4.3 found \(\nu = 1/2\) or \(3/2\) good. Our diagnostic scripts used 5/2.
+- **TWY2 (Richardson type)**, for one component: \(k_h = (\bar h \bar h')^{p} c_\nu(\bar h - \bar h'; \ell_h)\), with \(c_\nu\) a Matérn correlation with \(\nu = 3/2\). [lit] Bect §4.3 found \(\nu = 1/2\) or \(3/2\) good. Our diagnostic scripts used 5/2. [lit] Proposed by Tuo, Wu & Yu (2014, Technometrics 56:372–380); Bect et al. call it the model "considered—but not advocated" there. The name TWY2 is from Bect et al. 2103.14559 §3.
   - [lit] Bect et al. 2103.14559 Prop. 3 (one component): \(\delta(h) = A h^p + o(h^p)\) almost surely. This is the E&H power law, with the amplitude a GP in \(x\).
   - [lit] It has the same structure as PRE 2401.07562 eq 10.
   - [lit] Bect §4.3: TWY2 intervals were "simultaneously smaller than the GCI interval and with a good coverage".
-- **LB (lifted Brownian):** [lit] Boutelet & Sung 2503.23158 eq 4, with \(\gamma \in (0,1)\) controlling "the correlation between increments".
+- **LB (lifted Brownian):** [lit] Boutelet & Sung 2503.23158 eq 4, with \(\gamma \in (0,1)\) controlling "the correlation between increments". It extends the lifted Brownian kriging model of Plumlee & Apley (2017, Technometrics 59:165–177), as stated in Boutelet & Sung §2.2.
   - The Brownian kernel of Tuo–Wu–Yu, \(\min(h,h')^{2p}\), is \(\gamma = 0.5\).
   - [lit] Bect Prop. 2: in that case the Richardson form "does not hold".
   - [lit] Boutelet Fig. 1: increments are positive for an average-type QoI, and "somewhat uncorrelated or negatively correlated" for a maximum-type QoI.
@@ -392,7 +392,7 @@ Each module is generic. The core (Sections 1–3) works without any of them. A m
 
 ![Fig. B](../experiments/multifidelity/h_kernel_test_chi95.png)
 
-*Fig. B. \(\Delta t_{0.95}\) against cell size, per rpm: TWY2 and Brownian posteriors on L6–L9, with 95% bands. The cross is the single L10 run.*
+*Fig. B. \(\Delta t_{0.95}\) against cell size, per rpm: TWY2 and Brownian posteriors on L6–L9, with 95% bands. The cross is the old L10 run, discarded after the restart test (F8).*
 
 ![Fig. C](../experiments/multifidelity/cost_per_level.png)
 

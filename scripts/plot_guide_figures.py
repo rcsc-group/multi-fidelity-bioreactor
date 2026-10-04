@@ -4,6 +4,8 @@ G1  a QoI computed at four grid levels converges to the exact curve as h -> 0
 G2  Richardson extrapolation at one input: four grids, a power-law fit, the limit
 G3  a Gaussian process: prior samples, then the posterior after five observations
 G4  Yi et al.'s two-fidelity idea: many cheap points, few expensive points, a linear transfer
+G5  the transform Lambda: a relative grid error has a different size in seconds at each
+    condition, but one size in log units
 """
 import sys
 from pathlib import Path
@@ -152,8 +154,28 @@ def g4():
           f"true within band: {np.mean(np.abs(mean - hi(x)) <= 1.96 * sd):.0%}")
 
 
+def g5():
+    hb = np.linspace(0, 1, 100)
+    f0 = {"30 s": 30.0, "60 s": 60.0, "120 s": 120.0}     # exact answers at three conditions
+    y = {k: v * (1 - 0.3 * hb ** 1.5) for k, v in f0.items()}  # each run 30% short at hbar = 1
+    fig, axes = plt.subplots(1, 2, figsize=(9.0, 3.4))
+    for (k, v), c in zip(f0.items(), COLS[1:]):
+        axes[0].plot(hb, y[k] - v, color=c, lw=1.8, label=f"exact answer {k}")
+        axes[1].plot(hb, np.log(y[k]) - np.log(v), color=c, lw=1.8)
+    axes[0].set_ylabel(r"$y(x,h) - f(x)$ (s)")
+    axes[1].set_ylabel(r"$\log y(x,h) - \log f(x)$")
+    for ax in axes:
+        ax.set_xlabel(r"$\bar h$ (cell size / coarsest cell size)")
+        ax.axhline(0, color="k", lw=0.8)
+        ax.grid(**fs.GRID_KW)
+    axes[1].legend(*axes[0].get_legend_handles_labels(), loc="upper left",
+                   bbox_to_anchor=(1.02, 1.0), frameon=False)
+    fig.tight_layout()
+    fig.savefig(OUT / "g5_transform.png", dpi=150, bbox_inches="tight")
+
+
 if __name__ == "__main__":
     OUT.mkdir(parents=True, exist_ok=True)
     plt.rcParams.update(fs.rcparams())
-    g1(); g2(); g3(); g4()
+    g1(); g2(); g3(); g4(); g5()
     print("saved to", OUT)

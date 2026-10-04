@@ -38,7 +38,7 @@ The output must be a number with an honest error bar at every condition. For exa
 
 $$ f(h) \approx f(0) + a \, h^p $$
 
-\(f(0)\) is the exact value. \(a\) and \(p\) are unknown. When this approximation holds, the grids are in the **asymptotic range**.
+\(f(0)\) is the exact value. \(a\) and \(p\) are unknown. (This is eq 1 of Bect et al. 2021, arXiv 2103.14559.) When this approximation holds, the grids are in the **asymptotic range**.
 
 **How to find \(p\) and \(f(0)\).** Compare two grids that differ by a factor 2:
 
@@ -53,7 +53,7 @@ So each difference between neighbouring grids is \(2^p\) times the next one. Cal
 - The rest of the way to \(h = 0\) is a geometric series of ever smaller differences, which sums to \(0.0635/(2^{1.5} - 1)\). So \(f(0) = 1.5103 - 0.0635/1.828 = 1.4756\).
 - The exact value is 1.4755. The difference is only rounding.
 
-This is **Richardson extrapolation.**
+This is **Richardson extrapolation** (in the form of Bect et al. 2021, arXiv 2103.14559, §2.1, eqs 2–3, which give \(\hat p\), \(\hat A\) and \(\hat f_0\) from three grids).
 
 ![Fig. T2](../experiments/multifidelity/guide/g2_richardson.png)
 
@@ -67,13 +67,13 @@ This is **Richardson extrapolation.**
 **Eça & Hoekstra (2014)** is a careful recipe for this, for one QoI at one condition. They:
 - fit the power law by least squares over at least 4 grids;
 - choose the **error model**, the form of \(f(h)\) to fit (free \(p\); or fixed \(p = 1\) or 2; or two terms), from the observed \(p\);
-- report an uncertainty \(U = F_s \lvert \varepsilon \rvert\), where \(\varepsilon\) is the estimated error of the finest grid and the **safety factor** \(F_s\) is 1.25 when the data behave well and 3 when they do not.
+- report an uncertainty \(U = F_s \lvert \varepsilon \rvert\), where \(\varepsilon\) is the estimated error of the finest grid and the **safety factor** \(F_s\) is 1.25 when the data behave well and 3 when they do not. These two values come from Roache's Grid Convergence Index (GCI), as summarised by Bect et al. (2103.14559, §2.1, eqs 4–6).
 
 ---
 
 ## 3. Building block 2: a Gaussian process
 
-**The idea.** A Gaussian process (GP) is a probability distribution over functions. Instead of choosing one curve, you state which curves are plausible. Then the data rule some of them out.
+**The idea.** A Gaussian process (GP) is a probability distribution over functions. Instead of choosing one curve, you state which curves are plausible. Then the data rule some of them out. The standard reference for this section is Rasmussen & Williams (2006), *Gaussian Processes for Machine Learning*, Ch. 2 (Yi et al.'s ref. [14]).
 
 **Definition.** \(f\) is a GP if, for any finite set of inputs \(x_1, ..., x_n\), the values \(f(x_1), ..., f(x_n)\) are jointly Gaussian. Their means are \(m_0\) (a constant here), and their covariances are given by a **kernel** \(k(x_i, x_j)\).
 
@@ -119,13 +119,13 @@ Three facts matter more than the formulas:
 
 $$ f(x, h) = f(x, 0) + \mathrm{error}(x, h) $$
 
-We put a GP on the **error term**, with a kernel in \(h\) proportional to \((h h')^p\). Its variance at one \(h\) is \(k(h, h) \propto h^{2p}\). So the error's sd shrinks like \(h^p\) and is exactly zero at \(h = 0\). This puts Richardson extrapolation inside the GP. The GP then predicts \(f(x, 0)\) and says how sure it is.
+We put a GP on the **error term**, with a kernel in \(h\) proportional to \((h h')^p\). Its variance at one \(h\) is \(k(h, h) \propto h^{2p}\). So the error's sd shrinks like \(h^p\) and is exactly zero at \(h = 0\). This puts Richardson extrapolation inside the GP. The GP then predicts \(f(x, 0)\) and says how sure it is. This idea is from Tuo, Wu & Yu (2014). Bect et al. (arXiv 2103.14559, §2.2, eq 7) restate it, and the probabilistic Richardson extrapolation of Oates et al. (arXiv 2401.07562, §2) develops it further.
 
 ---
 
 ## 4. Building block 3: multi-fidelity learning (Yi et al. 2024)
 
-**The idea.** Cheap runs are many, and expensive runs are few. If cheap and expensive results move together, the cheap runs carry the shape of the function, and a few expensive runs correct it. The classical form (Kennedy and O'Hagan) is "expensive = \(\rho \times\) cheap + correction".
+**The idea.** Cheap runs are many, and expensive runs are few. If cheap and expensive results move together, the cheap runs carry the shape of the function, and a few expensive runs correct it. The classical form is "expensive = \(\rho \times\) cheap + correction" (co-kriging, Kennedy & O'Hagan 2000, Biometrika 87:1–13; Yi et al.'s ref. [15]).
 
 **Yi et al.'s KRR-LR-GPR** has three steps:
 1. Fit the cheap data with **kernel ridge regression (KRR)**. This is the GP posterior mean of Section 3 without the variance: a fast fit, with no uncertainty.
@@ -149,20 +149,36 @@ In Yi's algorithm, the coefficients of step 2 are found together with the GP of 
 
 **The idea in one sentence:** every grid level is a "cheap model" of the exact answer, linked to it by Yi's linear transfer, and the transfer becomes exact as \(h \to 0\).
 
-$$ \Lambda(y) = \rho_0(h) + \rho_1(h) \, \mu(x) + \delta(x, h) + e $$
+$$ \Lambda(y(x, h)) = \rho_0(h) + \rho_1(h) \, \mu(x) + \delta(x, h) + e(x, h) $$
+
+Both sides depend on \(h\). On the left, \(h\) enters through the run result \(y(x, h)\). \(\Lambda\) itself is one fixed function, the same for all grids.
 
 | Term | Meaning |
 |---|---|
-| \(y\) | the result of one run at condition \(x\) on grid \(h\) |
-| \(\Lambda\) | an optional transform, chosen per QoI. With \(\Lambda = \log\), a relative error ("10% too fast") becomes an additive one, which suits positive QoIs such as times and rates. |
-| \(\mu(x)\) | the exact answer we want, in \(\Lambda\) units. The reported answer is \(\Lambda^{-1}(\mu(x))\), which is the **median** result of a run at \(h = 0\): the noise is symmetric in \(\Lambda\) units, so \(\mu\) is the median of \(\Lambda(y)\), and a monotone \(\Lambda^{-1}\) keeps medians. |
+| \(y(x, h)\) | the result of one run at condition \(x\) on grid \(h\) |
+| \(\Lambda\) | the scale on which we write the grid error, chosen per QoI: for example \(\Lambda = \log\), or \(\Lambda\) the identity (no change). See "What \(\Lambda\) does" below. |
+| \(\mu(x)\) | the exact answer we want, in \(\Lambda\) units: the limit \(h \to 0\) of the model equations. The reported answer is \(\Lambda^{-1}(\mu(x))\), which is the **median** result of a run at \(h = 0\): the noise is symmetric in \(\Lambda\) units, so \(\mu\) is the median of \(\Lambda(y)\), and a monotone \(\Lambda^{-1}\) keeps medians. |
 | \(\rho_0(h) = c_0 \bar h^p\) | an offset that vanishes as \(h \to 0\) |
 | \(\rho_1(h) = 1 + c_1 \bar h^p\) | a scale that becomes 1 as \(h \to 0\) |
 | \(\delta(x, h)\) | the rest of the grid error, a GP that also shrinks like \(\bar h^p\) |
-| \(e\) | run-to-run scatter (Section 6) |
+| \(e(x, h)\) | run-to-run scatter (Section 6) |
 
 - \(\bar h\) is the cell size divided by the coarsest cell size, so \(\bar h = 1, 1/2, 1/4, ...\).
 - \(c_0\), \(c_1\) and \(p\) are constants learned from the data.
+- The pieces come from three sources. The linear transfer \(\rho_0 + \rho_1 \times\) (cheap model) is Yi et al.'s step 2 (Yi et al. 2024, arXiv 2407.15110, Algorithm 1), which is the transfer of co-kriging (Kennedy & O'Hagan 2000, cited by Yi et al. as their ref. [15]). The power law \(\bar h^p\) is Richardson's error model (Bect et al. 2021, arXiv 2103.14559, §2.1, eqs 1–2). A GP error term whose variance shrinks like \(h^{2p}\) is from Tuo, Wu & Yu (2014), as restated by Bect et al. (§2.2, eq 7; Proposition 3) and by Boutelet & Sung (2025, arXiv 2503.23158, §2.1).
+
+**What \(\Lambda\) does.** \(\Lambda\) does not connect the simulation to the real bioreactor. Both sides of the equation are about the simulation only: \(\mu\) is the \(h \to 0\) limit of the code, and the difference between that limit and a physical experiment (model-form error) is out of scope. \(\Lambda\) only chooses the **units** in which we write the grid error, in the same way that we choose a log axis for a plot.
+
+The choice matters because the model above uses one set of constants (\(c_0\), \(c_1\), \(p\)) for all conditions. That works only if, in the chosen units, the grid error has a similar form at every condition. An example (Fig. T5):
+- Suppose that a coarse run is 30% too short at every condition.
+- In seconds (\(\Lambda\) the identity), that error is −9 s where the exact answer is 30 s, and −36 s where it is 120 s. The size of the error changes with the condition. The model must then use \(\rho_1\) or \(\delta\) to describe it.
+- In log units (\(\Lambda = \log\)), the error is \(\log 0.7 = -0.36\) at every condition. One constant, \(c_0\), describes it.
+
+So \(\Lambda = \log\) suits positive QoIs whose errors are relative, such as times and rates. If we do not know which units are better, we fit both and let the data weight them (stacking, Section 6).
+
+![Fig. T5](../experiments/multifidelity/guide/g5_transform.png)
+
+*Fig. T5 (toy). Runs that are 30% short at \(\bar h = 1\), at three conditions with exact answers 30, 60 and 120 s. Left: the error in seconds is different at each condition. Right: the error in log units is the same at all three conditions, so the three curves lie on top of each other.*
 
 **Why both \(\rho\) and \(\delta\).**
 - \(\rho\) carries the part of the grid error that is **proportional to the answer**. For example, with \(\Lambda\) the identity, "the coarse grid gives a mixing time 30% too short at every condition" is a scale \(\rho_1 = 0.7\). (With \(\Lambda = \log\), the same error is an offset, \(\rho_0 = \log 0.7\).)
@@ -204,12 +220,14 @@ $$ \Lambda(y) = \rho_0(h) + \rho_1(h) \, \mu(x) + \delta(x, h) + e $$
 
 **Learning the unknown settings.** The model has settings we do not know: \(p\), \(c_0\), \(c_1\), the kernel amplitudes and length scales, and the noise level. The order \(p\) matters most, because it decides how far to extrapolate. A single best guess of \(p\) would hide that uncertainty.
 - **Markov chain Monte Carlo (MCMC)** draws thousands of combinations of settings, each in proportion to (prior probability) × (how well it explains the data). The final answer is the average of the predictions over these draws. So the uncertainty about \(p\) appears in the error bar.
+- The samplers are elliptical slice sampling (Murray, Adams & MacKay 2010, arXiv 1001.0175) for the GP values, and slice sampling with surrogate data (Murray & Adams 2010, arXiv 1006.0868) for the kernel settings. The chains are checked with \(\hat R\) and the effective sample size (Vehtari et al. 2021, arXiv 1903.08008).
+- Full Bayesian sampling of the order of a multi-fidelity GP was done before by Stroh et al. (arXiv 1709.06896), whose prior (their eq 7e) also gives each fidelity level its own noise variance.
 
 **Several model variants.** We try two families of kernel in \(h\):
-- one that behaves like Richardson extrapolation (called TWY2);
-- one in which the errors of neighbouring grids can be more or less alike (the "lifted Brownian" kernel, LB).
+- **TWY2**, \(\sigma^2 (h h')^{p} c(h - h')\), with \(c\) a stationary correlation. It behaves like Richardson extrapolation. It was proposed by Tuo, Wu & Yu (2014). Bect et al. (arXiv 2103.14559, Proposition 3, written with \(L = 2p\)) prove that its sample paths converge with order \(p\), and name it TWY2.
+- **LB**, the "lifted Brownian" kernel of Boutelet & Sung (arXiv 2503.23158, §2.2, eq 4), which extends the lifted Brownian kriging model of Plumlee & Apley (2017). Its parameter \(\gamma \in (0, 1)\) sets the correlation between successive differences of the error: the errors of neighbouring grids can be more alike or less alike. With \(\gamma = 0.5\) it is the Brownian kernel \(\min(h^{l}, h'^{l})\) of Tuo, Wu & Yu (2014) (Boutelet & Sung, §2.2).
 
-We also try several transforms \(\Lambda\). The variants are combined by **stacking**:
+We also try several transforms \(\Lambda\). The variants are combined by **stacking** (Yao et al. 2018, arXiv 1704.02030, eq 2.2):
 1. Each variant is fitted without the finest grid. The finest grid's runs are **held out**: hidden from the fit.
 2. Each variant predicts those hidden runs.
 3. The variants that predicted them better get larger weights.
@@ -218,9 +236,9 @@ We also try several transforms \(\Lambda\). The variants are combined by **stack
 
 ## 7. Choosing the next run
 
-**The value of a run** is how much it is expected to shrink the epistemic uncertainty of the exact answer, summed over all conditions, divided by its cost in core-hours.
+**The value of a run** is how much it is expected to shrink the epistemic uncertainty of the exact answer, summed over all conditions, divided by its cost in core-hours. This ratio is the MR-SUR criterion of Stroh et al. (arXiv 2007.13553, eq 11). Boutelet & Sung (arXiv 2503.23158) use the same idea with the integrated variance.
 
-**This value can be computed before the run.** For fixed settings, the posterior variance of a GP after a new observation depends on where the observation is, not on what it turns out to be. The parts that do depend on the outcome (for example, how much the run would teach us about \(p\)) are averaged over many simulated outcomes.
+**This value can be computed before the run.** For fixed settings, the posterior variance of a GP after a new observation depends on where the observation is, not on what it turns out to be (the variance formula of Section 3 contains no \(y\)). Oates et al. (arXiv 2401.07562, §2.7, eq 16) use this to choose grids before any run. The parts that do depend on the outcome (for example, how much the run would teach us about \(p\)) are averaged over many simulated outcomes.
 
 **Candidates** are every condition at every grid, including grids finer than any run so far.
 
@@ -288,7 +306,7 @@ The core method needs none of these. Each one is optional, and each one states i
 
 **kLa converges plausibly** on the same grids.
 
-**The start-up length matters (Fig. F).** Each run rocks for 80 cycles before the tracer is released, as in Kim et al.'s protocol.
+**The start-up length matters (Fig. F).** Each run rocks for 80 cycles before the tracer is released, as in Kim et al. (2024, §3.2: "the tracers were introduced after 80 cycles").
 - Releasing after 33 or 50 cycles changes kLa by up to 26%, and \(\Delta t\) by up to 23%.
 - Releases after 80, 82 and 85 cycles agree within 1%.
 - So every run, including a run started from a coarser state, must settle for the full 80 cycles.
