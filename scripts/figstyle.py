@@ -76,6 +76,12 @@ TRACER_COLOUR = {
     "c":  "#DDCC77",   # line
 }
 
+# The h -> 0 (converged) extrapolation of a multi-fidelity fit. It is not a
+# mesh level, so it takes a hue disjoint from every palette above (Tol olive).
+# Its bands share the hue: darker = epistemic, lighter = total (epistemic +
+# aleatoric).
+H0_COLOUR = "#999933"
+
 NEUTRAL = "0.45"        # annotations, guide lines, threshold rules
 GUIDE = "0.75"          # zero lines, grid emphasis
 
