@@ -275,10 +275,32 @@ flowchart TD
 - **G1, prediction of a finer grid:** hide the finest grid, predict it from the others, and compare. This is the closest test we have of extrapolation toward \(h = 0\). It needs enough runs on the finest grid; with too few, it is reported as "not testable".
 - **G2, leave one run out:** predict each run from all the others.
 - **G3, noise:** does the scatter of the replicates match the noise model?
-- **G4, coarsest grid:** does removing the coarsest grid change the answer? If yes, that grid is not yet in the asymptotic range, and it is removed.
+- **G4, coarsest grid:** does removing the coarsest grid change the answer by more than the model expects? When data are removed, the answer is expected to move by about \(\sqrt{\sigma_w^2 - \sigma_f^2}\) (the uncertainty without the grid, minus the uncertainty with it). If it moves much more than that at many conditions, that grid is not yet in the asymptotic range, and it is removed (but never below 3 grids).
 - **G5, shape:** a quantity that must increase (the mixing time with \(\chi\)) does increase.
-- **G6, Gaussian shape:** is "mean ± sd" a fair summary of the uncertainty?
+- **G6, Gaussian shape:** is "mean ± sd" a fair summary of the uncertainty? This is a warning only, because the tolerance uses quantiles, not a Gaussian.
 - **G7, prior influence:** does the answer change much when the prior settings change? If yes, the data are too weak to decide.
+
+### 8.1 One campaign, step by step
+
+A **campaign** is one run of this loop on one problem. The software (the package gcbml) never runs a simulation itself. It asks an **oracle**, which is a small adapter around the user's simulation code, to run the probes that it chooses.
+
+1. **Start.** Many runs on the coarsest grid, a few on the next grids, and some repeated runs (replicates) to measure the scatter.
+2. **Fit.** MCMC draws a few thousand combinations of the unknown settings (\(p\), \(c_0\), \(c_1\), the length scales, the noise level), each in proportion to how well it explains the runs. Each combination gives one Gaussian prediction of the exact answer. The report pools all of them, so the uncertainty about \(p\) is in the error bar. This fit is repeated after every batch of runs. It takes CPU minutes, which is small against one fine simulation.
+3. **Check** (the gates above).
+4. **Choose.** For each candidate run (a condition and a grid, including grids finer than any run so far):
+   - the cost model gives a price and a cap; the run is stopped if it reaches the cap, so the price is the expected cost with that cap;
+   - the method imagines plausible outcomes of the run (**fantasies**), adds each to the data, and measures how much the error bar would shrink. Grids finer than any run so far can show what the order \(p\) is, so their imagined outcomes can shrink the error bar a lot;
+   - the value is (shrinkage) / (price). The best runs that fit in the remaining budget are chosen.
+5. **Repeat** until the error bar is below the tolerance at every condition, or the budget is used.
+
+### 8.2 How we test the method itself
+
+**The A12 test checks step 4.** A wrong value estimate would make the method buy the wrong runs, so we test it on fake problems with a known answer, \(f(x, h) = f_0(x) + a(x) h^p\), which cost nothing to evaluate:
+- the method predicts the value of its best candidate on each grid;
+- an "oracle" measures the true value the slow way: imagine an outcome, refit the full MCMC, measure the shrinkage, and repeat many times;
+- the test passes if the method's choices are nearly as good as the oracle's best (in at least 16 of 20 problems), and its predicted values are right within a factor 2 on every grid.
+
+**The benchmarks check the whole campaign.** Seven small real solvers (for example a Poisson problem, an advection-diffusion problem with an upwind scheme, a stochastic differential equation) have known exact answers. Each one gets a budget that we prove is sufficient: a design chosen with knowledge of the answer reaches the tolerance at a cost \(C^*\), and the budget is 1.5, 2 or 4 times \(C^*\). gcbml and six other methods (from a single-grid GP to a Stroh-style method) run on the same budgets. We record how often each reaches the tolerance with an error bar that contains the true answer, and how often it claims success falsely. One problem is a trap: its grids converge only beyond the budget, and the method must not claim success there.
 
 ---
 
