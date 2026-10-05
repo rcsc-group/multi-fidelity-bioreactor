@@ -22,8 +22,9 @@ def load():
     spec = re.sub(r"^(#{2,5}) ", lambda m: "#" + m.group(1) + " ", spec, flags=re.M)   # demote
     spec = re.sub(r"^# .*$", "## Specification", spec, count=1, flags=re.M)
     head, body = spec.split("## Specification", 1)
-    spec = ("## Specification\n\n<details markdown=\"1\">\n<summary>The precise definition, "
-            "algorithm and assumptions (for implementation and review)</summary>\n\n" + body
+    spec = ("## Specification\n\nThis section is closed. Click the line below to open it.\n\n"
+            "<details markdown=\"1\">\n<summary>Open the specification: the problem definition, "
+            "the algorithm and the assumptions</summary>\n\n" + body
             + "\n\n</details>\n")
     text = guide + "\n\n---\n\n" + spec
     return re.sub(r"\]\(\.\./experiments/multifidelity/([^)]+)\)", r"](fig/\1)", text)
