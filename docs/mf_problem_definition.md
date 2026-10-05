@@ -412,7 +412,7 @@ Each module is generic. The core (Sections 1–3) works without any of them. A m
 *Fig. F. Change of each QoI against the mean of the releases after 80, 82 and 85 cycles, for L8 at 32.5 rpm.*
 
 **Runs** (same binaries and protocol as the ladder):
-- **Replicates:** tracer release at cycles 82 and 85 (and 80 at L7), at L6–L8 × 17.5/25/32.5 rpm and L9 × 25 rpm. They give \(s(x,h)\), its trend in \(h\), and \(R\). L6 and most of L7/L8 are done (F9); L9 is running.
+- **Replicates:** tracer release at cycles 82 and 85 (and 80 at L7), at L6–L8 × 17.5/25/32.5 rpm. They give \(s(x,h)\), its trend in \(h\), and \(R\) (F9). L9 replicates are not run: a cold L9 run to \(\chi = 0.95\) at 25 rpm takes about 170 h on 32 ranks.
 - **Spin-up test** (A11): done, and it refutes A11 (F8).
 
 ---
