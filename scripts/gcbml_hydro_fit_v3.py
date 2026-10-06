@@ -52,7 +52,11 @@ RPM_LO, RPM_HI = 15.0, 37.5
 # tau_95 is a tail percentile (an extremum-type statistic) -> filled
 QOIS = [("tau_mean_t", r"$\tau_{mean}$ (Pa)", "mean"), ("tau_95_t", r"$\tau_{95}$ (Pa)", "max")]
 KERNEL = os.environ.get("KERNEL", "twy2")
-SCALES = PriorScales(S_mu=0.8, S_c=0.5, S_delta=0.5, S_noise=0.02, log_p_mean=math.log(1.2), log_p_sd=0.45)
+# sensitivity knobs (G7-type prior-sensitivity runs): S_C, S_DELTA, S_NOISE, P_SD; TAG suffixes the output name
+SCALES = PriorScales(S_mu=0.8, S_c=float(os.environ.get("S_C", 0.5)), S_delta=float(os.environ.get("S_DELTA", 0.5)),
+                     S_noise=float(os.environ.get("S_NOISE", 0.02)), log_p_mean=math.log(float(os.environ.get("P_MED", 1.2))),
+                     log_p_sd=float(os.environ.get("P_SD", 0.45)))
+TAG = os.environ.get("TAG", "")
 CFG = model.ModelConfig(h_kernel=KERNEL, mean_basis="constant", beta_prior=None, increasing=True,
                         gamma_fixed=0.5 if KERNEL == "lb" else None)
 
@@ -140,7 +144,7 @@ def main():
         ax.grid(**fs.GRID_KW)
     axes[1].legend(loc="upper left", bbox_to_anchor=(1.02, 1.0), frameon=False)
     fig.tight_layout()
-    stem = ROOT / f"experiments/multifidelity/gcbml_hydro_v3_{KERNEL}_L{lmin}_{lmax}"
+    stem = ROOT / f"experiments/multifidelity/gcbml_hydro_v3_{KERNEL}{TAG}_L{lmin}_{lmax}"
     fig.savefig(f"{stem}.png", dpi=150, bbox_inches="tight")
     json.dump(res, open(f"{stem}.json", "w"), indent=1)
     print("saved", stem)
