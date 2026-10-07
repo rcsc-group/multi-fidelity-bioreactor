@@ -9341,3 +9341,8 @@ Not yet changed in postprocess.py -- awaiting decision (proposal: add kLa_1T_* a
 - Sensitivity of sigma_epi/m (median over rpm), tau_mean / tau_95: baseline 6.5/10.6; S_c, S_delta 0.5->0.1: 6.0/8.7; run-noise prior 0.02->0.001: 6.5/10.5 (s0 median 0.2% for tau_mean). The amplitude and noise priors do NOT drive the width.
 - p pinned (log-sd 0.05): p=1.0 9.2/12.0; 1.5 5.3/6.0; 2.0 4.0/3.9; 3.0 3.6/2.9. The posterior of p (0.6/1.4/2.6) equals its prior (0.5/1.2/2.9): with 3 levels p is NOT identified; the band is the prior on p pushed through the extrapolation. Floor at large p (3-4%) = noise of the single L10 point.
 - Conclusion: the width is honest for a 3-level power-law model, not a bug. Remedies must bring information on p (pool QoIs of the same solver, add an asymptotic level), not tighter amplitude priors.
+
+### 2026-10-07 — tau_mean on L6-L9: not converged; G4 does not detect it
+- Successive relative changes (median over 10 rpm): L6->L7 8.1%, L7->L8 17.2%, L8->L9 18.3% (max 30%): increments GROW, no convergence through L9. L9->L10 (9 rpm) is smaller: 0.4-9%.
+- gcbml fit L6-L9, scheme order prior: tau_mean sigma_epi/m 22%, tau_95 21%; order p 0.32/0.61/1.01 (below the prior 0.5/1.2/2.9).
+- G4 v3 (w6d, gates.g4_coarsest_level; scripts/gcbml_hydro_g4.py) on L6-L10: PASS for tau_mean (p-value 0.97, stat 3.5 for 10 dof) and tau_95 (0.91). It does not reject L6. Cause: the model absorbs the pre-asymptotic L6 by lowering p to 0.5-0.6 and widening delta; the residuals then look consistent (even too small: stat << dof). Pre-asymptotic levels are detected by the prior-posterior conflict on p, not by G4. OPEN.
