@@ -9421,3 +9421,10 @@ Not yet changed in postprocess.py -- awaiting decision (proposal: add kLa_1T_* a
   - New: integrate the kernel length scale and the noise ratio on a 2-D grid (60 x 40) with priors: length scale in scaled input units log l ~ N(log 0.3, 0.75^2); noise ratio (noise sd / HF std) log-uniform on [1e-3, 0.3]. Marginal likelihood per grid node in closed form: |K|^-1/2 |F'K^-1F|^-1/2 (b0 + S/2)^-(a0 + (n-p)/2). Predictive = mixture of Student-t over the grid.
   - The SAME priors and machinery for the HF-only GP (constant basis), so the baseline is no longer a collapsed MLE fit.
   - PASS = on test A (tau_mean, tau_95; LF L8, L9; n_HF = 3): pooled 95% coverage >= 85% AND MF median rel RMSE <= 1.2x the test-A value in every case. Reported, not criteria: the fair HF-only GP, T1 (EDR), and T3 at n_HF = 2..6.
+- T2b RESULT (scripts/test_t2b_fullbayes.py; module scripts/mfbml_local/krr_lr_gpr_fullbayes.py; 5 unit tests pass): FAIL by a hair on the pre-registered rule.
+  - Coverage PASS: pooled MF 95% coverage 97.0% (163/168), was 11.3% (T2).
+  - RMSE: ratio to test A 1.22 / 0.98 / 1.04 / 1.02 (tau_mean L8 / tau_mean L9 / tau_95 L8 / tau_95 L9); 1.22 > 1.2 -> FAIL (tau_mean L8: 9.7% vs 8.0%). Criterion not changed.
+  - Fair HF-only GP (same priors, integrated): 25.7-27.3% at n_HF = 3, coverage 96-100%. MF beats it 3-5x; MF still beats LF x ratio with LF L8 (9.7 vs 17.3; 5.7 vs 18.8) and loses with LF L9 for tau_mean (7.3 vs 4.9).
+  - Posteriors at n = 3 are broad: l ~ 0.4 [0.1, 1.2], eta barely moves from its prior.
+  - Learning curve: MF coverage falls with n (tau_95 L8 100% at n = 2 -> 79% at n = 6); fair HF-only GP catches up by n = 6 for tau_95 (8.3% vs MF 8.4%).
+  - Figure legend fixed (L8 was missing); rerun gives identical numbers.
