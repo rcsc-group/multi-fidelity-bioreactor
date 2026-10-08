@@ -9407,3 +9407,5 @@ Not yet changed in postprocess.py -- awaiting decision (proposal: add kLa_1T_* a
   (a) REAL structure if the dense dtmix_0.95(rpm) curve has |second difference| at 0.625 spacing <= 3x the replicate log-sd (~0.02) except across <= 2 narrow features;
   (b) EFFECTIVELY NOISY if |log y(rpm +- 0.1) - log y(rpm)| or dense-neighbour jumps are >= 0.10 (comparable to the 2.5-rpm jumps 0.12-0.27).
 - T6 (compute): second design parameter, rpm x angle. LF = L8 dense: theta in {2, 4, 5.5, 9} deg x 10 rpm (40 new runs; theta 7 exists). Same protocol (80 cycles spin-up + 150 post). HF (L9 or L10, 6-8 points) chosen after T3.
+- SUBMITTED T5 + T6 (scripts/submit_l8_t5_t6.py): 59 L8 jobs 7156006-7156065 (16 ranks, 8 h cap). --check vs kmix_l8_rpm25/32.5: params identical except the binary path (cmp: same file). Run ids t5_l8_rpm<r>_th7, t6_l8_rpm<r>_th<theta>.
+- Zero-compute T1-T4 dispatched to a Sonnet agent (spec = the pre-registration above). Prior-art v2 (Semantic Scholar free tier, raw JSON kept) + broadened canonical-case search dispatched in parallel.
