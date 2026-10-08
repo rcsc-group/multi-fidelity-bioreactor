@@ -52,6 +52,7 @@ nav:
       - "Non-dimensionalization": explanation/non-dimensionalization.md
       - "Multi-fidelity Bayesian optimization": explanation/multi-fidelity-bo.md
       - "Validating against Kim et al. (2024)": explanation/kim-et-al-validation.md
+      - "Grid convergence of the shear stress (gcbml)": explanation/gcbml-shear-stress.md
   - Reference:
       - "params.json": reference/params.md
       - "Output files": reference/output-files.md
