@@ -9346,3 +9346,8 @@ Not yet changed in postprocess.py -- awaiting decision (proposal: add kLa_1T_* a
 - Successive relative changes (median over 10 rpm): L6->L7 8.1%, L7->L8 17.2%, L8->L9 18.3% (max 30%): increments GROW, no convergence through L9. L9->L10 (9 rpm) is smaller: 0.4-9%.
 - gcbml fit L6-L9, scheme order prior: tau_mean sigma_epi/m 22%, tau_95 21%; order p 0.32/0.61/1.01 (below the prior 0.5/1.2/2.9).
 - G4 v3 (w6d, gates.g4_coarsest_level; scripts/gcbml_hydro_g4.py) on L6-L10: PASS for tau_mean (p-value 0.97, stat 3.5 for 10 dof) and tau_95 (0.91). It does not reject L6. Cause: the model absorbs the pre-asymptotic L6 by lowering p to 0.5-0.6 and widening delta; the residuals then look consistent (even too small: stat << dof). Pre-asymptotic levels are detected by the prior-posterior conflict on p, not by G4. OPEN.
+
+### 2026-10-07 — gcbml main = 21083d5 (campaign branch merged)
+- Merged: G4 v3, warm-started parallel refits (ask 529 s -> 250 s at n=207, 2 structures), acquisition gain x P(finish), max_extensions=0 in fantasy refits, n_extensions logged. Fast suite 457 passed, 1 skipped.
+- A12 v3 (20 truths, 283 core-h; raw results only in gcbml-wt/w6b/results/a12_v3, gitignored): criterion (i) 17/20 (need 16), (ii) gain ratios 1.10-1.73 inside [0.5, 2]. Script prints PASS. NOT clean evidence: acquisition chose level 0 in all 19 truths with candidates (criterion (i) is then easy when the oracle best is level 0); oracle rel. s.e. median 0.46 (target 0.10); 2367 fantasies (~27%) dropped for rhat(log p0) > 1.05; truth 3 had no candidate (counted a miss).
+- G4 power tests xfail: G4 cannot detect pre-asymptotic levels (same as real data). Remedy under test: error-shape option, branch `shape`.
