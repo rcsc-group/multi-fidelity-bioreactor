@@ -57,8 +57,10 @@ SCALES = PriorScales(S_mu=0.8, S_c=float(os.environ.get("S_C", 0.5)), S_delta=fl
                      S_noise=float(os.environ.get("S_NOISE", 0.02)), log_p_mean=math.log(float(os.environ.get("P_MED", 1.2))),
                      log_p_sd=float(os.environ.get("P_SD", 0.45)))
 TAG = os.environ.get("TAG", "")
+SHAPE = os.environ.get("SHAPE", "power")  # "saturating" needs the gcbml branch with err_shape (PYTHONPATH)
+_extra = {} if SHAPE == "power" else {"shape": SHAPE}
 CFG = model.ModelConfig(h_kernel=KERNEL, mean_basis="constant", beta_prior=None, increasing=True,
-                        gamma_fixed=0.5 if KERNEL == "lb" else None)
+                        gamma_fixed=0.5 if KERNEL == "lb" else None, **_extra)
 
 
 def padded(rows, key):
@@ -112,6 +114,11 @@ def fit_one(key_name, n_warmup, n_samples, lmin, lmax, seed=0):
                s0_q=np.quantile(s0, [0.05, 0.5, 0.95]).tolist(),
                fit_seconds=t_fit, max_rhat=worst, n_extensions=getattr(post.diagnostics, "n_extensions", 0),
                n_warmup=n_warmup, n_samples=n_samples)
+    if SHAPE == "saturating":  # h_s in hbar units (coarsest fitted level = 1); also as an equivalent level
+        hs = np.exp(np.asarray(post.theta["aux"]).reshape(-1))
+        out["hs_q"] = np.quantile(hs, [0.05, 0.5, 0.95]).tolist()
+        out["hs_level_q"] = (lmin - np.log2(np.quantile(hs, [0.95, 0.5, 0.05]))).tolist()
+        print(f"  h_s 5/50/95% {np.round(out['hs_q'], 3)} = level {np.round(out['hs_level_q'], 1)}", flush=True)
     rel = np.asarray(out["sigma_epi"]) / np.asarray(out["m"])
     out["rel_sigma_epi_median"] = float(np.median(rel))
     print(f"{KERNEL} L{lmin}-{lmax} {key_name}: fit {t_fit:.0f} s; p0 5/50/95% {np.round(out['p0_q'], 2)}; "
