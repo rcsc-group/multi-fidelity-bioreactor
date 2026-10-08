@@ -9428,3 +9428,14 @@ Not yet changed in postprocess.py -- awaiting decision (proposal: add kLa_1T_* a
   - Posteriors at n = 3 are broad: l ~ 0.4 [0.1, 1.2], eta barely moves from its prior.
   - Learning curve: MF coverage falls with n (tau_95 L8 100% at n = 2 -> 79% at n = 6); fair HF-only GP catches up by n = 6 for tau_95 (8.3% vs MF 8.4%).
   - Figure legend fixed (L8 was missing); rerun gives identical numbers.
+- User (2026-10-08): "tau mean, tau_95, EDR, mixing time, kLa. They all should be considered ... What about mixing time and kLa?" Correct: mfbml was never tested on dtmix or kLa.
+  - Why: L10 has no usable dtmix/kLa curve in rpm. Runs with tracer + oxygen at theta 7: l10c_rpm32.5_seg1 (cold, 80-cycle spin-up, the kmix protocol), fig11_l10_rpm35/37.5 (warm start, release after 5 cycles; rpm 35 ended before chi = 0.75), fig8_hist_l10b / fig9_l10* at 32.5 (other protocols). So <= 3 rpm, mixed protocols: no held-out test is possible at L10.
+  - L8 (kmix_l8_rpm*) and L9 (fig9_l9_rpm*) both have all 10 rpm with the same protocol (80-cycle spin-up, release, then 150 cycles).
+- T7 PRE-REGISTERED (zero compute): test A protocol with L8 -> L9 as a proxy for L8 -> L10, on dtmix and kLa.
+  - QoIs: dtmix_0.50, dtmix_0.75, dtmix_0.95, kLa_1T_10, kLa_1T_25, kLa_1T_50 (whole-period kLa, as Figs 11/12).
+  - LF = kmix_l8_rpm* (10 rpm). HF = fig9_l9_rpm* (10 rpm); dtmix_0.95 at 37.5 from fig9_l9_rpm37.5_ext1; kLa_1T_50 at 30 rpm is nan -> that rpm is dropped for that QoI only.
+  - Fit on log y (positive QoIs that span up to 60x); score on exp of the predictive median. Same metric otherwise (rel RMSE over held-out L9 rpm; 95% coverage from mixture quantiles).
+  - Model: T2b full-Bayes MF (FullBayesKRRLRGP, basis linear) and the same machinery with basis ordinary (HF-only GP); LF x ratio (ratio = mean of yh/yl over training rpm) as the honest baseline. n_HF = 3, designs = both endpoints (15, 37.5) + one interior.
+  - PASS per QoI: MF median rel RMSE < LF x ratio AND < HF-only GP. Overall pass = >= 4 of 6 QoIs pass AND pooled MF coverage >= 85%.
+  - Reported, not criteria: n_HF = 2..6 learning curve; the raw L8 vs L9 values (does L8 even rank the rpm like L9?), Spearman rank correlation L8 vs L9 per QoI.
+  - Caveat fixed now: a pass says mfbml can carry dtmix/kLa from L8 to L9, not to L10. L8/L9/L10 dtmix_0.95 at 32.5 rpm = 68/128/191 s: not converged, so L9 is not a stand-in for L10 in value.
