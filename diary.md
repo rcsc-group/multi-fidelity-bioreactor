@@ -9379,3 +9379,13 @@ Not yet changed in postprocess.py -- awaiting decision (proposal: add kLa_1T_* a
   - PASS (per prior) = 95% coverage >= 8/10 AND median |rel err| of the median < 20% AND median relative 95% width (hi-lo)/median <= 0.6.
   - Reference: deterministic single exponential (pilot_truncated_chi.py) median |err| 34% at L9.
   - Cost caveat stated now: stopping at chi 0.50 saves only 1.5-2.2x at L9 (spin-up, diary 2026-10-03).
+- DATA QUALITY, dtmix (scripts/diag_dtmix_quality.py -> dtmix_quality.json). Roughness in rpm r = log y - mean(log neighbours):
+  - median |r|: L6 0.19-0.32, L7 0.16-0.18, L8 0.12-0.17, L9 0.19-0.27, Kim 0.05-0.09 (chi 0.50/0.75/0.95).
+  - replicate sd of log y: 0.002-0.03 at L7/L8 and at L6 for 25-32.5 rpm; 0.06-0.17 at L6/L7 17.5 rpm.
+  - So the rpm wiggles at L8/L9 are 5-50x the run noise: deterministic, not noise. Their sign often differs between levels at the same rpm (chi 0.95, 30 rpm: L8 +0.40, L9 -0.27); Kim shares only the 22.5 rpm dip (-0.28 vs L9 -0.57). Reading: grid-dependent, non-transferring structure (unconverged data), not bad runs.
+  - L9 replicate rep_l9_rpm25_rel82 never ran (params.json only). No L9 noise estimate.
+- TEST B RESULT (scripts/test_truncated_chi_bayes.py), L9, 9 rpm with measured t_95, 411-790 curve samples up to chi 0.50 per run:
+  - log r of the full curves: L6-L8 population mean +0.01, sd 0.40; L9 values -1.0..+0.57.
+  - P1: coverage 9/9, median |err| 34.9%, median width 2.25 -> FAIL (width).
+  - P2: 7/9, 33.9%, 1.36 -> FAIL. P3: 6/9, 33.5%, 1.42 -> FAIL. Single exponential: 34.8%, 0/9.
+  - Reading: the curve up to chi 0.50 does not contain the late decay rate (consistent with diary 2026-10-02). A calibrated prior gives an honest band of a factor ~2-3; L8 at the same rpm does not narrow it (late/early ratio does not transfer from L8 to L9).

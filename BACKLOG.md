@@ -3,6 +3,13 @@
 Ideas and loose ends not yet scheduled. Newest first within a section. When an
 item starts, give it a diary entry; when it lands, delete it here.
 
+## APS DFD 2026-11-25 (pivot 2026-10-08: vanilla mfbml, HF target)
+
+- Canonical case: choose after the prior-art check (docs/lit_review_mf_bioreactor.md) and test A.
+- L9 dtmix has no noise estimate: rep_l9_rpm25_rel82 was set up but never ran.
+- The time-horizon fidelity (truncated chi curve) does not carry the late rate (test B); only
+  revisit with a physical late-rate model, not a prior on r.
+
 ## Methods
 
 - **kLa as a Floquet exponent of the oxygen operator ("hydrodynamics once,
@@ -46,7 +53,6 @@ item starts, give it a diary entry; when it lands, delete it here.
 - `make replicas` target wrapping the README's regenerate list.
 - Unsubmitted: `submit_figset.py` (Figs 2-7), `submit_fig14.py` (14/15),
   `submit_figA18.py`. Parked by request: A.16(c).
-- Convergence-aware MF: q_N = q_inf + C h_N^p per x, GP over (x, h^p). Error model = SE (+) GCI. Blocked for tau_max: R>1 at all rpm (diag_richardson_tau.py). Next: log argmax location of tau (contact-line hypothesis); run the same test on mean wall shear / <EDR> / kLa (L8/L9/L10).
 - Reproducibility of production kLa: at L4, OpenMP round-off moves kLa_50 by 2x (diag_omp_determinism.py). Test whether L7 kLa changes with MPI rank count (8 vs 16). If it does, kLa error bars need a round-off/chaos term.
 - t_end period rounding: FIXED in source (2026-09-30). Production scratch binaries still use the old rule; picked up at the next production rebuild.
 - Fig 13 MF figures still use the old buggy 3-grid u_bar (0.24/0.30). Faithful E&H gives 0.5-1.5 (diag_eh_ubar.py). Decide: apply it, or get L11 grids.
