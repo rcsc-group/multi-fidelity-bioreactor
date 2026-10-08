@@ -9363,3 +9363,19 @@ Not yet changed in postprocess.py -- awaiting decision (proposal: add kLa_1T_* a
 - REAL tau data, satA3 sigma_epi/m: L6-L10 tau_mean 19.7% (power 14.5%), tau_95 29%; L8-L10 8.6% (6.5%), 12.2% (10.6%). h_s posterior still wide (level 3.6-9.9 at L6-L10): not identified. No narrowing.
 - Real hold-out (fit L6-L9, predict observed L10 at 9 rpm; scripts/gcbml_hydro_holdout.py): tau_mean median |err| power 8.4% / satA3 8.9%; tau_95 16.3% / 13.9%; coverage 8-9 of 9 for all; mean 95% width 0.54-0.77. No model wins. L10 values are chained runs (3 cycles after rpm change) except 32.5 rpm.
 - Reading: the synthetic family proves the mechanism (saturated coarse levels bias a single power law; one extra hyperparameter removes the bias). The real data do not show a gain: they are non-monotone in rpm (e.g. 22.5 rpm) and the transition level probably depends on rpm, which a global h_s cannot represent. Open: h_s(x).
+
+## 2026-10-08 — Pivot after advisor meeting: vanilla mfbml, HF target. Two pre-registered tests.
+- Context: APS DFD 2026-11-25. Advisors: gcbml too experimental for DFD. Free choice of canonical case IF prior art in bioreactors is absent beyond reasonable doubt (lit agent dispatched).
+- TEST A (zero compute), PRE-REGISTERED before any run. Script scripts/test_mf_l10_holdout.py.
+  - Data hydro_dataset_v2.json. QoIs tau_mean_t, tau_95_t. LF = L8 (variant L9), all 10 rpm. HF = L10 (9 rpm, 17.5-37.5).
+  - Designs: n_HF = 3 (17.5, 37.5 + each interior rpm: 7 designs) and n_HF = 4 (endpoints + 2 interior: 21 designs). Score on the held-out L10 rpm.
+  - Methods: MF = Yi KRR-LR-GPR (scripts/mfbml_local, noise estimated by the method); HF-only GP (same GPR, constant basis); LF x ratio (mean HF/LF of training); LF alone.
+  - Metric: relative RMSE on held-out points, median over designs. Secondary (not a pass criterion): 95% coverage.
+  - PASS = MF median rel RMSE below BOTH HF-only GP and LF x ratio in >= 3 of the 4 (QoI x LF level) cases at n_HF = 3.
+  - Caveat stated now: L10 runs are chained (3 cycles after an rpm change) except 32.5 rpm.
+- TEST B (zero compute), PRE-REGISTERED. Truncated chi(t) -> dtmix_0.95, Bayesian, L9 rpm sweep (10 runs).
+  - Observed: chi(t) up to chi = 0.50 (the curve). Model: t_0.95 = t_0.50 + ln(10)/(r lam_e), lam_e = early decay rate fitted on chi in [0.25, 0.50] (posterior from the linear fit), r = late/early rate ratio.
+  - Priors on log r: P1 physics, N(0, 0.6^2) (r 95% in [0.3, 3.2]); P2 cheap-level population, N(m, s^2) fitted on full L6-L8 curves (all rpm); P3 grid-MF, centred on log r of L8 at the same rpm, sd = spread of log r(L8) - log r(L7) over rpm.
+  - PASS (per prior) = 95% coverage >= 8/10 AND median |rel err| of the median < 20% AND median relative 95% width (hi-lo)/median <= 0.6.
+  - Reference: deterministic single exponential (pilot_truncated_chi.py) median |err| 34% at L9.
+  - Cost caveat stated now: stopping at chi 0.50 saves only 1.5-2.2x at L9 (spin-up, diary 2026-10-03).
