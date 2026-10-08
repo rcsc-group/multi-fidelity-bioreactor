@@ -9389,3 +9389,7 @@ Not yet changed in postprocess.py -- awaiting decision (proposal: add kLa_1T_* a
   - P1: coverage 9/9, median |err| 34.9%, median width 2.25 -> FAIL (width).
   - P2: 7/9, 33.9%, 1.36 -> FAIL. P3: 6/9, 33.5%, 1.42 -> FAIL. Single exponential: 34.8%, 0/9.
   - Reading: the curve up to chi 0.50 does not contain the late decay rate (consistent with diary 2026-10-02). A calibrated prior gives an honest band of a factor ~2-3; L8 at the same rpm does not narrow it (late/early ratio does not transfer from L8 to L9).
+- TEST A RESULT (scripts/test_mf_l10_holdout.py, Sonnet agent, reviewed): PASS, 3 of 4 cases at n_HF = 3.
+  - Median held-out rel. RMSE, n_HF = 3: tau_mean L8->L10: MF 8.0% vs ratio 17.3% vs HF-only GP 53.9%; tau_95 L8: 5.5 vs 18.8 vs 52.6; tau_95 L9: 6.7 vs 9.2 vs 52.6; tau_mean L9: MF 7.4 LOSES to ratio 4.9 (L9 already within ~5% of L10).
+  - 95% coverage of the MF band: 0-57% (overconfident). HF-only GP 69-85%.
+  - Cause (read in code + Yi 2407.15110 App. B eq 23): the fit maximises eq 23 with unit signal variance on standardised y (code matches the paper; the BACKLOG "likelihood bug" item is NOT a bug). But predict() scales the epistemic variance by the plug-in sigma2 = r'K^-1 r / n. With n_HF = 3 and a 2-term linear transfer, r has 1 degree of freedom, so sigma2 -> ~0 and the band collapses. Not tested further; a fix needs a prior on the residual amplitude or more HF points.

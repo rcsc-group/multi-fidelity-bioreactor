@@ -30,10 +30,11 @@ item starts, give it a diary entry; when it lands, delete it here.
 - **Heteroscedastic noise in KRR-LR-GPR.** L10 cycle-to-cycle spread of
   tau_max grows ~35x from 17.5 to 37.5 rpm; the GPR noise is homoscedastic,
   so the band is too wide at low rpm and the pooled value is set by 37.5.
-- **Upstream likelihood check.** `mfbml` KRR-LR-GPR `_logLikelihood` uses
-  `-0.5*n*sigma2` (not `log sigma2`) when the noise is a free hyperparameter.
-  Upstream's own code, not project drift -- confirm against the paper's
-  Appendix B before relying on free-noise fits.
+- **KRR-LR-GPR band collapses at small n_HF.** The likelihood matches Yi eq 23
+  (checked 2026-10-08), but predict() scales the variance by the plug-in
+  sigma2 = r'K^-1 r / n; with n_HF = 3 and a linear transfer it goes to ~0
+  (test A coverage 0-57%). Fix candidates: prior on the residual amplitude,
+  or n_HF >= 5.
 
 ## Figures / runs
 
