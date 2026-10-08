@@ -9416,3 +9416,8 @@ Not yet changed in postprocess.py -- awaiting decision (proposal: add kLa_1T_* a
   - T3 learning curve: with LF L8, MF beats ratio at every n_HF = 2..6 for tau_mean (8-12% vs 16-19%), tau_95 (6-8% vs 17-19%), EDR (20-23% vs 24-33%). With LF L9, ratio wins for tau_mean and EDR (L9 ~ L10); MF wins for tau_95 up to n = 5. MF coverage rises with n (up to 88% at n = 6) but is < 60% at n <= 4.
   - Reading: MF pays when the LF is cheap and its discrepancy is not a constant factor (L8); when LF ~ HF (L9), a ratio suffices.
   - T4 retro BO (9-rpm pool, 5 feasible, best 22.5 rpm): L10 evaluations to the best, median: MF-Bayes L8 5, HF-only GP 4, MF-Bayes L9 5, random 6.3. No MF advantage. Inconclusive by design: a 9-point pool with 8/36 start pairs already containing the optimum cannot separate the arms.
+- T2b PRE-REGISTERED (own follow-up of the T2 root cause; T2 approved by the user): fully Bayesian KRR-LR-GPR residual GP.
+  - Keep: LF KRR, basis [1, f_l], rho flat, amplitude IG(2, 0.1) integrated analytically (as T2).
+  - New: integrate the kernel length scale and the noise ratio on a 2-D grid (60 x 40) with priors: length scale in scaled input units log l ~ N(log 0.3, 0.75^2); noise ratio (noise sd / HF std) log-uniform on [1e-3, 0.3]. Marginal likelihood per grid node in closed form: |K|^-1/2 |F'K^-1F|^-1/2 (b0 + S/2)^-(a0 + (n-p)/2). Predictive = mixture of Student-t over the grid.
+  - The SAME priors and machinery for the HF-only GP (constant basis), so the baseline is no longer a collapsed MLE fit.
+  - PASS = on test A (tau_mean, tau_95; LF L8, L9; n_HF = 3): pooled 95% coverage >= 85% AND MF median rel RMSE <= 1.2x the test-A value in every case. Reported, not criteria: the fair HF-only GP, T1 (EDR), and T3 at n_HF = 2..6.
