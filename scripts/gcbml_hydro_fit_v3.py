@@ -58,7 +58,7 @@ SCALES = PriorScales(S_mu=0.8, S_c=float(os.environ.get("S_C", 0.5)), S_delta=fl
                      log_p_sd=float(os.environ.get("P_SD", 0.45)))
 TAG = os.environ.get("TAG", "")
 SHAPE = os.environ.get("SHAPE", "power")  # "saturating" needs the gcbml branch with err_shape (PYTHONPATH)
-_extra = {} if SHAPE == "power" else {"shape": SHAPE}
+_extra = {} if SHAPE == "power" else {"shape": SHAPE, "sat_lo_factor": float(os.environ.get("SAT_LO", 0.5))}
 CFG = model.ModelConfig(h_kernel=KERNEL, mean_basis="constant", beta_prior=None, increasing=True,
                         gamma_fixed=0.5 if KERNEL == "lb" else None, **_extra)
 
