@@ -6,7 +6,9 @@ Only frames_per_period, snap_start_cycle, snap_end_cycle differ from scripts/sub
 binary has no VIDEOS output, so dt_video drives only the snapshot event and the dynamics are unchanged.
 Snapshots: fields/snap_%06d.bin, planes u.x, u.y, omega, f, cs, c, c1, c2, c3, oxy on the NN x NN grid.
 
-Usage: uv run python scripts/submit_l8_record.py --rpm R [R ...] [--theta 7] [--dry-run]
+Usage: uv run python scripts/submit_l8_record.py --rpm R [R ...] [--theta 7] [--level 8] [--frames 100]
+       [--snap-from 78] [--snap-to 90] [--tag rec] [--dry-run]
+L9 uses 32 ranks and 30 h (fig9_l9_rpm32.5: 18.2 h at 32 ranks).
 """
 from __future__ import annotations
 
@@ -26,16 +28,24 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--rpm", nargs="+", type=float, required=True)
     ap.add_argument("--theta", type=float, default=7.0)
+    ap.add_argument("--level", type=int, default=8)
+    ap.add_argument("--frames", type=int, default=FRAMES)
+    ap.add_argument("--snap-from", type=float, default=SNAP_FROM)
+    ap.add_argument("--snap-to", type=float, default=SNAP_TO)
+    ap.add_argument("--tag", default="rec", help="run id prefix")
     ap.add_argument("--dry-run", action="store_true")
     a = ap.parse_args()
+    ntasks, wall = (NTASKS, WALL) if a.level == 8 else (32, "30:00:00")
     for rpm in a.rpm:
-        p = params(rpm, a.theta, f"rec_l8_rpm{rpm:g}_th{a.theta:g}")
-        p.update(frames_per_period=FRAMES, snap_start_cycle=float(SNAP_FROM), snap_end_cycle=float(SNAP_TO))
-        print(f"  {p['run_id']}: t_end {p['t_end']}, snapshots cycles {SNAP_FROM}-{SNAP_TO}, {FRAMES}/period")
+        p = params(rpm, a.theta, f"{a.tag}_l{a.level}_rpm{rpm:g}_th{a.theta:g}")
+        p.update(fidelity=a.level, frames_per_period=a.frames, snap_start_cycle=float(a.snap_from),
+                 snap_end_cycle=float(a.snap_to))
+        print(f"  {p['run_id']}: t_end {p['t_end']}, snapshots cycles {a.snap_from:g}-{a.snap_to:g}, "
+              f"{a.frames}/period, {ntasks} ranks, {wall}")
         if a.dry_run:
             continue
-        job = submit_slurm(p, project_root=ROOT, runs_root=ROOT / "runs", walltime=WALL,
-                           template=ROOT / "config" / "slurm_mpi_template.sh", cpus=1, ntasks=NTASKS, mem="4G")
+        job = submit_slurm(p, project_root=ROOT, runs_root=ROOT / "runs", walltime=wall,
+                           template=ROOT / "config" / "slurm_mpi_template.sh", cpus=1, ntasks=ntasks, mem="4G")
         print(f"    job={job}")
 
 
