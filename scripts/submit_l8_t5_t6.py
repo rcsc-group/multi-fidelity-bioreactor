@@ -7,7 +7,7 @@ storage. Only rpm and theta change.
   T6: theta in {2, 4, 5.5, 9} x rpm 15..37.5 step 2.5.
 Run ids: t5_l8_rpm<r>_th7, t6_l8_rpm<r>_th<theta>.
 
-Usage: uv run python scripts/submit_l8_t5_t6.py --test t5|t6 [--dry-run] [--check RUN]
+Usage: uv run python scripts/submit_l8_t5_t6.py --test t5|t6 [--dry-run] [--check RUN] [--only RUN ...]
   --check RUN: print the params this script would write for RUN's (rpm, theta) and diff them with RUN's params.json.
 """
 from __future__ import annotations
@@ -64,12 +64,15 @@ def main() -> None:
     ap.add_argument("--test", choices=("t5", "t6"))
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--check")
+    ap.add_argument("--only", nargs="+", help="submit only these run ids (resubmission)")
     a = ap.parse_args()
     if a.check:
         check(a.check)
         return
     for rpm, th in designs(a.test):
         rid = f"{a.test}_l8_rpm{rpm:g}_th{th:g}"
+        if a.only and rid not in a.only:
+            continue
         p = params(rpm, th, rid)
         print(f"  {rid}: t_end={p['t_end']}")
         if a.dry_run:
