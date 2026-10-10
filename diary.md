@@ -47,6 +47,9 @@ Open tests (pre-registered in the 2026-10-10 entries; power stated there)
 - R (exact reruns): determinism check only. Jobs 7276608-15 (also the flow recordings for the estimator).
 - L8 -> L10 warm start (x8_l10, 3 runs): jobs 7276284-6; reference xlevel L10 and, at 32.5 rpm, cold l10c.
 - T6 rpm x theta L8 grid: 49/50 done or running (11 resubmitted 7276248-58).
+- Q (periodicity per rpm, 10 short L8 recordings flow_l8_*): jobs 7277961-70. (Test M, a dimensionality-reduction
+  test on the same runs, was withdrawn before any data.)
+- Question chain for the talk: Q1 fixed-scale mixing (test L), Q2 noise vs structure (tests P, Q), Q3 kLa convergence.
 - Plan: docs/dfd_plan.md v2 is STALE on test R and test L rules; v3 after P and L.
 
 CORRECTIONS (conflicting statements in the archive or earlier entries, resolved)
