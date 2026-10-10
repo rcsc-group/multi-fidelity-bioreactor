@@ -7,7 +7,7 @@ binary has no VIDEOS output, so dt_video drives only the snapshot event and the 
 Snapshots: fields/snap_%06d.bin, planes u.x, u.y, omega, f, cs, c, c1, c2, c3, oxy on the NN x NN grid.
 
 Usage: uv run python scripts/submit_l8_record.py --rpm R [R ...] [--theta 7] [--level 8] [--frames 100]
-       [--snap-from 78] [--snap-to 90] [--tag rec] [--dry-run]
+       [--snap-from 78] [--snap-to 90] [--tag rec] [--end-cycle C] [--dry-run]
 L9 uses 32 ranks and 30 h (fig9_l9_rpm32.5: 18.2 h at 32 ranks).
 """
 from __future__ import annotations
@@ -19,7 +19,7 @@ from pathlib import Path
 ROOT = Path("/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor")
 sys.path.insert(0, str(ROOT))
 from scripts.simulate import submit_slurm  # noqa: E402
-from scripts.submit_l8_t5_t6 import NTASKS, SPINUP, WALL, params  # noqa: E402
+from scripts.submit_l8_t5_t6 import NTASKS, POST, SPINUP, WALL, params  # noqa: E402
 
 FRAMES, SNAP_FROM, SNAP_TO = 100, SPINUP - 2, SPINUP + 10  # 2 periods before release, 10 after
 
@@ -33,6 +33,7 @@ def main() -> None:
     ap.add_argument("--snap-from", type=float, default=SNAP_FROM)
     ap.add_argument("--snap-to", type=float, default=SNAP_TO)
     ap.add_argument("--tag", default="rec", help="run id prefix")
+    ap.add_argument("--end-cycle", type=float, default=None, help="stop after this many cycles (default: full protocol)")
     ap.add_argument("--dry-run", action="store_true")
     a = ap.parse_args()
     ntasks, wall = (NTASKS, WALL) if a.level == 8 else (32, "30:00:00")
@@ -40,6 +41,8 @@ def main() -> None:
         p = params(rpm, a.theta, f"{a.tag}_l{a.level}_rpm{rpm:g}_th{a.theta:g}")
         p.update(fidelity=a.level, frames_per_period=a.frames, snap_start_cycle=float(a.snap_from),
                  snap_end_cycle=float(a.snap_to))
+        if a.end_cycle is not None:
+            p["t_end"] = round(p["t_end"] / (SPINUP + POST) * a.end_cycle, 4)
         print(f"  {p['run_id']}: t_end {p['t_end']}, snapshots cycles {a.snap_from:g}-{a.snap_to:g}, "
               f"{a.frames}/period, {ntasks} ranks, {wall}")
         if a.dry_run:
