@@ -38,6 +38,8 @@ item starts, give it a diary entry; when it lands, delete it here.
 
 ## Figures / runs
 
+- Bare `return;` in VIDEOS-only events movies_output / movies_output_tau (src/BioReactor.c ~2512, ~2623): the CLAUDE.md hazard (can stop the run). Lean production builds are unaffected (no VIDEOS). Fix before any VIDEOS run.
+
 - **Fig 8(b) tau tails ~13x Kim's** after the transient cleared. Test for
   grid-scale noise with a volume metric (EDR field spectrum / |grad u|^2
   distribution) at L8/L9/L10 before touching anything near the wall.

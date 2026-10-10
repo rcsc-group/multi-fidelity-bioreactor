@@ -9463,3 +9463,14 @@ Not yet changed in postprocess.py -- awaiting decision (proposal: add kLa_1T_* a
   - My concession to the user stands and is now measured: the roughness is not reproducible structure.
   - Consequence for MF on dtmix/kLa: treat a run as a noisy sample (noise sd ~0.2 in log at L8) and average an ensemble (e.g. rpm +- small perturbations) before any transfer. Not for DFD unless cheap.
 - User: plan, not summary; success = an adversarial Sonnet agent approves an above-average DFD contribution at L10 for tau_95, EDR, dtmix, kLa. Draft plan docs/dfd_plan.md (C1 noise finding, C2 transfer-operator mixing from recorded flow, C3 kLa closure from hydrodynamics, C4 mfbml + MF-BO on rpm x theta; tests F1-F7). Adversarial Sonnet review dispatched.
+- Adversarial review of docs/dfd_plan.md (Sonnet): below the bar as written. Main points, accepted:
+  - Prior art: Ulam period map from CFD for stirred-tank mixing times (Kluenker et al. 2603.13996; 2112.11497); wave-bioreactor kLa closure with VOF interface and fitted constant c differing ~12x between bags (Piontek et al., PMC12868168). C2/C3 are not new methods; new only in setting.
+  - F1/F3/F5(a) nearly unfalsifiable; F4 passable by tuning the Ulam cell size; F7 saving comes from the warm start, not the operator.
+  - L10 is not a converged reference for dtmix (68/128/191 s at L8/L9/L10) or kLa (47/29/22).
+  - Sharpest open question the data already pose: is the rpm roughness of dtmix in the flow or in the tracer? Same-run operator test + diffusion control.
+  - Plan to be revised and re-reviewed before large compute.
+- My reading added: dtmix rises and kLa falls with refinement, both consistent with scalar numerical diffusion falling with the grid (tracer D = 0.44e-9, Sc ~ 2300; oxygen Sc ~ 500, both unresolved). Hypothesis H_nd: the scalar QoIs are limited by the scalar's numerical diffusion, not by the flow (tau/EDR change much less L8 -> L10).
+- PRE-REGISTERED (compute ~450 core-h): 8 L8 flow-recording runs (scripts/submit_l8_record.py): kmix/T5 protocol and lean binary f1c11e0, + 100 snapshots/period over cycles 78-90. rpm 22.4, 22.5, 22.6, 25, 29.9, 30, 30.1, 32.5, theta 7.
+  - Reproducibility check (reported): each run repeats an existing run exactly except the snapshot params (no VIDEOS in the lean build, dt_video drives only snapshots). If dtmix_0.95 differs from the original by > 0.02 in log, single runs are not reproducible (round-off chaos) and that is itself the noise source.
+  - Same-run operator test criteria: fixed in the revised plan before the operator code exists.
+- BACKLOG: bare `return;` in events movies_output / movies_output_tau (VIDEOS builds only, BioReactor.c ~2512, ~2623): CLAUDE.md hazard. Lean production binary unaffected (no VIDEOS).
