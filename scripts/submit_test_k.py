@@ -2,7 +2,7 @@
 
 32.5 rpm, theta 7, kmix protocol (80-cycle spin-up, release, 150 cycles), lean binary with runtime D multipliers
 (commit fab19eb). tracer_D_scale = oxy_D_scale = s.
-  L6, L7, L8: s in {1, 1e1, 1e2, 1e3, 1e4, 1e5}; L9: s in {1, 1e3, 1e5}.
+  L6, L7, L8: s in {1, 1e1, 1e2, 1e3, 1e4, 1e5}; L9: s in {1, 1e1, 1e3, 1e5} (1e1 added before any L8/L9 result).
 Run ids: k_l<L>_s<s as 1eK>.
 
 Usage: uv run python scripts/submit_test_k.py [--dry-run] [--only RUN ...]
@@ -20,7 +20,7 @@ from scripts.submit_l8_t5_t6 import params  # noqa: E402
 
 BINARY = "/oscar/data/dharri15/eaguerov/bin/BioReactor-mpi-lean-dscale-fab19eb"
 RPM = 32.5
-SCALES = {6: (0, 1, 2, 3, 4, 5), 7: (0, 1, 2, 3, 4, 5), 8: (0, 1, 2, 3, 4, 5), 9: (0, 3, 5)}
+SCALES = {6: (0, 1, 2, 3, 4, 5), 7: (0, 1, 2, 3, 4, 5), 8: (0, 1, 2, 3, 4, 5), 9: (0, 1, 3, 5)}  # L9 k=1 added 2026-10-10
 RESOURCES = {6: (4, "04:00:00"), 7: (8, "06:00:00"), 8: (16, "08:00:00"), 9: (32, "30:00:00")}
 
 
