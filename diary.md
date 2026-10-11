@@ -70,27 +70,31 @@ Results in force
   Lagrangian scalar models (2509.25030), non-reproducible LES mixing times (Haringa 2503.20622), wave-bag kLa closure
   with per-bag fitted constant (Piontek, PMC12868168), MF-OT-ROM for two-phase flows (2603.04232).
 
-Open tests (pre-registered in the 2026-10-10 entries; power stated there)
-- P (perturbation-size scan, L8): is the dtmix roughness noise or smooth-steep structure? Jobs 7277523-30.
-- L (fixed-scale chi, L8/L9 at 32.5/37.5 rpm): is the level dependence of dtmix a measurement-scale artefact?
-  Jobs 7276682-5.
-- R (exact reruns): determinism check only. Jobs 7276608-15 (also the flow recordings for the estimator).
-- L8 -> L10 warm start (x8_l10, 3 runs): jobs 7276284-6; reference xlevel L10 and, at 32.5 rpm, cold l10c.
-- T6 rpm x theta L8 grid: 49/50 done or running (11 resubmitted 7276248-58).
-- Q (periodicity per rpm, 10 short L8 recordings flow_l8_*): jobs 7277961-70. (Test M, a dimensionality-reduction
-  test on the same runs, was withdrawn before any data.)
-- Question chain for the talk: Q1 fixed-scale mixing (test L), Q2 noise vs structure (tests P, Q), Q3 kLa convergence
-  (evidence so far AGAINST convergence: kLa_25 falls 183 -> 80 -> 29 -> 17 L6 -> L9, archive; test K tests the cause).
-- Plan: docs/dfd_plan.md v2 is STALE on test R and test L rules; v3 after P and L.
+Open tests (pre-registered in the 2026-10-10/11 entries; power stated there). Status 2026-10-11:
+- K (diffusivity scan): (i) holds at L7 and L8 (dtmix flat to <= 0.5% at D x10), no rejection; PENDING on L9
+  (k_l9_*, 4 runs incl. the pre-data amendment s = 10). Levels collapse when D x1e4-1e5 (L7 vs L8 within 6%).
+- P (perturbation-size scan): DONE, reading MIXED. Not noise (1e-6 rpm reproduces dtmix_0.95 to 4e-8 at 22.5 rpm);
+  steep structure: +0.01 rpm switches chi(t) between two families (dtmix_0.95 128 vs 90 s).
+- R: DONE (determinism): dtmix_0.50 exact 8/8; dtmix_0.95 within 0.2-1% (snapshot events change dt; hypothesis).
+- Q (periodicity): DONE, low power below 37.5 rpm (see 2026-10-11); 37.5 rpm aperiodic at L8; 22.5/30/32.5 consistent
+  with periodic.
+- I (islands, NEW): does trapped variance in a compact region explain the two chi families? isl_l8_* jobs 7290700-04.
+- L (fixed-scale chi) and G (scalar microscale): scal_l8 done, scal_l9 pending (jobs 7276684-5).
+- L8 -> L10 warm start (x8_l10, 3 runs): 1/3 done; reference xlevel L10 and, at 32.5 rpm, cold l10c.
+- T6 rpm x theta L8 grid: DONE (40/40 + theta 7 = 50-run LF set).
+- Question chain for the talk: Q1 fixed-scale mixing (test L), Q2 why dtmix_0.95 jumps (P done; I pending),
+  Q3 grid control of dtmix/kLa (K: L7, L8 grid-controlled; L9 pending).
+- Plan: docs/dfd_plan.md v2 is STALE; v3 after K (L9), L and I.
 
 CORRECTIONS (conflicting statements in the archive or earlier entries, resolved; see also the audit facts above)
 A. Archive entries before 2026-09-07 about restart bias, Delta-theta offsets steepening with resolution, bistability,
    and checkpointing not saving compute predate the pressure-restore, phase and fs fixes: do not cite them.
-B. Archive 2026-09 "dtmix rpm structure is real deterministic (L7)" is superseded by T5 (effectively noise at L8).
+B. Archive 2026-09 "dtmix rpm structure is real deterministic (L7)": T5 found +-0.1 rpm jumps that look like noise at L8;
+   test P (2026-10-11) shows they are deterministic (1e-6 rpm reproduces) steep structure, not noise.
 C. kLa: "convergence plausible" (archive) vs "falls 1.7-2.8x per level, not converging at L9" (archive): the latter
    is the measured statement; Q3 open.
-1. "the dtmix rpm roughness is reproducible" (2026-10-08): withdrawn the same day; T5 shows it is effectively noise
-   at L8 (cause open: test P).
+1. "the dtmix rpm roughness is reproducible" (2026-10-08): withdrawn the same day after T5; test P (2026-10-11) then
+   showed each run IS reproducible and the roughness is deterministic steep structure in rpm (two chi families).
 2. "MF beats HF-only GP 5-10x" (tests A, T1, T3): the HF-only GP was a collapsed MLE fit; the fair figures are in T2b.
 3. "Hydrodynamic QoIs converge (tau_mean) on L6-L10" (archive, 2026-10-05 heading): overstated. 2026-10-07 shows the
    increments grow through L9; only L9 -> L10 is small. Convergence is not established.
@@ -193,7 +197,7 @@ C. kLa: "convergence plausible" (archive) vs "falls 1.7-2.8x per level, not conv
 - PRE-REGISTERED (compute, 3 L10 runs, ~1,500 core-h): L8 -> L10 two-level warm start (scripts/submit_l10_from_l8.py; same mechanics and N_CYCLES = 6 as submit_l10_fig13a_xlevel.py, which starts from L9). theta 7, rpm 17.5/25/32.5, source kmix_l8_rpm<r>. Reference: l10_fig13a_xlevel_rpm<r> (L10 from L9). QoIs tau_mean_t, tau_95_t, edr_mean_t over the hydro_dataset_v2 window (last 3 cycles before release).
   PASS if, for every QoI and rpm, |x8 - xlevel| / xlevel <= max(5%, 2 x the cycle-to-cycle relative sd of the xlevel run over the same 3 cycles). Also reported: per-cycle tau/EDR after the restart (does it settle within 3 cycles?).
   If FAIL: use L8 -> L9 -> L10 chains for HF points (cost about 2x) or more L10 cycles.
-- T5 RESULT (scripts/test_t5_roughness.py, Sonnet agent; reviewed: figure opened, the rpm +- 0.1 markers changed from filled to hollow (filled = extremum in figstyle), rerun json identical): EFFECTIVELY NOISY ((b) holds, (a) fails).
+- T5 RESULT (scripts/test_t5_roughness.py, Sonnet agent; reviewed: figure opened, the rpm +- 0.1 markers changed from filled to hollow (filled = extremum in figstyle), rerun json identical): EFFECTIVELY NOISY ((b) holds, (a) fails) [label valid only at the +-0.1 rpm sampling; test P (2026-10-11) shows the runs are deterministic and the jumps are steep structure, not sensitive dependence].
   - dtmix_0.95, L8, theta 7: 17/19 interior |second differences| > 3 x replicate sd (0.0555), in 3 features (> 2). rpm +- 0.1 changes log y by 0.18-0.35 (all 4 pairs >= 0.10); 12/20 neighbour jumps at 0.625 rpm >= 0.10.
   - Same metrics, reported only: dtmix_0.50/0.75 and kLa_1T_10/25/50 are also rough (max jumps 0.28-1.06; +-0.1 rpm pairs up to 0.49). tau_mean_t and tau_95_t are smooth (no jump >= 0.10, max 0.09/0.08); edr_mean_t nearly (2 of 24 >= 0.10).
   - Reading: a single-run dtmix or kLa is not a smooth function of rpm at L8. A 0.1-rpm change moves it by 20-40%, 10-20x the release-cycle replicate sd (those replicates sample a phase-locked flow and understate the spread). tau and EDR are smooth. This explains T7 vs T2b: mfbml transfers tau/EDR and fails on dtmix/kLa because of the QoIs, not the method.
