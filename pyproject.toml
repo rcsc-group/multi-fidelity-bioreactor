@@ -17,6 +17,7 @@ dependencies = [
     "torch",
     "pytest",
     "imageio-ffmpeg>=0.6.0",
+    "jax[cuda12]>=0.10.2",
 ]
 
 [tool.uv]
