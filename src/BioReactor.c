@@ -2421,7 +2421,7 @@ event normcal (t+=t_out; t<=t_end){
     // Re-verified after this fix: the same reproducibility test now gives
     // tau_95/98 differing by ~0.87% between identical runs, matching
     // tau_100/mean's ordinary noise level -- the race is gone.
-    #define TAU_BINS 200
+    #define TAU_BINS 2000
     int _tau_nthreads = 1;
     #if _OPENMP
       _tau_nthreads = omp_get_max_threads();
@@ -2464,14 +2464,24 @@ event normcal (t+=t_out; t<=t_end){
     double tau_95_val = tau_max_val;
     double tau_98_val = tau_max_val;
     int    found_95   = 0;
+    // Bin k holds tau in [k, k+1)*tau_max_val/(TAU_BINS-1) (see the index
+    // map above). The percentile is the linear interpolation of the cumulative
+    // count inside the crossing bin: lower edge + fraction*width (2026-10-10;
+    // the old rule returned the upper edge, biasing tau_95 high by up to a bin).
+    double _tau_w = tau_max_val / (TAU_BINS - 1.0);
     for (int k = 0; k < TAU_BINS; k++) {
+      long prev = cumul;
       cumul += bins[k];
       if (!found_95 && cumul >= (long)(0.95 * (double)total)) {
-        tau_95_val = tau_max_val * (k + 1.0) / TAU_BINS;
+        double fr = bins[k] > 0 ? (0.95*(double)total - (double)prev) / (double)bins[k] : 0.;
+        if (fr < 0.) fr = 0.; if (fr > 1.) fr = 1.;
+        tau_95_val = _tau_w * (k + fr);
         found_95   = 1;
       }
       if (cumul >= (long)(0.98 * (double)total)) {
-        tau_98_val = tau_max_val * (k + 1.0) / TAU_BINS;
+        double fr = bins[k] > 0 ? (0.98*(double)total - (double)prev) / (double)bins[k] : 0.;
+        if (fr < 0.) fr = 0.; if (fr > 1.) fr = 1.;
+        tau_98_val = _tau_w * (k + fr);
         break;
       }
     }
