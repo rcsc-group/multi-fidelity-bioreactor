@@ -641,9 +641,9 @@ int main(int argc, char * argv[]){
   Fr   = U_bio/sqrt(grav*L_bio);            // Froude number
   rhor = rho_a/rho_w;                       // Density ratio
   mur  = mu_a/mu_w;                         // Viscosity ratio
-  Pe_tracer_1 = U_bio*L_bio/D_tracer_1;     // Peclet number of tracer at phase 1 (water)
+  Pe_tracer_1 = U_bio*L_bio/(D_tracer_1*params.tracer_D_scale);    // Peclet number of tracer at phase 1 (water)
   Pe_tracer_2 = U_bio*L_bio/D_tracer_2;     // Peclet number of tracer at phase 2 (air)
-  Pe_oxy_1    = U_bio*L_bio/D_oxy_1;        // Peclet number of oxygen at phase 1 (water)
+  Pe_oxy_1    = U_bio*L_bio/(D_oxy_1*params.oxy_D_scale);       // Peclet number of oxygen at phase 1 (water)
   Pe_oxy_2    = U_bio*L_bio/D_oxy_2;        // Peclet number of oxygen at phase 1 (air) 
 
   rho1 = 1.0;             // Reference density of phase 1 (water) (scaled to 1)

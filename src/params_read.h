@@ -47,6 +47,8 @@ typedef struct {
   // C* reaches 0.10/0.25/0.50 -- and none of those instants is known in
   // advance. Recording a window and letting the analysis pick the frame keeps
   // every threshold out of the solver. Both 0 (default) disables the writer.
+  double tracer_D_scale;
+  double oxy_D_scale;
   double snap_start_cycle;
   double snap_end_cycle;
   // Checkpoint restart fields (set by chain.py for restart segments; 0 for fresh runs)
@@ -111,6 +113,8 @@ static BioreactorParams params_read(const char *path) {
   p.t_end         = 250.0;    // default if not present in params.json
   p.n_mix_cycles  = 80;       // default: 80 rocking cycles (upstream hardcoded value)
   p.frames_per_period = 13;   // ~Kim et al.'s cadence; interval is offset off-period (see BioReactor.c)
+  p.tracer_D_scale    = 1.0;  // liquid-phase tracer diffusivity multiplier
+  p.oxy_D_scale       = 1.0;  // liquid-phase oxygen diffusivity multiplier
   p.snap_start_cycle  = 0.0;  // field snapshots off unless a window is given
   p.snap_end_cycle    = 0.0;
 
@@ -159,6 +163,10 @@ static BioreactorParams params_read(const char *path) {
       p.frames_per_period = tok_int(json, &tokens[++i]);
     else if (jsoneq(json, &tokens[i], "remove_drop"))
       p.remove_drop = tok_int(json, &tokens[++i]);
+    else if (jsoneq(json, &tokens[i], "tracer_D_scale"))
+      p.tracer_D_scale = tok_double(json, &tokens[++i]);
+    else if (jsoneq(json, &tokens[i], "oxy_D_scale"))
+      p.oxy_D_scale = tok_double(json, &tokens[++i]);
     else if (jsoneq(json, &tokens[i], "snap_start_cycle"))
       p.snap_start_cycle = tok_double(json, &tokens[++i]);
     else if (jsoneq(json, &tokens[i], "snap_end_cycle"))
