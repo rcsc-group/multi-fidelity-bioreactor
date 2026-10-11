@@ -1,0 +1,214 @@
+{
+ "n_reruns_available": 8,
+ "n_bitwise_identical_dtmix": 1,
+ "rows": [
+  {
+   "rpm": 22.4,
+   "rerun": "rec_l8_rpm22.4_th7",
+   "original": "t5_l8_rpm22.4_th7",
+   "keys": {
+    "dtmix_0.50": {
+     "rerun": 21.081766260394293,
+     "original": 21.081766260394293,
+     "abs_log_diff": 0.0,
+     "exactly_zero": true
+    },
+    "dtmix_0.75": {
+     "rerun": 42.51636542891233,
+     "original": 42.51636542891233,
+     "abs_log_diff": 0.0,
+     "exactly_zero": true
+    },
+    "dtmix_0.95": {
+     "rerun": 104.96779016681677,
+     "original": 104.87958193978578,
+     "abs_log_diff": 0.0008406894147938715,
+     "exactly_zero": false
+    }
+   },
+   "status": "ok"
+  },
+  {
+   "rpm": 22.5,
+   "rerun": "rec_l8_rpm22.5_th7",
+   "original": "kmix_l8_rpm22.5",
+   "keys": {
+    "dtmix_0.50": {
+     "rerun": 15.104384760213307,
+     "original": 15.104384760213307,
+     "abs_log_diff": 0.0,
+     "exactly_zero": true
+    },
+    "dtmix_0.75": {
+     "rerun": 38.551307614730504,
+     "original": 38.551307614730504,
+     "abs_log_diff": 0.0,
+     "exactly_zero": true
+    },
+    "dtmix_0.95": {
+     "rerun": 129.0019837950777,
+     "original": 127.86037331901504,
+     "abs_log_diff": 0.008888947417246662,
+     "exactly_zero": false
+    }
+   },
+   "status": "ok"
+  },
+  {
+   "rpm": 22.6,
+   "rerun": "rec_l8_rpm22.6_th7",
+   "original": "t5_l8_rpm22.6_th7",
+   "keys": {
+    "dtmix_0.50": {
+     "rerun": 18.88436662241117,
+     "original": 18.88436662241117,
+     "abs_log_diff": 0.0,
+     "exactly_zero": true
+    },
+    "dtmix_0.75": {
+     "rerun": 37.76873324482234,
+     "original": 37.76873324482234,
+     "abs_log_diff": 0.0,
+     "exactly_zero": true
+    },
+    "dtmix_0.95": {
+     "rerun": 89.0013204704378,
+     "original": 89.87559670295686,
+     "abs_log_diff": 0.009775248904642986,
+     "exactly_zero": false
+    }
+   },
+   "status": "ok"
+  },
+  {
+   "rpm": 25.0,
+   "rerun": "rec_l8_rpm25_th7",
+   "original": "kmix_l8_rpm25",
+   "keys": {
+    "dtmix_0.50": {
+     "rerun": 19.12636628357243,
+     "original": 19.12636628357243,
+     "abs_log_diff": 0.0,
+     "exactly_zero": true
+    },
+    "dtmix_0.75": {
+     "rerun": 43.6270834236859,
+     "original": 43.469014280846466,
+     "abs_log_diff": 0.0036297680505783525,
+     "exactly_zero": false
+    },
+    "dtmix_0.95": {
+     "rerun": 112.9404025587811,
+     "original": 113.25654084445998,
+     "abs_log_diff": 0.002795249898304597,
+     "exactly_zero": false
+    }
+   },
+   "status": "ok"
+  },
+  {
+   "rpm": 29.9,
+   "rerun": "rec_l8_rpm29.9_th7",
+   "original": "t5_l8_rpm29.9_th7",
+   "keys": {
+    "dtmix_0.50": {
+     "rerun": 14.802461536803893,
+     "original": 14.802461536803893,
+     "abs_log_diff": 0.0,
+     "exactly_zero": true
+    },
+    "dtmix_0.75": {
+     "rerun": 35.42017582020934,
+     "original": 35.42017582020934,
+     "abs_log_diff": 0.0,
+     "exactly_zero": true
+    },
+    "dtmix_0.95": {
+     "rerun": 137.12101646816114,
+     "original": 136.460192292411,
+     "abs_log_diff": 0.004830927269665608,
+     "exactly_zero": false
+    }
+   },
+   "status": "ok"
+  },
+  {
+   "rpm": 30.0,
+   "rerun": "rec_l8_rpm30_th7",
+   "original": "kmix_l8_rpm30",
+   "keys": {
+    "dtmix_0.50": {
+     "rerun": 16.794846426690686,
+     "original": 16.794846426690686,
+     "abs_log_diff": 0.0,
+     "exactly_zero": true
+    },
+    "dtmix_0.75": {
+     "rerun": 33.721417139080906,
+     "original": 33.721417139080906,
+     "abs_log_diff": 0.0,
+     "exactly_zero": true
+    },
+    "dtmix_0.95": {
+     "rerun": 114.53426641574546,
+     "original": 114.33667998719615,
+     "abs_log_diff": 0.001726619133987306,
+     "exactly_zero": false
+    }
+   },
+   "status": "ok"
+  },
+  {
+   "rpm": 30.1,
+   "rerun": "rec_l8_rpm30.1_th7",
+   "original": "t5_l8_rpm30.1_th7",
+   "keys": {
+    "dtmix_0.50": {
+     "rerun": 16.93597958994017,
+     "original": 16.93597958994017,
+     "abs_log_diff": 0.0,
+     "exactly_zero": true
+    },
+    "dtmix_0.75": {
+     "rerun": 32.69037920848919,
+     "original": 32.69037920848919,
+     "abs_log_diff": 0.0,
+     "exactly_zero": true
+    },
+    "dtmix_0.95": {
+     "rerun": 93.60739106687869,
+     "original": 93.60739106687869,
+     "abs_log_diff": 0.0,
+     "exactly_zero": true
+    }
+   },
+   "status": "ok"
+  },
+  {
+   "rpm": 32.5,
+   "rerun": "rec_l8_rpm32.5_th7",
+   "original": "kmix_l8_rpm32.5",
+   "keys": {
+    "dtmix_0.50": {
+     "rerun": 11.794389888789098,
+     "original": 11.794389888789098,
+     "abs_log_diff": 0.0,
+     "exactly_zero": true
+    },
+    "dtmix_0.75": {
+     "rerun": 23.041617360057074,
+     "original": 23.041617360057074,
+     "abs_log_diff": 0.0,
+     "exactly_zero": true
+    },
+    "dtmix_0.95": {
+     "rerun": 68.63848548681912,
+     "original": 68.33450636597402,
+     "abs_log_diff": 0.0044385336960264254,
+     "exactly_zero": false
+    }
+   },
+   "status": "ok"
+  }
+ ]
+}
