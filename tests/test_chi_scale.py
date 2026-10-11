@@ -195,3 +195,18 @@ def test_gradient_scale_sinusoid():
     # gas / solid cells are excluded: halving the liquid must not change lambda
     f2 = f.copy(); f2[n // 2:, :] = 0.0
     assert cs_mod.gradient_scale(f2, cs, c)["lambda_dx"] == pytest.approx(1 / k, rel=0.02)
+
+
+def test_test_l_lists_unreached_cases():
+    s = {}
+    for rpm in (32.5, 37.5):
+        s[(8, rpm)] = _fake((10, 20, 60), (10, 20, 60))
+        s[(9, rpm)] = _fake((10 * math.e**0.3, 20 * math.e**0.3, 60 * math.e**0.3), (10, 20, 60))
+    s[(9, 37.5)] = _fake((10 * math.e**0.3, 20 * math.e**0.3, math.nan), (10, 20, math.nan))
+    s[(9, 37.5)]["chi"] = {"native": np.array([0.0, 0.8, 0.93]), "vol_32": np.array([0.0, 0.7, 0.9])}
+    v = cs_mod.test_l_verdict(s)
+    un = [c for c in v["cases"] if c["status"] == "unreached"]
+    assert len(un) == 1 and un[0]["rpm"] == 37.5 and un[0]["chi"] == "0.95"
+    assert {(u["level"], u["estimator"]): u["max_chi_reached"] for u in un[0]["unreached"]} == {
+        (9, "native"): pytest.approx(0.93), (9, "vol_32"): pytest.approx(0.9)}
+    assert v["n_counted"] == 5            # unreached is listed but not counted

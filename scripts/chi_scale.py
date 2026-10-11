@@ -495,7 +495,16 @@ def test_l_verdict(series: dict, scale_key: str = "vol_32") -> dict:
                     case["artefact"] = bool(case["d_l"] <= case["d_grid"] / 3)
                     case["not_artefact"] = bool(case["d_l"] >= 2 * case["d_grid"] / 3)
                 else:
-                    case["status"] = "threshold not reached"
+                    case["status"] = "unreached"      # listed, not counted
+                    un = []
+                    for lvl, sr in ((8, s8), (9, s9)):
+                        for k in ("native", scale_key):
+                            v = sr["dtmix"][k][thr]
+                            if v is None or not math.isfinite(v):
+                                arr = sr.get("chi", {}).get(k)
+                                un.append({"level": lvl, "estimator": k,
+                                           "max_chi_reached": None if arr is None else float(np.max(arr))})
+                    case["unreached"] = un
             cases.append(case)
     missing = [c for c in cases if c["status"] == "missing"]
     ok = [c for c in cases if c["status"] == "ok"]
