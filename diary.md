@@ -17,11 +17,41 @@ Model and data facts
 - 2-D Basilisk two-phase rocking bag; levels L6-L10 (NN = 2^L); theta 7 deg unless stated.
 - Kim's postprocessing (BioReactor3D dev/postprocessing, read 2026-10-10): chi = 1 - sigma^2/sigma0^2 over liquid
   cells at cell scale, optional block projection; kLa from an exp fit of 1 - C/C* from release.
-- Tracer D = 0.44e-9 m^2/s (Pe ~ 1e7, Batchelor scale ~50 um [superseded: 4-10 um, diag_batchelor.py] vs L9 cell 0.49 mm); oxygen D = 1.9e-9. Neither scalar
-  is resolved at any level.
+- Tracer D = 0.44e-9 m^2/s (Pe = U_bio L_bio/D ~ 5e7 at 32.5 rpm; Batchelor scale 4-10 um, diag_batchelor.py, vs L9 cell
+  0.49 mm); oxygen D = 1.9e-9. Neither scalar is resolved at any level.
 - Measured run costs: L8 kmix protocol (80-cycle spin-up + 150 cycles, 16 ranks) ~57 core-h (kmix_l8_rpm20 12,761 s);
-  L9 fig9 protocol (32 ranks, prod binary) ~580 core-h (fig9_l9_rpm32.5 18.2 h); for Kim's case: L8 ~16, L9 ~410,
-  L10 ~3600 core-h. L10 6-cycle warm start: ~300-550 core-h (estimate from cost_model rates, not yet measured).
+  L9 fig9 protocol (32 ranks, prod binary) ~580 core-h (fig9_l9_rpm32.5 18.2 h); for Kim's case the archive gives
+  L8 ~16, L9 ~410, L10 ~3600 core-h, BUT its own per-cycle rates (L10 ~31 core-h/cycle at 32 ranks, ~11-13x per level)
+  imply a cold L10 run of ~7-8k core-h: the 3600 figure is probably low by ~2x. Cost per cycle depends on rpm ~4x
+  (L10, 32 ranks: 168 min/cycle at 17.5 rpm, 42 at 37.5). L10 6-cycle warm start: ~200-550 core-h by rpm (estimate).
+
+Data-integrity facts (archive audit 2026-10-10, Sonnet read all 9,368 lines; items checked by me where marked)
+- Shear/EDR values before the 2026-09-15 bag-mask fix are invalid (~3.5x low means; tau_95 also affected through the
+  histogram pass). Only post-fix run families are used (hydro_dataset_v2).
+- Every restart must set *_prev = current values: without it the seam biases dtmix by +28-57% and kLa by -25..-39%
+  (archive rt_l8_D). Checked: submit_l10_from_l8.py and submit_l10_fig13a_xlevel.py set them; fig9_l10 seg2/seg3 did
+  not (those runs are not used).
+- Two-level warm start L8 -> L10 works mechanically (checked, job 7276286 stderr: "refine n 2048 -> 32768 ... depth
+  10"); the guard accepts any power of 4.
+- tau_95 is a HISTOGRAM value: 200 linear bins from 0 to the per-step tau_max, upper bin edge returned. tau_max/tau_95
+  grows with level (median 3.6 at L8, 7.1 at L9, 12-13 at L10), so one bin is 1.8% / 3.6% / 6-7% of tau_95: a
+  level-dependent upward bias of up to one bin, the same size as the L8/L9 -> L10 tau_95 differences and the mfbml
+  errors. Not yet corrected (BACKLOG: more bins or exact percentile).
+- Binaries: kmix_l8, t5/t6, scal_*, l10c = lean f1c11e0; fig9_l9 = prod-4b3a435; xlevel L10 = xlevel-chain; test K =
+  dscale-fab19eb. L8 (f1c11e0) vs L9 (4b3a435) comparisons, incl. T7, carry a binary confound; test L does not.
+- Tracer mass is not conserved at coarse levels (max drift -7..-10% L6, -3% L7, -0.7% L8, +-0.4% L9): matters for
+  test K at L6.
+- kLa_1T_c = log-linear fit of ln(1 - C/C*) over one full period centred on the C* = c crossing (NaN if the run ends
+  within half a period); the 5-sample kLa_c has +-10-36% phase noise. They are different estimators.
+- 22.5 rpm is anomalous in every statistic (largest miss in every MF test, z = 2.8; dtmix dip; Kim also has a peak).
+- theta = 2 deg shows low-frequency variability (cycle sd 3.5-3.75%; 4 -> 2 deg transitions never settled): T6 values
+  at theta 2 need a longer window or a flag.
+- At 35-37.5 rpm, L10 EDR was still moving after 6 cycles of a warm start (13-20%); the x8 validation covers
+  17.5-32.5 rpm only.
+- mfbml_local uses leave-one-out KRR tuning for the LF (a stated deviation from upstream's single random split, which
+  chose flat fits); "vanilla" means the Yi model structure, not the upstream tuning.
+- Eca-Hoekstra numerical uncertainty with >= 4 grids gives 50-150% for <tau>/<eps> (L7-L10); a defensible bound needs
+  L11+ (archive 2026-10-01).
 
 Results in force
 - tau_mean, tau_95, EDR: smooth in rpm at L8 (T5). Level changes: tau_mean grows 8 -> 18% per level from L6 to L9,
@@ -49,10 +79,16 @@ Open tests (pre-registered in the 2026-10-10 entries; power stated there)
 - T6 rpm x theta L8 grid: 49/50 done or running (11 resubmitted 7276248-58).
 - Q (periodicity per rpm, 10 short L8 recordings flow_l8_*): jobs 7277961-70. (Test M, a dimensionality-reduction
   test on the same runs, was withdrawn before any data.)
-- Question chain for the talk: Q1 fixed-scale mixing (test L), Q2 noise vs structure (tests P, Q), Q3 kLa convergence.
+- Question chain for the talk: Q1 fixed-scale mixing (test L), Q2 noise vs structure (tests P, Q), Q3 kLa convergence
+  (evidence so far AGAINST convergence: kLa_25 falls 183 -> 80 -> 29 -> 17 L6 -> L9, archive; test K tests the cause).
 - Plan: docs/dfd_plan.md v2 is STALE on test R and test L rules; v3 after P and L.
 
-CORRECTIONS (conflicting statements in the archive or earlier entries, resolved)
+CORRECTIONS (conflicting statements in the archive or earlier entries, resolved; see also the audit facts above)
+A. Archive entries before 2026-09-07 about restart bias, Delta-theta offsets steepening with resolution, bistability,
+   and checkpointing not saving compute predate the pressure-restore, phase and fs fixes: do not cite them.
+B. Archive 2026-09 "dtmix rpm structure is real deterministic (L7)" is superseded by T5 (effectively noise at L8).
+C. kLa: "convergence plausible" (archive) vs "falls 1.7-2.8x per level, not converging at L9" (archive): the latter
+   is the measured statement; Q3 open.
 1. "the dtmix rpm roughness is reproducible" (2026-10-08): withdrawn the same day; T5 shows it is effectively noise
    at L8 (cause open: test P).
 2. "MF beats HF-only GP 5-10x" (tests A, T1, T3): the HF-only GP was a collapsed MLE fit; the fair figures are in T2b.
@@ -213,6 +249,7 @@ CORRECTIONS (conflicting statements in the archive or earlier entries, resolved)
   Q1 (test L): is the level dependence of dtmix an artefact of measuring chi at the grid scale? Experiments measure macro-mixing at a probe scale, so chi at a FIXED physical scale is the physically meaningful definition; if it converges across levels, dtmix becomes a well-posed L10 target.
   Q2 (test P): is the rpm roughness sensitive dependence (dtmix a random variable) or smooth-steep structure? If random: the design objective is its expectation and mfbml needs a noise model; cheap L8 ensembles + few L10 runs is exactly the multi-fidelity setting.
   Q3: kLa ladder 47/29/22 (ratio of successive changes 0.39) may converge geometrically (archive: "kLa convergence plausible"); test with the Sc ~ 500 caveat once P says how noisy kLa is.
+  [CORRECTED by the archive audit: the archive also says kLa falls 1.7-2.8x per level L6 -> L9 (kLa_25: 183/80/29/17) and is not converging at L9; three L8-L10 points at one rpm cannot claim geometric convergence. Q3 is open, leaning 'not converged'.]
   => Test M as a dimensionality-reduction test is WITHDRAWN (never run). The 10 flow_l8 runs (jobs 7277961-70, ~250 core-h) are kept for a periodicity check that feeds Q2:
   PRE-REGISTERED test Q (periodicity per rpm): relative L2 difference of (u, v) between phase-matched snapshots one period apart (linear time interpolation, 100 frames/period), median over phases and the 4 recorded periods. PERIODIC if < 1%, APERIODIC if > 10%, else quasi-periodic. Power: phase-interpolation error with 100 frames/period is ~(2 pi/100)^2 ~ 0.4% for a smooth signal, below the 1% bar (checked on the data: the error of interpolating a snapshot from its neighbours is reported as the floor; if the floor exceeds 1%, the PERIODIC bar is raised to 2x the floor and that is disclosed).
   Reading with P: periodic flow + smooth P -> the roughness is steep deterministic structure in rpm; periodic flow + noisy P -> impossible for a stable limit cycle unless multistable, check; aperiodic flow + noisy P -> flow chaos makes dtmix a random variable.

@@ -38,6 +38,8 @@ item starts, give it a diary entry; when it lands, delete it here.
 
 ## Figures / runs
 
+- **tau_95 histogram quantisation.** tau_95 = upper edge of 200 linear bins up to the per-step tau_max; tau_max/tau_95 grows 3.6 (L8) -> 12-13 (L10), so one bin is 2-7% of tau_95, level-dependent (archive audit 2026-10-10). Fix before final L10 runs: exact per-step percentile (sort) or >= 2000 bins; re-derive tau_95 from snapshots where available.
+
 - Bare `return;` in VIDEOS-only events movies_output / movies_output_tau (src/BioReactor.c ~2512, ~2623): the CLAUDE.md hazard (can stop the run). Lean production builds are unaffected (no VIDEOS). Fix before any VIDEOS run.
 
 - **Fig 8(b) tau tails ~13x Kim's** after the transient cleared. Test for
