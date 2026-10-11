@@ -1,0 +1,159 @@
+{
+ "overall": "INCOMPLETE (runs missing/unfinished; see per-rpm entries)",
+ "per_rpm": {
+  "17.5": {
+   "x8_run": "x8_l10_rpm17.5_th7",
+   "xlevel_run": "l10_fig13a_xlevel_rpm17.5",
+   "x8": "MISSING (no shear_stress.dat)",
+   "xlevel": {
+    "qois": {
+     "tau_mean_t": 0.0014919211504806152,
+     "tau_95_t": 0.008299122002416354,
+     "edr_mean_t": 0.03097405284732726,
+     "window": [
+      43.0,
+      46.0
+     ],
+     "n_steps": 91
+    },
+    "complete": true,
+    "release_cycle": 46.99918392398018,
+    "last_cycle_reached": 46.992638923309016
+   },
+   "xlevel_per_cycle_window": [
+    {
+     "tau_mean_t": 0.001494759886288733,
+     "tau_95_t": 0.008314850102055845,
+     "edr_mean_t": 0.03112427645871424,
+     "n_steps": 31
+    },
+    {
+     "tau_mean_t": 0.0014906310355546775,
+     "tau_95_t": 0.00827222538314508,
+     "edr_mean_t": 0.03091600269600877,
+     "n_steps": 30
+    },
+    {
+     "tau_mean_t": 0.0014902779050714994,
+     "tau_95_t": 0.008301151750935916,
+     "edr_mean_t": 0.030876871933545862,
+     "n_steps": 30
+    }
+   ],
+   "xlevel_cycle_rel_sd": {
+    "tau_mean_t": 0.0016703622109547876,
+    "tau_95_t": 0.0026230471856431526,
+    "edr_mean_t": 0.0042938278845702435
+   },
+   "comparison_vs_xlevel": "INCOMPLETE/MISSING"
+  },
+  "25": {
+   "x8_run": "x8_l10_rpm25_th7",
+   "xlevel_run": "l10_fig13a_xlevel_rpm25",
+   "x8": "MISSING (no shear_stress.dat)",
+   "xlevel": {
+    "qois": {
+     "tau_mean_t": 0.0023140503568773747,
+     "tau_95_t": 0.011657036055518682,
+     "edr_mean_t": 0.07762142903709744,
+     "window": [
+      121.0,
+      124.0
+     ],
+     "n_steps": 91
+    },
+    "complete": true,
+    "release_cycle": 124.97996105810476,
+    "last_cycle_reached": 124.9734160574336
+   },
+   "xlevel_per_cycle_window": [
+    {
+     "tau_mean_t": 0.0023310024487383386,
+     "tau_95_t": 0.011765437393687447,
+     "edr_mean_t": 0.07839107405948095,
+     "n_steps": 30
+    },
+    {
+     "tau_mean_t": 0.0023063917659596205,
+     "tau_95_t": 0.011657036055518682,
+     "edr_mean_t": 0.07827192637106163,
+     "n_steps": 31
+    },
+    {
+     "tau_mean_t": 0.00230501214229809,
+     "tau_95_t": 0.011586316039072606,
+     "edr_mean_t": 0.07617960343628426,
+     "n_steps": 30
+    }
+   ],
+   "xlevel_cycle_rel_sd": {
+    "tau_mean_t": 0.00631921787703784,
+    "tau_95_t": 0.007731101612090019,
+    "edr_mean_t": 0.01602574847403831
+   },
+   "comparison_vs_xlevel": "INCOMPLETE/MISSING"
+  },
+  "32.5": {
+   "x8_run": "x8_l10_rpm32.5_th7",
+   "xlevel_run": "l10_fig13a_xlevel_rpm32.5",
+   "x8": "MISSING (no shear_stress.dat)",
+   "xlevel": {
+    "qois": {
+     "tau_mean_t": 0.003588758822890159,
+     "tau_95_t": 0.016455444802863862,
+     "edr_mean_t": 0.18780619276562222,
+     "window": [
+      199.0,
+      202.0
+     ],
+     "n_steps": 92
+    },
+    "complete": true,
+    "release_cycle": 202.9936692636542,
+    "last_cycle_reached": 202.98712426298303
+   },
+   "xlevel_per_cycle_window": [
+    {
+     "tau_mean_t": 0.0035937680488557625,
+     "tau_95_t": 0.01643488276797459,
+     "edr_mean_t": 0.1885664067232461,
+     "n_steps": 31
+    },
+    {
+     "tau_mean_t": 0.0035769898516707943,
+     "tau_95_t": 0.016135177581808966,
+     "edr_mean_t": 0.1857422251553235,
+     "n_steps": 30
+    },
+    {
+     "tau_mean_t": 0.003595138923911039,
+     "tau_95_t": 0.016864656352469372,
+     "edr_mean_t": 0.18904336681796488,
+     "n_steps": 31
+    }
+   ],
+   "xlevel_cycle_rel_sd": {
+    "tau_mean_t": 0.002816088491292689,
+    "tau_95_t": 0.02225158456461765,
+    "edr_mean_t": 0.009501543676356725
+   },
+   "comparison_vs_xlevel": "INCOMPLETE/MISSING"
+  }
+ },
+ "l10c_run": "l10c_rpm32.5_seg1",
+ "l10c_status": {
+  "complete": true,
+  "last_cycle_reached": 260.9787410422032,
+  "release_cycle": 80.0,
+  "qois": {
+   "tau_mean_t": 0.003580642979911718,
+   "tau_95_t": 0.016624405207973706,
+   "edr_mean_t": 0.18660097161554376,
+   "window": [
+    77.0,
+    80.0
+   ],
+   "n_steps": 91
+  }
+ }
+}
