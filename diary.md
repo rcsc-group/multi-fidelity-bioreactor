@@ -286,3 +286,14 @@ C. kLa: "convergence plausible" (archive) vs "falls 1.7-2.8x per level, not conv
 - Test K SUBMITTED (scripts/submit_test_k.py): 21 runs k_l<L>_s1e<k>, 32.5 rpm, theta 7, kmix protocol. Note: the s = 1 runs use the new HEAD build (t_end period-rounding fix etc. since f1c11e0), so test K compares within its own runs, not with kmix_l*.
 - Warm-start scoring script (scripts/test_warmstart_x8.py, Sonnet; reviewed). References: xlevel (L10 from L9) cycle-to-cycle sd 0.2-2.2% -> tolerance is the 5% floor everywhere; xlevel vs cold l10c at 32.5 rpm: 0.2% / 1.0% / 0.6% (tau_mean / tau_95 / EDR), so the L9-sourced warm start already matches the cold run there. x8 t_checkpoint = 139.68 at every rpm is intended (all kmix_l8 sources end at 230 cycles and T_nd is rpm-independent at theta 7). Verdict pending the x8 runs.
 - Test K first two runs (L7, 32.5 rpm; NOT a verdict, the rule needs L6-L9 and the large-s positive control): s = 1 vs s = 10 give dtmix_0.50/0.75/0.95 = 8.15/13.98/28.27 s in BOTH (identical to 0.01 s); kLa_1T_10/25 131.07/80.24 vs 131.30/80.42 (+0.2%). Consistency: the new build at s = 1 reproduces the old kmix_l7_rpm32.5 (8.09/14.04/28.51; dtmix_0.95 -0.8%).
+- Test K, L7 COMPLETE (6/6; 32.5 rpm, theta 7). Still NOT a verdict: the rule needs L8-L9 (k_l8, k_l9 pending).
+  | s | dtmix_0.50 | dtmix_0.75 | dtmix_0.95 | kLa_1T_25 | kLa_25 |
+  |---|---|---|---|---|---|
+  | 1 | 8.147 | 13.983 | 28.270 | 80.2 | 67.3 |
+  | 1e1 | 8.147 | 13.983 | 28.270 | 80.4 | 67.6 |
+  | 1e2 | 8.147 | 13.922 | 28.088 | 81.4 | 77.8 |
+  | 1e3 | 7.539 | 13.132 | 26.446 | 95.8 | 85.2 |
+  | 1e4 | 4.438 | 8.633 | 17.692 | 255.9 | 260.9 |
+  | 1e5 | 0.851 | 1.763 | 4.073 | (fit null) | 1616 |
+  Reading at L7: dtmix is flat to 0.6% up to s = 100 and first moves at s = 1e3 (-6%). So at L7 the variance is destroyed by something ~100-1000x stronger than the physical D: numerical diffusion, D_num(L7) ~ 1e2-1e3 D (order of magnitude only). Condition (i) holds at L7. kLa responds earlier than dtmix (kLa_25 +16% at s = 100) but is still flat at s = 10 (+0.5%), while penetration theory predicts kLa ~ sqrt(D), i.e. x3.2 per decade if the interface layer were resolved. Between s = 1e3 and 1e4 kLa_25 rises x3.06, close to sqrt(10) = 3.16: a HYPOTHESIS that the physics-controlled regime of kLa starts there at L7 (to be checked on L8: s*(L) must rise with level).
+  Power of the L7 part: under the log law a physically controlled dtmix would move ~13% per decade (pre-registration), and the replicate log-sd is 0.02; the measured change s 1 -> 10 is 0.00%. kLa: the alternative (resolved, ~sqrt(D)) predicts +216% per decade; measured +0.2%. Both are far outside noise, so L7 is a strong rejection of "physical D sets dtmix/kLa at L7". It says nothing yet about L8-L10; that is what k_l8/k_l9 decide.
