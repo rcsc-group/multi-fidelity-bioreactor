@@ -78,11 +78,12 @@ Open tests (pre-registered in the 2026-10-10/11 entries; power stated there). St
 - R: DONE (determinism): dtmix_0.50 exact 8/8; dtmix_0.95 within 0.2-1% (snapshot events change dt; hypothesis).
 - Q (periodicity): DONE, low power below 37.5 rpm (see 2026-10-11); 37.5 rpm aperiodic at L8; 22.5/30/32.5 consistent
   with periodic.
-- I (islands, NEW): does trapped variance in a compact region explain the two chi families? isl_l8_* jobs 7290700-04.
+- I (islands): DONE 2026-10-11, NOT ISLAND at L8 (A50 slow/fast 0.70-0.93; slow-run region not persistent,
+  Jaccard min 0.19). H_island in its "variance trapped in a persistent compact region" form is rejected at L8.
 - L (fixed-scale chi) and G (scalar microscale): scal_l8 done, scal_l9 pending (jobs 7276684-5).
-- L8 -> L10 warm start (x8_l10, 3 runs): 1/3 done; reference xlevel L10 and, at 32.5 rpm, cold l10c.
+- L8 -> L10 warm start (x8_l10, 3 runs): 2/3 done (25 rpm finished, not yet analysed); reference xlevel L10 and, at 32.5 rpm, cold l10c.
 - T6 rpm x theta L8 grid: DONE (40/40 + theta 7 = 50-run LF set).
-- Question chain for the talk: Q1 fixed-scale mixing (test L), Q2 why dtmix_0.95 jumps (P done; I pending),
+- Question chain for the talk: Q1 fixed-scale mixing (test L), Q2 why dtmix_0.95 jumps (P done; I: not islands at L8),
   Q3 grid control of dtmix/kLa (K: L7, L8 grid-controlled; L9 pending).
 - Plan: docs/dfd_plan.md v2 is STALE; v3 after K (L9), L and I.
 
@@ -330,3 +331,9 @@ C. kLa: "convergence plausible" (archive) vs "falls 1.7-2.8x per level, not conv
   Correction to the test I power statement: I wrote "A50 ~ 0.2-0.25 for a spread-out residual"; that was a Gaussian-field guess. The measured 32.5 rpm value is ~0.1, so absolute A50 thresholds would be meaningless here; the verdict uses only the slow/fast RATIO, which is unaffected.
   Bag length: L0 = 1 = 0.25 m is the full bag length (cs > 0.5 over x/L0 in [0, 0.996]); the src comment "geometry_a = bag half-length" looks inconsistent; BACKLOG.
 - Warm start L8 -> L10 (x8_l10), 32.5 rpm (1/3; 17.5 and 25 still running): PASS vs xlevel (tau_mean +2.8%, tau_95 +2.0%, EDR +0.5%; tol 5%) and vs cold l10c (+2.6 / +3.0 / +0.1%). Margin is smaller than xlevel vs l10c (0.2 / 1.0 / 0.7%). tau_mean rises over x8 cycles 1-3 (3.38e-3 -> 3.51e-3) and then holds (3.48, 3.47, 3.47e-3): the window (last 3 of 6 cycles) is after the transient, but 6 cycles is not much more than needed. Both runs use the 200-bin tau_95 binary, so the tau_95 comparison is like-for-like. Verdict on the warm start waits for 17.5 and 25 rpm (pre-registered: all three rpm).
+- Test I RESULT (2026-10-11, 5/5 isl_l8 runs, scripts/test_i_islands.py; experiments/multifidelity/test_i_*.png/json): **NOT ISLAND**.
+  Prerequisite: every recording reproduces its original dtmix_0.95 (+1.03% 22.5, 0.00% 22.51, +0.08% 22.4, 0.00% 30, +0.10% 29.9; bar 2%), so the families are as labelled.
+  A50 at chi = 0.90 / 0.95: 22.5 (slow) 0.101 / 0.087; 22.51 (fast) 0.120 / 0.125; 22.4 (fast) 0.124 / 0.094. Ratios slow/fast: 0.84 / 0.70 (vs 22.51), 0.81 / 0.93 (vs 22.4); all four in the NOT band 0.67-1.5 (0.697 is close to its edge). Snapshot scatter of A50 <= 2.7%.
+  Persistence of the slow run's A50 region (Jaccard vs middle period): 0.67 / 0.19 / 0.79 / 0.38, min 0.19 < 0.5: the region is not fixed. Report-only pair: 29.9 (slow) / 30 (fast) = 1.21 / 1.44, i.e. the slow run's variance is MORE spread, opposite to H_island.
+  Power: H_island predicted slow/fast <= 0.5 with a persistent region; the measured ratios (0.70-0.93) are 1.4-1.9x above that bar and far outside the 2.7% scatter, and the 30-rpm pair goes the wrong way, so at L8 the test had power and rejects. Limits: (1) L8 only, where numerical diffusion is ~1e2-1e3 x D (test K): an island smaller than a few L8 cells (~1-3 mm) would be smeared and could still exist at L10; (2) A50 measures where variance sits, not whether it is trapped. So the claim is "at L8 the two families are NOT explained by variance trapped in a persistent compact region"; the alternative (families differ by a global mixing rate, slow run's variance only mildly more concentrated, ~20%) is what the data show.
+  Consequence for Q2: the dtmix_0.95 jumps are deterministic steep structure in rpm (P, R) without a trapped-region mechanism at L8. Next evidence, if Q2 stays in the talk: compare the chi(t) slope at the 0.95 crossing (diag_chi_slope.py) - the jump may be a level-crossing effect of a slow, oscillating chi near 0.95, not a change of mechanism.
