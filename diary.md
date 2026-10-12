@@ -85,8 +85,7 @@ Open tests (pre-registered in the 2026-10-10/11 entries; power stated there). St
   No sharp striations (0.93-1.0 of liquid cells at 0.1 < c < 0.9).
 - L8 -> L10 warm start (x8_l10): 6 cycles FAIL at 17.5 rpm (tau_mean +7.3%); 12-13 cycles: all QoIs within 5% (17.5 rpm
   tau_mean +3.6% residual; continuation verdict UNSETTLED by rule only through the disclosed 25 rpm bar flaw). Cause: L8 mean
-  circulation 28-52% too strong, decaying over ~10 cycles. OLD LINE FOLLOWS:
-  32.5 rpm pass. 6-cycle continuation x8e_l10_rpm{17.5,25} (jobs 7296699-700) decides transient vs bias.
+  circulation 28-52% too strong, decaying over ~10 cycles.
 - T6 rpm x theta L8 grid: DONE (40/40 + theta 7 = 50-run LF set).
 - Question chain for the talk: Q1 fixed-scale mixing (test L), Q2 why dtmix_0.95 jumps (P done; I: not islands at L8),
   Q3 grid control of dtmix/kLa (K: INCONCLUSIVE by rule (L9 control failed at chi 0.95); (i) holds L7-L9).
