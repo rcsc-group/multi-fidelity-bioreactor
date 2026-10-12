@@ -1,0 +1,640 @@
+{
+ "runs": {
+  "scal_l8_rpm32.5_th7": {
+   "run_id": "scal_l8_rpm32.5_th7",
+   "status": "ok",
+   "n_snapshots": 1361,
+   "dtmix": {
+    "native": {
+     "0.50": 11.72617785780861,
+     "0.75": 23.040611105582624,
+     "0.95": 68.32230470708144
+    },
+    "vol_16": {
+     "0.50": 5.419140485158981,
+     "0.75": 16.403621569694465,
+     "0.95": 40.49384727286268
+    },
+    "kim_16": {
+     "0.50": 16.65112622888135,
+     "0.75": null,
+     "0.95": null
+    },
+    "vol_32": {
+     "0.50": 10.530795016191139,
+     "0.75": 21.26463530390397,
+     "0.95": 63.993673715464276
+    },
+    "kim_32": {
+     "0.50": 24.67479896217316,
+     "0.75": null,
+     "0.95": null
+    },
+    "vol_64": {
+     "0.50": 11.84749076848227,
+     "0.75": 23.034638605642385,
+     "0.95": 69.31959676040613
+    },
+    "kim_64": {
+     "0.50": 34.16161929744001,
+     "0.75": null,
+     "0.95": null
+    }
+   },
+   "dtmix_native_first": {
+    "0.50": 11.76752661765257,
+    "0.75": 23.16886443390888,
+    "0.95": 68.36702506262698
+   },
+   "solver": {
+    "dtmix": {
+     "dtmix_0.50": 11.794389888789098,
+     "dtmix_0.75": 23.041617360057074,
+     "dtmix_0.95": 68.63848548681912
+    },
+    "sigma0": 0.23769120114342948,
+    "f_mean": 0.1429687324266285,
+    "t0_nd": 48.6,
+    "t0_fallback": false
+   },
+   "sigma0_used": {
+    "native": 0.23769120114342948,
+    "vol_16": 0.20053945805323478,
+    "kim_16": 0.09644930254033424,
+    "vol_32": 0.20740066542802896,
+    "kim_32": 0.10189658241367035,
+    "vol_64": 0.22113024691488906,
+    "kim_64": 0.10780923159419381
+   },
+   "release_offset_s": -0.04154503840130815,
+   "release_offset_chi": 0.0,
+   "fields_dir": "/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor/runs/scal_l8_rpm32.5_th7/fields",
+   "t_end_s": 184.55208661872646,
+   "native_vs_results_json": {
+    "0.50": {
+     "solver": 11.794389888789098,
+     "snapshots_interp": 11.72617785780861,
+     "snapshots_first_sample": 11.76752661765257,
+     "rel_diff": -0.005783430226037001,
+     "rel_diff_first_sample": -0.002277631262814439,
+     "within_2pct": true
+    },
+    "0.75": {
+     "solver": 23.041617360057074,
+     "snapshots_interp": 23.040611105582624,
+     "snapshots_first_sample": 23.16886443390888,
+     "rel_diff": -4.3671173716952616e-05,
+     "rel_diff_first_sample": 0.005522488802039982,
+     "within_2pct": true
+    },
+    "0.95": {
+     "solver": 68.63848548681912,
+     "snapshots_interp": 68.32230470708144,
+     "snapshots_first_sample": 68.36702506262698,
+     "rel_diff": -0.0046064649809092195,
+     "rel_diff_first_sample": -0.003954930273691315,
+     "within_2pct": true
+    }
+   },
+   "interface_treatment": {
+    "status": "ok",
+    "rel_gap_vol_vs_solver_block1": [
+     0.008132704935820856,
+     0.020777906692618586,
+     0.04187349043605604,
+     0.08760966449949215,
+     0.1311589063730374
+    ]
+   }
+  },
+  "scal_l9_rpm32.5_th7": {
+   "run_id": "scal_l9_rpm32.5_th7",
+   "status": "ok",
+   "n_snapshots": 1361,
+   "dtmix": {
+    "native": {
+     "0.50": 39.49431800042371,
+     "0.75": 72.91489013125688,
+     "0.95": 128.25222273085234
+    },
+    "vol_16": {
+     "0.50": 21.915801131954634,
+     "0.75": 45.979838384665186,
+     "0.95": 107.93711207698712
+    },
+    "kim_16": {
+     "0.50": 46.87944457650523,
+     "0.75": null,
+     "0.95": null
+    },
+    "vol_32": {
+     "0.50": 33.321340612154614,
+     "0.75": 62.901812217986716,
+     "0.95": 128.07038147812722
+    },
+    "kim_32": {
+     "0.50": 92.16766631091147,
+     "0.75": null,
+     "0.95": null
+    },
+    "vol_64": {
+     "0.50": 39.57132717316873,
+     "0.75": 70.97837030153178,
+     "0.95": 128.27520451637292
+    },
+    "kim_64": {
+     "0.50": 101.39458722145292,
+     "0.75": null,
+     "0.95": null
+    }
+   },
+   "dtmix_native_first": {
+    "0.50": 39.57154975127862,
+    "0.75": 72.94393521660834,
+    "0.95": 128.29325745180094
+   },
+   "solver": {
+    "dtmix": {
+     "dtmix_0.50": 39.517285709860424,
+     "dtmix_0.75": 72.95498900281923,
+     "dtmix_0.95": 128.27918899662384
+    },
+    "sigma0": 0.24286673682709203,
+    "f_mean": 0.14296973031596924,
+    "t0_nd": 48.6,
+    "t0_fallback": false
+   },
+   "sigma0_used": {
+    "native": 0.24286673682709203,
+    "vol_16": 0.19101169220125314,
+    "kim_16": 0.09640600004759037,
+    "vol_32": 0.2017221006156404,
+    "kim_32": 0.10283563322594855,
+    "vol_64": 0.22314309541150062,
+    "kim_64": 0.1108362978529037
+   },
+   "release_offset_s": -0.04154503840130815,
+   "release_offset_chi": 0.0,
+   "fields_dir": "/oscar/scratch/eaguerov/mpi_runs/scal_l9_rpm32.5_th7/fields",
+   "t_end_s": 184.4565403080921,
+   "native_vs_results_json": {
+    "0.50": {
+     "solver": 39.517285709860424,
+     "snapshots_interp": 39.49431800042371,
+     "snapshots_first_sample": 39.57154975127862,
+     "rel_diff": -0.0005812066548634975,
+     "rel_diff_first_sample": 0.0013731722825449655,
+     "within_2pct": true
+    },
+    "0.75": {
+     "solver": 72.95498900281923,
+     "snapshots_interp": 72.91489013125688,
+     "snapshots_first_sample": 72.94393521660834,
+     "rel_diff": -0.0005496385115046909,
+     "rel_diff_first_sample": -0.00015151515149247619,
+     "within_2pct": true
+    },
+    "0.95": {
+     "solver": 128.27918899662384,
+     "snapshots_interp": 128.25222273085234,
+     "snapshots_first_sample": 128.29325745180094,
+     "rel_diff": -0.0002102154369888476,
+     "rel_diff_first_sample": 0.00010967059651023625,
+     "within_2pct": true
+    }
+   },
+   "interface_treatment": {
+    "status": "ok",
+    "rel_gap_vol_vs_solver_block1": [
+     0.004139944766653247,
+     0.0003979474527433524,
+     0.0045528793678109025,
+     0.004602669151495542,
+     0.02530471538912238
+    ]
+   }
+  },
+  "scal_l8_rpm37.5_th7": {
+   "run_id": "scal_l8_rpm37.5_th7",
+   "status": "ok",
+   "n_snapshots": 1355,
+   "dtmix": {
+    "native": {
+     "0.50": 6.9557877161669,
+     "0.75": 15.46579684716051,
+     "0.95": 30.780144776307115
+    },
+    "vol_16": {
+     "0.50": 3.683657098448504,
+     "0.75": 12.093880618245334,
+     "0.95": 25.415070910632103
+    },
+    "kim_16": {
+     "0.50": 18.246294002764994,
+     "0.75": null,
+     "0.95": null
+    },
+    "vol_32": {
+     "0.50": 6.404397148053238,
+     "0.75": 14.887330545845206,
+     "0.95": 27.137033349888323
+    },
+    "kim_32": {
+     "0.50": 20.802589146892466,
+     "0.75": null,
+     "0.95": null
+    },
+    "vol_64": {
+     "0.50": 7.021323084270602,
+     "0.75": 15.172130366501833,
+     "0.95": 29.333561037259404
+    },
+    "kim_64": {
+     "0.50": 22.346321103135562,
+     "0.75": null,
+     "0.95": null
+    }
+   },
+   "dtmix_native_first": {
+    "0.50": 7.046961765427337,
+    "0.75": 15.554858083202884,
+    "0.95": 30.792153834396274
+   },
+   "solver": {
+    "dtmix": {
+     "dtmix_0.50": 7.00773199921524,
+     "dtmix_0.75": 15.490775998265276,
+     "dtmix_0.95": 30.82348285369112
+    },
+    "sigma0": 0.23498951866835635,
+    "f_mean": 0.14292992712956334,
+    "t0_nd": 48.6,
+    "t0_fallback": false
+   },
+   "sigma0_used": {
+    "native": 0.23498951866835635,
+    "vol_16": 0.1982097299930307,
+    "kim_16": 0.09003065370320576,
+    "vol_32": 0.20523374420055898,
+    "kim_32": 0.09646430227755651,
+    "vol_64": 0.21949177115058224,
+    "kim_64": 0.10573826293724038
+   },
+   "release_offset_s": -0.03600569994778168,
+   "release_offset_chi": 0.0,
+   "fields_dir": "/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor/runs/scal_l8_rpm37.5_th7/fields",
+   "t_end_s": 159.8990943046624,
+   "native_vs_results_json": {
+    "0.50": {
+     "solver": 7.00773199921524,
+     "snapshots_interp": 6.9557877161669,
+     "snapshots_first_sample": 7.046961765427337,
+     "rel_diff": -0.00741242431276723,
+     "rel_diff_first_sample": 0.005598068849734794,
+     "within_2pct": true
+    },
+    "0.75": {
+     "solver": 15.490775998265276,
+     "snapshots_interp": 15.46579684716051,
+     "snapshots_first_sample": 15.554858083202884,
+     "rel_diff": -0.0016125177400773127,
+     "rel_diff_first_sample": 0.004136789851249878,
+     "within_2pct": true
+    },
+    "0.95": {
+     "solver": 30.82348285369112,
+     "snapshots_interp": 30.780144776307115,
+     "snapshots_first_sample": 30.792153834396274,
+     "rel_diff": -0.0014060084510799653,
+     "rel_diff_first_sample": -0.0010164010161848314,
+     "within_2pct": true
+    }
+   },
+   "interface_treatment": {
+    "status": "ok",
+    "rel_gap_vol_vs_solver_block1": [
+     0.006739857980997188,
+     0.02432526255233136,
+     0.43218421860429546,
+     1.6850671510596769,
+     1.8784255798003868
+    ]
+   }
+  },
+  "scal_l9_rpm37.5_th7": {
+   "run_id": "scal_l9_rpm37.5_th7",
+   "status": "ok",
+   "n_snapshots": 1358,
+   "dtmix": {
+    "native": {
+     "0.50": 7.877255294817572,
+     "0.75": 17.007099373385632,
+     "0.95": 63.97377935239706
+    },
+    "vol_16": {
+     "0.50": 3.3641077186160477,
+     "0.75": 11.12664809786224,
+     "0.95": 33.55233075370232
+    },
+    "kim_16": {
+     "0.50": 19.294924043655936,
+     "0.75": null,
+     "0.95": null
+    },
+    "vol_32": {
+     "0.50": 7.1674240201288875,
+     "0.75": 14.526151521115752,
+     "0.95": 58.242713293893146
+    },
+    "kim_32": {
+     "0.50": 43.96524447089967,
+     "0.75": null,
+     "0.95": null
+    },
+    "vol_64": {
+     "0.50": 7.648699367230376,
+     "0.75": 16.47347503508407,
+     "0.95": 62.84449239890244
+    },
+    "kim_64": {
+     "0.50": 46.14677272835591,
+     "0.75": null,
+     "0.95": null
+    }
+   },
+   "dtmix_native_first": {
+    "0.50": 7.980482442904401,
+    "0.75": 17.05741683619285,
+    "0.95": 64.08976122276201
+   },
+   "solver": {
+    "dtmix": {
+     "dtmix_0.50": 7.903457141972085,
+     "dtmix_0.75": 17.018777712379894,
+     "dtmix_0.95": 63.96531313569406
+    },
+    "sigma0": 0.24228525394728673,
+    "f_mean": 0.14286359785254116,
+    "t0_nd": 48.6,
+    "t0_fallback": false
+   },
+   "sigma0_used": {
+    "native": 0.24228525394728673,
+    "vol_16": 0.1908807345108875,
+    "kim_16": 0.08952579663935337,
+    "vol_32": 0.2015731398201347,
+    "kim_32": 0.0978322396374712,
+    "vol_64": 0.2230030887477918,
+    "kim_64": 0.10897576579277408
+   },
+   "release_offset_s": -0.03600569994778168,
+   "release_offset_chi": 0.0,
+   "fields_dir": "/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor/runs/scal_l9_rpm37.5_th7/fields",
+   "t_end_s": 159.9207032273852,
+   "native_vs_results_json": {
+    "0.50": {
+     "solver": 7.903457141972085,
+     "snapshots_interp": 7.877255294817572,
+     "snapshots_first_sample": 7.980482442904401,
+     "rel_diff": -0.003315238721972147,
+     "rel_diff_first_sample": 0.009745773216541576,
+     "within_2pct": true
+    },
+    "0.75": {
+     "solver": 17.018777712379894,
+     "snapshots_interp": 17.007099373385632,
+     "snapshots_first_sample": 17.05741683619285,
+     "rel_diff": -0.0006862031569850879,
+     "rel_diff_first_sample": 0.0022703818374012474,
+     "within_2pct": true
+    },
+    "0.95": {
+     "solver": 63.96531313569406,
+     "snapshots_interp": 63.97377935239706,
+     "snapshots_first_sample": 64.08976122276201,
+     "rel_diff": 0.00013235637078867768,
+     "rel_diff_first_sample": 0.0019455558171652676,
+     "within_2pct": true
+    }
+   },
+   "interface_treatment": {
+    "status": "ok",
+    "rel_gap_vol_vs_solver_block1": [
+     0.004935461061906565,
+     0.007506250373085832,
+     0.01732726316635147,
+     0.03250104985207214,
+     0.08256759039095063
+    ]
+   }
+  }
+ },
+ "verdict_primary": {
+  "scale": "vol_32",
+  "d_grid_min": 0.2,
+  "n_counted": 4,
+  "n_artefact": 0,
+  "n_not_artefact": 4,
+  "n_missing": 0,
+  "verdict": "NOT an artefact",
+  "cases": [
+   {
+    "rpm": 32.5,
+    "chi": "0.50",
+    "d_grid": 1.2143330472265692,
+    "d_l": 1.151894227538667,
+    "status": "ok",
+    "d_grid_results_json": 1.2091142038263554,
+    "d_l_over_d_grid": 0.9485817998361264,
+    "artefact": false,
+    "not_artefact": true,
+    "counted": true
+   },
+   {
+    "rpm": 32.5,
+    "chi": "0.75",
+    "d_grid": 1.1520345132028726,
+    "d_l": 1.0845295958928967,
+    "status": "ok",
+    "d_grid_results_json": 1.1525406306936654,
+    "d_l_over_d_grid": 0.9414037370093196,
+    "artefact": false,
+    "not_artefact": true,
+    "counted": true
+   },
+   {
+    "rpm": 32.5,
+    "chi": "0.95",
+    "d_grid": 0.6297625322211262,
+    "d_l": 0.6937957378244572,
+    "status": "ok",
+    "d_grid_results_json": 0.6253556623204499,
+    "d_l_over_d_grid": 1.1016783348121564,
+    "artefact": false,
+    "not_artefact": true,
+    "counted": true
+   },
+   {
+    "rpm": 37.5,
+    "chi": "0.50",
+    "d_grid": 0.12440545241788548,
+    "d_l": 0.11256150927421671,
+    "status": "ok",
+    "d_grid_results_json": 0.12028616587450336,
+    "d_l_over_d_grid": 0.9047956266106068,
+    "artefact": false,
+    "not_artefact": true,
+    "counted": false
+   },
+   {
+    "rpm": 37.5,
+    "chi": "0.75",
+    "d_grid": 0.09499993642797477,
+    "d_l": 0.024559974147872143,
+    "status": "ok",
+    "d_grid_results_json": 0.0940725558839759,
+    "d_l_over_d_grid": 0.25852621666218223,
+    "artefact": true,
+    "not_artefact": false,
+    "counted": false
+   },
+   {
+    "rpm": 37.5,
+    "chi": "0.95",
+    "d_grid": 0.7316034698084786,
+    "d_l": 0.7637196516637492,
+    "status": "ok",
+    "d_grid_results_json": 0.7300641243875874,
+    "d_l_over_d_grid": 1.043898345457107,
+    "artefact": false,
+    "not_artefact": true,
+    "counted": true
+   }
+  ]
+ },
+ "verdict_kim_secondary": {
+  "scale": "kim_32",
+  "d_grid_min": 0.2,
+  "n_counted": 1,
+  "n_artefact": 0,
+  "n_not_artefact": 1,
+  "n_missing": 0,
+  "verdict": "inconclusive (fewer than 2 counted cases)",
+  "cases": [
+   {
+    "rpm": 32.5,
+    "chi": "0.50",
+    "d_grid": 1.2143330472265692,
+    "d_l": 1.3178269404284388,
+    "status": "ok",
+    "d_grid_results_json": 1.2091142038263554,
+    "d_l_over_d_grid": 1.0852269428376677,
+    "artefact": false,
+    "not_artefact": true,
+    "counted": true
+   },
+   {
+    "rpm": 32.5,
+    "chi": "0.75",
+    "d_grid": 1.1520345132028726,
+    "d_l": null,
+    "status": "unreached",
+    "d_grid_results_json": 1.1525406306936654,
+    "d_l_over_d_grid": null,
+    "unreached": [
+     {
+      "level": 8,
+      "estimator": "kim_32",
+      "max_chi_reached": 0.59473688450587
+     },
+     {
+      "level": 9,
+      "estimator": "kim_32",
+      "max_chi_reached": 0.5524698053184209
+     }
+    ]
+   },
+   {
+    "rpm": 32.5,
+    "chi": "0.95",
+    "d_grid": 0.6297625322211262,
+    "d_l": null,
+    "status": "unreached",
+    "d_grid_results_json": 0.6253556623204499,
+    "d_l_over_d_grid": null,
+    "unreached": [
+     {
+      "level": 8,
+      "estimator": "kim_32",
+      "max_chi_reached": 0.59473688450587
+     },
+     {
+      "level": 9,
+      "estimator": "kim_32",
+      "max_chi_reached": 0.5524698053184209
+     }
+    ]
+   },
+   {
+    "rpm": 37.5,
+    "chi": "0.50",
+    "d_grid": 0.12440545241788548,
+    "d_l": 0.7483219662190188,
+    "status": "ok",
+    "d_grid_results_json": 0.12028616587450336,
+    "d_l_over_d_grid": 6.015186245256839,
+    "artefact": false,
+    "not_artefact": true,
+    "counted": false
+   },
+   {
+    "rpm": 37.5,
+    "chi": "0.75",
+    "d_grid": 0.09499993642797477,
+    "d_l": null,
+    "status": "unreached",
+    "d_grid_results_json": 0.0940725558839759,
+    "d_l_over_d_grid": null,
+    "unreached": [
+     {
+      "level": 8,
+      "estimator": "kim_32",
+      "max_chi_reached": 0.5757855446717124
+     },
+     {
+      "level": 9,
+      "estimator": "kim_32",
+      "max_chi_reached": 0.5525127169977673
+     }
+    ]
+   },
+   {
+    "rpm": 37.5,
+    "chi": "0.95",
+    "d_grid": 0.7316034698084786,
+    "d_l": null,
+    "status": "unreached",
+    "d_grid_results_json": 0.7300641243875874,
+    "d_l_over_d_grid": null,
+    "unreached": [
+     {
+      "level": 8,
+      "estimator": "kim_32",
+      "max_chi_reached": 0.5757855446717124
+     },
+     {
+      "level": 9,
+      "estimator": "kim_32",
+      "max_chi_reached": 0.5525127169977673
+     }
+    ]
+   }
+  ]
+ },
+ "other_scales": {
+  "vol_16": "NOT an artefact",
+  "vol_64": "NOT an artefact",
+  "kim_16": "inconclusive (fewer than 2 counted cases)",
+  "kim_64": "inconclusive (fewer than 2 counted cases)"
+ }
+}
