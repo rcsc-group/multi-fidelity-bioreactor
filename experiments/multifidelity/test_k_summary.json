@@ -131,13 +131,21 @@
         "kLa_1T_25": NaN,
         "kLa_25": 1713.9632188202877
       }
+    },
+    "L9": {
+      "1e5": {
+        "dtmix_0.50": 0.8511415383662281,
+        "dtmix_0.75": 1.8846705492394895,
+        "dtmix_0.95": 9.727331867042555,
+        "kLa_1T_25": NaN,
+        "kLa_25": 1751.081323107192
+      }
     }
   },
   "pending": [
     "L9 s=1e0",
     "L9 s=1e1",
-    "L9 s=1e3",
-    "L9 s=1e5"
+    "L9 s=1e3"
   ],
   "rule": {
     "verdict": "PENDING",
@@ -174,11 +182,11 @@
     },
     "cond_ii": {
       "changes": {
-        "dtmix_0.50": null,
-        "dtmix_0.75": null,
-        "dtmix_0.95": null
+        "dtmix_0.50": 0.0,
+        "dtmix_0.75": 0.06896551724137812,
+        "dtmix_0.95": 1.2535211267605582
       },
-      "holds": null
+      "holds": false
     },
     "rejected": false,
     "missing": [
@@ -190,12 +198,11 @@
       "L9 s=1e1 dtmix_0.95",
       "L9 s=1e3 dtmix_0.50",
       "L9 s=1e3 dtmix_0.75",
-      "L9 s=1e3 dtmix_0.95",
-      "L9 s=1e5 dtmix_0.50",
-      "L9 s=1e5 dtmix_0.75",
-      "L9 s=1e5 dtmix_0.95"
+      "L9 s=1e3 dtmix_0.95"
     ],
-    "failing": []
+    "failing": [
+      "(ii) L9 vs L8 at s=1e5"
+    ]
   },
   "s_star_descriptive_not_preregistered": {
     "L6": {
