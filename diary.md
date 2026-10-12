@@ -83,7 +83,9 @@ Open tests (pre-registered in the 2026-10-10/11 entries; power stated there). St
 - L (fixed-scale chi): DONE 2026-10-11, NOT an artefact (d_l/d_grid 0.94-1.10, 4 counted cases).
 - G (scalar microscale): DONE 2026-10-11, NEITHER (lambda_c 3-4 mm = 3-6 dx; same length at 37.5 rpm L8/L9).
   No sharp striations (0.93-1.0 of liquid cells at 0.1 < c < 0.9).
-- L8 -> L10 warm start (x8_l10): FAIL 2026-10-11 at 17.5 rpm (tau_mean +7.3%, still falling at cycle 6); 25 and
+- L8 -> L10 warm start (x8_l10): 6 cycles FAIL at 17.5 rpm (tau_mean +7.3%); 12-13 cycles: all QoIs within 5% (17.5 rpm
+  tau_mean +3.6% residual; continuation verdict UNSETTLED by rule only through the disclosed 25 rpm bar flaw). Cause: L8 mean
+  circulation 28-52% too strong, decaying over ~10 cycles. OLD LINE FOLLOWS:
   32.5 rpm pass. 6-cycle continuation x8e_l10_rpm{17.5,25} (jobs 7296699-700) decides transient vs bias.
 - T6 rpm x theta L8 grid: DONE (40/40 + theta 7 = 50-run LF set).
 - Question chain for the talk: Q1 fixed-scale mixing (test L), Q2 why dtmix_0.95 jumps (P done; I: not islands at L8),
@@ -389,3 +391,8 @@ C. kLa: "convergence plausible" (archive) vs "falls 1.7-2.8x per level, not conv
   Level trend: r falls x2.8 (32.5 rpm) and x3.0 (37.5 rpm) from L8 to L9, i.e. D_num ~ dx^1.5 (2^1.5 = 2.83). HYPOTHESIS (two levels, not a fit): r ~ 80-130 at L10 and ~30-45 at L11; the decay would stay numerical-dominated through L11. Testing L10 needs one recorded L10 run (c2 snapshots after release).
   Robustness: the gradient average excludes cells next to the interface and walls; if those held all the large gradients, r would be overestimated, but a 10x underestimate of <|grad c|^2> would still leave r >= 20 at L9. The verdict cannot flip on that.
   Scope: tracer (mixing time). kLa has no variance budget; its evidence stays the D-scan (kLa_1T_25 flat to <= 3.7% at 10x D, L6-L9) plus the physical fact that O2 crosses the interface only by molecular diffusion. An interfacial-flux budget for oxygen (resolved D dc/dn at the interface vs d<C>/dt) would be the analogue; not done.
+- x8 continuation RESULT (2026-10-12 14:12; scripts/test_x8e_continuation.py): pre-registered verdict **UNSETTLED**, caused only by the 25 rpm settle bar, whose power flaw was disclosed before the 17.5 rpm data (cycle changes +0.43 / +0.77 / -0.36% vs a 0.5% bar below the reference's own 0.63% cycle sd).
+  17.5 rpm (13 cycles after the L8 -> L10 restart): tau_mean 1.808 ... 1.547, 1.545, 1.550, 1.543, 1.544, 1.550, 1.544 e-3; settled from cycle 7 (changes +0.07 / +0.38 / -0.35%); last 3 vs xlevel: tau_mean +3.6%, tau_95 +0.0%, EDR +0.6% -> within 5%. Mean circulation 5.04 -> 4.99 over cycles 7-13 vs xlevel 4.93 (+1.3%, still drifting down ~0.1%/cycle).
+  25 rpm: last 3 vs xlevel -2.1 / +1.7 / -0.1%.
+  POST-HOC reading (settle bar = max(0.5%, 2 x xlevel cycle sd), declared before the 17.5 data): TRANSIENT at both rpm; all QoIs within 5% of the L9-started reference after 12-13 L10 cycles.
+  Not identical: at 17.5 rpm a +3.6% tau_mean offset remains (~20 cycle sd) while the circulation is still 1.3% high; it may shrink further or persist. Either way it is inside the 5% tolerance. For the HF map: L8 -> L10 with 12 cycles, with a stated tau_mean bias of up to ~+4% at the lowest rpm; tau_95 and EDR within 2%.
