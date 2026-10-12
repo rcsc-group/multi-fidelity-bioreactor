@@ -80,7 +80,9 @@ Open tests (pre-registered in the 2026-10-10/11 entries; power stated there). St
   with periodic.
 - I (islands): DONE 2026-10-11, NOT ISLAND at L8 (A50 slow/fast 0.70-0.93; slow-run region not persistent,
   Jaccard min 0.19). H_island in its "variance trapped in a persistent compact region" form is rejected at L8.
-- L (fixed-scale chi): DONE 2026-10-11, NOT an artefact (d_l/d_grid 0.94-1.10, 4 counted cases). G: run 2026-10-11.
+- L (fixed-scale chi): DONE 2026-10-11, NOT an artefact (d_l/d_grid 0.94-1.10, 4 counted cases).
+- G (scalar microscale): DONE 2026-10-11, NEITHER (lambda_c 3-4 mm = 3-6 dx; same length at 37.5 rpm L8/L9).
+  No sharp striations (0.93-1.0 of liquid cells at 0.1 < c < 0.9).
 - L8 -> L10 warm start (x8_l10): FAIL 2026-10-11 at 17.5 rpm (tau_mean +7.3%, still falling at cycle 6); 25 and
   32.5 rpm pass. 6-cycle continuation x8e_l10_rpm{17.5,25} (jobs 7296699-700) decides transient vs bias.
 - T6 rpm x theta L8 grid: DONE (40/40 + theta 7 = 50-run LF set).
@@ -358,3 +360,7 @@ C. kLa: "convergence plausible" (archive) vs "falls 1.7-2.8x per level, not conv
   Secondary (Kim's projection, unweighted boxes): inconclusive, because Kim-projected chi does not reach 0.75 or 0.95 in the recorded window in these cases (d_l null), so only 32.5/0.50 counts (d_l 1.32 vs d_grid 1.21). Reported, not interpreted further.
   Power: d_grid is 0.63-1.21 in log (factor 1.9-3.4 between L8 and L9) against a single-run noise of ~0.2 (T5/P); the measured ratios 0.94-1.10 are 3x above the ARTEFACT bar. High power. Weakness kept from pre-registration: one realization per level.
   Meaning (Q1): measuring chi at a fixed physical scale (probe-like, 4-16 mm) does NOT remove the level dependence of dtmix; the L8 -> L9 gap is the same at 7.8 mm boxes as at the grid scale. So the grid dependence is in the transport itself (consistent with test K: numerical diffusion), not in how chi is measured. A fixed-scale chi does not make dtmix a well-posed L10 target.
+- Test G RESULT (2026-10-11 23:20; scripts/chi_scale.py G; experiments/multifidelity/test_g_gradient_scale.json/png): **NEITHER at both rpm** (pre-registered bands not met). Window chi 0.5-0.95, 200-650 snapshots per run, combined relative scatter 0.13 / 0.17 (< 0.3, so the check has its stated precision).
+  32.5 rpm: lambda_c = 4.36 mm (L8, 4.5 dx) vs 2.98 mm (L9, 6.1 dx), ratio 1.47 (GRID band 1.5-2.5 needs also lambda/dx 1-3; NOT band 0.8-1.25 needs >= 5 dx at both). 37.5 rpm: 3.21 mm (L8, 3.3 dx) vs 3.17 mm (L9, 6.5 dx), ratio 1.01 (same physical length) but L8 is only 3.3 dx < 5.
+  Fraction of liquid cells with 0.1 < c < 0.9 in the window: 0.93-1.0 (scal) and 0.64-0.72 (rec_l8): the scalar is NOT in sharp striations; it is smooth on a ~3-4 mm scale.
+  Reading (descriptive; the rule did not decide): the solver's scalar microscale is a few mm, 3-6 cells, and at 37.5 rpm it is already the same physical length at L8 and L9; the physical Batchelor scale is 4-10 um (diag_batchelor.py), ~1000x smaller. So the gradients the solver resolves are set by the stirring scale plus numerical smoothing, not by molecular diffusion. Power note: my bands left a gap (ratio 1.25-1.5, or lambda/dx 3-5) where the data fell; the test was well-posed but its bands were too narrow to classify this regime. Together with K and L: dtmix is set by numerical diffusion acting on a mm-scale scalar field; nothing in L6-L9 resolves the physical scalar scale.
