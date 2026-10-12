@@ -411,3 +411,4 @@ C. kLa: "convergence plausible" (archive) vs "falls 1.7-2.8x per level, not conv
   Power: under a calibrated model, P(coverage <= 10/13) = 3%; a model with true coverage 0.7 passes the coverage bar with P ~ 25%, so the coverage part is weak alone, which is why RMSE vs both baselines is also required. The 10% RMSE bar is the T2b level (5.7-20% at 3 L10 points); 13 points should tighten it.
   Submitted: jobs 7328256-7328263 (x8_l10_rpm{17.5,25,32.5}_th{4,9}).
   7328258 (x8_l10_rpm32.5_th4) was CANCELLED by root (uid 0) 5 s after start on node2336 (node/prolog failure, not us); resubmitted as 7328510.
+  node2336 is bad: it took 7328258, 7328263 and the resubmission 7328510 and each was CANCELLED by root (uid 0) within seconds of start; sinfo still shows it as 'mix' with no reason. Pending H1 jobs updated with ExcNodeList=node2336; 32.5/4 and 32.5/9 resubmitted with --exclude node2336 (jobs 7328524, 7328523). submit_l10_from_l8.py gained --exclude.

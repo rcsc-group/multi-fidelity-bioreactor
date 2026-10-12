@@ -42,6 +42,7 @@ def main() -> None:
     ap.add_argument("--points", nargs="+", required=True)
     ap.add_argument("--cycles", type=int, default=N_CYCLES, help="L10 cycles after the restart (12 after 2026-10-12)")
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--exclude", default=None, help="nodes to avoid (sbatch --exclude)")
     a = ap.parse_args()
     for pt in a.points:
         rpm, theta = map(float, pt.split(":"))
@@ -62,7 +63,8 @@ def main() -> None:
             continue
         job = submit_slurm(p, project_root=ROOT, runs_root=ROOT / "runs", walltime=f"{hours:02d}:00:00",
                            template=ROOT / "config" / "slurm_mpi_template.sh",
-                           checkpoint=str((sd / "checkpoint.dump").resolve()), cpus=1, ntasks=NTASKS, mem="4G")
+                           checkpoint=str((sd / "checkpoint.dump").resolve()), cpus=1, ntasks=NTASKS, mem="4G",
+                           exclude=a.exclude)
         print(f"    job={job}")
 
 
