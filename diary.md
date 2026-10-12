@@ -90,8 +90,7 @@ Open tests (pre-registered in the 2026-10-10/11 entries; power stated there). St
 - Question chain for the talk: Q1 fixed-scale mixing (test L), Q2 why dtmix_0.95 jumps (P done; I: not islands at L8),
   Q3 grid control of dtmix/kLa (K: INCONCLUSIVE by rule (L9 control failed at chi 0.95); (i) holds L7-L9).
 - Plan: docs/dfd_plan.md v3 (2026-10-12). HF design H1 submitted (6 L10 points, theta 4/9). Key figure: fig_numdiff_proof
-  (test V + kL bound). Next: V-L10 (running), H1 runs, adversarial review. [old next-steps line follows]
-  verdict, pre-register the HF rpm x theta design, then adversarial review.
+  (test V + kL bound). Next: V-L10 (running), H1 runs, adversarial review.
 
 CORRECTIONS (conflicting statements in the archive or earlier entries, resolved; see also the audit facts above)
 A. Archive entries before 2026-09-07 about restart bias, Delta-theta offsets steepening with resolution, bistability,
