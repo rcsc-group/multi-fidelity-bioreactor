@@ -25,10 +25,12 @@ Hydrodynamics
 
 Scalars (mixing time dtmix_chi at chi = 0.50/0.75/0.95; kLa_1T_25)
 - E3. Grid ladder at 32.5 rpm, physical D: dtmix_0.95 14 / 28 / 68 / 128 / 191 s (L6-L10); kLa_1T_25
-  135 / 67 / 29 / 15 1/h (L6-L9); kLa_1T_10 47 / 29 / 22 1/h (L8-L10). No sign of convergence.
+  183 / 80 / 29 / 17 / 12.7 1/h (L6-L10; L10 = l10c, binary f1c11e0); kLa_1T_10 47 / 29 / 22 1/h (L8-L10).
+  No sign of convergence.
 - E4. Test K (D x 1 ... 1e5 at L6-L9, 22 runs): a 10x change of the physical scalar diffusivity moves dtmix by
-  <= 1.7% at L7, L8 AND L9 (a physics-controlled dtmix would move ~13%/decade). kLa responds with exponent
-  0.002 / 0.026 / 0.077 at L7 / L8 / L9 (penetration theory 0.5). Formal verdict INCONCLUSIVE: the high-D positive
+  <= 1.7% at L7, L8 AND L9 (a physics-controlled dtmix would move ~13%/decade) and kLa_1T_25 by <= 3.7%
+  (exponent <= 0.016; penetration theory 0.5). [Corrected 2026-10-12: an earlier version quoted the phase-noisy
+  5-sample kLa_25 under this label.] Formal verdict INCONCLUSIVE: the high-D positive
   control (levels collapse at 1e5 D) holds for chi 0.50/0.75 but fails for chi 0.95 at L9 (unexplained stall;
   detached-pocket hypothesis tested and rejected). Stated as such in the talk.
 - E5. Test L: measuring chi at a fixed physical scale (3.9-15.6 mm boxes) keeps the full L8 -> L9 gap
