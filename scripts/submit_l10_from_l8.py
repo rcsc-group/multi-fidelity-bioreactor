@@ -25,8 +25,8 @@ from scripts.simulate import submit_slurm  # noqa: E402
 from scripts.submit_l8_t5_t6 import params as l8_params  # noqa: E402
 
 BINARY = "/oscar/data/dharri15/eaguerov/bin/BioReactor-mpi-xlevel-chain"
-N_CYCLES, NTASKS, MARGIN, SPINUP_POST = 6, 32, 1.5, 230
-_RATE_32 = {17.5: 168.1, 32.5: 101.0, 37.5: 42.0}  # min per L10 cycle at 32 ranks, scripts/cost_model.py
+N_CYCLES, NTASKS, MARGIN, SPINUP_POST = 6, 32, 1.2, 230
+_RATE_32 = {17.5: 194.0, 25: 162.0, 32.5: 51.0, 37.5: 42.0}  # min per L10 cycle, 32 ranks; 17.5-32.5 measured on x8_l10 (2026-10-12)
 
 
 def source_run(rpm: float, theta: float) -> str:
@@ -40,6 +40,7 @@ def source_run(rpm: float, theta: float) -> str:
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--points", nargs="+", required=True)
+    ap.add_argument("--cycles", type=int, default=N_CYCLES, help="L10 cycles after the restart (12 after 2026-10-12)")
     ap.add_argument("--dry-run", action="store_true")
     a = ap.parse_args()
     for pt in a.points:
@@ -50,12 +51,12 @@ def main() -> None:
         p = l8_params(rpm, theta, f"x8_l10_rpm{rpm:g}_th{theta:g}")
         t_nd = p["t_end"] / SPINUP_POST  # nondimensional period (depends on theta through the fill volume)
         zeros = [0.0, 0.0, 0.0]
-        p.update(fidelity=10, t_end=round(N_CYCLES * t_nd, 6), n_mix_cycles=N_CYCLES, t_checkpoint=t_dump,
+        p.update(fidelity=10, t_end=round(a.cycles * t_nd, 6), n_mix_cycles=a.cycles, t_checkpoint=t_dump,
                  omega_b_prev=p["omega_b"], theta_max_prev=[theta, 0.0, 0.0], phi_angular_prev=zeros,
                  amplitude_h_prev=zeros, phi_horizontal_prev=zeros, omega_h_prev=0.0, _binary=BINARY)
         xs = sorted(_RATE_32)
         rate = float(np.interp(min(max(rpm, xs[0]), xs[-1]), xs, [_RATE_32[x] for x in xs]))
-        hours = max(4, math.ceil(N_CYCLES * rate * MARGIN / 60.0))
+        hours = min(48, max(4, math.ceil(a.cycles * rate * MARGIN / 60.0)))  # 48 h cap; maxruntime dumps a checkpoint
         print(f"  {p['run_id']}: source {src} (t {t_dump:g}), t_end {p['t_end']}, walltime {hours} h")
         if a.dry_run:
             continue

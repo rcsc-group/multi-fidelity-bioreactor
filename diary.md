@@ -89,7 +89,8 @@ Open tests (pre-registered in the 2026-10-10/11 entries; power stated there). St
 - T6 rpm x theta L8 grid: DONE (40/40 + theta 7 = 50-run LF set).
 - Question chain for the talk: Q1 fixed-scale mixing (test L), Q2 why dtmix_0.95 jumps (P done; I: not islands at L8),
   Q3 grid control of dtmix/kLa (K: INCONCLUSIVE by rule (L9 control failed at chi 0.95); (i) holds L7-L9).
-- Plan: docs/dfd_plan.md v3 (2026-10-12): hydro transfers (mfbml), scalars are numerical diffusion. Next: x8e 17.5
+- Plan: docs/dfd_plan.md v3 (2026-10-12). HF design H1 submitted (6 L10 points, theta 4/9). Key figure: fig_numdiff_proof
+  (test V + kL bound). Next: V-L10 (running), H1 runs, adversarial review. [old next-steps line follows]
   verdict, pre-register the HF rpm x theta design, then adversarial review.
 
 CORRECTIONS (conflicting statements in the archive or earlier entries, resolved; see also the audit facts above)
@@ -405,3 +406,8 @@ C. kLa: "convergence plausible" (archive) vs "falls 1.7-2.8x per level, not conv
   Note on magnitude: L10 kL is ~3.4x the penetration estimate; the published-level number is numerically produced but not absurd in size. "Gibberish" overstates it; "numerical, not physical, and not converged" is the claim.
 - fig_numdiff_proof (a) tracer D_eff/D_phys vs dx (L8, L9; L10 from test V-L10 when done), (b) kL vs dx with 2D/dx (L6-L10). Proposed key figure for the talk.
 - Test V-L10 pipeline smoke (vsmoke_l8, job 7328098, 2.6 min, 16 ranks): restart + release 1 cycle later + 13 snapshots/period work (fs sanity OK, sigma2_max 0.240, 27 snapshots); r = 1370-1550 at chi 0.08-0.15 vs 1362 in the chi 0.1-0.2 bin of the full-protocol scal_l8 run: the restart-release protocol reproduces r (supports "r does not depend on the protocol"). L10 run v_l10_rpm32.5_th7 submitted (21 cycles, 32 ranks).
+- PRE-REGISTERED HF design H1 (2026-10-12, before any of these runs): L10 points over rpm x theta for the mfbml map (talk section 2). 6 new L8 -> L10 warm starts, 12 L10 cycles each (x8 continuation: within 5% after 12-13), binary xlevel-chain (the 200-bin tau_95 binary of ALL existing L8 and L10 data, so the one-bin tau_95 bias is the same across the dataset; stated as a systematic), sources t6_l8: (rpm, theta) = (17.5, 4), (25, 4), (32.5, 4), (17.5, 9), (25, 9), (32.5, 9). ~5k core-h; walltime capped at 48 h (17.5 rpm needs ~39-47 h; a run that hits the cap dumps a checkpoint and is continued, x8e-style).
+  Excluded and why: theta 2 (low-frequency variability at L8, never settled), rpm 35-37.5 (L10 EDR still moving after 6 cycles), rpm 15 (warm start not validated below 17.5). theta 5.5 is held out of H1 (reserve for a second round chosen by posterior variance).
+  Evaluation (fixed now): mfbml as in T2b (full-Bayes residual GP) on input (rpm, theta); LF = the L8 grid without theta 2 (40 points); HF = these 6 + the 7 theta-7 L10 points at 17.5-32.5 rpm (xlevel set) = 13. Leave-one-out over the 13 HF points. PASS if, for tau_95 AND EDR: LOO relative RMSE <= 10%, AND mfbml RMSE below both baselines (L8 x global ratio; HF-only GP, integrated), AND the 95% intervals cover >= 80% of the 13 (>= 11). tau_mean reported (its warm-start bias of up to +4% at 17.5 rpm is stated).
+  Power: under a calibrated model, P(coverage <= 10/13) = 3%; a model with true coverage 0.7 passes the coverage bar with P ~ 25%, so the coverage part is weak alone, which is why RMSE vs both baselines is also required. The 10% RMSE bar is the T2b level (5.7-20% at 3 L10 points); 13 points should tighten it.
+  Submitted: jobs 7328256-7328263 (x8_l10_rpm{17.5,25,32.5}_th{4,9}).
