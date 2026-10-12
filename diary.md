@@ -5,7 +5,7 @@ Entries before 2026-10-08 are kept verbatim in diary_archive_to_2026-10-07.md (s
 pre-split file at /oscar/scratch/eaguerov/tmp/diary_backup_20261010.md). The archive is NOT re-audited line by line:
 where it conflicts with CURRENT STATE, CURRENT STATE wins, and the known conflicts are listed under CORRECTIONS.
 
-## CURRENT STATE (updated 2026-10-10)
+## CURRENT STATE (updated 2026-10-12)
 
 Goal and constraints
 - APS DFD 2026 talk (Orlando, ~Nov 22-24). Must keep a form of mfbml (Bessa is the PI). Pivot 2026-10-08: vanilla
@@ -71,8 +71,8 @@ Results in force
   with per-bag fitted constant (Piontek, PMC12868168), MF-OT-ROM for two-phase flows (2603.04232).
 
 Open tests (pre-registered in the 2026-10-10/11 entries; power stated there). Status 2026-10-11:
-- K (diffusivity scan): (i) holds at L7 and L8 (dtmix flat to <= 0.5% at D x10), no rejection; PENDING on L9
-  (k_l9_*, 4 runs incl. the pre-data amendment s = 10). Levels collapse when D x1e4-1e5 (L7 vs L8 within 6%).
+- K (diffusivity scan): DONE 2026-10-12, INCONCLUSIVE by rule (L9 positive control fails at chi 0.95 only).
+  (i) holds at L7, L8, L9 (dtmix moves <= 1.7% at D x10); kLa exponent vs D 0.002 / 0.026 / 0.077 (L7-L9; theory 0.5).
 - P (perturbation-size scan): DONE, reading MIXED. Not noise (1e-6 rpm reproduces dtmix_0.95 to 4e-8 at 22.5 rpm);
   steep structure: +0.01 rpm switches chi(t) between two families (dtmix_0.95 128 vs 90 s).
 - R: DONE (determinism): dtmix_0.50 exact 8/8; dtmix_0.95 within 0.2-1% (snapshot events change dt; hypothesis).
@@ -88,7 +88,8 @@ Open tests (pre-registered in the 2026-10-10/11 entries; power stated there). St
 - T6 rpm x theta L8 grid: DONE (40/40 + theta 7 = 50-run LF set).
 - Question chain for the talk: Q1 fixed-scale mixing (test L), Q2 why dtmix_0.95 jumps (P done; I: not islands at L8),
   Q3 grid control of dtmix/kLa (K: INCONCLUSIVE by rule (L9 control failed at chi 0.95); (i) holds L7-L9).
-- Plan: docs/dfd_plan.md v2 is STALE; v3 after K (L9), L and I.
+- Plan: docs/dfd_plan.md v3 (2026-10-12): hydro transfers (mfbml), scalars are numerical diffusion. Next: x8e 17.5
+  verdict, pre-register the HF rpm x theta design, then adversarial review.
 
 CORRECTIONS (conflicting statements in the archive or earlier entries, resolved; see also the audit facts above)
 A. Archive entries before 2026-09-07 about restart bias, Delta-theta offsets steepening with resolution, bistability,
@@ -96,7 +97,7 @@ A. Archive entries before 2026-09-07 about restart bias, Delta-theta offsets ste
 B. Archive 2026-09 "dtmix rpm structure is real deterministic (L7)": T5 found +-0.1 rpm jumps that look like noise at L8;
    test P (2026-10-11) shows they are deterministic (1e-6 rpm reproduces) steep structure, not noise.
 C. kLa: "convergence plausible" (archive) vs "falls 1.7-2.8x per level, not converging at L9" (archive): the latter
-   is the measured statement; Q3 open.
+   is the measured statement; test K (2026-10-12) adds that kLa is controlled by numerical diffusion through L9.
 1. "the dtmix rpm roughness is reproducible" (2026-10-08): withdrawn the same day after T5; test P (2026-10-11) then
    showed each run IS reproducible and the roughness is deterministic steep structure in rpm (two chi families).
 2. "MF beats HF-only GP 5-10x" (tests A, T1, T3): the HF-only GP was a collapsed MLE fit; the fair figures are in T2b.
