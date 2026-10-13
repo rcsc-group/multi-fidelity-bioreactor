@@ -432,3 +432,4 @@ C. kLa: "convergence plausible" (archive) vs "falls 1.7-2.8x per level, not conv
   New L9 runs: x8_l9_rpm{17.5,25,32.5}_th{4,9}, L8 -> L9 warm start, 12 cycles, xlevel-chain binary (exclude node2336). Confound stated: theta-7 L9 data are cold fig9 runs (prod-4b3a435 binary), theta 4/9 are warm starts (xlevel-chain); both 200-bin tau_95.
   Power: H2 is judged on the same 13 points as H1, so H1 vs H2 is a paired comparison; only H2 vs its own bar decides H2.
   Submitted: jobs 7341536-7341541.
+  2026-10-13 02:50: x8_l9_rpm32.5_th4 done (job 7341538, 1.7 h). Restart healthy: fs sanity OK; per-cycle tau_mean/EDR continuous; EDR flat (3.11e-2 +-0.1%) from cycle 2; tau_mean drift -0.42% over last 3 cycles (the known slow mode); Omega 3.51 -> 3.43.
