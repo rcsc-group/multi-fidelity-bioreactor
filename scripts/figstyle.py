@@ -108,6 +108,7 @@ MK = {
     "vorticity": "D",    # <|xi_bar|>, steady-streaming vorticity
     "elevation": "h",    # free-surface elevation (Figs 14-15)
     "l2":        "X",    # discrete L2 error (Fig A.16c)
+    "deff":      "p",    # D_eff/D_phys of the tracer (variance budget, test V)
     # mixing time, by degree of homogeneity
     "chi_0.50":  "v",
     "chi_0.75":  "^",

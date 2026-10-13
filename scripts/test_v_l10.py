@@ -20,7 +20,8 @@ sys.path.insert(0, str(ROOT))
 from scripts.test_v_variance_budget import series  # noqa: E402
 
 RUN = "v_l10_rpm32.5_th7"
-REF = {8: "scal_l8_rpm32.5_th7", 9: "scal_l9_rpm32.5_th7"}
+REF = {8: "scal_l8_rpm32.5_th7", 9: "scal_l9_rpm32.5_th7"}  # binned from test_v_variance_budget.json
+EXTRA = {6: "v_l6_rpm32.5_th7", 7: "v_l7_rpm32.5_th7"}     # same protocol as RUN; reported, not decisive
 WINDOW = (0.1, 0.4)
 BINS = [(0.1, 0.2), (0.2, 0.3), (0.3, 0.4)]
 OUT = ROOT / "experiments/multifidelity/test_v_l10.json"
@@ -43,10 +44,14 @@ def main():
     ref = json.loads((ROOT / "experiments/multifidelity/test_v_variance_budget.json").read_text())["runs"]
     s = series(RUN)
     res = {10: dict(run=RUN, chi_max=float(np.nanmax(s["chi"])), **binned(s["chi"], s["r"]))}
+    for L, run in EXTRA.items():
+        if (ROOT / "runs" / run / "results.json").exists():
+            e = series(run)
+            res[L] = dict(run=run, chi_max=float(np.nanmax(e["chi"])), **binned(e["chi"], e["r"]))
     for L, run in REF.items():
         res[L] = dict(run=run, **binned(ref[run]["chi"], ref[run]["r"]))
     print(f"{'level':>5} {'run':24s} {'median r, chi 0.1-0.4':>22s}  bins " + "  ".join(f"{a}-{b}" for a, b in BINS))
-    for L in (8, 9, 10):
+    for L in sorted(res):
         d = res[L]
         print(f"{L:5d} {d['run']:24s} {d['window']:16.1f} (n={d['n_window']:3d})  "
               + "  ".join(f"{x:7.1f}" for x in d["bins"]))
