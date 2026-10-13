@@ -60,20 +60,28 @@ class MeanAdapter:
         return np.asarray(self.model.predict_mean(np.atleast_2d(np.asarray(X, float))), float).ravel()
 
 
-def _fit_predict(X, y, xt, lf_model, basis):
+def _fit_predict(X, y, xt, lf_model, basis, log=False):
+    """log=True: train on log(y); return exp(posterior mean), exp(2.5/97.5% quantiles) (H3)."""
     from mfbml_local.krr_lr_gpr_fullbayes import FullBayesKRRLRGP
+    if log:
+        y = np.log(y)
     m = FullBayesKRRLRGP(BOUNDS, lf_model=lf_model, basis=basis).train(X, y)
     qq = m.quantile(xt, [0.025, 0.975])[0]
-    return float(m.predict_mean(xt)[0]), float(qq[0]), float(qq[1])
+    mean = float(m.predict_mean(xt)[0])
+    if log:
+        return float(np.exp(mean)), float(np.exp(qq[0])), float(np.exp(qq[1]))
+    return mean, float(qq[0]), float(qq[1])
 
 
-def loo_h2(q, lf_model, l9_pts, lf_pts, hf_pts):
+def loo_h2(q, lf_model, l9_pts, lf_pts, hf_pts, log=False):
     """LOO over hf_pts (each must have an L8 and L9 counterpart). lf_model = trained L8 KRR.
-    Model 1 (L8 -> L9) is trained once on ALL l9_pts (it never sees L10)."""
+    Model 1 (L8 -> L9) is trained once on ALL l9_pts (it never sees L10).
+    log=True (H3): model 1, model 2 and HF-only work on log(QoI); the caller must pass an lf_model
+    trained on log L8. Predictions/intervals are returned on the raw scale; ratio and L9 columns stay raw."""
     from mfbml_local.krr_lr_gpr_fullbayes import FullBayesKRRLRGP
     k9 = sorted(l9_pts, key=lambda k: (k[1], k[0]))
     model1 = FullBayesKRRLRGP(BOUNDS, lf_model=lf_model, basis="linear").train(
-        np.array(k9), np.array([l9_pts[k][q] for k in k9]))
+        np.array(k9), (np.log if log else np.asarray)([l9_pts[k][q] for k in k9]))
     adapter = MeanAdapter(model1)
     hk = sorted(hf_pts, key=lambda k: (k[1], k[0]))
     X = np.array(hk)
@@ -86,7 +94,8 @@ def loo_h2(q, lf_model, l9_pts, lf_pts, hf_pts):
         xt = X[i:i + 1]
         r = dict(rpm=k[0], theta=k[1], obs=float(yh[i]), l8=float(y8[i]), l9=float(y9[i]))
         for name, lfm, basis in (("mf", adapter, "linear"), ("hf", None, "ordinary")):
-            r[f"{name}_pred"], r[f"{name}_lo"], r[f"{name}_hi"] = _fit_predict(X[tr], yh[tr], xt, lfm, basis)
+            r[f"{name}_pred"], r[f"{name}_lo"], r[f"{name}_hi"] = _fit_predict(
+                X[tr], yh[tr], xt, lfm, basis, log)
         r["ratio_pred"] = ratio_baseline(yh[tr], y8[tr], y8[i])        # decisive baseline (as H1)
         r["l9ratio_pred"] = ratio_baseline(yh[tr], y9[tr], y9[i])      # non-decisive
         r["l9_pred"] = float(y9[i])                                    # non-decisive
