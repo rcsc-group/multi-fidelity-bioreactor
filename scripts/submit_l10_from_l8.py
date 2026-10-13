@@ -25,7 +25,8 @@ from scripts.simulate import submit_slurm  # noqa: E402
 from scripts.submit_l8_t5_t6 import params as l8_params  # noqa: E402
 
 BINARY = "/oscar/data/dharri15/eaguerov/bin/BioReactor-mpi-xlevel-chain"
-N_CYCLES, NTASKS, MARGIN, SPINUP_POST = 6, 32, 1.2, 230
+N_CYCLES, NTASKS, MARGIN, SPINUP_POST = 12, 32, 1.2, 230
+# BINARY predates f1c11e0 (deadline checkpoint): a job killed at walltime leaves NO dump.
 _RATE_32 = {17.5: 194.0, 25: 162.0, 32.5: 51.0, 37.5: 42.0}  # min per L10 cycle, 32 ranks; 17.5-32.5 measured on x8_l10 (2026-10-12)
 
 
@@ -44,6 +45,7 @@ def main() -> None:
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--exclude", default=None, help="nodes to avoid (sbatch --exclude)")
     ap.add_argument("--level", type=int, default=10, help="target level (9 or 10); 9 for the H2 middle level")
+    ap.add_argument("--rate", type=float, default=None, help="measured min per cycle (overrides the theta-7 table)")
     a = ap.parse_args()
     for pt in a.points:
         rpm, theta = map(float, pt.split(":"))
@@ -59,7 +61,8 @@ def main() -> None:
         xs = sorted(_RATE_32)
         rate = float(np.interp(min(max(rpm, xs[0]), xs[-1]), xs, [_RATE_32[x] for x in xs]))
         rate = rate if a.level == 10 else rate / 6.0  # L9 ~1/8 of L10 per cycle; /6 kept conservative
-        hours = min(48, max(4, math.ceil(a.cycles * rate * MARGIN / 60.0)))  # 48 h cap; maxruntime dumps a checkpoint
+        rate = a.rate if a.rate else rate  # theta 4 runs ~2x slower than the theta-7 table (x8_l10_rpm32.5_th4: 97)
+        hours = min(48, max(4, math.ceil(a.cycles * rate * MARGIN / 60.0)))  # 48 h cap; no dump at kill
         print(f"  {p['run_id']}: source {src} (t {t_dump:g}), t_end {p['t_end']}, walltime {hours} h")
         if a.dry_run:
             continue
