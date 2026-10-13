@@ -1,6 +1,6 @@
 """Figure: mixing and oxygen transfer in our solver are carried by numerical, not physical, diffusion (L6-L10).
 
-(a) Tracer: D_eff/D_phys from the variance budget (test V; median over chi 0.5-0.95, 32.5 rpm) vs grid spacing.
+(a) Tracer: D_eff/D_phys from the variance budget (tests V and V-L10; median over chi 0.1-0.4, 32.5 rpm) vs dx.
     Physically controlled decay: D_eff/D_phys = 1.
 (b) Oxygen: measured kL = kLa_1T_25 / a vs grid spacing, against the most a resolved diffusive layer can carry,
     2 D/dx (whole saturation jump across one cell). Data: diag_kl_bound.json (32.5 rpm, physical D).
@@ -20,17 +20,17 @@ sys.path.insert(0, str(ROOT))
 from scripts import figstyle as fs  # noqa: E402
 
 L_BIO = 0.25
-V_RUNS = {8: "scal_l8_rpm32.5_th7", 9: "scal_l9_rpm32.5_th7", 10: "v_l10_rpm32.5_th7"}
+V_JSON = "experiments/multifidelity/test_v_l10.json"  # L8-L10 binned at equal chi
 
 
 def main():
-    v = json.loads((ROOT / "experiments/multifidelity/test_v_variance_budget.json").read_text())["runs"]
+    v = json.loads((ROOT / V_JSON).read_text())["levels"]
     kb = json.loads((ROOT / "experiments/multifidelity/diag_kl_bound.json").read_text())
     plt.rcParams.update(fs.rcparams())
     fig, (a1, a2) = plt.subplots(1, 2, figsize=(9.0, 3.6))
-    for L, run in V_RUNS.items():
-        if run in v:
-            a1.plot([L_BIO / 2 ** L * 1e3], [v[run]["r_median"]], label=f"L{L}",
+    for L in (8, 9, 10):
+        if str(L) in v:
+            a1.plot([L_BIO / 2 ** L * 1e3], [v[str(L)]["window"]], label=f"L{L}",
                     **fs.series_kw(fs.level_colour(L), fs.MK["chi_0.95"], stat="mean", ours=True))
     a1.axhline(1.0, color=fs.NEUTRAL, ls="--", lw=1.0)
     a1.set_ylabel(r"$D_{\mathrm{eff}}/D_{\mathrm{phys}}$")
