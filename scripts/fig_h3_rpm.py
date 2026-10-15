@@ -49,9 +49,13 @@ def full_model(q, lf_pts, l9_pts, hf_pts):
         np.array(kh), np.log([hf_pts[k][q] for k in kh]))
 
     def pred(theta):
+        """{level: (mean, lo, hi)}; L8 is a KRR (no interval: lo = hi = None)."""
         X = np.column_stack([GRID, np.full_like(GRID, theta)])
-        qq = m2.quantile(X, [0.025, 0.975])
-        return np.exp(np.ravel(m2.predict_mean(X))), np.exp(qq[:, 0]), np.exp(qq[:, 1])
+        out = {8: (np.exp(np.ravel(lf.predict(X))), None, None)}
+        for L, m in ((9, m1), (10, m2)):
+            qq = m.quantile(X, [0.025, 0.975])
+            out[L] = (np.exp(np.ravel(m.predict_mean(X))), np.exp(qq[:, 0]), np.exp(qq[:, 1]))
+        return out
     return pred
 
 
@@ -62,13 +66,24 @@ def main():
     hf_pts, _ = load_points(hf_points(), hf_run)
     loo = json.loads((MF / "test_h3_mfbml.json").read_text())["results"]
     plt.rcParams.update(fs.rcparams())
-    fig, axes = plt.subplots(3, 3, figsize=(10.0, 7.6), sharex=True, sharey="row")
+    fig, axes = plt.subplots(3, 3, figsize=(10.0, 7.6), sharex=True, sharey=False)
     c10, cp = fs.level_colour(10), "0.25"
     for i, (q, mk, stat, lab) in enumerate(ROWS):
         pred = full_model(q, lf_pts, l9_pts, hf_pts)
         for j, th in enumerate(THETAS):
             ax = axes[i, j]
-            m, lo, hi = pred(th)
+            curves = pred(th)
+            for L in (8, 9):
+                cL = fs.level_colour(L)
+                m, lo, hi = curves[L]
+                if lo is not None:
+                    ax.fill_between(GRID, lo, hi, color=cL, alpha=0.12, lw=0)
+                ax.plot(GRID, m, color=cL, lw=1.0, ls="--")
+                src = lf_pts if L == 8 else l9_pts
+                ks = sorted(k for k in src if k[1] == th and GRID[0] <= k[0] <= GRID[-1])
+                ax.plot([k[0] for k in ks], [src[k][q] for k in ks], ls="none",
+                        **{k: v for k, v in fs.series_kw(cL, mk, stat=stat, ours=True).items() if k != "ls"})
+            m, lo, hi = curves[10]
             ax.fill_between(GRID, lo, hi, color=cp, alpha=0.15, lw=0)
             ax.plot(GRID, m, color=cp, lw=1.0)
             pts = [p for p in loo[q]["points"] if p["theta"] == th]
@@ -85,7 +100,13 @@ def main():
                 ax.set_ylabel(lab)
             if i == 2:
                 ax.set_xlabel("rocking speed (rpm)")
-    handles = [Line2D([], [], color=c10, marker="o", mfc=c10, ls="none", ms=5, label="L10 simulation"),
+    handles = [Line2D([], [], color=fs.level_colour(8), marker="o", mfc=fs.level_colour(8), ls="none", ms=5,
+                      label="L8 simulation"),
+               Line2D([], [], color=fs.level_colour(8), lw=1.0, ls="--", label="L8 fit (KRR)"),
+               Line2D([], [], color=fs.level_colour(9), marker="o", mfc=fs.level_colour(9), ls="none", ms=5,
+                      label="L9 simulation"),
+               Line2D([], [], color=fs.level_colour(9), lw=1.0, ls="--", label="L9 fit (GP, 95% band)"),
+               Line2D([], [], color=c10, marker="o", mfc=c10, ls="none", ms=5, label="L10 simulation"),
                Line2D([], [], color=cp, marker="_", ls="none", ms=8, mew=1.0,
                       label="prediction, point left out\n(95% interval)"),
                Patch(facecolor=cp, alpha=0.15, label="prediction, all points\n(95% interval)"),
