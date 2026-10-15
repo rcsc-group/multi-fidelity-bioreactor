@@ -1,0 +1,4 @@
+mean snapshot spacing dt_File = 0.044651294
+full-series {'plain': np.float64(76.94565832296394), 'chi_scale_kim_block1': nan, 'first_idx_plain': 551, 'strict': np.float64(68.12472747465237), 'nfiles': 1361, 'ours_results_json': 68.63848548681912}
+truncate at nfiles 582 fin np.float64(74.528734714)
+TRUNCATED prediction {'plain': np.float64(76.94565832296394), 'chi_scale_kim_block1': nan, 'first_idx_plain': 551, 'strict': np.float64(68.12472747465237), 'nfiles': 582, 'ours_results_json': 68.63848548681912}
