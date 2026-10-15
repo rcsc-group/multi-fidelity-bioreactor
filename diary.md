@@ -513,3 +513,4 @@ C. kLa: "convergence plausible" (archive) vs "falls 1.7-2.8x per level, not conv
   Our pair jumps |dlog dtmix_0.95|: 0.165 (22.4/22.6), 0.376 (29.9/30.1). PIPELINE-DRIVEN if Kim-plain pair |dlog| <= 1/3 of ours in BOTH pairs; SAME-IN-KIM if >= 2/3 of ours in BOTH; else MIXED.
   Power: the jumps are 5-10x Kim's cadence quantisation (3.2 s on 90-137 s = 0.02-0.035 in log); 2 pairs only. Cost ~160 core-h.
   2026-10-15 13:46: ks_l8_rpm22.4 done (job 7422597, 2.0 h): dtmix_0.95 104.97 s vs T5 104.88 s (0.08%, reproducibility check passes); 1016 snapshots. 3 runs left.
+  2026-10-15 14:12: ks 29.9 (137.12 vs T5 136.46 s, 0.5%) and 22.6 (89.00 vs 89.88 s, 1.0%) done, both reproduce. ks 30.1 running. Kim pipeline on the pairs dispatched (Sonnet).
