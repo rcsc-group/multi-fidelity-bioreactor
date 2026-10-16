@@ -73,6 +73,12 @@ typedef struct {
   double amplitude_h_prev[N_MAX];
   double phi_horizontal_prev[N_MAX];
   double omega_h_prev;
+  // Flux record/replay (compile-time -DRECORD_FLUX / -DREPLAY_FLUX; see BioReactor.c). Ignored by the
+  // default build. t_rec0 < 0 means "unset": the record starts at the release time t_mix.
+  double t_rec0;                     // absolute non-dim time at which recording starts
+  int    n_rec_periods;              // RECORD: periods recorded after t_rec0. REPLAY: periods of the record used (0 = all)
+  int    replay_loop;                // REPLAY: 1 = wrap to the first recorded step when the record ends
+  char   rec_dir[512];               // directory holding flux_rec.<pid>.bin
 } BioreactorParams;
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -117,6 +123,8 @@ static BioreactorParams params_read(const char *path) {
   p.oxy_D_scale       = 1.0;  // liquid-phase oxygen diffusivity multiplier
   p.snap_start_cycle  = 0.0;  // field snapshots off unless a window is given
   p.snap_end_cycle    = 0.0;
+  p.t_rec0            = -1.0; // record start unset: BioReactor.c falls back to t_mix
+  strcpy(p.rec_dir, ".");
 
   FILE *fp = fopen(path, "r");
   if (!fp) {
@@ -171,6 +179,19 @@ static BioreactorParams params_read(const char *path) {
       p.snap_start_cycle = tok_double(json, &tokens[++i]);
     else if (jsoneq(json, &tokens[i], "snap_end_cycle"))
       p.snap_end_cycle = tok_double(json, &tokens[++i]);
+    else if (jsoneq(json, &tokens[i], "t_rec0"))
+      p.t_rec0 = tok_double(json, &tokens[++i]);
+    else if (jsoneq(json, &tokens[i], "n_rec_periods"))
+      p.n_rec_periods = tok_int(json, &tokens[++i]);
+    else if (jsoneq(json, &tokens[i], "replay_loop"))
+      p.replay_loop = tok_int(json, &tokens[++i]);
+    else if (jsoneq(json, &tokens[i], "rec_dir")) {
+      jsmntok_t *v = &tokens[++i];
+      int len = v->end - v->start;
+      if (len >= (int)sizeof(p.rec_dir)) len = (int)sizeof(p.rec_dir) - 1;
+      memcpy(p.rec_dir, json + v->start, len);
+      p.rec_dir[len] = '\0';
+    }
     else if (jsoneq(json, &tokens[i], "theta_max")) {
       tok_array(json, tokens, ++i, p.theta_max, N_MAX);
       i += tokens[i].size;

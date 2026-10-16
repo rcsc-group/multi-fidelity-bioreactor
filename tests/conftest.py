@@ -35,6 +35,7 @@ CANONICAL_PARAMS = {
 def pytest_configure(config):
     config.addinivalue_line("markers", "medium: short CFD run, fidelity 3; ~2 min on OSCAR")
     config.addinivalue_line("markers", "hpc: SLURM-required; fidelity 5-7")
+    config.addinivalue_line("markers", "slow: takes more than a minute")
 
 
 @pytest.fixture(scope="session", autouse=True)

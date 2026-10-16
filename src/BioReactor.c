@@ -23,24 +23,78 @@
 // project's own commit history (`git log -- src/BioReactor.c`).
 // ============================================================================
 
+// [PROJECT ADDED, 2026-10-16] Passive-scalar record/replay (diary.md 2026-10-16). Oxygen `oxy` and
+// tracer `c2` never enter rho or mu, so the flow does not depend on them. Two compile-time modes of
+// THIS file (both off by default; the default build is the unchanged coupled solver):
+//   -DRECORD_FLUX  coupled run that also writes, once per step from t_rec0 for n_rec_periods, the face
+//                  flux uf exactly as the VOF step of f consumes it, plus a start checkpoint
+//                  (replay_start.dump, written at the end of the step that lands on t_rec0).
+//   -DREPLAY_FLUX  no Navier-Stokes: restore replay_start.dump (params: t_checkpoint = t_rec0,
+//                  restart_continue = 1, n_mix_cycles = 0), then each step read (i,t,dt,uf) and run
+//                  only what the coupled run does to f, phi1, phi2 and the scalar diffusion.
+// What else touches f or the scalars between steps, and whether replay reproduces it:
+//   vof_advection of f and f.tracers (phi1, phi2 of oxy and c2)   same code, same uf, dt, parity of i
+//   conserving.h's momentum tracers q1, q2                         not needed: they never feed back on f
+//   event adapt (centered.h): fractions_cleanup(cs,fs), uf=0 where fs=0   cleanup repeated after restore; the uf
+//                                                                  zeroing is already in the recorded uf
+//   event tracer (t=t_mix), event oxygen (t=t_mix; every step)    same bodies, triggered by t >= t_mix
+//   iforce.h event acceleration: f = clamp(f,0,1) every step      same clamp (event clamp_f); this one mattered
+//   remove_drop                                                    same event (a function of f only)
+//   boundary conditions of f, oxy, c2, embed no-flux of the scalars  same declarations
+//   NOT reproduced: anything the flow does to f through u itself (that is what the record replaces);
+//   looped replay is exact only to the extent that the flow is periodic.
+#ifndef RECORD_FLUX
+#define RECORD_FLUX 0
+#endif
+#ifndef REPLAY_FLUX
+#define REPLAY_FLUX 0
+#endif
+#if RECORD_FLUX && REPLAY_FLUX
+#error "RECORD_FLUX and REPLAY_FLUX are mutually exclusive"
+#endif
+
 // Core Basilisk modules for embedding geometries and centered Navier-Stokes solver
 #include "embed.h"
+#if REPLAY_FLUX
+// Frozen-flow stand-in for centered.h + two-phase.h + conserving.h: only what VOF advection of f, its
+// tracers and the scalar diffusion read. `init` is registered here so that restore() runs before the
+// replay events below it (events execute in registration order).
+#include "run.h"                   // time loop, utils.h (DT, statsf, perf, minmod2)
+#include "timestep.h"
+#include "output.h"                // restore
+event init (i = 0);
+// Event order. qcc registers the events marked `last` after all the others, so in the coupled solver every
+// user event (release, outputs, ...) runs at the START of a step, before the vof / diffusion / projection
+// events of that step. The same declarations (as in centered.h) give the replay the same order.
+event vof (i++,last);
+event tracer_diffusion (i++,last);
+face vector uf[];                  // read from the record, one step at a time
+scalar f[], * interfaces = {f};
+#include "vof.h"
+#include "curvature.h"             // position(), used by the interface height outputs
+#include "poisson.h"               // mg_solve, used by tracer_diffusion in henry_oxy2.h
+#else
 #include "navier-stokes/centered.h"
+#endif
 
 // Define dynamic viscosity as a function of the volume fraction (f)
 // Uses harmonic averaging for two-phase flow
 #define mu(f) ( 1./(clamp(f,0,1)*(1./mu1 - 1./mu2) + 1./mu2)  )
 
+#if !REPLAY_FLUX
 // Modules for two-phase flow (e.g., air and water) with surface tension and volume conservation
 #include "two-phase.h"
 #include "tension.h"
 #include "navier-stokes/conserving.h"
+#endif
 
 // Modules for oxygen transfer + tracers
 #include "henry_oxy2.h"
 
 // Custom headers foroxy specific configurations and visualization
+#if !REPLAY_FLUX
 #include "view3.h"
+#endif
 #include "utils2.h"
 
 // [PROJECT ADDED] Reinstates upstream's REMOVE_DROP feature (droplet/bubble
@@ -94,6 +148,12 @@
 // Other simulation options
 #define ACCELERATION     1   // Enable acceleration (rocking motion)
 #define NORMCAL          1   // Calculate statistics (norms)
+#if REPLAY_FLUX
+#undef ACCELERATION
+#define ACCELERATION     0   // no forcing: the recorded flux is the flow
+#undef NORMCAL
+#define NORMCAL          0   // replaced by the replay version of event normcal below
+#endif
 // [PROJECT ADDED] VIDEOS/DIAGNOSTICS have no upstream equivalent (upstream
 // has no compile-time video toggle — its view3.h/draw3.h calls are
 // unconditional — and no separate pressure-residual health-check output).
@@ -264,6 +324,10 @@ FILE * fp_stats, * fp_norm, * fp_stats2, * fp_stats3, * fp_tau;
 #ifndef STREAMING_VORTICITY
 #define STREAMING_VORTICITY 1
 #endif
+#if REPLAY_FLUX                       // no velocity field in a replay
+#undef STREAMING_VORTICITY
+#define STREAMING_VORTICITY 0
+#endif
 #if STREAMING_VORTICITY
 vector u_acc[];                       // running integral of u*f dt over one period
 scalar f_acc[];                       // running integral of f dt (liquid residence)
@@ -348,6 +412,301 @@ static int next_period_count (double x) {
   int n = (int) ceil (x - PERIOD_TOL);
   return n < 1 ? 1 : n;
 }
+
+// ================================================================== //
+//                  FLUX RECORD / REPLAY (see top of file)            //
+// ================================================================== //
+#if RECORD_FLUX || REPLAY_FLUX
+#if REPLAY_FLUX && (VIDEOS || CROSS_LEVEL_WARMSTART)
+#error "REPLAY_FLUX has no velocity field: VIDEOS and CROSS_LEVEL_WARMSTART are not available"
+#endif
+
+// Record format, one file per rank (<rec_dir>/flux_rec.<pid>.bin), read by scripts/replay_gate.py:
+//   file header: char magic[8], int pid, int npe
+//   per step   : int i, double t, double dt, long long n, then n*REC_NPC doubles: for each leaf cell and
+//                each axis, the left and the right face value of uf (x: uf.x[], uf.x[1]; y: uf.y[], uf.y[0,1]).
+// The right/top faces are stored too: on the domain edge they live in a ghost cell, which a leaf-only
+// traversal would not reach.
+#define REC_NPC (2*dimension)
+#define REC_EPS 1e-9                        // relative tolerance when comparing times
+static const char rec_magic[8] = {'F','L','X','R','E','C','0','1'};
+static double t_rec0 = -1., t_rec_end = 1e30;   // record window; set in main()
+static FILE * fp_rec = NULL;
+
+// Leaf cells owned by this rank. foreach_cell() is serial, so the gather/scatter order is the traversal
+// order and identical in the recording and the replaying run (same restored tree).
+static long long rec_leaf_count (void)
+{
+  long long n = 0;
+  foreach_cell() {
+    if (is_leaf(cell)) {
+      if (is_local(cell))
+        n++;
+      continue;
+    }
+  }
+  return n;
+}
+
+static void rec_file_name (char * name, size_t len)
+{
+  snprintf (name, len, "%s/flux_rec.%d.bin", params.rec_dir, pid());
+}
+
+static void rec_gather (double * buf)
+{
+  double * w = buf;
+  foreach_cell() {
+    if (is_leaf(cell)) {
+      if (is_local(cell))
+        foreach_dimension() {
+          *w++ = uf.x[];
+          *w++ = uf.x[1];
+        }
+      continue;
+    }
+  }
+}
+
+static void rec_scatter (const double * buf)
+{
+  const double * r = buf;
+  foreach_cell() {
+    if (is_leaf(cell)) {
+      if (is_local(cell))
+        foreach_dimension() {
+          uf.x[]  = *r++;
+          uf.x[1] = *r++;
+        }
+      continue;
+    }
+  }
+}
+
+// -DREC_CHECKSUM=1: weighted sums of f, uf, c2 and oxy at the same point of the step (before the VOF
+// advection, after uf is in place) in both modes, into rec_checksum.txt, to find the first step at which a
+// replay leaves the recorded run.
+#ifndef REC_CHECKSUM
+#define REC_CHECKSUM 0
+#endif
+#if REC_CHECKSUM
+static void rec_checksum_to (const char * file)
+{
+  double cf = 0., cu = 0., cc2 = 0., co = 0., cog = 0., cogn = 0., nz = 0., ntiny = 0., nneg = 0., cf2 = 0.;
+  foreach (reduction(+:cf) reduction(+:cu) reduction(+:cc2) reduction(+:co) reduction(+:cog) reduction(+:cogn)
+           reduction(+:nz) reduction(+:ntiny) reduction(+:nneg) reduction(+:cf2)) {
+    cf2 += f[]*f[];
+    nz += (f[] == 0.);
+    ntiny += (f[] != 0. && fabs (f[]) < 1e-9);
+    nneg += (f[] < 0.);
+    double w = 1. + 0.37*x + 0.71*y;
+    cf  += f[]*w;
+    cu  += (uf.x[] + 2.*uf.y[])*w;
+    cc2 += c2[]*w;
+    co  += oxy[]*w;
+    if (f[] == 0.) {              // pure gas cells, and how many of them
+      cog  += oxy[]*w;
+      cogn += cs[];
+    }
+  }
+  static FILE * fps[2] = {NULL, NULL};
+  FILE ** pf_ = file[12] == '_' ? &fps[1] : &fps[0];   // "rec_checksum_norm.txt" vs "rec_checksum.txt"
+  FILE * fp = *pf_;
+  if (!fp && pid() == 0)
+    fp = *pf_ = fopen (file, "w");
+  if (fp) {
+    fprintf (fp, "%d %.17g %.17g %.17g %.17g %.17g %.17g %.17g %g %g %g %.17g\n", iter, t, cf, cu, cc2, co, cog, cogn, nz, ntiny, nneg, cf2);
+    fflush (fp);
+  }
+}
+static void rec_checksum (void) { rec_checksum_to ("rec_checksum.txt"); }
+#endif
+#endif // RECORD_FLUX || REPLAY_FLUX
+
+#if RECORD_FLUX
+// Called from event rec_checkpoint at the START of the step that lands on t_rec0, after the release events
+// of that step (user events run before the vof/diffusion/projection events of the same step). The dump is
+// the state that step starts from, and that step is the first recorded one.
+// restore() ends by marking every event of the restored iteration as done, so a restart resumes at the
+// NEXT iteration. To resume AT this step the dump is written with iter - 1 in its header (same t).
+// p and pf are forced into the dump as in event dump_checkpoint, so that restore() of it is the ordinary
+// restart.
+static void rec_start (void)
+{
+  p.nodump = pf.nodump = false;
+  iter--;
+  dump (file = "replay_start.dump");
+  iter++;
+  p.nodump = pf.nodump = true;
+  if (pid() == 0)
+    fprintf (ferr, "record: replay_start.dump written at i=%d t=%.17g\n", iter, t);
+  char name[600];
+  rec_file_name (name, sizeof name);
+  fp_rec = fopen (name, "wb");
+  if (!fp_rec) {
+    perror (name);
+    exit (1);
+  }
+  int rank = pid(), np = npe();
+  fwrite (rec_magic, 1, 8, fp_rec);
+  fwrite (&rank, sizeof(int), 1, fp_rec);
+  fwrite (&np, sizeof(int), 1, fp_rec);
+}
+
+static void rec_write_step (void)
+{
+  static int first = 1;
+  if (first && pid() == 0)
+    fprintf (ferr, "record: first step i=%d t=%.17g dt=%.17g\n", iter, t, dt);
+  first = 0;
+  long long n = rec_leaf_count();
+  double * buf = (double *) malloc (n*REC_NPC*sizeof(double));
+  rec_gather (buf);
+  int hi = iter;
+  double ht = t, hdt = dt;
+  fwrite (&hi, sizeof(int), 1, fp_rec);
+  fwrite (&ht, sizeof(double), 1, fp_rec);
+  fwrite (&hdt, sizeof(double), 1, fp_rec);
+  fwrite (&n, sizeof(long long), 1, fp_rec);
+  fwrite (buf, sizeof(double), n*REC_NPC, fp_rec);
+  fflush (fp_rec);
+  free (buf);
+}
+
+static int rec_state = 0;   // 0 before the window, 1 recording, 2 window closed
+
+// Empty events: they only make dtnext() land a step exactly on both ends of the window, so that the
+// checkpoint is at t_rec0 and the last recorded step ends at t_rec_end (n_rec_periods periods later; the
+// step that starts at t_rec_end is not run, event dump_checkpoint stops the run first).
+event rec_land_start (t = t_rec0) {}
+event rec_land_end   (t = t_rec_end) {}
+#endif // RECORD_FLUX
+
+#if REPLAY_FLUX
+static long rec_nuse = 0;       // records of the file that belong to the replay
+static long rec_lap = 0;        // steps of one pass over the record (one fewer than rec_nuse when looping)
+static long rec_k = 0;          // next step of the current pass
+static long rec_pos0 = 0;       // file offset of the first step
+static int  rec_pass = 0;       // number of completed passes
+static int  replay_stop = 0;    // the last step of a non-looping record has been read
+
+static int rec_read_head (int * hi, double * ht, double * hdt, long long * hn)
+{
+  return fread (hi, sizeof(int), 1, fp_rec) == 1 && fread (ht, sizeof(double), 1, fp_rec) == 1 &&
+         fread (hdt, sizeof(double), 1, fp_rec) == 1 && fread (hn, sizeof(long long), 1, fp_rec) == 1;
+}
+
+// Called from event init once the checkpoint is restored: opens the record, indexes it and checks that it
+// starts where the checkpoint is (the dump header carries iter - 1, see rec_start). It also sets the time of
+// the first step, which the restored run does not know (centered.h does this with event("stability")).
+// The records of one pass add up to exactly the window length when its last step landed on the window end.
+static void replay_open (void)
+{
+  char name[600];
+  rec_file_name (name, sizeof name);
+  fp_rec = fopen (name, "rb");
+  if (!fp_rec) {
+    fprintf (stderr, "ERROR: replay: cannot open %s\n", name);
+    exit (1);
+  }
+  char magic[8];
+  int rank = -1, np = -1;
+  if (fread (magic, 1, 8, fp_rec) != 8 || memcmp (magic, rec_magic, 8) ||
+      fread (&rank, sizeof(int), 1, fp_rec) != 1 || fread (&np, sizeof(int), 1, fp_rec) != 1 ||
+      rank != pid() || np != npe()) {
+    fprintf (stderr, "ERROR: replay: %s is not a flux record for rank %d of %d\n", name, pid(), npe());
+    exit (1);
+  }
+  rec_pos0 = ftell (fp_rec);
+  long long ncell = rec_leaf_count(), hn;
+  int hi, i_first = -1;
+  double ht, hdt, t_first = 0.;
+  long nall = 0;
+  rec_nuse = 0;
+  while (rec_read_head (&hi, &ht, &hdt, &hn)) {
+    if (hn != ncell) {
+      fprintf (stderr, "ERROR: replay: record has %lld leaf cells per step, the restored grid has %lld\n",
+               hn, ncell);
+      exit (1);
+    }
+    if (nall == 0)
+      i_first = hi, t_first = ht;
+    if (params.n_rec_periods <= 0 ||
+        ht < t_first + params.n_rec_periods*T_per_st - REC_EPS*(1. + fabs (ht)))
+      rec_nuse++;
+    nall++;
+    fseek (fp_rec, (long) (hn*REC_NPC*sizeof(double)), SEEK_CUR);
+  }
+  rec_lap = rec_nuse;
+  if (rec_lap < 1) {
+    fprintf (stderr, "ERROR: replay: %ld usable records in %s is too few\n", rec_nuse, name);
+    exit (1);
+  }
+  if (i_first != iter + 1 || fabs (t_first - t) > REC_EPS*(1. + fabs (t))) {
+    fprintf (stderr, "ERROR: replay: record starts at i=%d t=%.17g but the checkpoint resumes at i=%d t=%.17g\n",
+             i_first, t_first, iter + 1, t);
+    exit (1);
+  }
+  tnext = t_first;
+  fseek (fp_rec, rec_pos0, SEEK_SET);
+  rec_k = 0;
+  if (pid() == 0)
+    fprintf (ferr, "replay: %ld records (%ld in file), pass of %ld steps, loop %d, from i=%d t=%.17g\n",
+             rec_nuse, nall, rec_lap, params.replay_loop, i_first, t_first);
+}
+
+// Called from event vof at the start of every step: takes the place of stability + the Navier-Stokes
+// solve. Sets dt and the time of the next step, and loads the flux that step advects with.
+static void replay_load_step (void)
+{
+  if (rec_k >= rec_lap) {       // end of the pass: time goes on, the flow restarts from its first step
+    fseek (fp_rec, rec_pos0, SEEK_SET);
+    rec_k = 0;
+    rec_pass++;
+  }
+  int hi;
+  double ht, hdt;
+  long long hn;
+  if (!rec_read_head (&hi, &ht, &hdt, &hn)) {
+    fprintf (stderr, "ERROR: replay: record ends early at step %ld of the pass\n", rec_k);
+    exit (1);
+  }
+  if (rec_pass == 0 && (hi != iter || fabs (ht - t) > REC_EPS*(1. + fabs (t)))) {
+    fprintf (stderr, "ERROR: replay: out of step with the record: i=%d t=%.17g, record has i=%d t=%.17g\n",
+             iter, t, hi, ht);
+    exit (1);
+  }
+  double * buf = (double *) malloc (hn*REC_NPC*sizeof(double));
+  if (fread (buf, sizeof(double), hn*REC_NPC, fp_rec) != (size_t) (hn*REC_NPC)) {
+    fprintf (stderr, "ERROR: replay: truncated record at step %ld\n", rec_k);
+    exit (1);
+  }
+  rec_scatter (buf);
+  free (buf);
+#if REC_CHECKSUM
+  rec_checksum();
+#endif
+  dt = hdt;
+  tnext = t + dt;               // dt already lands on every event time of the recorded run
+  rec_k++;
+  if (!params.replay_loop && rec_k == rec_lap)
+    replay_stop = 1;
+}
+
+// The Basilisk time events `t += dt_out` are dropped when t steps over their time, and a looped replay
+// does not land on the lattice of output times. So replay outputs at the first step whose time is at or
+// after the next lattice point. In the first pass the steps do land on it, so the times agree with the
+// recorded run.
+static int out_due (double * t_next, double dt_out)
+{
+  if (*t_next < 0.)
+    *t_next = dt_out*ceil (t/dt_out - REC_EPS);
+  if (t < *t_next - REC_EPS*(1. + fabs (t)))
+    return 0;
+  *t_next = dt_out*(floor (t/dt_out + REC_EPS) + 1.);
+  return 1;
+}
+#endif // REPLAY_FLUX
 
 int main(int argc, char * argv[]){
 
@@ -617,6 +976,22 @@ int main(int argc, char * argv[]){
     t_end = t_dump_checkpoint;
   }
 
+#if REPLAY_FLUX
+  // A replay continues the recorded run from its start checkpoint; params.t_end is the duration to replay.
+  // No forcing is evaluated, so there is no period boundary to round to (and no checkpoint to write).
+  if (!restart_file) {
+    fprintf (stderr, "ERROR: REPLAY_FLUX needs t_checkpoint > 0 in params and the start checkpoint as argv[2]\n");
+    return 1;
+  }
+  t_end = params.t_checkpoint + params.t_end;
+  t_dump_checkpoint = t_end;
+#endif
+#if RECORD_FLUX
+  // Record window: from t_rec0 (default: the release time t_mix) for n_rec_periods periods (0 = to the end).
+  t_rec0    = params.t_rec0 >= 0. ? params.t_rec0 : t_mix;
+  t_rec_end = params.n_rec_periods > 0 ? t_rec0 + params.n_rec_periods*T_per_st : 1e30;
+#endif
+
   // [PROJECT ADDED, 2026-09-21] Walltime deadline, if the queueing system
   // told us one. Absent (interactive runs, tests that do not set it) the
   // limit stays HUGE and the deadline event never fires, so behaviour is
@@ -646,11 +1021,13 @@ int main(int argc, char * argv[]){
   Pe_oxy_1    = U_bio*L_bio/(D_oxy_1*params.oxy_D_scale);       // Peclet number of oxygen at phase 1 (water)
   Pe_oxy_2    = U_bio*L_bio/D_oxy_2;        // Peclet number of oxygen at phase 1 (air) 
 
+#if !REPLAY_FLUX
   rho1 = 1.0;             // Reference density of phase 1 (water) (scaled to 1)
   rho2 = rho1*rhor;       // Scaled density of phase 2 (air)
   mu1  = 1.0/Re_w;        // Dimensionless viscosity of phase1 (water)
   mu2  = mur*mu1;         // Scaled viscosity of phase 2 (air)
   f.sigma = 1.0 / We_w;   // Dimensionless surface tension
+#endif
   
   // Tracer field configuration
   #if TRACER  
@@ -695,6 +1072,7 @@ int main(int argc, char * argv[]){
 // specifically because it looked, from the geometry formula alone, like this
 // fork might be embedding all four walls where Kim only embeds two — it
 // isn't; see the [PROJECT CHANGED] note at the superellipse solid() call.
+#if !REPLAY_FLUX    // a replay has no velocity field
   u.n[left]  = dirichlet(0.);  // Set no-slip velocity boundary conditions (zero velocity)
   u.t[left]  = dirichlet(0.);
   u.n[right] = dirichlet(0.);
@@ -709,6 +1087,7 @@ int main(int argc, char * argv[]){
   u.n[embed] = dirichlet(0.); // Set no-slip velocity boundary conditions (zero velocity)
   u.t[embed] = dirichlet(0.);
 #endif
+#endif // !REPLAY_FLUX
 
 // Output Files
   char name[200],name2[200],name3[200],name4[200],name5[200];
@@ -743,6 +1122,9 @@ int main(int argc, char * argv[]){
   fclose(fp_stats); fclose(fp_norm); fclose(fp_stats2); fclose(fp_stats3); fclose(fp_tau);
 #if STREAMING_VORTICITY
   if (fp_streaming) fclose(fp_streaming);
+#endif
+#if RECORD_FLUX || REPLAY_FLUX
+  if (fp_rec) fclose(fp_rec);
 #endif
 }
 
@@ -799,6 +1181,33 @@ static void assert_fs_sane (const char *tag)
 #endif
 }
 
+#if REPLAY_FLUX
+// Replay has no u, p, g: only the fields it advances.
+static void write_restart_diagnostic (const char *tag)
+{
+  stats sfv  = statsf (f);
+  stats sc2  = statsf (c2);
+  stats soxy = statsf (oxy);
+#if _MPI
+  if (pid() == 0)
+#endif
+  {
+    char fname[64];
+    sprintf (fname, "restart_diagnostic_%s.txt", tag);
+    FILE *fp = fopen (fname, "w");
+    if (fp) {
+      fprintf (fp, "tag %s\nt %.17g\n", tag, t);
+      fprintf (fp, "f_min %.17g\nf_max %.17g\nf_sum %.17g\nf_stddev %.17g\n",
+               sfv.min, sfv.max, sfv.sum, sfv.stddev);
+      fprintf (fp, "c2_min %.17g\nc2_max %.17g\nc2_sum %.17g\nc2_stddev %.17g\n",
+               sc2.min, sc2.max, sc2.sum, sc2.stddev);
+      fprintf (fp, "oxy_min %.17g\noxy_max %.17g\noxy_sum %.17g\noxy_stddev %.17g\n",
+               soxy.min, soxy.max, soxy.sum, soxy.stddev);
+      fclose (fp);
+    }
+  }
+}
+#else
 static void write_restart_diagnostic (const char *tag)
 {
   stats su   = statsf (u.x);
@@ -861,6 +1270,7 @@ static void write_restart_diagnostic (const char *tag)
     }
   }
 }
+#endif // REPLAY_FLUX
 
 // ================================================================== //
 //                      INITIAL CONDITIONS                            //
@@ -896,13 +1306,32 @@ event init (t = 0)
     // every restart instead of the "tiny correction" the code intended,
     // directly contradicting the p.nodump=false comment at the dump call
     // site below).
+#if !REPLAY_FLUX
     p.nodump = pf.nodump = false;
+#endif
     if (!restore (file = restart_file)) {
       fprintf (stderr, "ERROR: restore() failed to open '%s' — aborting\n", restart_file);
       exit (1);
     }
+#if !REPLAY_FLUX
     p.nodump = pf.nodump = true;
+#endif
     write_restart_diagnostic ("post_restore");
+#if REPLAY_FLUX && EMBED
+    scalar cs_dumped[];             // the cleaned geometry the coupled run had; compared below
+    foreach()
+      cs_dumped[] = cs[];
+    // Coarse-level metric. A fresh coupled run never restricts fs after solid(): embed.h's event metric
+    // restricts fs = 1 once at i = 0, and the multigrid of the scalar diffusion (h_relax, embed_flux) reads
+    // the coarse levels of fs ever after. The dump has no face fields, and the restart path's own
+    // restriction({cs,fs}) after solid() would give the coarse levels a different value than the run being
+    // replayed had; that changes the oxygen solve (measured: 1e-3 after one step). So reproduce the fresh
+    // run: fs = 1 on all levels here, and no restriction after solid() below. The coarse cs is dumped, and
+    // restriction({D, beta, cm}) in tracer_diffusion refreshes it every step as in the coupled run.
+    foreach_face()
+      fs.x[] = 1.;
+    restriction ({fs});
+#endif
 
 
     // Re-apply the prolongation/restriction setup from event defaults(i=0) in
@@ -944,6 +1373,7 @@ event init (t = 0)
     // Confirmed experimentally: fresh run to t=15 is stable; restart crashes at
     // t=t_checkpoint+1.14T with both 4 and 16 MPI ranks.
 #if TREE && EMBED
+#if !REPLAY_FLUX
     uf.x.refine = refine_face;
     foreach_dimension()
       uf.x.prolongation = refine_embed_face_x;
@@ -954,6 +1384,7 @@ event init (t = 0)
     }
     for (scalar s in {p, pf})
       s.embed_gradient = pressure_embed_gradient;
+#endif // !REPLAY_FLUX
 
     // [PROJECT ADDED, 2026-09-13] cs/fs themselves have exactly the same
     // restart-attribute-loss problem as u/p/pf/g/uf above, and it was never
@@ -1176,7 +1607,7 @@ event init (t = 0)
       // solid() outside the normal i=0 init path always follows it with
       // this restriction (src/test/neumann3D.c:43-47); our restart path
       // was missing it.
-#if TREE
+#if TREE && !REPLAY_FLUX      // a replay keeps the coarse levels it set up above, see there
       restriction ({cs, fs});
 #endif
     }
@@ -1185,6 +1616,30 @@ event init (t = 0)
     // fs is likewise broken by restore() and only repaired by the solid()
     // call just above.
     assert_fs_sane ("post-solid");
+#endif
+
+#if REPLAY_FLUX
+    // The coupled run repeats fractions_cleanup(cs, fs) every step (event adapt of centered.h, trees
+    // only), so the cs/fs it advects f with are the cleaned ones, and the dump holds them; solid() above
+    // has just rebuilt the raw ones. The cleanup is deterministic and reaches a fixed point, so one call
+    // restores the cleaned geometry. The uf=0 on closed faces that event adapt also does is already in
+    // the recorded uf.
+#if TREE && EMBED
+    fractions_cleanup (cs, fs);
+    {
+      int ndiff = 0;
+      double dmax = 0.;
+      foreach (reduction(+:ndiff) reduction(max:dmax)) {
+        double d = fabs (cs[] - cs_dumped[]);
+        if (d > 1e-12) ndiff++;
+        if (d > dmax) dmax = d;
+      }
+      if (pid() == 0)
+        fprintf (ferr, "replay: cs after solid()+fractions_cleanup differs from the dumped cs in %d cells "
+                 "(max %.3g)\n", ndiff, dmax);
+    }
+#endif
+    replay_open ();
 #endif
 
     // [PROJECT NOTE, 2026-09-13] A cross-level warm-start (CROSS_LEVEL_
@@ -1225,6 +1680,7 @@ event init (t = 0)
     // diary.md 2026-09-13 for the full investigation (kept there, not
     // here, to keep this file uncluttered) before attempting further fixes.
 
+#if !REPLAY_FLUX
     // Rescale stored velocity and pressure to the new segment's non-dim frame.
     // [PROJECT FIXED, 2026-09-07] The comment this replaces claimed "U_bio ∝
     // omega_b (fixed geometry, theta_max)" and rescaled by su =
@@ -1340,6 +1796,8 @@ event init (t = 0)
 #endif
     }
 
+#endif // !REPLAY_FLUX
+
     // Reset ALL stracers to zero at EVERY multigrid level.  reset() zeroes
     // owned cells; boundary() communicates zeroed leaf ghost values.  But
     // coarse-level ghost cells (owned by a neighbouring MPI rank) are NOT
@@ -1416,11 +1874,34 @@ event init (t = 0)
 }
 
 
+#if REPLAY_FLUX
+// iforce.h (through tension.h) clamps f to [0,1] in its event acceleration, every step, after the VOF step
+// and the scalar diffusion and before the next VOF step. VOF round-off leaves f ~ -1e-17 or 1+1e-17 in
+// some cells, and the oxygen reset below tests f == 0 exactly, so a replay that skips this clamp resets
+// a different set of gas cells (measured: the pure-gas cell count drifts by 3 per step, and oxy with it).
+// It must run before the other user events of the next step, so it is registered first among them.
+event clamp_f (i++)
+{
+  foreach()
+    f[] = clamp (f[], 0., 1.);
+}
+#endif
+
 // ================================================================== //
 //                           TRACER SETUP                             //
 // ================================================================== //
 #if TRACER
+#if REPLAY_FLUX
+// Release by time instead of by event time: restore() runs events(false) up to the restored t, which
+// consumes an event whose time equals that t without running it, and a replay that releases at its
+// start (n_mix_cycles = 0) has exactly that t. The replay starts at the release step, as the coupled run.
+static int tracer_done = 0;
+event tracer (i++) {
+  if (!tracer_done && t >= t_mix - REC_EPS*(1. + fabs (t))) {
+  tracer_done = 1;
+#else
 event tracer(t = t_mix){
+#endif
   // On a CONTINUATION the tracer was injected in an earlier segment and has
   // been mixing ever since; re-injecting would overwrite that partially-mixed
   // field with a fresh segregated one and restart chi from 0 mid-experiment
@@ -1514,6 +1995,9 @@ event tracer(t = t_mix){
   #endif
   }  // end if (!params.restart_continue)
 
+#if REPLAY_FLUX
+  }
+#endif
 }
 #endif
 
@@ -1522,7 +2006,14 @@ event tracer(t = t_mix){
 //                           OXYGEN SETUP                             //
 // ================================================================== //
 #if OXYGEN
+// From t_mix on this runs EVERY step: gas cells (f == 0) are reset to oxy = 1, i.e. the gas is a reservoir
+// held at saturation. The replay must repeat it each step (it modifies the scalar between advections).
+#if REPLAY_FLUX
+event oxygen (i++) {
+  if (t >= t_mix - REC_EPS*(1. + fabs (t))) {
+#else
 event oxygen (t=t_mix; i++){
+#endif
 
 #if OXYGEN_AIR
   foreach(){
@@ -1534,6 +2025,9 @@ event oxygen (t=t_mix; i++){
   // neighbour halos at the first tracer_diffusion call, producing a
   // spurious large gradient that crashes h_relax under MPI FP trapping.
   boundary ({oxy});
+#endif
+#if REPLAY_FLUX
+  }
 #endif
 }
 #endif
@@ -1787,10 +2281,12 @@ event acceleration(i++)
 // matrix. Upstream ran this unconditionally once enabled, every step
 // (i++); logic unchanged from upstream's remove_drop event.
 event remove_drop(i++) {
-  if (!params.remove_drop)
-    return;
-  remove_droplets(f, remove_minsize, remove_threshold, false);  // remove droplets
-  remove_droplets(f, remove_minsize, remove_threshold, true);   // remove bubbles
+  // `if` wrapper, not a bare `return;`: a valueless return in an event is a nonzero int return that
+  // stops the run (CLAUDE.md). Same behaviour as before for remove_drop = 0 and 1.
+  if (params.remove_drop) {
+    remove_droplets(f, remove_minsize, remove_threshold, false);  // remove droplets
+    remove_droplets(f, remove_minsize, remove_threshold, true);   // remove bubbles
+  }
 }
 
 // [PROJECT ADDED, 2026-09-07] One-shot velocity-field "kick" test (diary.md
@@ -1858,6 +2354,7 @@ event velocity_kick (t = KICK_T) {
 }
 #endif
 
+#if !REPLAY_FLUX
 // [PROJECT ADDED, 2026-09-16] Velocity field on a uniform grid, written once,
 // at the same instant as the checkpoint. Kim's Fig. A.16(c) is the discrete
 // L2 norm of the velocity error between each resolution and a finer
@@ -1988,6 +2485,8 @@ static void write_uv_field (double t_nd)
   free (bux); free (buy); free (bf); free (bcs);
 }
 
+#endif // !REPLAY_FLUX
+
 // [PROJECT ADDED, 2026-09-21] Record the phase this checkpoint was written
 // at, next to the checkpoint itself.
 //
@@ -2020,6 +2519,7 @@ static void write_phase_sidecar (double t_now)
   fclose (fp);
 }
 
+#if !REPLAY_FLUX
 // Stop cleanly when the wall clock is nearly gone.
 //
 // i += 10 rather than i++ so the reduction is not paid every step; at L10 a
@@ -2089,8 +2589,26 @@ event dump_checkpoint (t = t_dump_checkpoint) {
   return 1;
 }
 
+#else
+// Ends the run, at the same place in the event order as event dump_checkpoint ends the coupled run (before
+// the outputs of the step that would start at the end time). The condition (i < INT_MAX) is not decoration: Basilisk's events() stops the loop when no
+// event with a condition (or with a time and no increment) is left alive, and every other event of a
+// replay is unconditional, so without one the run would end after its first step.
+event end_replay (i++; i < 2000000000) {
+  if (replay_stop || t >= t_end - REC_EPS*(1. + fabs (t)))
+    return 1;
+  return 0;
+}
+#endif // !REPLAY_FLUX
+
 //  Log performance and runtime
+#if REPLAY_FLUX
+static double t_next_log = -1.;
+event logstats (i++) {
+  if (out_due (&t_next_log, 0.1)) {
+#else
 event logstats (t+=0.1; t <= t_end) {
+#endif
 
     timing s = timer_timing (perf.gt, i, perf.tnc, NULL);
  
@@ -2099,10 +2617,13 @@ event logstats (t+=0.1; t <= t_end) {
       fprintf(fp_stats, "i: %i t: %g dt: %g #Cells: %ld Wall clock time (s): %g CPU time (s): %g \n", i, t, dt, grid->n, perf.t, s.cpu);
       fflush(fp_stats);
     }
+#if REPLAY_FLUX
+  }
+#endif
 }
 
 // Pressure Poisson residuals — health-check build only (DIAGNOSTICS=1)
-#if DIAGNOSTICS
+#if DIAGNOSTICS && !REPLAY_FLUX
 event pressure_diagnostics (t+=0.1; t<=t_end) {
   static FILE *fp_pdiag = NULL;
   if (!fp_pdiag) {
@@ -2120,6 +2641,9 @@ event pressure_diagnostics (t+=0.1; t<=t_end) {
 #if NORMCAL
 event normcal (t+=t_out; t<=t_end){
     //timing s = timer_timing (perf.gt, i, perf.tnc, NULL);
+#if REC_CHECKSUM && RECORD_FLUX
+    rec_checksum_to ("rec_checksum_norm.txt");
+#endif
 
     scalar ux_liq[],uy_liq[],ux_liq_abs[],omega[],omega_liq[],oxy_liq[],f_liq[],posY[],c_liq[],c1_liq[],c2_liq[],c3_liq[];
     double omega_liq_avg,omega_liq_rms,omega_liq_vol,omega_liq_max;
@@ -2503,6 +3027,102 @@ event normcal (t+=t_out; t<=t_end){
       fprintf(fp_tau, "%i %g %g %g %g %g %g %g %g %g %g %g %g %g %g \n", i, t, tau_95_val, tau_98_val, tau_max_val, tau_mean_val, tau_max_strict, tau_mean_strict, tau_max_signed, ediss_mean_val, tau_mean_signed, tau_kim_max, tau_kim_mean, ediss_kim_max, ediss_kim_mean);
       fflush(fp_tau);
    }
+}
+#endif
+
+#if REPLAY_FLUX
+// Replay version of event normcal: the interface, tracer and oxygen columns only. The formulas and the
+// output format of vol_frac_interf.dat and tr_oxy.dat are copied from the event above and must stay in
+// step with it; normf.dat and shear_stress.dat (velocity statistics) get their header and no rows.
+static double t_next_norm = -1.;
+event normcal (i++) {
+  if (out_due (&t_next_norm, t_out)) {
+#if REC_CHECKSUM
+    rec_checksum_to ("rec_checksum_norm.txt");
+#endif
+    scalar oxy_liq[],f_liq[],posY[],c_liq[],c1_liq[],c2_liq[],c3_liq[];
+    foreach(){
+      oxy_liq[] = f[]*oxy[]/(f[]*c_oxy_alpha + (1.-f[]) + 1e-10);
+      f_liq[]   = f[];
+      c_liq[]   = c[]*f[];
+      c1_liq[]  = c1[]*f[];
+      c2_liq[]  = c2[]*f[];
+      c3_liq[]  = c3[]*f[];
+    }
+    position (f, posY, {0,1,0});
+    double f_liq_sum = statsf2(f_liq).sum;
+    double f_liq_interf = interface_area(f);
+    double posY_max = statsf(posY).max;
+    double x_lo = X0 + 0.02*L0, x_hi = X0 + L0 - 0.02*L0;
+    double y_left = -HUGE, y_right = -HUGE;
+    foreach (reduction(max:y_left) reduction(max:y_right)) {
+      if (posY[] != nodata && cs[] > 0.) {
+        if (x <= x_lo && posY[] > y_left)  y_left  = posY[];
+        if (x >= x_hi && posY[] > y_right) y_right = posY[];
+      }
+    }
+    if (y_left  == -HUGE) y_left  = nodata;
+    if (y_right == -HUGE) y_right = nodata;
+    double posY_min = statsf(posY).min;
+    double oxy_liq_sum   = statsf2(oxy_liq).sum;
+    double oxy_liq_sum2  = statsf2(oxy_liq).sum2;
+    double c_liq_sum     = statsf2(c_liq).sum;
+    double c_liq_sum2    = statsf2(c_liq).sum2;
+    double c1_liq_sum    = statsf2(c1_liq).sum;
+    double c1_liq_sum2   = statsf2(c1_liq).sum2;
+    double c2_liq_sum    = statsf2(c2_liq).sum;
+    double c2_liq_sum2   = statsf2(c2_liq).sum2;
+    double c3_liq_sum    = statsf2(c3_liq).sum;
+    double c3_liq_sum2   = statsf2(c3_liq).sum2;
+    if (pid() == 0) {
+      fprintf(fp_stats2, "%i %g %g %g %g %g %g %g \n",i,t,f_liq_sum,f_liq_interf,posY_max,posY_min,y_left,y_right);
+      fflush(fp_stats2);
+      fprintf(fp_stats3, "%i %g %g %g %g %g %g %g %g %g %g %g \n",i,t,oxy_liq_sum,oxy_liq_sum2,c_liq_sum,c_liq_sum2,c1_liq_sum,c1_liq_sum2,c2_liq_sum,c2_liq_sum2,c3_liq_sum,c3_liq_sum2);
+      fflush(fp_stats3);
+    }
+  }
+}
+
+#endif // REPLAY_FLUX
+
+// ================================================================== //
+//                  FLUX RECORD / REPLAY EVENT                        //
+// ================================================================== //
+// Actions of one event name run in reverse order of registration, so this one runs before the VOF actions
+// of henry_oxy2.h and vof.h/conserving.h: it sees uf and dt exactly as they will be consumed. (A named
+// event is used rather than an ordering flag: this file is compiled by qcc, which has no way to place
+// an event relative to a library event other than by registration order.)
+#if RECORD_FLUX
+// End of the step that lands on t_rec0: registered after the release events, so a release at t_rec0 is in
+// the checkpoint.
+event rec_checkpoint (t = t_rec0)
+{
+  rec_start();
+  rec_state = 1;
+}
+#endif
+
+#if RECORD_FLUX || REPLAY_FLUX
+event vof (i++)
+{
+#if RECORD_FLUX
+  if (rec_state == 1) {
+    if (t <= t_rec_end + REC_EPS*(1. + fabs (t))) {
+#if REC_CHECKSUM
+      rec_checksum();
+#endif
+      rec_write_step();
+    }
+    else {
+      fclose (fp_rec);
+      fp_rec = NULL;
+      rec_state = 2;
+    }
+  }
+#endif
+#if REPLAY_FLUX
+  replay_load_step();
+#endif
 }
 #endif
 
