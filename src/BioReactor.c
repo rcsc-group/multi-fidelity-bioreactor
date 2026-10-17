@@ -428,6 +428,14 @@ static int next_period_count (double x) {
 // The right/top faces are stored too: on the domain edge they live in a ghost cell, which a leaf-only
 // traversal would not reach.
 #define REC_NPC (2*dimension)
+// The cells a record is made of. Recording: the leaves of the flow grid. Replaying: the cells of the flow
+// level params.fidelity, which are the leaves too unless the scalars live on a finer grid
+// (params.replay_scalar_level > params.fidelity), where they are the parents of the leaves.
+#if REPLAY_FLUX
+#define REC_AT_CELL (level == params.fidelity)
+#else
+#define REC_AT_CELL is_leaf(cell)
+#endif
 #define REC_EPS 1e-9                        // relative tolerance when comparing times
 static const char rec_magic[8] = {'F','L','X','R','E','C','0','1'};
 static double t_rec0 = -1., t_rec_end = 1e30;   // record window; set in main()
@@ -439,7 +447,7 @@ static long long rec_leaf_count (void)
 {
   long long n = 0;
   foreach_cell() {
-    if (is_leaf(cell)) {
+    if (REC_AT_CELL) {
       if (is_local(cell))
         n++;
       continue;
@@ -457,7 +465,7 @@ static void rec_gather (double * buf)
 {
   double * w = buf;
   foreach_cell() {
-    if (is_leaf(cell)) {
+    if (REC_AT_CELL) {
       if (is_local(cell))
         foreach_dimension() {
           *w++ = uf.x[];
@@ -472,7 +480,7 @@ static void rec_scatter (const double * buf)
 {
   const double * r = buf;
   foreach_cell() {
-    if (is_leaf(cell)) {
+    if (REC_AT_CELL) {
       if (is_local(cell))
         foreach_dimension() {
           uf.x[]  = *r++;
@@ -520,6 +528,17 @@ static void rec_checksum_to (const char * file)
   }
 }
 static void rec_checksum (void) { rec_checksum_to ("rec_checksum.txt"); }
+// where the largest |oxy| is (serial only): position, f, cs, oxy
+static void rec_where_max (void)
+{
+  double big = 0., bx = 0., by = 0., bf = 0., bcs = 0., bo = 0.;
+  foreach (serial) {
+    if (fabs (oxy[]) > big) {
+      big = fabs (oxy[]); bx = x; by = y; bf = f[]; bcs = cs[]; bo = oxy[];
+    }
+  }
+  fprintf (stderr, "where_max i=%d x=%g y=%g f=%g cs=%g oxy=%g\n", iter, bx, by, bf, bcs, bo);
+}
 #endif
 #endif // RECORD_FLUX || REPLAY_FLUX
 
@@ -655,42 +674,127 @@ static void replay_open (void)
              rec_nuse, nall, rec_lap, params.replay_loop, i_first, t_first);
 }
 
+// Scalars on a finer grid than the flow: the record holds uf at the flow level; the faces of the finer
+// levels come from Basilisk's own solenoidal face refinement, refine_face_solenoidal() of
+// grid/tree-common.h (Popinet 2009, sec. 3.3: linear interpolation plus a local projection that keeps the
+// divergence of the children equal to that of the parent), applied level by level. That function is written
+// for the moment a cell is refined: it writes the faces shared with a neighbour only when the neighbour is
+// not refined yet (is_refined()). The tree is already refined, so the cells of the level being
+// prolonged are marked as leaves for the duration of the call, which is the state refine_cell() sees.
+static void rec_prolong (void)
+{
+  for (int l = params.fidelity; l < params.replay_scalar_level; l++) {
+    foreach_cell() {
+      if (level == l) {
+        cell.flags |= leaf;
+        continue;
+      }
+    }
+    foreach_level(l)
+      refine_face_solenoidal (point, uf.x);
+    foreach_cell() {
+      if (level == l) {
+        cell.flags &= ~leaf;
+        continue;
+      }
+    }
+  }
+  // The solenoidal refinement knows nothing of the embedded boundary, so it puts flux on faces the wall
+  // closes (fs = 0). vof.h divides by fm (un = uf*dt/(Delta*fm + SEPS)), so such a flux gives un ~ 1e30 and
+  // the scalars diverge in the first step (measured). The coupled run clears them every step in event adapt
+  // of centered.h, and so does this: the same line. It is the only place the prolonged flux is changed
+  // after the canonical routine, and it is what makes the divergence at wall cells nonzero (reported).
+  foreach_face()
+    if (uf.x[] && !fs.x[])
+      uf.x[] = 0.;
+}
+
+// params.replay_diag = 1: per step, into replay_diag.txt, max |div uf|*Delta/max|uf| on the leaf grid, over
+// the cells away from the wall (cs = 1 and the four faces open) and over all cells.
+static void replay_diag (void)
+{
+  double dfar = 0., dall = 0., umax = 0.;
+  foreach (reduction(max:dfar) reduction(max:dall) reduction(max:umax)) {
+    double d = 0.;
+    foreach_dimension() {
+      d += uf.x[1] - uf.x[];
+      if (fabs (uf.x[]) > umax)
+        umax = fabs (uf.x[]);
+    }
+    d = fabs (d);
+    if (d > dall)
+      dall = d;
+    if (cs[] == 1. && fs.x[] == 1. && fs.x[1] == 1. && fs.y[] == 1. && fs.y[0,1] == 1. && d > dfar)
+      dfar = d;
+  }
+  static FILE * fp = NULL;
+  if (!fp && pid() == 0)
+    fp = fopen ("replay_diag.txt", "w");
+  if (fp) {
+    fprintf (fp, "%d %.17g %.17g %.17g %.17g\n", iter, t, dfar, dall, umax);
+    fflush (fp);
+  }
+}
+
 // Called from event vof at the start of every step: takes the place of stability + the Navier-Stokes
 // solve. Sets dt and the time of the next step, and loads the flux that step advects with.
+// With scalars on a grid finer than the flow by k levels, the recorded dt violates the CFL limit of the VOF
+// step (it was set for the flow grid: measured, CFL 0.5 -> 0.91 at one level, and the scalar solves blow
+// up). Each recorded step is therefore taken as n = 2^k substeps of dt/n with the same flux, the flux being
+// constant over a recorded step in the coupled run too. Substeps are iterations, so `i` advances n times
+// per record and the i check is dropped (the time check stays).
+static int rec_sub = 0;         // substeps of the current record already taken
+static double rec_hdt = 0.;     // dt of the current record
+
 static void replay_load_step (void)
 {
-  if (rec_k >= rec_lap) {       // end of the pass: time goes on, the flow restarts from its first step
-    fseek (fp_rec, rec_pos0, SEEK_SET);
-    rec_k = 0;
-    rec_pass++;
+  int nsub = 1;
+  if (params.replay_scalar_level > params.fidelity)
+    nsub = 1 << (params.replay_scalar_level - params.fidelity);
+  if (rec_sub == 0) {
+    if (rec_k >= rec_lap) {     // end of the pass: time goes on, the flow restarts from its first step
+      fseek (fp_rec, rec_pos0, SEEK_SET);
+      rec_k = 0;
+      rec_pass++;
+    }
+    int hi;
+    double ht;
+    long long hn;
+    if (!rec_read_head (&hi, &ht, &rec_hdt, &hn)) {
+      fprintf (stderr, "ERROR: replay: record ends early at step %ld of the pass\n", rec_k);
+      exit (1);
+    }
+    if (rec_pass == 0 && ((nsub == 1 && hi != iter) || fabs (ht - t) > REC_EPS*(1. + fabs (t)))) {
+      fprintf (stderr, "ERROR: replay: out of step with the record: i=%d t=%.17g, record has i=%d t=%.17g\n",
+               iter, t, hi, ht);
+      exit (1);
+    }
+    double * buf = (double *) malloc (hn*REC_NPC*sizeof(double));
+    if (fread (buf, sizeof(double), hn*REC_NPC, fp_rec) != (size_t) (hn*REC_NPC)) {
+      fprintf (stderr, "ERROR: replay: truncated record at step %ld\n", rec_k);
+      exit (1);
+    }
+    rec_scatter (buf);
+    free (buf);
+    if (params.replay_scalar_level > params.fidelity)
+      rec_prolong();
+    if (params.replay_diag)
+      replay_diag();
   }
-  int hi;
-  double ht, hdt;
-  long long hn;
-  if (!rec_read_head (&hi, &ht, &hdt, &hn)) {
-    fprintf (stderr, "ERROR: replay: record ends early at step %ld of the pass\n", rec_k);
-    exit (1);
-  }
-  if (rec_pass == 0 && (hi != iter || fabs (ht - t) > REC_EPS*(1. + fabs (t)))) {
-    fprintf (stderr, "ERROR: replay: out of step with the record: i=%d t=%.17g, record has i=%d t=%.17g\n",
-             iter, t, hi, ht);
-    exit (1);
-  }
-  double * buf = (double *) malloc (hn*REC_NPC*sizeof(double));
-  if (fread (buf, sizeof(double), hn*REC_NPC, fp_rec) != (size_t) (hn*REC_NPC)) {
-    fprintf (stderr, "ERROR: replay: truncated record at step %ld\n", rec_k);
-    exit (1);
-  }
-  rec_scatter (buf);
-  free (buf);
 #if REC_CHECKSUM
   rec_checksum();
 #endif
-  dt = hdt;
+#if REC_CHECKSUM
+  rec_where_max();
+#endif
+  dt = rec_hdt/nsub;
   tnext = t + dt;               // dt already lands on every event time of the recorded run
-  rec_k++;
-  if (!params.replay_loop && rec_k == rec_lap)
-    replay_stop = 1;
+  if (++rec_sub == nsub) {
+    rec_sub = 0;
+    rec_k++;
+    if (!params.replay_loop && rec_k == rec_lap)
+      replay_stop = 1;
+  }
 }
 
 // The Basilisk time events `t += dt_out` are dropped when t steps over their time, and a looped replay
@@ -1570,6 +1674,52 @@ event init (t = 0)
     }
 #endif
 
+#if REPLAY_FLUX
+    // Scalars on a finer grid than the flow (F3): refine the restored grid to replay_scalar_level. Order as
+    // in the cross-level path above (CLAUDE.md): cs/fs from solid() on the coarse grid FIRST, because
+    // refine_embed_linear and embed_fraction_refine read fs; then refine(); the fine solid() and the cleanup
+    // follow below. The fs = 1 coarse-level convention of a fresh run is set again on the new levels.
+    if (params.replay_scalar_level > params.fidelity) {
+      if (depth() != params.fidelity) {
+        fprintf (stderr, "ERROR: replay: restored grid has depth %d, params.fidelity says %d\n",
+                 depth(), params.fidelity);
+        exit (1);
+      }
+#if EMBED
+      {
+        double a_nd = params.geometry_a / L_bio;
+        double b_nd = params.geometry_b / L_bio;
+        if (params.geometry_n >= 8.)
+          solid (cs, fs, intersection(a_nd - fabs(x), b_nd - fabs(y)));
+        else
+          solid (cs, fs, 1. - pow(fabs(x/a_nd), params.geometry_n)
+                            - pow(fabs(y/b_nd), params.geometry_n));
+      }
+      assert_fs_sane ("pre-refine");
+#endif
+      refine (level < params.replay_scalar_level);
+      if (depth() != params.replay_scalar_level) {
+        fprintf (stderr, "ERROR: replay: refine reached depth %d, wanted %d\n", depth(),
+                 params.replay_scalar_level);
+        exit (1);
+      }
+      if (pid() == 0)
+        fprintf (ferr, "replay: scalar grid refined from level %d to %d, %ld cells\n", params.fidelity,
+                 params.replay_scalar_level, (long) grid->n);
+      if (params.replay_diag != 2) {
+      foreach_face()
+        fs.x[] = 1.;
+      restriction ({fs});
+      }
+      if (params.replay_diag) {
+        stats s1 = statsf (f), s2 = statsf (oxy), s3 = statsf (c2), s4 = statsf (c1), s5 = statsf (cs);
+        if (pid() == 0)
+        fprintf (ferr, "replay: after refine f [%g,%g] sum %.10g, oxy [%g,%g], c2 [%g,%g], c1 [%g,%g], cs [%g,%g]\n",
+                 s1.min, s1.max, s1.sum, s2.min, s2.max, s3.min, s3.max, s4.min, s4.max, s5.min, s5.max);
+      }
+    }
+#endif // REPLAY_FLUX
+
     // fs (embed face fractions) does not survive dump/restore intact, so it
     // must be recomputed from the same static geometry used at fresh-start
     // (rocking is body forces, not a moving solid). Without this the NS
@@ -1639,6 +1789,19 @@ event init (t = 0)
                  "(max %.3g)\n", ndiff, dmax);
     }
 #endif
+    if (params.replay_diag == 2)
+      restriction ({cs, fs});
+    if (params.replay_scalar_level > params.fidelity) {
+      // measured at level 7: tracer values interpolated into the cells of the wall that the fine geometry
+      // calls solid (cs = 0) feed the cut cells through small face fractions and the oxygen solve diverges
+      // in the first step. A fresh run has 0 there (the solver itself sets them to 0, h_relax: d <= 0).
+      foreach()
+        if (cs[] == 0.)
+          for (scalar s in stracers)
+            s[] = 0.;
+      boundary (stracers);
+      restriction (stracers);
+    }
     replay_open ();
 #endif
 

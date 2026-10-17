@@ -51,8 +51,12 @@ def binary_is_current(binary: Path, src: Path = ROOT / "src") -> bool:
     return binary.exists() and binary.stat().st_mtime > source_mtime(src)
 
 
-def build_binary(tag: str, flags: list[str] | None = None, src: Path = ROOT / "src") -> Path:
-    """Serial (non-MPI) build, same command line as `make build`, compiled in a private copy of src."""
+SBUILD = Path("/oscar/scratch/eaguerov/replay_gate/sbuild2.sh")
+
+
+def build_binary(tag: str, flags: list[str] | None = None, src: Path = ROOT / "src", mpi: bool = False) -> Path:
+    """Compile in a private copy of src on a COMPUTE node through sbatch (default account; never the
+    interactive allocation). Same command line as `make build` (or the MPI one with mpi=True)."""
     out = BIN_DIR / f"BioReactor-{tag}"
     work = WORK / f"build_{tag}"
     if work.exists():
@@ -62,12 +66,13 @@ def build_binary(tag: str, flags: list[str] | None = None, src: Path = ROOT / "s
         if p.is_file():
             shutil.copy2(p, work / p.name)
     BIN_DIR.mkdir(parents=True, exist_ok=True)
-    env = {**os.environ, "BASILISK": str(BASILISK)}
-    cmd = [str(BASILISK / "qcc"), "-O2", "-w", "-fopenmp", "-Wall", "-autolink", *(flags or []),
-           "BioReactor.c", "-o", str(out), f"-L{BASILISK}/gl", "-lglutils", "-lfb_tiny", "-lm"]
-    r = subprocess.run(cmd, cwd=work, env=env, capture_output=True, text=True)
+    if out.exists():
+        out.unlink()
+    env = {**os.environ, "BUILD_MPI": "1" if mpi else "0"}
+    r = subprocess.run(["sbatch", "--wait", "--export=ALL", str(SBUILD), str(work), str(out), *(flags or [])],
+                       env=env, capture_output=True, text=True)
     if r.returncode != 0 or not out.exists():
-        raise RuntimeError(f"qcc failed for {tag}:\n{r.stdout[-3000:]}\n{r.stderr[-6000:]}")
+        raise RuntimeError(f"build of {tag} failed:\n{r.stdout[-2000:]}\n{r.stderr[-2000:]}")
     return out
 
 
@@ -103,7 +108,7 @@ def scratch_dir(run_id: str) -> Path:
 
 
 def submit(params: dict, checkpoint: Path | None = None, walltime: str = "02:00:00", mem: str = "6G",
-           src: Path = ROOT / "src") -> str:
+           src: Path = ROOT / "src", ntasks: int = 1) -> str:
     """One rank, default (priority) account: submit_slurm is called without account/qos on purpose.
     Refuses to submit a binary that is older than the sources it was built from."""
     binary = Path(params["_binary"])
@@ -114,7 +119,7 @@ def submit(params: dict, checkpoint: Path | None = None, walltime: str = "02:00:
             shutil.rmtree(d)
     RUNS.mkdir(parents=True, exist_ok=True)
     return submit_slurm(params, project_root=ROOT, runs_root=RUNS, walltime=walltime,
-                        template=ROOT / "config" / "slurm_mpi_template.sh", cpus=1, ntasks=1, mem=mem,
+                        template=ROOT / "config" / "slurm_mpi_template.sh", cpus=1, ntasks=ntasks, mem=mem,
                         checkpoint=str(checkpoint) if checkpoint else None, mpi_scratch_root=MPI_SCRATCH)
 
 
