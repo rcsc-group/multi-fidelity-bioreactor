@@ -79,6 +79,8 @@ typedef struct {
   int    n_rec_periods;              // RECORD: periods recorded after t_rec0. REPLAY: periods of the record used (0 = all)
   int    replay_loop;                // REPLAY: 1 = wrap to the first recorded step when the record ends
   int    replay_scalar_level;        // REPLAY: level of the grid the scalars (and f) live on; 0 or <= fidelity = the flow level
+  int    replay_project_flux;        // REPLAY: project the prolonged flux on the fine grid (project())
+  double replay_project_tol;         // tolerance of that projection (divergence residual); default 1e-10
   int    replay_diag;                // REPLAY: write replay_diag.txt (divergence of the prolonged flux)
   char   rec_dir[512];               // directory holding flux_rec.<pid>.bin
 } BioreactorParams;
@@ -189,6 +191,10 @@ static BioreactorParams params_read(const char *path) {
       p.replay_loop = tok_int(json, &tokens[++i]);
     else if (jsoneq(json, &tokens[i], "replay_scalar_level"))
       p.replay_scalar_level = tok_int(json, &tokens[++i]);
+    else if (jsoneq(json, &tokens[i], "replay_project_flux"))
+      p.replay_project_flux = tok_int(json, &tokens[++i]);
+    else if (jsoneq(json, &tokens[i], "replay_project_tol"))
+      p.replay_project_tol = tok_double(json, &tokens[++i]);
     else if (jsoneq(json, &tokens[i], "replay_diag"))
       p.replay_diag = tok_int(json, &tokens[++i]);
     else if (jsoneq(json, &tokens[i], "rec_dir")) {
