@@ -35,6 +35,7 @@ def main() -> None:
     ap.add_argument("--snap-to", type=float, default=SNAP_TO)
     ap.add_argument("--tag", default="rec", help="run id prefix")
     ap.add_argument("--end-cycle", type=float, default=None, help="stop after this many cycles (default: full protocol)")
+    ap.add_argument("--exclude", default="node2356", help="nodes to exclude (node2356 cancelled 15 of my jobs 1 s after start, 2026-10-16/17)")
     ap.add_argument("--dry-run", action="store_true")
     a = ap.parse_args()
     ntasks, wall = (NTASKS, WALL) if a.level == 8 else (32, "30:00:00")
@@ -53,7 +54,8 @@ def main() -> None:
             print(f"    SKIPPED {p['run_id']}: its scratch logstats.dat changed in the last 30 min (job running)")
             continue
         job = submit_slurm(p, project_root=ROOT, runs_root=ROOT / "runs", walltime=wall,
-                           template=ROOT / "config" / "slurm_mpi_template.sh", cpus=1, ntasks=ntasks, mem="4G")
+                           template=ROOT / "config" / "slurm_mpi_template.sh", cpus=1, ntasks=ntasks, mem="4G",
+                           exclude=a.exclude or None)
         print(f"    job={job}")
 
 
