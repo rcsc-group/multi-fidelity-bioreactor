@@ -500,9 +500,15 @@ static void rec_scatter (const double * buf)
 #if REC_CHECKSUM
 static void rec_checksum_to (const char * file)
 {
-  double cf = 0., cu = 0., cc2 = 0., co = 0., cog = 0., cogn = 0., nz = 0., ntiny = 0., nneg = 0., cf2 = 0.;
+  double cf = 0., cu = 0., cc2 = 0., co = 0., cog = 0., cogn = 0., nz = 0., ntiny = 0., nneg = 0., cf2 = 0.,
+    mc2 = 0., mo = 0., mf = 0.;
   foreach (reduction(+:cf) reduction(+:cu) reduction(+:cc2) reduction(+:co) reduction(+:cog) reduction(+:cogn)
-           reduction(+:nz) reduction(+:ntiny) reduction(+:nneg) reduction(+:cf2)) {
+           reduction(+:nz) reduction(+:ntiny) reduction(+:nneg) reduction(+:cf2) reduction(+:mc2) reduction(+:mo)
+           reduction(+:mf)) {
+    // total (liquid + gas) mass of c2 and oxy: the transported variable c = phi1 + phi2 integrates to it
+    mc2 += dv()*c2[];
+    mo  += dv()*oxy[];
+    mf  += dv()*f[];
     cf2 += f[]*f[];
     nz += (f[] == 0.);
     ntiny += (f[] != 0. && fabs (f[]) < 1e-9);
@@ -523,7 +529,7 @@ static void rec_checksum_to (const char * file)
   if (!fp && pid() == 0)
     fp = *pf_ = fopen (file, "w");
   if (fp) {
-    fprintf (fp, "%d %.17g %.17g %.17g %.17g %.17g %.17g %.17g %g %g %g %.17g\n", iter, t, cf, cu, cc2, co, cog, cogn, nz, ntiny, nneg, cf2);
+    fprintf (fp, "%d %.17g %.17g %.17g %.17g %.17g %.17g %.17g %g %g %g %.17g %.17g %.17g %.17g\n", iter, t, cf, cu, cc2, co, cog, cogn, nz, ntiny, nneg, cf2, mc2, mo, mf);
     fflush (fp);
   }
 }
@@ -707,6 +713,27 @@ static void rec_prolong (void)
   foreach_face()
     if (uf.x[] && !fs.x[])
       uf.x[] = 0.;
+  // params.replay_project_flux = 1: make the prolonged flux divergence-free on the fine grid with Basilisk's
+  // own project() (poisson.h), called as centered.h's event projection calls it (alpha = fm, here with
+  // dt = 1: only the divergence-free flux is wanted, and project() scales its tolerance by dt^2). The
+  // tolerance is TOLERANCE/sq(dt) on the divergence residual, so it is set to replay_project_tol for the
+  // call and put back for the scalar solves. fm = 0 on closed faces, so they stay zero.
+  if (params.replay_project_flux) {
+    scalar pp[];
+    foreach()
+      pp[] = 0.;
+    double tol0 = TOLERANCE;
+    TOLERANCE = params.replay_project_tol > 0. ? params.replay_project_tol : 1e-10;
+    mgstats mp = project (uf, pp, fm, 1., 4);
+    TOLERANCE = tol0;
+    static FILE * fpm = NULL;
+    if (!fpm && pid() == 0)
+      fpm = fopen ("replay_project.txt", "w");
+    if (fpm) {
+      fprintf (fpm, "%d %d %g %g\n", iter, mp.i, mp.resb, mp.resa);
+      fflush (fpm);
+    }
+  }
 }
 
 // params.replay_diag = 1: per step, into replay_diag.txt, max |div uf|*Delta/max|uf| on the leaf grid, over
