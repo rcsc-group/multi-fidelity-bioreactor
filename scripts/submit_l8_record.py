@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+import time
 from pathlib import Path
 
 ROOT = Path("/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor")
@@ -46,6 +47,10 @@ def main() -> None:
         print(f"  {p['run_id']}: t_end {p['t_end']}, snapshots cycles {a.snap_from:g}-{a.snap_to:g}, "
               f"{a.frames}/period, {ntasks} ranks, {wall}")
         if a.dry_run:
+            continue
+        live = Path("/oscar/scratch/eaguerov/mpi_runs") / p["run_id"] / "logstats.dat"
+        if live.exists() and time.time() - live.stat().st_mtime < 1800:   # a running job writes here: a second job truncates its files
+            print(f"    SKIPPED {p['run_id']}: its scratch logstats.dat changed in the last 30 min (job running)")
             continue
         job = submit_slurm(p, project_root=ROOT, runs_root=ROOT / "runs", walltime=wall,
                            template=ROOT / "config" / "slurm_mpi_template.sh", cpus=1, ntasks=ntasks, mem="4G")
