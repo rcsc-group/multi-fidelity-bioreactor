@@ -5,28 +5,22 @@ item starts, give it a diary entry; when it lands, delete it here.
 
 ## APS DFD 2026-11-25 (pivot 2026-10-08: vanilla mfbml, HF target)
 
-- Canonical case: choose after the prior-art check (docs/lit_review_mf_bioreactor.md) and test A.
-- L9 dtmix has no noise estimate: rep_l9_rpm25_rel82 was set up but never ran.
+- H3 variance propagation (owed, zero compute): model 2 uses only the mean of model 1, so the L10 band between design points is too narrow; add rho1^2 var9 (recursive co-kriging; read the reference before citing).
+- kla_mix_dataset.csv needs a binary/protocol column (L9 theta-7 fig9 runs = prod-4b3a435, cold; e9 = lean-f1c11e0, T5 protocol; L10 T10 = lean-eec1f15 warm restart).
+- Tell CCV about node2356 (killed 15 jobs 1 s after start, bursts 2026-10-16 18:48 and 2026-10-17 00:30; Slurm lists it MIXED, not drained).
+- e9_l9_rpm22.6_th7 stopped at the 30 h limit (chi 0.937, t = 134): dtmix_0.95 censored. Continuation needs restart_continue=1 (unexplained ~8% artifact, BioReactor.c ~l.1085) or a longer first walltime; budget 36 h for L9 T5-protocol runs.
+- Same-protocol L9 rpm grid (about 5.8k core-h) only if T10/E9 make L9 necessary; E9 says L9 roughness is local in rpm (22.5 yes, 30 no).
+- L10 roughness near 22.5 rpm (L9 pair split 0.29 in kLa_1T_10 there): add L10 scalar points at 22-23 rpm after T10.
+- F3b follow-ups: Ls = 11 replay (~1.4k core-h), a second rpm, an L10-flow record (cost: ~26 core-h per L10 cycle for the flow, records ~16x bigger than L8).
 - The time-horizon fidelity (truncated chi curve) does not carry the late rate (test B); only
   revisit with a physical late-rate model, not a prior on r.
 
 ## Methods
 
-- **kLa as a Floquet exponent of the oxygen operator ("hydrodynamics once,
-  oxygen replayed").** Oxygen is passive, so on a settled periodic flow C*
-  obeys a *linear, periodic* advection-diffusion problem and kLa is its
-  leading decay rate -- exact, no closure. Record one settled period of
-  (u, f); solve only the oxygen equation on it, looped, and get the decay rate
-  by power iteration over periods instead of waiting 30-90 cycles for C* to
-  hit 25%. Allows oxygen on a finer mesh than the flow (Sc ~ 500), the
-  likely cause of L9's kLa scatter. Feeds Yi et al. cleanly: LF = replay kLa,
-  HF = coupled L10 kLa, same QoI, so the linear transfer is justified.
-  *First falsifier:* L6 serial, replay vs coupled kLa at the same level.
-  *Before anything:* read how the interfacial oxygen BC is implemented.
-- **Dense L8 grid for the MF demo.** Yi et al. assume abundant LF (200*d);
-  `plot_mf_tau_max.py` has 9 L8 points. L8 is ~1.5 min/cycle at 8 ranks, so
-  ~15-20 points over 15-40 rpm is about a day of compute and puts the LF in
-  the regime the method is built for.
+- **Record/replay of the passive scalars (built 2026-10-16/17, branch replay-gate merged).**
+  Exact non-looped replay works (F0, F1, MPI). Looping one period FAILS (F2: the L6 flow is not
+  periodic, defect 9-30%), so it is not a cost saver. Open: F3b (scalar mesh Ls = 8, 9, 10 at a fixed
+  L8 flow, record written, 57 GB). The Floquet-exponent idea needs a periodic flow and is parked.
 - **Heteroscedastic noise in KRR-LR-GPR.** L10 cycle-to-cycle spread of
   tau_max grows ~35x from 17.5 to 37.5 rpm; the GPR noise is homoscedastic,
   so the band is too wide at low rpm and the pooled value is set by 37.5.
