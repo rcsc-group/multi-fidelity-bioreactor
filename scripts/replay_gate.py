@@ -108,7 +108,7 @@ def scratch_dir(run_id: str) -> Path:
 
 
 def submit(params: dict, checkpoint: Path | None = None, walltime: str = "02:00:00", mem: str = "6G",
-           src: Path = ROOT / "src", ntasks: int = 1) -> str:
+           src: Path = ROOT / "src", ntasks: int = 1, exclude: str | None = None) -> str:
     """One rank, default (priority) account: submit_slurm is called without account/qos on purpose.
     Refuses to submit a binary that is older than the sources it was built from."""
     binary = Path(params["_binary"])
@@ -120,7 +120,7 @@ def submit(params: dict, checkpoint: Path | None = None, walltime: str = "02:00:
     RUNS.mkdir(parents=True, exist_ok=True)
     return submit_slurm(params, project_root=ROOT, runs_root=RUNS, walltime=walltime,
                         template=ROOT / "config" / "slurm_mpi_template.sh", cpus=1, ntasks=ntasks, mem=mem,
-                        checkpoint=str(checkpoint) if checkpoint else None, mpi_scratch_root=MPI_SCRATCH)
+                        checkpoint=str(checkpoint) if checkpoint else None, mpi_scratch_root=MPI_SCRATCH, exclude=exclude)
 
 
 def wait(job: str, poll: float = 20.0, timeout: float = 6 * 3600) -> str:
