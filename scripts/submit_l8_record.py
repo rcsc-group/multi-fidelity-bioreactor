@@ -36,9 +36,11 @@ def main() -> None:
     ap.add_argument("--tag", default="rec", help="run id prefix")
     ap.add_argument("--end-cycle", type=float, default=None, help="stop after this many cycles (default: full protocol)")
     ap.add_argument("--exclude", default="node2356", help="nodes to exclude (node2356 cancelled 15 of my jobs 1 s after start, 2026-10-16/17)")
+    ap.add_argument("--walltime", default=None, help="override the walltime (default 30:00:00 for L9; 3 of 4 pair runs hit it)")
     ap.add_argument("--dry-run", action="store_true")
     a = ap.parse_args()
     ntasks, wall = (NTASKS, WALL) if a.level == 8 else (32, "30:00:00")
+    wall = a.walltime or wall
     for rpm in a.rpm:
         p = params(rpm, a.theta, f"{a.tag}_l{a.level}_rpm{rpm:g}_th{a.theta:g}")
         p.update(fidelity=a.level, frames_per_period=a.frames, snap_start_cycle=float(a.snap_from),
