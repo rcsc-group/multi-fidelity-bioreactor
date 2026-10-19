@@ -71,6 +71,7 @@ def main():
             row[v] = dict(rmse=float(np.sqrt(np.mean(err ** 2))), cover=int(sum(x["lo"] <= x["obs"] <= x["hi"] for x in r)),
                           half_width_pct=float(100 * np.mean([(x["hi"] - x["lo"]) / 2 for x in r])))
         row["rho_mean"] = float(np.mean(rhos))
+        row["points_B"] = [dict(rpm=k[0], theta=k[1], **res["B"][i]) for i, k in enumerate(hk)]
         out[q] = row
         print(q, " | ".join(f"{v}: RMSE {row[v]['rmse']:.1%} cover {row[v]['cover']}/13 half-width {row[v]['half_width_pct']:.1f}%" for v in "ABC"), f"| rho {row['rho_mean']:.2f}")
     cover_c = [out[q]["C"]["cover"] for q in QS]
