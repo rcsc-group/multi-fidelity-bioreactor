@@ -67,7 +67,7 @@ def levels():
     l10_old = [(rpm_of(n), n) for n in ("fig11_l10_rpm35", "fig11_l10_rpm37.5")]
     fig, axes = plt.subplots(1, 2, figsize=(10.0, 3.9), sharex=True)
     for ax, q in zip(axes, ("kLa_1T_10", "dtmix_0.50")):
-        for L, items, a in ((8, l8, 1.0), (9, l9_old, 0.4), (9, e9, 1.0), (10, l10, 1.0), (10, l10_old, 0.35)):
+        for L, items, a in ((8, l8, 1.0), (9, l9_old, 1.0), (9, e9, 1.0), (10, l10, 1.0), (10, l10_old, 1.0)):
             xy = np.array([(x, val(r, q)) for x, r in items if np.isfinite(val(r, q))])
             if len(xy):
                 ax.plot(xy[:, 0], xy[:, 1], ls="none", alpha=a, **mkw(L, q))
@@ -75,11 +75,7 @@ def levels():
         ax.set_ylabel(YLAB[q])
         ax.set_xlabel("rocking speed (rpm)")
         ax.grid(**fs.GRID_KW)
-    h = [Line2D([], [], ls="none", marker="o", mfc="w", mec=fs.level_colour(8), ms=5, label="L8"),
-         Line2D([], [], ls="none", marker="o", mfc="w", mec=fs.level_colour(9), ms=5, label="L9, same protocol as L8"),
-         Line2D([], [], ls="none", marker="o", mfc="w", mec=fs.level_colour(9), alpha=0.4, ms=5, label="L9, cold start, other binary"),
-         Line2D([], [], ls="none", marker="o", mfc="w", mec=fs.level_colour(10), ms=5, label="L10, 32.5 rpm"),
-         Line2D([], [], ls="none", marker="o", mfc="w", mec=fs.level_colour(10), alpha=0.35, ms=5, label="L10, earlier runs")]
+    h = [Line2D([], [], ls="none", marker="o", mfc="w", mec=fs.level_colour(L), ms=5, label=f"L{L}") for L in (8, 9, 10)]
     lg = axes[1].legend(handles=h, frameon=False, fontsize=8, loc="upper left", bbox_to_anchor=(1.03, 1.0))
     fig.tight_layout()
     save(fig, "fig_state_levels", [lg])
@@ -99,7 +95,7 @@ def scatter():
             dev = 100 * (y / np.exp(np.polyval(c, x)) - 1)
             ax.plot(x[ok], dev[ok], ls="none", **mkw(8, q))
             z, _ = zscores(y)
-            out = ok & (np.abs(z) > 3)
+            out = ok & (np.abs(z) > 4.5)
             ax.plot(x[out], dev[out], ls="none", marker="o", ms=12, mfc="none", mec="0.35", mew=1.0)
             ax.axhline(0, color=fs.GUIDE, lw=1.0)
             ax.grid(**fs.GRID_KW)
@@ -174,11 +170,9 @@ def e9():
                 x = i + (k - 0.5) * 0.25
                 if np.isfinite(va) and np.isfinite(vb):
                     ax.plot(x, 100 * abs(va - vb) / ((va + vb) / 2), ls="none", **mkw(L, q))
-                elif np.isfinite(va):    # 22.6 rpm at L9 never reached chi 0.95: the true gap is larger than the one shown
-                    vb = 374.0           # time reached by the run (diary 2026-10-18)
-                    ax.plot(x, 100 * abs(va - vb) / ((va + vb) / 2), ls="none", **mkw(L, q))
-                    ax.annotate("", xy=(x, 100 * abs(va - vb) / ((va + vb) / 2) + 28), xytext=(x, 100 * abs(va - vb) / ((va + vb) / 2) + 4),
-                                arrowprops=dict(arrowstyle="->", color=fs.level_colour(L)))
+                elif np.isfinite(va):    # 22.6 rpm at L9 never reached chi 0.95 (reached 0.937 at 374 s): its time is longer than 374 s
+                    d = 100 * abs(va - 374.0) / ((va + 374.0) / 2)
+                    ax.errorbar(x, d, yerr=12, lolims=True, ls="none", color=fs.level_colour(L), marker=QL[q][0], mfc="w", ms=8, mew=1.3, capsize=4)
         ax.set_xticks(range(len(qs)))
         ax.set_xticklabels([QL[q][1] for q in qs], fontsize=8)
         ax.set_title(title, fontsize=10)

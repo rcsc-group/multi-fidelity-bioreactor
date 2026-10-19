@@ -1,11 +1,11 @@
-"""Figure: L10 QoIs vs rocking speed, simulation and H3 prediction with 95% uncertainty, per rocking angle.
+"""Figure: L10 QoIs vs rocking speed, simulation and multi-fidelity prediction, per rocking angle.
 
 Rows: tau_95, mean tau, EDR. Columns: theta = 4, 7, 9 deg. x: rocking speed (rpm).
-  markers   = L10 simulation (13 runs).
-  bars      = H3 prediction at that point with the point LEFT OUT of the training (leave-one-out, as test H3).
-  line+band = H3 prediction trained on all 13 L10 points, posterior mean and 95% interval.
-H3 = three-level chain on log(QoI): KRR on 40 L8 runs -> GP correction to 16 L9 runs -> GP correction to the
-L10 runs (FullBayesKRRLRGP, mfbml_local). Data/models: scripts/test_h1_mfbml.py, test_h2_mfbml.py, test_h3_mfbml.py.
+  filled/hollow markers: simulations at L8 (13 x... all L8 runs), L9 and L10; L10 bars = spread of the last three cycles.
+  dashed lines: L8 fit (KRR) and L9 fit (GP).
+  grey line + band: three-level prediction trained on all 13 L10 runs, with 95% interval incl. the L9 uncertainty.
+  grey bars: the same model trained on the 12 other L10 runs, predicting that run (each L10 run is left out once).
+Method: scripts/test_h3_mfbml.py (log QoI, FullBayesKRRLRGP), band propagation: scripts/h3_band_check.py (variant B).
 Usage: uv run python scripts/fig_h3_rpm.py
 """
 from __future__ import annotations
@@ -24,9 +24,12 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "scripts"))
 from scripts import figstyle as fs  # noqa: E402
+from scripts.h3_band_check import DELTA, Offset, sd_log  # noqa: E402
+from scripts.hydro_dataset_v2 import COL_EDISS, RHO, qois  # noqa: E402
+from scripts.postprocess import _load_dat, _t_scales  # noqa: E402
 from scripts.test_h1_mfbml import (BOUNDS, LF_THETAS, RPMS, hf_points, hf_run, lf_run,  # noqa: E402
                                    load_points, train_lf2d)
-from scripts.test_h2_mfbml import MeanAdapter, l9_points, l9_run  # noqa: E402
+from scripts.test_h2_mfbml import l9_points, l9_run  # noqa: E402
 
 MF = ROOT / "experiments/multifidelity"
 THETAS = (4.0, 7.0, 9.0)
@@ -36,26 +39,48 @@ ROWS = (("tau_95_t", fs.MK["tau"], "max", r"$\tau_{95}$ (Pa)"),
 GRID = np.linspace(17.5, 32.5, 31)
 
 
+def cycle_sd(run, q):
+    """Relative sd of the QoI over the three whole cycles of the QoI window (same window as hydro_dataset_v2.qois)."""
+    h = qois(run)
+    d = ROOT / "runs" / run
+    import math
+    p = json.load(open(d / "params.json"))
+    arr = _load_dat(d / "shear_stress.dat")
+    T_bio, T = _t_scales(p)
+    U = p.get("geometry", {}).get("a", 0.25) / T_bio
+    L = p.get("geometry", {}).get("a", 0.25)
+    cyc = arr[:, 1] / T
+    c0, c1 = h["window"]
+    vals = []
+    for k in range(int(round(c1 - c0))):
+        m = (cyc >= c0 + k) & (cyc < c0 + k + 1)
+        a = arr[m]
+        vals.append({"tau_mean_t": a[:, 5].mean(), "tau_95_t": np.median(a[:, 2]), "edr_mean_t": a[:, COL_EDISS].mean()}[q])
+    vals = np.array(vals)
+    return float(vals.std(ddof=1) / vals.mean())
+
+
 def full_model(q, lf_pts, l9_pts, hf_pts):
-    """H3 trained on all points; returns a function rpm-grid, theta -> (mean, lo, hi) on the raw scale."""
     from mfbml_local.krr_lr_gpr_fullbayes import FullBayesKRRLRGP
     k8 = sorted(lf_pts, key=lambda k: (k[1], k[0]))
     lf = train_lf2d(np.array(k8), np.log([lf_pts[k][q] for k in k8]))
     k9 = sorted(l9_pts, key=lambda k: (k[1], k[0]))
-    m1 = FullBayesKRRLRGP(BOUNDS, lf_model=lf, basis="linear").train(
-        np.array(k9), np.log([l9_pts[k][q] for k in k9]))
+    m1 = FullBayesKRRLRGP(BOUNDS, lf_model=lf, basis="linear").train(np.array(k9), np.log([l9_pts[k][q] for k in k9]))
     kh = sorted(hf_pts, key=lambda k: (k[1], k[0]))
-    m2 = FullBayesKRRLRGP(BOUNDS, lf_model=MeanAdapter(m1), basis="linear").train(
-        np.array(kh), np.log([hf_pts[k][q] for k in kh]))
+    ad = Offset(m1)
+    m2 = FullBayesKRRLRGP(BOUNDS, lf_model=ad, basis="linear").train(np.array(kh), np.log([hf_pts[k][q] for k in kh]))
 
     def pred(theta):
-        """{level: (mean, lo, hi)}; L8 is a KRR (no interval: lo = hi = None)."""
         X = np.column_stack([GRID, np.full_like(GRID, theta)])
-        out = {8: (np.exp(np.ravel(lf.predict(X))), None, None)}
-        for L, m in ((9, m1), (10, m2)):
-            qq = m.quantile(X, [0.025, 0.975])
-            out[L] = (np.exp(np.ravel(m.predict_mean(X))), np.exp(qq[:, 0]), np.exp(qq[:, 1]))
-        return out
+        mean = np.ravel(m2.predict_mean(X))
+        qq = m2.quantile(X, [0.025, 0.975])
+        ad.off = DELTA
+        rho = (np.ravel(m2.predict_mean(X)) - mean) / DELTA
+        ad.off = 0.0
+        hw = np.sqrt(((qq[:, 1] - qq[:, 0]) / 2) ** 2 + (1.96 * rho * sd_log(m1, X)) ** 2)
+        return {8: np.exp(np.ravel(lf.predict(X))),
+                9: np.exp(np.ravel(m1.predict_mean(X))),
+                10: (np.exp(mean), np.exp(mean - hw), np.exp(mean + hw))}
     return pred
 
 
@@ -64,35 +89,33 @@ def main():
     lf_pts, _ = load_points([(r, t) for r in RPMS for t in LF_THETAS], lf_run)
     l9_pts, _ = load_points(l9_points(), l9_run)
     hf_pts, _ = load_points(hf_points(), hf_run)
-    loo = json.loads((MF / "test_h3_mfbml.json").read_text())["results"]
+    loo = json.loads((MF / "h3_band_check.json").read_text())
     plt.rcParams.update(fs.rcparams())
-    fig, axes = plt.subplots(3, 3, figsize=(10.0, 7.6), sharex=True, sharey=False)
+    fig, axes = plt.subplots(3, 3, figsize=(9.2, 7.6), sharex=True, sharey=False)
     c10, cp = fs.level_colour(10), "0.25"
     for i, (q, mk, stat, lab) in enumerate(ROWS):
         pred = full_model(q, lf_pts, l9_pts, hf_pts)
         for j, th in enumerate(THETAS):
             ax = axes[i, j]
             curves = pred(th)
-            for L in (8, 9):
+            for L, src in ((8, lf_pts), (9, l9_pts)):
                 cL = fs.level_colour(L)
-                m, lo, hi = curves[L]
-                if lo is not None:
-                    ax.fill_between(GRID, lo, hi, color=cL, alpha=0.12, lw=0)
-                ax.plot(GRID, m, color=cL, lw=1.0, ls="--")
-                src = lf_pts if L == 8 else l9_pts
+                ax.plot(GRID, curves[L], color=cL, lw=1.0, ls="--")
                 ks = sorted(k for k in src if k[1] == th and GRID[0] <= k[0] <= GRID[-1])
                 ax.plot([k[0] for k in ks], [src[k][q] for k in ks], ls="none",
                         **{k: v for k, v in fs.series_kw(cL, mk, stat=stat, ours=True).items() if k != "ls"})
             m, lo, hi = curves[10]
             ax.fill_between(GRID, lo, hi, color=cp, alpha=0.15, lw=0)
             ax.plot(GRID, m, color=cp, lw=1.0)
-            pts = [p for p in loo[q]["points"] if p["theta"] == th]
+            pts = [p for p in loo[q]["points_B"] if p["theta"] == th]
             r = np.array([p["rpm"] for p in pts])
-            ax.errorbar(r + 0.35, [p["mf_pred"] for p in pts],
-                        yerr=[[p["mf_pred"] - p["mf_lo"] for p in pts], [p["mf_hi"] - p["mf_pred"] for p in pts]],
+            ax.errorbar(r + 0.35, [np.exp(p["mean"]) for p in pts],
+                        yerr=[[np.exp(p["mean"]) - np.exp(p["lo"]) for p in pts], [np.exp(p["hi"]) - np.exp(p["mean"]) for p in pts]],
                         ls="none", color=cp, marker="_", ms=6, elinewidth=1.0, capsize=2)
-            ax.plot(r, [p["obs"] for p in pts], ls="none",
-                    **{k: v for k, v in fs.series_kw(c10, mk, stat=stat, ours=True).items() if k != "ls"})
+            obs = np.array([np.exp(p["obs"]) for p in pts])
+            sd = np.array([cycle_sd(hf_run(p["rpm"], th), q) for p in pts])
+            ax.errorbar(r, obs, yerr=obs * sd, ls="none", color=c10, elinewidth=1.0, capsize=0, zorder=3)
+            ax.plot(r, obs, ls="none", **{k: v for k, v in fs.series_kw(c10, mk, stat=stat, ours=True).items() if k != "ls"})
             ax.grid(**fs.GRID_KW)
             if i == 0:
                 ax.set_title(rf"$\theta$ = {th:g}$^\circ$", fontsize=10)
@@ -100,23 +123,15 @@ def main():
                 ax.set_ylabel(lab)
             if i == 2:
                 ax.set_xlabel("rocking speed (rpm)")
-    handles = [Line2D([], [], color=fs.level_colour(8), marker="o", mfc=fs.level_colour(8), ls="none", ms=5,
-                      label="L8 simulation"),
-               Line2D([], [], color=fs.level_colour(8), lw=1.0, ls="--", label="L8 fit (KRR)"),
-               Line2D([], [], color=fs.level_colour(9), marker="o", mfc=fs.level_colour(9), ls="none", ms=5,
-                      label="L9 simulation"),
-               Line2D([], [], color=fs.level_colour(9), lw=1.0, ls="--", label="L9 fit (GP, 95% band)"),
-               Line2D([], [], color=c10, marker="o", mfc=c10, ls="none", ms=5, label="L10 simulation"),
-               Line2D([], [], color=cp, marker="_", ls="none", ms=8, mew=1.0,
-                      label="prediction, point left out\n(95% interval)"),
-               Patch(facecolor=cp, alpha=0.15, label="prediction, all points\n(95% interval)"),
-               Line2D([], [], color=cp, lw=1.0, label="prediction, all points\n(mean)")]
+    handles = [Line2D([], [], color=fs.level_colour(L), marker="o", mfc=fs.level_colour(L), ls="none", ms=5, label=f"L{L}")
+               for L in (8, 9, 10)] + \
+              [Patch(facecolor=cp, alpha=0.3, label="prediction"),
+               Line2D([], [], color=cp, marker="_", ls="none", ms=8, mew=1.0, label="prediction without that run")]
     lg = axes[0, 2].legend(handles=handles, fontsize=8, frameon=False, loc="upper left", bbox_to_anchor=(1.04, 1.0))
     fig.tight_layout()
     for ext in ("png", "pdf"):
-        out = MF / f"fig_h3_rpm.{ext}"
-        fig.savefig(out, dpi=200, bbox_inches="tight", bbox_extra_artists=[lg])
-        print("wrote", out)
+        fig.savefig(MF / f"fig_h3_rpm.{ext}", dpi=200, bbox_inches="tight", bbox_extra_artists=[lg])
+        print("wrote", MF / f"fig_h3_rpm.{ext}")
 
 
 if __name__ == "__main__":
