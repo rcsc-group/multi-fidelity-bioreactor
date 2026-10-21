@@ -13,13 +13,13 @@ Requested by the user for this meeting: (1) the 5x3 chain L8 -> L9 -> L10, (2) t
 ## 01  Chain L8 -> L9 -> L10, 5 x 3
 `01_chain_L8_L9_L10_5x3.png`. Rows: tau_95, mean tau, dissipation rate (EDR), kLa at C* = 0.10, mixing time at chi = 0.50. Columns: rocking angle 4, 7, 9 deg. Markers: simulations. Dashed blue: L8 fit (KRR). Dashed green: L9 fit. Grey line and band: L10 prediction with 95 % range, trained on ALL L10 runs (mfbml, Yi et al. 2407.15110, three levels in a chain, on the log of the quantity; the L9 uncertainty is passed on to the L10 band, `scripts/h3_band_check.py`). Small bars on L10 shear and dissipation markers: spread of the last three cycles.
 - Shear and dissipation: 13 L10 runs (7 at 7 deg, 3 at 4 deg, 3 at 9 deg). Leave-one-out error 4.6 / 3.0 / 4.1 % (tau_95 / mean tau / EDR), with an L9 run at the same point; true test set (5 new L10 runs at 5.5 deg) 2.0 / 3.1 / 7.3 %.
-- kLa row: 13 L10 runs. DATA GAP: L9 kLa exists only at 7 deg, so the L9 curves at 4 and 9 deg are extrapolations (the model assumes the L9 correction does not depend on the angle).
+- Drawing rule (same in every panel): all level markers are drawn; the fitted curves and the L10 prediction span 17.5-32.5 rpm (the L10 range) and appear only where L9 has >= 3 runs at that angle and the row has >= 5 L10 runs. kLa row: 13 L10 runs, but L9 kLa exists only at 7 deg, so only that column has curves and a prediction.
 - Mixing-time row: L10 has only 3 runs (the 50 % mixing time needs more cycles than the L10 runs have; seven runs are being continued, ready in about 2 days). No prediction is drawn.
 - Confound: L10 shear and dissipation come from warm starts (from L8 for most points, from L9 at 7 deg); 12 of 13 are settled to within 6 % (check against the end of the continuation runs), the 22.5 rpm run at 7 deg is not (+19 % EDR later).
 
 ## 02  Usual two-level mfbml L9 -> L10, 5 x 3
 `02_two_level_L9_L10_5x3.png`. Same layout. The low fidelity is a KRR trained on the L9 runs (dashed green); the high fidelity is the L10 GP correction (Yi et al.). No L8 information.
-- Same data gaps as card 01.
+- Same data gaps and the same drawing rule as card 01.
 - Honest reading (cards 07 and 03): a regression ratio fitted on L9 is as accurate as the chain; mfbml adds an uncertainty band.
 
 ## 03  The C* extrapolation problem (PI idea 1) as a multi-fidelity problem
