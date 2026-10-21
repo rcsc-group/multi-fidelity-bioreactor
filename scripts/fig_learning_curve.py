@@ -36,6 +36,9 @@ def main():
         ax.set_xscale("log")
         ax.set_title(LAB[q], fontsize=10)
         ax.set_xlabel("training cost (core-hours)")
+        ax.set_xticks([3000, 5000, 10000])
+        ax.set_xticklabels(["3k", "5k", "10k"])
+        ax.minorticks_off()
         ax.grid(**fs.GRID_KW)
     axes[0].set_ylabel("error on unseen L10 runs (%)")
     h = [Line2D([], [], color=fs.level_colour(10), marker="o", mfc="w", label="L10 runs only"),
