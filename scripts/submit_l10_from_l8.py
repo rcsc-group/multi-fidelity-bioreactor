@@ -46,23 +46,25 @@ def main() -> None:
     ap.add_argument("--exclude", default=None, help="nodes to avoid (sbatch --exclude)")
     ap.add_argument("--level", type=int, default=10, help="target level (9 or 10); 9 for the H2 middle level")
     ap.add_argument("--rate", type=float, default=None, help="measured min per cycle (overrides the theta-7 table)")
+    ap.add_argument("--post", type=int, default=0, help="extra cycles AFTER the tracer/oxygen release (release stays at --cycles); one job does warm start, release and the scalar run")
+    ap.add_argument("--tag", default="x8", help="run id prefix")
     a = ap.parse_args()
     for pt in a.points:
         rpm, theta = map(float, pt.split(":"))
         src = source_run(rpm, theta)
         sd = ROOT / "runs" / src
         t_dump = float(np.loadtxt(sd / "shear_stress.dat", skiprows=1)[-1, 1])
-        p = l8_params(rpm, theta, f"x8_l{a.level}_rpm{rpm:g}_th{theta:g}")
+        p = l8_params(rpm, theta, f"{a.tag}_l{a.level}_rpm{rpm:g}_th{theta:g}")
         t_nd = p["t_end"] / SPINUP_POST  # nondimensional period (depends on theta through the fill volume)
         zeros = [0.0, 0.0, 0.0]
-        p.update(fidelity=a.level, t_end=round(a.cycles * t_nd, 6), n_mix_cycles=a.cycles, t_checkpoint=t_dump,
+        p.update(fidelity=a.level, t_end=round((a.cycles + a.post) * t_nd, 6), n_mix_cycles=a.cycles, t_checkpoint=t_dump,
                  omega_b_prev=p["omega_b"], theta_max_prev=[theta, 0.0, 0.0], phi_angular_prev=zeros,
                  amplitude_h_prev=zeros, phi_horizontal_prev=zeros, omega_h_prev=0.0, _binary=BINARY)
         xs = sorted(_RATE_32)
         rate = float(np.interp(min(max(rpm, xs[0]), xs[-1]), xs, [_RATE_32[x] for x in xs]))
         rate = rate if a.level == 10 else rate / 6.0  # L9 ~1/8 of L10 per cycle; /6 kept conservative
         rate = a.rate if a.rate else rate  # theta 4 runs ~2x slower than the theta-7 table (x8_l10_rpm32.5_th4: 97)
-        hours = min(48, max(4, math.ceil(a.cycles * rate * MARGIN / 60.0)))  # 48 h cap; no dump at kill
+        hours = min(48, max(4, math.ceil((a.cycles + a.post) * rate * MARGIN / 60.0)))  # 48 h cap; no dump at kill
         print(f"  {p['run_id']}: source {src} (t {t_dump:g}), t_end {p['t_end']}, walltime {hours} h")
         if a.dry_run:
             continue
