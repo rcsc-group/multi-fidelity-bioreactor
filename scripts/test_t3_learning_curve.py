@@ -43,7 +43,8 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "scripts"))
 from scripts import figstyle as fs                                         # noqa: E402
-from scripts.plot_mf_fig13 import LooKRR                                   # noqa: E402
+from scripts.plot_mf_fig13 import LooKRR as _SlowLooKRR                        # noqa: E402
+from scripts.fast_loo_krr import FastLooKRR as LooKRR                      # noqa: E402  closed-form leave-one-out, same fits (diary 2026-10-21)
 from scripts.test_mf_l10_holdout import load, col, rel_rmse, ENDS, DS, LFS, OUT  # noqa: E402
 from scripts.test_t2_bayes_band import as_bayes                            # noqa: E402
 from mfbml_local.krr_lr_gpr import KernelRidgeLinearGaussianProcess        # noqa: E402
