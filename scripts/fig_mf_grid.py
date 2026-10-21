@@ -33,7 +33,7 @@ from scripts.test_s89_l8_to_l9 import collect  # noqa: E402
 from mfbml_local.krr_lr_gpr_fullbayes import FullBayesKRRLRGP  # noqa: E402
 
 THETAS = (4.0, 7.0, 9.0)
-GRID = np.linspace(17.5, 32.5, 31)
+GRID = np.linspace(14.5, 38.5, 49)   # the full range of the L8 and L9 data: the predictions extrapolate beyond the L10 runs (17.5-32.5 rpm)
 HYDRO = (("tau_95_t", fs.MK["tau"], "max", r"$\tau_{95}$ (Pa)"), ("tau_mean_t", fs.MK["tau"], "mean", r"$\overline{\tau}$ (Pa)"),
          ("edr_mean_t", fs.MK["ediss"], "mean", r"EDR (W/m$^3$)"))
 SCAL = (("kLa_1T_10", fs.MK["cstar_10"], "mean", r"$k_La$, $C^*\!=\!0.10$ (1/h)"), ("dtmix_0.50", fs.MK["chi_0.50"], "mean", r"$t_{\mathrm{mix}}$, $\chi\!=\!0.50$ (s)"))
@@ -63,13 +63,27 @@ def scalar_data(q):
     return arr(l8), arr(l9), arr(l10)
 
 
+def lf_cached(X, y):
+    """The L8 / L9 KRR (leave-one-out tuned, 10 restarts) is the slow step and does not depend on the level above it: cache it by a hash of its data."""
+    import hashlib
+    import pickle
+    key = hashlib.md5(np.ascontiguousarray(np.column_stack([X, np.log(y)])).tobytes()).hexdigest()[:16]
+    f = Path("/oscar/scratch/eaguerov/mfcache") / f"krr_{key}.pkl"
+    if f.exists():
+        return pickle.load(f.open("rb"))
+    lf = train_lf2d(X, np.log(y))
+    f.parent.mkdir(exist_ok=True)
+    pickle.dump(lf, f.open("wb"))
+    return lf
+
+
 def models(mode, a8, a9, a10):
     """returns pred(theta) -> (lower-level curve, (mean, lo, hi) of L10) or None."""
     (X8, y8), (X9, y9), (X10, y10) = a8, a9, a10
     if len(y10) < 5 or len(y9) < 3:
         return None
     if mode == "chain":
-        lf = train_lf2d(X8, np.log(y8))
+        lf = lf_cached(X8, y8)
         m1 = FullBayesKRRLRGP(BOUNDS, lf_model=lf, basis="linear").train(X9, np.log(y9))
         ad = Offset(m1)
         m2 = FullBayesKRRLRGP(BOUNDS, lf_model=ad, basis="linear").train(X10, np.log(y10))
@@ -84,7 +98,7 @@ def models(mode, a8, a9, a10):
             hw = np.sqrt(((qq[:, 1] - qq[:, 0]) / 2) ** 2 + (1.96 * rho * sd_log(m1, X)) ** 2)
             return np.exp(np.ravel(m1.predict_mean(X))), (np.exp(mean), np.exp(mean - hw), np.exp(mean + hw)), np.exp(np.ravel(lf.predict(X)))
         return pred
-    lf = train_lf2d(X9, np.log(y9))
+    lf = lf_cached(X9, y9)
     m2 = FullBayesKRRLRGP(BOUNDS, lf_model=lf, basis="linear").train(X10, np.log(y10))
 
     def pred(theta):
@@ -120,7 +134,7 @@ def main(mode):
                         ax.errorbar(X[m, 0], y[m], yerr=y[m] * sd, ls="none", color=c10, elinewidth=1.0, capsize=0, zorder=3)
                     ax.plot(X[m, 0], y[m], ls="none", **kw)
             has9 = int((a9[0][:, 1] == th).sum()) >= 3   # a level curve or a prediction is drawn only where that level has data at this angle
-            if pred is not None and has9:
+            if pred is not None:
                 try:
                     low, (mean, lo, hi), l8curve = pred(th)
                     ax.plot(GRID, low, color=fs.level_colour(9 if mode == "chain" else 9), ls="--", lw=1.0)
@@ -130,7 +144,7 @@ def main(mode):
                     ax.plot(GRID, mean, color=cp, lw=1.0)
                 except Exception as e:   # noqa: BLE001
                     print("panel failed", q, th, repr(e)[:80])
-            if q in ("kLa_1T_10", "dtmix_0.50"):
+            if q in ("tau_95_t", "tau_mean_t", "kLa_1T_10", "dtmix_0.50"):
                 ax.set_yscale("log")
             ax.set_xlim(14, 39)
             ax.grid(**fs.GRID_KW)
