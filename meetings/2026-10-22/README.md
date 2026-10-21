@@ -31,10 +31,12 @@ Requested by the user for this meeting: (1) the 5x3 chain L8 -> L9 -> L10, (2) t
 - The mixing-time version (chi up to 0.5 -> time to 0.95) was tested earlier (diary 2026-10-08): about 34 % error, the early curve does not carry the late rate.
 
 ## 04  PROPER mfbml with a converged cycle repeated as the low fidelity (PI idea 2)
-Figure NOT ready on 2026-10-21. What exists:
-- `10_one_period_repeated.png`: one case (L8, 32.5 rpm, 7 deg): looping the first recorded flow period reproduces kLa(0.10) and mixing time (0.50) of the coupled run to 0.6 % and 0.0 %; kLa(0.25) is off by 15-51 % (more periods help). Cost at L8: 4 min vs 2 h.
-- Running: a pipeline that records ONE period after a restart from each L8 grid run and repeats it 22 cycles, for up to 40 (rpm, angle) conditions (about 1 core-hour each). When it ends, the mfbml (LF = repeated period, HF = the normal L8 run) is built exactly like card 03 (learning curve, same baselines).
-- The idea in mfbml terms: LF is cheap (settle the flow, record one period, repeat it); HF is the coupled run.
+`04_repeated_period_mfbml.png`. Low fidelity (LF) = ONE converged flow period repeated 22 cycles with the oxygen and tracer solved on it (record one period after a restart from the run's cycle-230 state; about 1.2 core-hours). High fidelity (HF) = the normal L8 run at the same condition (about 32 core-hours). 39 conditions: angles 4, 5.5, 7, 9 deg, 10 rocking speeds each. Top: LF against HF (line = equal). Bottom: error on unseen conditions against the number of normal runs used (same four methods as card 03; learning curve, 20 random draws).
+- Result: LF and HF agree: correlation of the logs 0.98 (kLa 0.10), 0.91 (kLa 0.25), 0.99 (50 % mixing time); the scatter around the rpm-angle trend is reproduced too (residual correlation 0.92 / 0.77 / 0.92). With ONE constant fitted on 4 normal runs, the error is 0.08 (kLa 0.10), 0.19 (kLa 0.25), 0.11 (mixing time), against 0.57 / 0.71 / 0.36 for a GPR on the normal runs alone.
+- mfbml itself is not the best method here: a constant or a GPR with the LF as prior is as good or better (mfbml 0.15 / 0.28 / 0.28 at n = 4).
+- Cost: about 25 times cheaper than the normal L8 run per condition.
+- Caveats: LF restarts from the HF run's own converged state, so the test shows that the scalars are set by the converged flow of each condition; a new condition still needs its flow settled first (12 warm-start cycles). The validation case (32.5 rpm) differed from the cold run by 2.7 % (kLa 0.10) and 6.7 % (mixing time); a coupled control with the same restart protocol matches the replay to 0.55 %, so the gap comes from the release at cycle 231 instead of 81. One more case in `10_one_period_repeated.png` (an earlier looping test).
+- Not done: the same at L9 and L10.
 
 ## 05  A hydrodynamics-informed law for kLa (new lead)
 `05_kla_law_dissipation.png`. Left: kLa(0.10) against the dissipation rate (EDR) of the same flow at L9 (green) and L10 (pink), straight lines in the log-log plot. Middle: the 50 % mixing time against EDR at L8 (blue) and L9 (green). Right: error for kLa at L10 by method.
