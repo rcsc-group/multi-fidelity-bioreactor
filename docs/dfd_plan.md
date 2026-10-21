@@ -1,88 +1,68 @@
-# APS DFD 2026 plan (v3): what multi-fidelity CFD can and cannot learn about a rocking bioreactor
+# APS DFD 2026 plan (v4): what multi-fidelity CFD can and cannot learn about a rocking bioreactor
 
-Status 2026-10-12. Talk ~2026-11-22. v2 (2026-10-10) built the talk on three hypotheses (H_rep, H_flow, H_nd) and a
-Lagrangian estimator. Since then the pre-registered tests R, P, Q, I, K, L, G and the L8 -> L10 warm start have run
-(diary.md, 2026-10-11/12). This version replaces v2. Every claim below cites a test; anything without a test is
-marked HYPOTHESIS.
+Status 2026-10-21. Talk about 2026-11-22. v3 (2026-10-12) said "scalars are numerical diffusion". The PI meeting of 2026-10-15
+rejected that framing: the goal is to predict L10 quantities from lower levels at a fraction of the cost, convergence to the
+physical value is secondary. This version rewrites the plan around that goal. Every claim names the test that supports it
+(diary.md, section and date). A claim without a test is marked HYPOTHESIS. Numbers are from the diary; confounds are listed.
 
 ## One-sentence thesis
 
-In a 2-D VOF model of a rocking bioreactor, the hydrodynamic design objectives (wall shear, dissipation) are smooth
-in the operating parameters and transfer across grid levels, so a multi-fidelity surrogate (mfbml) maps them at the
-finest level cheaply; the scalar objectives (mixing time, kLa) are set by numerical diffusion at every affordable
-level, so any surrogate of them, single- or multi-fidelity, learns the numerics, not the physics.
+In a 2-D VOF model of a rocking bioreactor, a chain of multi-fidelity models (mfbml, Yi et al. 2407.15110) predicts the
+L10 wall shear and dissipation to 2-7 % on points it never saw, provided an L9 run exists at the same point; the scalar
+quantities (kLa, mixing time) are rough in the rocking speed, are not converged with the grid, and can be predicted from L9
+to about 17-19 % by a simple ratio as well as by the chain.
 
-## Evidence (all pre-registered; power stated in diary.md)
+## Evidence
 
-Hydrodynamics
-- E1. tau_mean, tau_95, EDR are smooth in rpm at L8 (T5). mfbml L8 -> L10 (T2b, full-Bayes residual GP, 3 L10
-  points): rel. RMSE tau_mean 9.7%, tau_95 5.7%, EDR ~20%; 95% coverage 97%; baselines L8 x ratio 17-32%, L10-only
-  GP 25-27%. (T2b missed its own RMSE rule by a hair: 1.22 vs 1.2; stated.)
-- E2. Cheap L10 points: L8 -> L10 warm start passes at 25 and 32.5 rpm (all QoIs <= 3% vs the L9-started
-  reference; at 32.5 rpm also vs a cold L10). It FAILED at 17.5 rpm on tau_mean (+7.3%) because tau_mean was still
-  falling after 6 cycles; tau_95 and EDR pass everywhere. At 25 rpm a 6-cycle continuation shows the fall stops at
-  cycle ~7 and settles at -2% (x8e). The 17.5 rpm continuation decides the cycle count (pending, Mon 2026-10-12).
+### Hydrodynamics (shear, dissipation)
+- H-1. Chain L8 -> L9 -> L10 on ln(QoI), 13 L10 runs, leave-one-out: relative RMSE tau_95 4.6 %, tau_mean 3.0 %, EDR 4.1 %; 12 of 13
+  inside the 95 % interval (diary 2026-10-14, H3). The two-level L8 -> L10 chain FAILS (15.6 / 24.3 %).
+- H-2. The published interval was too narrow because it ignored the L9 uncertainty. With it propagated: half-widths 16 / 23 / 47 %
+  (diary 2026-10-19, band check). Without the L9 run at the held-out point the EDR error is 28 % (tau_95 7.8 %, tau_mean 11 %).
+- H-3. TRUE TEST SET: 5 of 6 new L10 runs at theta 5.5 (between the training angles), no refit: RMSE tau_95 2.0 %, tau_mean 3.1 %,
+  EDR 7.3 %, coverage 5/5 (interim, 2026-10-21). The simple baseline "L9 x one ratio" gives 3.4 / 3.0 / 4.0 %: it matches or beats
+  the chain except for tau_95. The 6th run is resubmitted (timeout at 13 h).
+- H-4. There is a narrow dissipation bump near 22.5 rpm (theta 7): present at L9 and L10, spike of ~0.6 rpm width at L8
+  (outlier screen and width test, 2026-10-18/19). At L9 the pair 22.4 / 22.6 rpm differs by 30 % in EDR and 3.6x in late mixing rate.
 
-Scalars (mixing time dtmix_chi at chi = 0.50/0.75/0.95; kLa_1T_25)
-- E3. Grid ladder at 32.5 rpm, physical D: dtmix_0.95 14 / 28 / 68 / 128 / 191 s (L6-L10); kLa_1T_25
-  183 / 80 / 29 / 17 / 12.7 1/h (L6-L10; L10 = l10c, binary f1c11e0); kLa_1T_10 47 / 29 / 22 1/h (L8-L10).
-  No sign of convergence.
-- E4. Test K (D x 1 ... 1e5 at L6-L9, 22 runs): a 10x change of the physical scalar diffusivity moves dtmix by
-  <= 1.7% at L7, L8 AND L9 (a physics-controlled dtmix would move ~13%/decade) and kLa_1T_25 by <= 3.7%
-  (exponent <= 0.016; penetration theory 0.5). [Corrected 2026-10-12: an earlier version quoted the phase-noisy
-  5-sample kLa_25 under this label.] Formal verdict INCONCLUSIVE: the high-D positive
-  control (levels collapse at 1e5 D) holds for chi 0.50/0.75 but fails for chi 0.95 at L9 (unexplained stall;
-  detached-pocket hypothesis tested and rejected). Stated as such in the talk.
-- E5. Test L: measuring chi at a fixed physical scale (3.9-15.6 mm boxes) keeps the full L8 -> L9 gap
-  (ratio 0.94-1.10, 4 cases): the grid dependence is in the transport, not in how chi is measured.
-- E6. Test G: the solver's scalar microscale is 3-4 mm (3-6 cells), smooth (93-100% of liquid cells at
-  0.1 < c < 0.9); the physical Batchelor scale is 4-10 um. Formal verdict NEITHER (bands too narrow; stated).
-- E7. Roughness in rpm: deterministic (R: reruns reproduce dtmix_0.50 exactly, dtmix_0.95 within 0.2-1%; P: 1e-6
-  rpm reproduces to 4e-8) but steep: +0.01 rpm switches chi(t) between two families (dtmix_0.95 128 vs 90 s at
-  22.5 rpm). Not explained by variance trapped in a persistent region at L8 (I: NOT ISLAND). Periodicity (Q):
-  37.5 rpm aperiodic; 22.5/30/32.5 consistent with periodic; low power elsewhere.
+### Scalars (kLa, mixing time)
+- S-1. The scatter between runs 0.2 rpm apart is in the simulated flow: not our estimator (test S), not our definitions (Kim's
+  MATLAB on our fields, KP), and the same jumps appear in Kim's own pipeline (KS) (diary 2026-10-15). Median deviation from a
+  smooth trend after removing 5 outliers of 63: 3-12 % (diary 2026-10-19).
+- S-2. kLa at C* = 0.10 has the same L8 scatter at theta 4, 7, 9 (0.11 / 0.095 / 0.11 in ln), releases the tracer at cycle 12 or 80
+  with no change (+0.6 +- 3 %), responds smoothly to tiny rpm changes. The 95 % mixing time does not: scatter 1.6-1.9x larger off theta 7,
+  -43 % with a short spin-up, two families of late mixing rates at theta 9 (diary 2026-10-17/19). HERO TARGETS: kLa(C* = 0.10) and the 50 % mixing time.
+- S-3. L10 kLa(C* = 0.10) at 8 + 7 points: a constant L8 ratio FAILS (RMS ln 0.82); L10/L8 is 0.14-0.55, depends on rpm and theta; at
+  theta 7 and 17.5 rpm kLa falls 37 -> 15 -> 8.3 1/h from L8 to L10 (no convergence) (diary 2026-10-19/20).
+- S-4. L8 -> L9 (theta 7, 14 L9 runs, leave-the-rpm-group-out): chain RMS ln 0.22 (kLa) and 0.22 (50 % mixing time); baselines L9-only
+  0.26 / 0.38, L8 x ratio 0.25 / 0.33 (diary 2026-10-19; the first version leaked and is disclosed).
+- S-5. L9 -> L10 (theta 7, 7 L10 runs): chain 0.19, L9 x ratio 0.17: the chain does not beat the ratio (diary 2026-10-21).
+- S-6. FIXED-FLOW SCALAR-MESH TEST (exact record and replay on an L8 flow, 32.5 rpm): scalar mesh L8 / L9 / L10 gives 50 % mixing time
+  11.8 / 19.0 / 24.7 s and kLa(0.25) 28.6 / 38.7 / 51.6: +30 % per level, NOT converged (diary 2026-10-19). Flow resolution and
+  scalar resolution both drive the coupled ladder.
+- S-7. L9 binary and protocol: same-protocol L9 runs reproduce the older cold runs to 0.01 % (diary 2026-10-20). Closed.
 
-## Talk structure (12 min)
+## Open tests (pre-registered, diary 2026-10-21)
+- O-1. Two-dimensional scalar chain: new L9 scalar runs at theta 4, 5.5, 9 (12) and L10 kLa runs at theta 5.5 (5-6) as a TRUE test set; PASS if RMS
+  ln error <= 0.25 and below the L9 x ratio and the L10-only baselines. Queue: 17 jobs pending, first start 2026-10-21 14:37.
+- O-2. Hydrodynamic test set, 6th point (resubmitted, 39 h).
 
-1. Setup (1 min): 2-D VOF rocking bag (Kim/Harris/Cimpeanu solver), levels L6-L10, design space rpm x theta.
-   All claims are about this 2-D model; stated on the first slide.
-2. Hydrodynamics transfer (3 min): E1 + E2. mfbml (Yi et al. 2407.15110, KRR-LR-GPR, Bessa group) L8 -> L10 over
-   rpm x theta: maps of tau_95 and EDR at L10 with intervals; leave-one-out over L10 points; baselines L8 x ratio,
-   L10-only GP. This is the constructive result and the mfbml content.
-3. Scalars do not (5 min): E3 ladder; E4 the D-scan as the central figure (dtmix flat in D, kLa exponent far below
-   0.5, both up to L9); E5 and E6 rule out the measurement scale and show the resolved scalar is mm-scale. The
-   message: a surrogate of CFD dtmix or kLa at L10 is a surrogate of numerical diffusion.
-4. Roughness (2 min): E7. Deterministic steep structure in rpm, not noise and not trapped islands at L8; the
-   0.95 threshold is the fragile one (P, I and the K control all fail there).
-5. Consequences (1 min): which objectives can be optimised with MF-CFD in this class of flows; what a scalar
-   objective needs (a validated sub-grid transfer closure or a D-resolved method), with the kLa exponent as the
-   measurable acceptance test for any such method.
+## Talk structure (12 minutes)
+1. Setup (1 min): 2-D VOF rocking bag, levels L6-L10, the cost ladder (L8 ~0.5 core-h per cycle ... L10 ~30-80 core-h per cycle), the design space (rpm, theta).
+2. Shear and dissipation transfer (3 min): H-1, H-3 figure (prediction and test set), the honest result H-3 (L9 is the key ingredient).
+3. Scalars: what transfers and what does not (5 min): S-2 (hero targets), S-1 (roughness is in the flow, same in Kim's code), S-3 / S-4 / S-5 (predictability
+   ladder), S-6 (flow vs scalar resolution: the record-and-replay tool).
+4. Cost and consequences (2 min): cost per level and per point, the learning curve (TO DO), what an optimiser can trust.
+5. Limits (1 min): 2-D, one geometry, 7 L10 kLa runs at theta 7, warm-start protocol at L10.
 
-Required L10 numbers (success criterion: tau_95, EDR, mixing time, kLa at L10):
-- tau_95, EDR at L10: mfbml map over rpm x theta (HF points below) + the 9-rpm L10 set at theta 7.
-- dtmix, kLa at L10: the existing l10c (32.5 rpm, cold, released at cycle 80) values, reported WITH E3/E4 as their
-  uncertainty statement (they are numerical-diffusion numbers; the talk says so).
+## Remaining work (about 32 days left)
+1. O-1 and O-2 (queue, 2-4 days). 2. Learning curve: error vs number of L10 runs and core-hours (zero compute, after O-1). 3. Cost table per level from logs.
+4. Adversarial Sonnet 5.5 review of this plan and the figures (start now on v4, again before the slides). 5. Figures in the figstyle grammar: levels, scatter, prediction + test set,
+   predictability ladder, fixed-flow scalar mesh. 6. Slides and a 12-minute rehearsal.
 
-## Remaining work (in order)
-
-1. x8e 17.5 rpm verdict (Mon). Decides the HF cycle count: 12 cycles if TRANSIENT; else L8 -> L9 -> L10 chains
-   (about 2x cost) or a cold L10 reference at 17.5 rpm.
-2. HF design over rpm x theta (T6: 50 L8 points; rpm 17.5-37.5, theta 2-10): 6-8 L10 warm-start points chosen by
-   max posterior variance of the L8 -> L10 mfbml residual (sequential, 2 at a time). Budget ~6k core-h. Pre-register
-   the leave-one-out acceptance (rel. RMSE and 95% coverage) BEFORE the first HF point. Exclusions stated: theta 2
-   (low-frequency variability) and 35-37.5 rpm (EDR still moving after 6 L10 cycles) unless the continuation
-   shows they settle.
-3. Figures (figstyle.py): ladder E3, D-scan E4 (the key figure), test L, test G, the chi families (E7), mfbml maps.
-4. Adversarial review (Sonnet 5.5) of this plan + the evidence, AFTER items 1-2 are pre-registered; fix or drop
-   every claim it breaks.
-5. Optional, only if cheap: an L10 D x 10 restart from the l10c release checkpoint up to chi = 0.75 (HYPOTHESIS
-   that L10 is still flat in D; cost to be estimated from l10c timings before any decision).
-
-## Risks
-
-- Warm start fails at low rpm: chains or cold reference; or restrict the HF map to rpm >= 25 (stated).
-- mfbml on the rpm x theta map misses its acceptance rule: report it as measured; E1 at theta 7 stands.
-- Reviewer objection "2-D": the scalar result is a statement about grid-scale numerics of VOF + advection-diffusion,
-  which carries to 3-D at equal resolution; the hydrodynamic numbers are 2-D only. Both stated.
-- Reviewer objection "known that Sc ~ 500 is unresolved": the contribution is the measured consequence (E4: D
-  insensitivity through L9, kLa exponent ladder), not the scale estimate; and that MF surrogates inherit it.
+## Risks and known confounds
+- L10 kLa runs are warm restarts released after 1 cycle (binary lean-eec1f15); L8 and L9 are cold, released at cycle 80. Direct L10 check: 32.5 rpm theta 7, 22.05 vs 22.43 1/h only.
+- Few L10 scalar points (15 now, 6 more coming); run-to-run spread at L10 is not measured (one run per point).
+- The chain's advantage over "L9 x ratio" is small or absent; the talk must not oversell mfbml.
+- The "narrow regime at 22.5 rpm" mechanism is a hypothesis (resonance); only its width at L8 and L9 is measured.
+- Reviewer objection "2-D": all claims are for this 2-D model.
