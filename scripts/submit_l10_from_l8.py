@@ -48,6 +48,7 @@ def main() -> None:
     ap.add_argument("--rate", type=float, default=None, help="measured min per cycle (overrides the theta-7 table)")
     ap.add_argument("--post", type=int, default=0, help="extra cycles AFTER the tracer/oxygen release (release stays at --cycles); one job does warm start, release and the scalar run")
     ap.add_argument("--tag", default="x8", help="run id prefix")
+    ap.add_argument("--account", default=None, help="sbatch account override (mbessa-condo only for a named experiment the user authorised)")
     a = ap.parse_args()
     for pt in a.points:
         rpm, theta = map(float, pt.split(":"))
@@ -71,7 +72,7 @@ def main() -> None:
         job = submit_slurm(p, project_root=ROOT, runs_root=ROOT / "runs", walltime=f"{hours:02d}:00:00",
                            template=ROOT / "config" / "slurm_mpi_template.sh",
                            checkpoint=str((sd / "checkpoint.dump").resolve()), cpus=1, ntasks=NTASKS, mem="4G",
-                           exclude=a.exclude)
+                           exclude=a.exclude, account=a.account)
         print(f"    job={job}")
 
 
