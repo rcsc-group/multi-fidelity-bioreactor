@@ -21,7 +21,9 @@ File: `01_chain_L8_L9_L10_5x3.png`.
 - The model uses the log of each quantity. It trains on all L10 runs of the row. The L9 uncertainty goes into the L10 band.
 - All curves span 14.5 to 38.5 rpm. The L10 runs span 17.5 to 32.5 rpm. So you see the extrapolation.
 - Shear and dissipation: leave-one-out error 4.6 %, 3.0 %, 4.1 %. Test on 5 new runs at 5.5 deg: 2.0 %, 3.1 %, 7.3 %.
-- Gaps: L9 kLa and mixing time exist only at 7 deg. At 4 and 9 deg the L9 curve is an extrapolation. Six L9 runs for 4 and 9 deg are running. L10 mixing time has 3 runs: no prediction.
+- Training set: all 13 L10 runs (7 at 7 deg, 3 at 4 deg, 3 at 9 deg) train each shear row, the dissipation row and the kLa row. Each panel shows only the runs of its own angle.
+- The dissipation, shear, kLa and mixing-time axes are logarithmic.
+- Gaps: L9 kLa and mixing time now exist at 4, 7 and 9 deg (three L9 runs each at 4 and 9 deg). L10 mixing time has 3 runs: no prediction.
 
 ## 02 Two-level model L9 to L10 (5 rows, 3 columns)
 File: `02_two_level_L9_L10_5x3.png`.

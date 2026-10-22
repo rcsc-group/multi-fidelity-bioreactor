@@ -6,7 +6,7 @@ Rows: tau_95, mean tau, EDR, kLa (C* = 0.10), mixing time (chi = 0.50). Columns:
 Markers: simulations (L8 blue, L9 green, L10 pink); dashed line: the fitted lower level; grey line and band: prediction of L10 and its 95 % range, trained on ALL L10 runs.
 L10 hydrodynamic markers carry bars = sd of the last three cycles. A row has a prediction only if there are >= 5 L10 runs with that quantity.
 Uniform rule: all level markers are always drawn; the fitted curves and the L10 prediction span the L10 range (17.5-32.5 rpm) and are drawn only in panels where L9 has >= 3 runs at that angle and the row has >= 5 L10 runs.
-Data gaps (shown as missing, not filled): L9 kLa and mixing time exist only at theta 7; L10 mixing time (50 %) exists at 3 runs.
+Data gaps (shown as missing, not filled): L10 mixing time (50 %) exists at 3 runs.
 Usage: uv run python scripts/fig_mf_grid.py [chain|two_level]
 """
 from __future__ import annotations
@@ -50,7 +50,7 @@ def hydro_data(q):
 
 def scalar_data(q):
     l8 = collect(["t6_l8_*", "kmix_l8_*", "t5_l8_*", "e8_l8_*", "w_l8_*", "dose_l8_*"], q)
-    l9 = [p for p in collect(["fig9_l9_rpm*", "e9_l9_rpm22.4_th7", "e9_l9_rpm22.6_th7", "e9_l9_rpm29.9_th7", "e9_l9_rpm30.1_th7"], q) if p[1] == 7.0]
+    l9 = [p for p in collect(["fig9_l9_rpm*", "w9_l9_rpm*", "e9_l9_rpm22.4_th7", "e9_l9_rpm22.6_th7", "e9_l9_rpm29.9_th7", "e9_l9_rpm30.1_th7"], q)]
     l10 = []
     for d in sorted((ROOT / "runs").glob("t10_l10_*")) + [ROOT / "runs" / "v_l10_rpm32.5_th7"]:
         if d.name.endswith("_ext") or not (d / "results.json").exists():
@@ -144,7 +144,7 @@ def main(mode):
                     ax.plot(GRID, mean, color=cp, lw=1.0)
                 except Exception as e:   # noqa: BLE001
                     print("panel failed", q, th, repr(e)[:80])
-            if q in ("tau_95_t", "tau_mean_t", "kLa_1T_10", "dtmix_0.50"):
+            if q in ("tau_95_t", "tau_mean_t", "edr_mean_t", "kLa_1T_10", "dtmix_0.50"):
                 ax.set_yscale("log")
             ax.set_xlim(14, 39)
             ax.grid(**fs.GRID_KW)
