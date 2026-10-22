@@ -38,6 +38,21 @@ HYDRO = (("tau_95_t", fs.MK["tau"], "max", r"$\tau_{95}$ (Pa)"), ("tau_mean_t", 
          ("edr_mean_t", fs.MK["ediss"], "mean", r"EDR (W/m$^3$)"))
 SCAL = (("kLa_1T_10", fs.MK["cstar_10"], "mean", r"$k_La$, $C^*\!=\!0.10$ (1/h)"), ("dtmix_0.50", fs.MK["chi_0.50"], "mean", r"$t_{\mathrm{mix}}$, $\chi\!=\!0.50$ (s)"))
 MF = ROOT / "experiments/multifidelity"
+KIM = ROOT / "experiments/kimetal2024/csv_raw"
+
+
+def kim_points():
+    """Kim et al. 2024 published points per row quantity: {q: {theta: (rpm array, value array)}}. Never used in training."""
+    import pandas as pd
+    f = pd.read_csv(KIM / "shear_ediss_vs_frequency.csv", skiprows=[1])
+    m = pd.read_csv(KIM / "mixing_kla_vs_frequency.csv")
+    a = pd.read_csv(KIM / "shear_ediss_vs_angle.csv")
+    a4 = a[a.theta_deg == 4.0].iloc[0]
+    out = {"tau_mean_t": {7.0: (f.RPM.values, f.tau_liq_mean.values), 4.0: (np.array([32.5]), np.array([a4.tau_liq_mean]))},
+           "edr_mean_t": {7.0: (f.RPM.values, f.Ediss_liq_mean.values), 4.0: (np.array([32.5]), np.array([a4.Ediss_liq_mean]))},
+           "kLa_1T_10": {7.0: (m.RPM.values, m.kLa_exp5pts_10.values)},
+           "dtmix_0.50": {7.0: (m.RPM.values, m["dtmix_strict_0.5"].values)}}
+    return out
 
 
 def hydro_data(q):
@@ -121,6 +136,7 @@ def main(mode):
     for q, mk, stat, lab in SCAL:
         a8, a9, a10 = scalar_data(q)
         rows.append((q, mk, stat, lab, a8, a9, a10, None))
+    kim = kim_points()
     for i, (q, mk, stat, lab, a8, a9, a10, hf) in enumerate(rows):
         pred = models(mode, a8, a9, a10)
         for j, th in enumerate(THETAS):
@@ -144,6 +160,9 @@ def main(mode):
                     ax.plot(GRID, mean, color=cp, lw=1.0)
                 except Exception as e:   # noqa: BLE001
                     print("panel failed", q, th, repr(e)[:80])
+            if q in kim and th in kim[q]:
+                kx, ky = kim[q][th]
+                ax.plot(kx, ky, ls="none", marker=mk, ms=9, mfc="none", mec="k", mew=0.9, zorder=2)
             if q in ("tau_95_t", "tau_mean_t", "edr_mean_t", "kLa_1T_10", "dtmix_0.50"):
                 ax.set_yscale("log")
             ax.set_xlim(14, 39)
@@ -155,7 +174,8 @@ def main(mode):
             if i == 4:
                 ax.set_xlabel("rocking speed (rpm)")
     h = [Line2D([], [], color=fs.level_colour(L), marker="o", mfc=fs.level_colour(L), ls="none", ms=5, label=f"L{L}") for L in (8, 9, 10)] + \
-        [Patch(facecolor=cp, alpha=0.3, label="L10 prediction")]
+        [Patch(facecolor=cp, alpha=0.3, label="L10 prediction"),
+         Line2D([], [], color="k", marker="o", mfc="none", ls="none", ms=8, label="Kim et al.\n(not trained on)")]
     lg = axes[0, 2].legend(handles=h, fontsize=8, frameon=False, loc="upper left", bbox_to_anchor=(1.04, 1.0))
     fig.tight_layout()
     out = MF / f"fig_mf_{mode}_5x3"
