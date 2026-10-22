@@ -55,7 +55,8 @@ def cycle_sd(run, q):
     for k in range(int(round(c1 - c0))):
         m = (cyc >= c0 + k) & (cyc < c0 + k + 1)
         a = arr[m]
-        vals.append({"tau_mean_t": a[:, 5].mean(), "tau_95_t": np.median(a[:, 2]), "edr_mean_t": a[:, COL_EDISS].mean()}[q])
+        vals.append({"tau_mean_t": a[:, 5].mean(), "tau_95_t": np.median(a[:, 2]), "edr_mean_t": a[:, COL_EDISS].mean(),
+                     "tau_amp_t": 0.5 * (a[:, 10].max() - a[:, 10].min()), "edr_max_t": a[:, COL_EDISS].max()}[q])
     vals = np.array(vals)
     return float(vals.std(ddof=1) / vals.mean())
 

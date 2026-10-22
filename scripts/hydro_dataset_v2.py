@@ -42,7 +42,9 @@ def qois(run):
     c_end = min(math.floor(c_rel + 1e-6), math.floor(cyc.max() + 1e-6))
     m = (cyc >= c_end - N_CYC) & (cyc < c_end)
     return dict(tau_mean_t=float(arr[m, 5].mean() * scale), tau_95_t=float(np.median(arr[m, 2]) * scale),
-                edr_mean_t=float(arr[m, COL_EDISS].mean() * escale), window=[float(c_end - N_CYC), float(c_end)], n_steps=int(m.sum()))
+                edr_mean_t=float(arr[m, COL_EDISS].mean() * escale),
+                # Kim et al. 2024 Fig 13 statistics (plot_fig13.py): amplitude of the SIGNED spatial-mean shear, max over time of the spatial-mean EDR
+                tau_amp_t=float(0.5 * (arr[m, 10].max() - arr[m, 10].min()) * scale), edr_max_t=float(arr[m, COL_EDISS].max() * escale), window=[float(c_end - N_CYC), float(c_end)], n_steps=int(m.sum()))
 
 
 def main():

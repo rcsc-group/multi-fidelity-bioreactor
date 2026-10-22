@@ -34,8 +34,8 @@ from mfbml_local.krr_lr_gpr_fullbayes import FullBayesKRRLRGP  # noqa: E402
 
 THETAS = (4.0, 7.0, 9.0)
 GRID = np.linspace(14.5, 38.5, 49)   # the full range of the L8 and L9 data: the predictions extrapolate beyond the L10 runs (17.5-32.5 rpm)
-HYDRO = (("tau_95_t", fs.MK["tau"], "max", r"$\tau_{95}$ (Pa)"), ("tau_mean_t", fs.MK["tau"], "mean", r"$\overline{\tau}$ (Pa)"),
-         ("edr_mean_t", fs.MK["ediss"], "mean", r"EDR (W/m$^3$)"))
+HYDRO = (("tau_95_t", fs.MK["tau"], "max", r"$\tau_{95}$ (Pa)"), ("tau_amp_t", fs.MK["tau"], "mean", r"$\overline{\tau}$ (Pa)"),
+         ("edr_max_t", fs.MK["ediss"], "mean", r"EDR (W/m$^3$)"))
 SCAL = (("kLa_1T_10", fs.MK["cstar_10"], "mean", r"$k_La$, $C^*\!=\!0.10$ (1/h)"), ("dtmix_0.50", fs.MK["chi_0.50"], "mean", r"$t_{\mathrm{mix}}$, $\chi\!=\!0.50$ (s)"))
 MF = ROOT / "experiments/multifidelity"
 KIM = ROOT / "experiments/kimetal2024/csv_raw"
@@ -48,8 +48,8 @@ def kim_points():
     m = pd.read_csv(KIM / "mixing_kla_vs_frequency.csv")
     a = pd.read_csv(KIM / "shear_ediss_vs_angle.csv")
     a4 = a[a.theta_deg == 4.0].iloc[0]
-    out = {"tau_mean_t": {7.0: (f.RPM.values, f.tau_liq_mean.values), 4.0: (np.array([32.5]), np.array([a4.tau_liq_mean]))},
-           "edr_mean_t": {7.0: (f.RPM.values, f.Ediss_liq_mean.values), 4.0: (np.array([32.5]), np.array([a4.Ediss_liq_mean]))},
+    out = {"tau_amp_t": {7.0: (f.RPM.values, f.tau_liq_mean.values), 4.0: (np.array([32.5]), np.array([a4.tau_liq_mean]))},
+           "edr_max_t": {7.0: (f.RPM.values, f.Ediss_liq_mean.values), 4.0: (np.array([32.5]), np.array([a4.Ediss_liq_mean]))},
            "kLa_1T_10": {7.0: (m.RPM.values, m.kLa_exp5pts_10.values)},
            "dtmix_0.50": {7.0: (m.RPM.values, m["dtmix_strict_0.5"].values)}}
     return out
@@ -163,7 +163,7 @@ def main(mode):
             if q in kim and th in kim[q]:
                 kx, ky = kim[q][th]
                 ax.plot(kx, ky, ls="none", marker=mk, ms=9, mfc="none", mec="k", mew=0.9, zorder=2)
-            if q in ("tau_95_t", "tau_mean_t", "edr_mean_t", "kLa_1T_10", "dtmix_0.50"):
+            if q in ("tau_95_t", "tau_amp_t", "edr_max_t", "kLa_1T_10", "dtmix_0.50"):
                 ax.set_yscale("log")
             ax.set_xlim(14, 39)
             ax.grid(**fs.GRID_KW)

@@ -23,7 +23,10 @@ File: `01_chain_L8_L9_L10_5x3.png`.
 - Shear and dissipation: leave-one-out error 4.6 %, 3.0 %, 4.1 %. Test on 5 new runs at 5.5 deg: 2.0 %, 3.1 %, 7.3 %.
 - Training set: all 13 L10 runs (7 at 7 deg, 3 at 4 deg, 3 at 9 deg) train each shear row, the dissipation row and the kLa row. Each panel shows only the runs of its own angle.
 - The dissipation, shear, kLa and mixing-time axes are logarithmic.
-- Black large open markers: Kim et al. 2024 (published at 7 deg; shear and dissipation also at 4 deg, 32.5 rpm). We did not train on them. Kim kLa is the five-point fit at C* = 0.10: it falls on our L10 prediction. Kim shear and dissipation are the MAXIMUM over time of the spatial mean, and Kim mixing time is the strict definition: they are different statistics from ours (time mean, first crossing), so an offset is expected.
+- Black large open markers: Kim et al. 2024 (published at 7 deg; shear and dissipation also at 4 deg, 32.5 rpm). We did not train on them.
+- Mean shear and EDR rows use Kim's statistics: amplitude of the signed spatial-mean shear, and maximum over time of the spatial-mean EDR, over the last 3 cycles. Our L10 agrees with Kim to 4-7 %, including the 22.5 rpm bump. The leave-one-out and test-set errors in this card (3.0 %, 4.1 %, 3.1 %, 7.3 %) are for the older time-mean statistics. They are not yet repeated for these.
+- Kim kLa (five-point fit, C* = 0.10) falls on our L10 prediction.
+- Kim mixing time is 3-5 times above our L9 and L10 values. The cause is not yet found.
 - Gaps: L9 kLa and mixing time now exist at 4, 7 and 9 deg (three L9 runs each at 4 and 9 deg). L10 mixing time has 3 runs: no prediction.
 
 ## 02 Two-level model L9 to L10 (5 rows, 3 columns)
