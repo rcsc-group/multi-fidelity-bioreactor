@@ -65,7 +65,10 @@ def hydro_data(q):
 
 def scalar_data(q):
     l8 = collect(["t6_l8_*", "kmix_l8_*", "t5_l8_*", "e8_l8_*", "w_l8_*", "dose_l8_*"], q)
-    l9 = [p for p in collect(["fig9_l9_rpm*", "w9_l9_rpm*", "e9_l9_rpm22.4_th7", "e9_l9_rpm22.6_th7", "e9_l9_rpm29.9_th7", "e9_l9_rpm30.1_th7"], q)]
+    l9all = collect(["fig9_l9_rpm*", "w9_l9_rpm*", "e9_l9_rpm22.4_th7", "e9_l9_rpm22.6_th7", "e9_l9_rpm29.9_th7", "e9_l9_rpm30.1_th7"], q)
+    # the warm-start L9 protocol reproduces kLa (C* = 0.10) (3 of 3 within 15 %) but not the 50 % mixing time (1 of 3): drawn apart there
+    l9 = [p for p in l9all if not (q == "dtmix_0.50" and p[3].startswith("w9"))]
+    l9w = [p for p in l9all if q == "dtmix_0.50" and p[3].startswith("w9")]
     l10 = []
     for d in sorted((ROOT / "runs").glob("t10_l10_*")) + [ROOT / "runs" / "v_l10_rpm32.5_th7"]:
         if d.name.endswith("_ext") or not (d / "results.json").exists():
@@ -75,7 +78,7 @@ def scalar_data(q):
             p = json.loads((d / "params.json").read_text())
             l10.append((p["omega_b"] * 60 / (2 * math.pi), p["theta_max"][0], float(v)))
     arr = lambda rows: (np.array([[r[0], r[1]] for r in rows], float), np.array([r[2] for r in rows], float))   # noqa: E731
-    return arr(l8), arr(l9), arr(l10)
+    return arr(l8), arr(l9), arr(l10), (arr(l9w) if l9w else (np.zeros((0, 2)), np.zeros(0)))
 
 
 def lf_cached(X, y):
@@ -132,12 +135,12 @@ def main(mode):
     rows = []
     for q, mk, stat, lab in HYDRO:
         a8, a9, a10, hf = hydro_data(q)
-        rows.append((q, mk, stat, lab, a8, a9, a10, hf))
+        rows.append((q, mk, stat, lab, a8, a9, a10, hf, None))
     for q, mk, stat, lab in SCAL:
-        a8, a9, a10 = scalar_data(q)
-        rows.append((q, mk, stat, lab, a8, a9, a10, None))
+        a8, a9, a10, w9 = scalar_data(q)
+        rows.append((q, mk, stat, lab, a8, a9, a10, None, w9))
     kim = kim_points()
-    for i, (q, mk, stat, lab, a8, a9, a10, hf) in enumerate(rows):
+    for i, (q, mk, stat, lab, a8, a9, a10, hf, w9) in enumerate(rows):
         pred = models(mode, a8, a9, a10)
         for j, th in enumerate(THETAS):
             ax = axes[i, j]
@@ -160,6 +163,9 @@ def main(mode):
                     ax.plot(GRID, mean, color=cp, lw=1.0)
                 except Exception as e:   # noqa: BLE001
                     print("panel failed", q, th, repr(e)[:80])
+            if w9 is not None and (w9[0][:, 1] == th).any():
+                mw = w9[0][:, 1] == th
+                ax.plot(w9[0][mw, 0], w9[1][mw], ls="none", marker=mk, ms=5, mfc="none", mec=fs.level_colour(9), mew=0.8, alpha=0.5)
             if q in kim and th in kim[q]:
                 kx, ky = kim[q][th]
                 ax.plot(kx, ky, ls="none", marker=mk, ms=9, mfc="none", mec="k", mew=0.9, zorder=2)
@@ -175,6 +181,7 @@ def main(mode):
                 ax.set_xlabel("rocking speed (rpm)")
     h = [Line2D([], [], color=fs.level_colour(L), marker="o", mfc=fs.level_colour(L), ls="none", ms=5, label=f"L{L}") for L in (8, 9, 10)] + \
         [Patch(facecolor=cp, alpha=0.3, label="L10 prediction"),
+         Line2D([], [], color=fs.level_colour(9), marker="v", mfc="none", ls="none", ms=5, alpha=0.5, label="L9 warm start\n(mixing time)"),
          Line2D([], [], color="k", marker="o", mfc="none", ls="none", ms=8, label="Kim et al.\n(not trained on)")]
     lg = axes[0, 2].legend(handles=h, fontsize=8, frameon=False, loc="upper left", bbox_to_anchor=(1.04, 1.0))
     fig.tight_layout()
