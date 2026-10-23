@@ -16,7 +16,7 @@ from scripts.test_h1_mfbml import BOUNDS, LF_THETAS, RPMS, hf_points, hf_run, lf
 from scripts.test_h2_mfbml import MeanAdapter, l9_points, l9_run  # noqa: E402
 from mfbml_local.krr_lr_gpr_fullbayes import FullBayesKRRLRGP  # noqa: E402
 
-QS = ("tau_95_t", "tau_mean_t", "edr_mean_t")
+QS = tuple(sys.argv[1].split(",")) if len(sys.argv) > 1 else ("tau_95_t", "tau_mean_t", "edr_mean_t")   # e.g. tau_amp_t,edr_max_t (Kim statistics)
 DELTA = 0.02
 
 
@@ -79,7 +79,7 @@ def main():
     verdict = "TOO NARROW" if min(cover_c) <= 10 or max(ratio) > 2 else "HONEST" if min(cover_c) >= 11 and max(ratio) <= 1.5 else "MIXED"
     out["verdict"] = verdict
     print("verdict:", verdict, "coverage C", cover_c, "RMSE ratio C/A", [round(r, 2) for r in ratio])
-    (ROOT / "experiments/multifidelity/h3_band_check.json").write_text(json.dumps(out, indent=1))
+    (ROOT / "experiments/multifidelity" / ("h3_band_check.json" if len(sys.argv) < 2 else "h3_band_check_kim.json")).write_text(json.dumps(out, indent=1))
 
 
 if __name__ == "__main__":

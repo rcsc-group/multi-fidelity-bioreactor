@@ -24,7 +24,7 @@ from scripts.test_h1_mfbml import BOUNDS, LF_THETAS, RPMS, hf_points, hf_run, lf
 from scripts.test_h2_mfbml import l9_points, l9_run  # noqa: E402
 from mfbml_local.krr_lr_gpr_fullbayes import FullBayesKRRLRGP  # noqa: E402
 
-QS = ("tau_95_t", "tau_mean_t", "edr_mean_t")
+QS = tuple(sys.argv[1].split(",")) if len(sys.argv) > 1 else ("tau_95_t", "tau_mean_t", "edr_mean_t")   # e.g. tau_amp_t,edr_max_t (Kim statistics)
 TEST_RPM = (17.5, 20, 22.5, 27.5, 30, 32.5)
 TH = 5.5
 
@@ -80,10 +80,10 @@ def main():
               f" | C (without) RMSE {row['C']['rmse']:.1%} cover {row['C']['cover']}/{len(test)} | L9 x ratio {row['l9_ratio_rmse']:.1%}  L8 x ratio {row['l8_ratio_rmse']:.1%}")
     n = len(test)
     need = 5 if n >= 6 else max(1, math.ceil(n * 5 / 6))
-    ok = all(out[q]["A"]["rmse"] <= 0.10 and out[q]["A"]["cover"] >= need for q in ("tau_95_t", "edr_mean_t"))
+    ok = all(out[q]["A"]["rmse"] <= 0.10 and out[q]["A"]["cover"] >= need for q in QS if q != "tau_mean_t" and q != "tau_amp_t")
     out["verdict"] = ("PASS" if ok else "FAIL") + ("" if n >= 6 else f" (interim, {n} of 6 test points)")
     print("verdict:", out["verdict"])
-    (ROOT / "experiments/multifidelity/test_h4_testset.json").write_text(json.dumps(out, indent=1))
+    (ROOT / "experiments/multifidelity" / ("test_h4_testset.json" if len(sys.argv) < 2 else "test_h4_testset_kim.json")).write_text(json.dumps(out, indent=1))
 
 
 if __name__ == "__main__":
