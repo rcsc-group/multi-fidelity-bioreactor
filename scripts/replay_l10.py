@@ -26,7 +26,23 @@ def main():
     ap.add_argument("--calibrate", action="store_true")
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--walltime", default=None)
+    ap.add_argument("--replay", action="store_true", help="loop the finished L10 record on the L10 scalar grid (no refinement, no projection)")
     a = ap.parse_args()
+    if a.replay:
+        sp = json.loads((SRC / "params.json").read_text())
+        _, T = pp._t_scales(sp)
+        rdir = REC_ROOT / RID
+        start = rl.rg.scratch_dir(RID) / "replay_start.dump"
+        t_rec0 = rl.checkpoint_time(start)
+        lid = "lfrep_l10_rpm32.5_th7"
+        p = rl.replay_params(sp, lid, t_rec0, rdir)
+        p.update(replay_scalar_level=10, replay_project_flux=0)   # same grid as the flow: the replay is exact (gate F1)
+        rl.NTASKS = 32                                            # the record has one flux file per rank (32)
+        if a.dry_run:
+            print("dry run: would submit", lid, "t_rec0", t_rec0 / T, "cycles", rl.N_REPLAY_CYCLES)
+            return
+        print("job", rl._submit(p, start, a.walltime or "36:00:00"))
+        return
     if not rg.binary_is_current(rl.REC_BIN, rl.SRC_TREE):
         raise SystemExit(f"{rl.REC_BIN} is older than {rl.SRC_TREE}: rebuild first")
     ck = SRC / "checkpoint.dump"
