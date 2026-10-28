@@ -57,3 +57,4 @@ item starts, give it a diary entry; when it lands, delete it here.
 - Fig 13 MF figures still use the old buggy 3-grid u_bar (0.24/0.30). Faithful E&H gives 0.5-1.5 (diag_eh_ubar.py). Decide: apply it, or get L11 grids.
 - kLa: whole-period estimator adopted in Figs 11/12 (2026-10-01). Still open: re-check mixing time (dtmix) the same way; the CI restart test still uses the 5-point kLa.
 - src/BioReactor.c ~l.368 comments geometry_a as 'bag half-length (m)', but snapshots show the bag spans the full L0 = 1 = 0.25 m. Check and fix the comment (2026-10-11, test I agent).
+- Kim offline comparison (2026-10-28): when jobs 8051486/8051487 end, compare kim_l8_rpm32.5_th7 with lf_l8_rpm32.5_th7 (tracer total, max concentration, kLa_1T_10, dtmix_0.50); then decide whether to emulate his T/100 snapshot hold and read the rest of TracerTest_test.c.

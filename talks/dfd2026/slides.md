@@ -8,12 +8,12 @@ colorSchema: light
 transition: fade
 ---
 
-<video src="/title_v2.mp4" autoplay loop muted playsinline class="absolute inset-0 w-full h-full object-cover" />
-<div class="absolute inset-0" style="background: linear-gradient(180deg, rgba(8,16,28,0.55) 0%, rgba(8,16,28,0.3) 30%, rgba(8,16,28,0) 50%)" />
+<video src="/title_v2_light.mp4" autoplay loop muted playsinline class="absolute inset-0 w-full h-full object-cover" />
 
-<div class="absolute left-14 top-12 right-14 text-white">
-  <div style="font-size: 42px; line-height: 1.15; font-weight: 700; letter-spacing: -0.5px; text-shadow: 0 2px 14px rgba(0,0,0,0.55)">Multi-fidelity Bayesian optimization of mixing in two-phase rocking bioreactors</div>
-  <div class="mt-5" style="font-size: 24px; font-weight: 400; color: #dbe8ff; text-shadow: 0 1px 10px rgba(0,0,0,0.6)">Elvis Aguero · [co-authors] · Brown University</div>
+<div class="absolute left-14 top-12 right-14">
+  <div style="font-size: 40px; line-height: 1.15; font-weight: 300; letter-spacing: -0.5px; color: #14202e">Multi-fidelity Bayesian optimization of mixing in two-phase rocking bioreactors</div>
+  <div class="mt-5" style="font-size: 22px; font-weight: 200; color: #14202e"><b style="font-weight: 300">Elvis Aguero</b> · Minki Kim · Radu Cimpeanu · Miguel Bessa · Daniel Harris</div>
+  <div class="mt-1" style="font-size: 17px; font-weight: 200; color: #7a8797">Brown University · Kookmin University · University of Warwick</div>
 </div>
 
 ---

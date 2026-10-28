@@ -26,6 +26,11 @@ GROUND = np.array([0.043, 0.082, 0.140])
 EMBER = np.array([1.0, 0.42, 0.12])
 OXY = LinearSegmentedColormap.from_list("oxy", ["#0b1626", "#1d2a78", "#1f6fc0", "#14b5cc", "#79e6b4", "#f4f7a8"])
 W, H = 1920, 1080
+LIGHT = "--light" in sys.argv     # white ground, light oxygen map, dissipation glow blended in (title_v2_light.mp4)
+if LIGHT:
+    sys.argv.remove("--light")
+    GROUND = np.array([1.0, 1.0, 1.0])
+    OXY = LinearSegmentedColormap.from_list("oxy", ["#eef3f8", "#b9dcee", "#5fb7d6", "#1f6fc0", "#1d2a78"])
 
 
 def load(f, n=256, npl=10):
@@ -42,7 +47,10 @@ def render(f, t, T, th_max, sign, state):
     w = np.clip((np.where(core, q, lo) - lo) / (hi - lo), 0, 1) ** 2.2
     w = ndimage.gaussian_filter(w, 0.8)
     v = np.clip(ndimage.gaussian_filter(oxy, (1.2, 4.0)) / 0.12, 0, 1) ** 0.5
-    col = np.clip(OXY(v)[..., :3] + 0.85 * w[..., None] * EMBER, 0, 1)
+    if LIGHT:
+        col = OXY(v)[..., :3] * (1 - 0.75 * w[..., None]) + EMBER * 0.75 * w[..., None]
+    else:
+        col = np.clip(OXY(v)[..., :3] + 0.85 * w[..., None] * EMBER, 0, 1)
     # colour carried into the air by the nearest liquid cell, so the interface has no dark halo; the interface itself comes from the continuous
     # VOF fraction (upsampled and smoothed), not from a thresholded mask: a thresholded mask is what looked pixelated
     idx = ndimage.distance_transform_edt(~liquid, return_distances=False, return_indices=True)
@@ -81,12 +89,12 @@ def main():
     state = {}
     if a.mode == "still":
         i = min(sel, key=lambda i: abs(ts[i] / T - 89.25))
-        Image.fromarray(render(files[i], ts[i], T, th_max, a.sign, state)).save(Path(__file__).resolve().parent / f"still_v2_{'p' if a.sign > 0 else 'm'}.png")
+        Image.fromarray(render(files[i], ts[i], T, th_max, a.sign, state)).save(Path(__file__).resolve().parent / f"still_v2{'_light' if LIGHT else ''}_{'p' if a.sign > 0 else 'm'}.png")
         return
     ff = REPO / ".venv/lib/python3.12/site-packages/imageio_ffmpeg/binaries/ffmpeg-linux-x86_64-v7.0.2"
     nfade = int(1.2 * a.fps); nfr = len(sel)
     cmd = [str(ff), "-y", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}", "-r", str(a.fps), "-i", "-",
-           "-vf", f"fade=t=in:st=0:d=1.2,fade=t=out:st={nfr / a.fps - 1.2}:d=1.2", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "18", str(OUT / "title_v2.mp4")]
+           "-vf", f"fade=t=in:st=0:d=1.2,fade=t=out:st={nfr / a.fps - 1.2}:d=1.2", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "18", str(OUT / ("title_v2_light.mp4" if LIGHT else "title_v2.mp4"))]
     pr = subprocess.Popen(cmd, stdin=subprocess.PIPE)
     for k, i in enumerate(sel):
         pr.stdin.write(render(files[i], ts[i], T, th_max, a.sign, state).tobytes())

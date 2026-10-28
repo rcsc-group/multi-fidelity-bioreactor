@@ -437,6 +437,21 @@ static int next_period_count (double x) {
 #define REC_AT_CELL is_leaf(cell)
 #endif
 #define REC_EPS 1e-9                        // relative tolerance when comparing times
+// -DREC_KIM_FLUX=1 (with -DRECORD_FLUX; default 0): store ufk = fm*face_value(u) instead of uf. It emulates
+// an offline solver that rebuilds the advecting face velocity from the stored cell-centred velocity (not
+// divergence-free), to measure the error of that approach. Same record format; uf, u and the run are untouched.
+#ifndef REC_KIM_FLUX
+#define REC_KIM_FLUX 0
+#endif
+#if REC_KIM_FLUX && !RECORD_FLUX
+#error "REC_KIM_FLUX needs RECORD_FLUX"
+#endif
+#if REC_KIM_FLUX && dimension != 2
+#error "REC_KIM_FLUX is 2D only"
+#endif
+#if REC_KIM_FLUX
+face vector ufk[];                          // declared once at file scope (see the note at tau_field)
+#endif
 static const char rec_magic[8] = {'F','L','X','R','E','C','0','1'};
 static double t_rec0 = -1., t_rec_end = 1e30;   // record window; set in main()
 static FILE * fp_rec = NULL;
@@ -468,8 +483,13 @@ static void rec_gather (double * buf)
     if (REC_AT_CELL) {
       if (is_local(cell))
         foreach_dimension() {
+#if REC_KIM_FLUX
+          *w++ = ufk.x[];
+          *w++ = ufk.x[1];
+#else
           *w++ = uf.x[];
           *w++ = uf.x[1];
+#endif
         }
       continue;
     }
@@ -586,6 +606,18 @@ static void rec_write_step (void)
   first = 0;
   long long n = rec_leaf_count();
   double * buf = (double *) malloc (n*REC_NPC*sizeof(double));
+#if REC_KIM_FLUX
+  // foreach_face() also visits the face on the upper domain edge (it lives in a ghost cell), computed from
+  // the ghost value of u; boundary() then fills the faces that sit in the halos of the other ranks and of
+  // coarser neighbours, so that ufk.x[1] is defined the same way uf.x[1] is.
+  // noauto (hence the explicit 2D order x, y): without it qcc calls boundary() on u first, which refreshes
+  // the ghost and halo cells of u and changes the coupled run (measured: i = 200 on, L6, 2 ranks). With it,
+  // u is only read, as the solver holds it; the faces that reach a ghost or halo cell of u (~0.5 % of them
+  // at the first recorded step) use the value u has there.
+  foreach_face (x, y, noauto)
+    ufk.x[] = fm.x[]*face_value (u.x, 0);
+  boundary ((scalar *){ufk});
+#endif
   rec_gather (buf);
   int hi = iter;
   double ht = t, hdt = dt;
