@@ -94,7 +94,7 @@ def main():
     ff = REPO / ".venv/lib/python3.12/site-packages/imageio_ffmpeg/binaries/ffmpeg-linux-x86_64-v7.0.2"
     nfade = int(1.2 * a.fps); nfr = len(sel)
     cmd = [str(ff), "-y", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}", "-r", str(a.fps), "-i", "-",
-           "-vf", f"fade=t=in:st=0:d=1.2,fade=t=out:st={nfr / a.fps - 1.2}:d=1.2", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "18", str(OUT / ("title_v2_light.mp4" if LIGHT else "title_v2.mp4"))]
+           "-vf", f"fade=t=in:st=0:d=1.2{':color=white' if LIGHT else ''},fade=t=out:st={nfr / a.fps - 1.2}:d=1.2{':color=white' if LIGHT else ''}", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "18", str(OUT / ("title_v2_light.mp4" if LIGHT else "title_v2.mp4"))]
     pr = subprocess.Popen(cmd, stdin=subprocess.PIPE)
     for k, i in enumerate(sel):
         pr.stdin.write(render(files[i], ts[i], T, th_max, a.sign, state).tobytes())
