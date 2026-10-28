@@ -1,0 +1,12 @@
+@import "@fontsource/inter/200.css";
+@import "@fontsource/inter/300.css";
+:root { --ground: #ffffff; --ink: #14202e; --mute: #7a8797; --accent: #e8590c; }
+/* Helvetica Neue Thin on the presenting machine; Inter ExtraLight is the stand-in where Helvetica Neue is not installed (Oscar previews) */
+.slidev-layout, .slidev-page { font-family: "Helvetica Neue", "Inter", sans-serif; font-weight: 200; background: var(--ground); color: var(--ink); }
+.cap { color: var(--mute); font-size: 17px; }
+.name { color: var(--accent); font-size: 22px; font-weight: 300; }
+.slidev-layout img { margin-top: 10px; }
+
+/* equations: Computer Modern (KaTeX fonts ship with Slidev); variables in the italic math face */
+.eq, .eq * { font-family: "KaTeX_Main", "Latin Modern Math", "Latin Modern Roman", serif !important; font-weight: 400 !important; }
+.eq i, .eq .v { font-family: "KaTeX_Math", "KaTeX_Main", serif !important; font-style: italic; }

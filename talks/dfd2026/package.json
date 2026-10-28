@@ -1,0 +1,26 @@
+{
+  "name": "dfd2026-talk",
+  "private": true,
+  "scripts": {
+    "dev": "slidev --host 127.0.0.1",
+    "build": "slidev build",
+    "export": "slidev export"
+  },
+  "devDependencies": {
+    "@slidev/cli": "^53.0.0",
+    "@slidev/theme-default": "^0.25.0",
+    "playwright-chromium": "^1.64.1",
+    "vue": "^3.5.44"
+  },
+  "pnpm": {
+    "overrides": {
+      "markdown-it": "14.1.0"
+    }
+  },
+  "dependencies": {
+    "@fontsource/ibm-plex-sans": "^5.3.0",
+    "@fontsource/inter": "^5.3.0",
+    "@fontsource/jost": "^5.3.0",
+    "@fontsource/stix-two-text": "^5.3.0"
+  }
+}
