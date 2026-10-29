@@ -833,7 +833,17 @@ static void replay_load_step (void)
       fprintf (stderr, "ERROR: replay: truncated record at step %ld\n", rec_k);
       exit (1);
     }
-    rec_scatter (buf);
+    // params.replay_hold = n > 0 emulates an offline solver that stores n snapshots per period: the flux is
+    // loaded at the first step of each snapshot interval (time from the first record) and held over the rest.
+    static double rec_t_first = 0.;
+    static long rec_snap = -1;
+    if (rec_pass == 0 && rec_k == 0)
+      rec_t_first = ht;
+    long snap = params.replay_hold > 0 ?
+      (long) floor ((ht - rec_t_first)/(T_per_st/params.replay_hold) + REC_EPS) : -2;
+    if (snap != rec_snap || params.replay_hold <= 0)
+      rec_scatter (buf);
+    rec_snap = snap;
     free (buf);
     if (params.replay_scalar_level > params.fidelity)
       rec_prolong();

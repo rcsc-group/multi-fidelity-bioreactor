@@ -1,0 +1,88 @@
+--- a/codes_bio_run/BioReactor.c
++++ b/codes_bio_run/BioReactor.c
+@@ -66,6 +66,8 @@
+     back, and it removes the ASCII->binary conversion pass entirely.
+     Set to 0 to reproduce the old text dumps. */
+ #define OUT_DUMP_BINARY   1
++#define PREREG_REC        0   // offline-vs-DNS test: record u, f, uf each step
++#define PREREG_DIAG       0   // offline-vs-DNS test: per-step scalar sums
+ 
+ #if OUT_DUMP_BINARY
+ /** Single source of truth: the writer lives beside the offline solver it
+@@ -992,3 +994,5 @@
+   #endif
+ }
+ #endif
++
++#include "/oscar/scratch/eaguerov/kim_pipeline/prereg_src/prereg_MK.h"
+--- a/codes/TracerTest_test.c
++++ b/codes/TracerTest_test.c
+@@ -102,6 +102,13 @@
+ 
+ #if !EMBED
+   scalar cs[];
++#endif
++#define PREREG_OFFLINE 1
++#ifndef PREREG_MODE
++#define PREREG_MODE 0
++#endif
++#ifndef PREREG_DIAG
++#define PREREG_DIAG 0
+ #endif
+ #ifndef NFILES
+ #define NFILES 1000
+@@ -440,6 +447,7 @@
+ 
+ #include "flowmap_MK.h"   // cached record->cell map, local buffer, cycle cache
+ 
++#if !PREREG_MODE
+ // event restore_all(i++){
+ event restore_all(t = 0; t <= t_end_file; t += dt_file_import){
+   TM_START (TM_IMPORT);
+@@ -938,6 +946,7 @@
+   dt = dtnext(timestep (uf, DT));
+   TM_STOP (TM_FIELDDEF);
+ }
++#endif // !PREREG_MODE
+ 
+ #endif
+ 
+@@ -945,6 +954,7 @@
+ //** Initial condition (not i=0)  **//
+ // event init (i=2; i++,last) {
+ #if RESTORE
++#if !PREREG_MODE   // test modes seed in prereg_MK.h, where the producer seeds
+ event initial_conditions (i = 0) {
+ 
+ #if TRACER
+@@ -999,6 +1009,7 @@
+   // MPI halo sync after seeding tracer / oxygen fields
+   boundary({c, c1, c2, c3, oxy});
+ }
++#endif // !PREREG_MODE
+ 
+ #if OXYGEN_REPLE
+ event oxygen_replenish(i++){
+@@ -1020,6 +1031,7 @@
+   fprintf(stderr, "i: %i t: %g dt: %g #Cells: %ld \n", i, t, dt, grid->n);
+ }
+ 
++#if !PREREG_MODE
+ //  Log performance and runtime
+ event logstats (t+=0.1; t <= t_end_file) {
+ 
+@@ -1031,6 +1043,8 @@
+       fflush(fp_stats);
+     }
+ }
++
++#endif // !PREREG_MODE
+ 
+ // Output files
+ #if OUT_FILES
+@@ -1289,3 +1303,5 @@
+   #endif
+ }
+ #endif
++
++#include "prereg_MK.h"

@@ -1,0 +1,5 @@
+B      M1 0.000e+00  M2 0.000e+00  M3 0.000e+00  (to 3.000 cycles)
+repT1  M1 0.000e+00  M2 0.000e+00  M3 0.000e+00  (to 2.986 cycles)
+repH   M1 5.911e-03  M2 9.100e-03  M3 1.568e-01  (to 2.986 cycles)
+repW   M1 6.952e-04  M2 1.266e-03  M3 7.415e-03  (to 3.000 cycles)
+repS   M1 8.052e-02  M2 1.328e-02  M3 1.376e-01  (to 2.986 cycles)

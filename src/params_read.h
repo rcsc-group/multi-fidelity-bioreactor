@@ -82,6 +82,7 @@ typedef struct {
   int    replay_project_flux;        // REPLAY: project the prolonged flux on the fine grid (project())
   double replay_project_tol;         // tolerance of that projection (divergence residual); default 1e-10
   int    replay_diag;                // REPLAY: write replay_diag.txt (divergence of the prolonged flux)
+  int    replay_hold;                // REPLAY: > 0 = load the flux only at replay_hold snapshots per period, hold it between (0 = every step)
   char   rec_dir[512];               // directory holding flux_rec.<pid>.bin
 } BioreactorParams;
 
@@ -197,6 +198,8 @@ static BioreactorParams params_read(const char *path) {
       p.replay_project_tol = tok_double(json, &tokens[++i]);
     else if (jsoneq(json, &tokens[i], "replay_diag"))
       p.replay_diag = tok_int(json, &tokens[++i]);
+    else if (jsoneq(json, &tokens[i], "replay_hold"))
+      p.replay_hold = tok_int(json, &tokens[++i]);
     else if (jsoneq(json, &tokens[i], "rec_dir")) {
       jsmntok_t *v = &tokens[++i];
       int len = v->end - v->start;
