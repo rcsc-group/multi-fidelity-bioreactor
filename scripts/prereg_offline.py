@@ -93,7 +93,8 @@ def replay(level: int, only: list[str] | None = None) -> None:
     for tag, src, extra in (("T1", "A", dict(n_rec_periods=N_REC, replay_loop=0)),
                             ("H", "A", dict(n_rec_periods=N_REC, replay_loop=0, replay_hold=100)),
                             ("W", "A", dict(n_rec_periods=1, replay_loop=1)),
-                            ("S", "Akim", dict(n_rec_periods=N_REC, replay_loop=0))):
+                            ("S", "Akim", dict(n_rec_periods=N_REC, replay_loop=0)),
+                            ("WS", "Akim", dict(n_rec_periods=1, replay_loop=1))):   # flux from u, cycle 1 looped
         if only and tag not in only:
             continue
         sp = base(level, rid(level, f"rep{tag}"), BIN["rep"])
@@ -138,7 +139,7 @@ def series(run_id: str) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]
 def report(level: int) -> None:
     ta, ma, xa, oa = series(rid(level, "A"))
     rows, ts = [], {"t": ta, "A_m": ma, "A_chi": xa, "A_oxy": oa}
-    for tag in ("B", "repT1", "repH", "repW", "repS"):
+    for tag in ("B", "repT1", "repH", "repW", "repS", "repWS"):
         try:
             t, m, x, o = series(rid(level, tag))
         except (FileNotFoundError, OSError, ValueError) as e:
