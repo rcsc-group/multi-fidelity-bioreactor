@@ -462,7 +462,51 @@ def _kla_inst_at_threshold(t: np.ndarray, c_star: np.ndarray,
 
 # ── mixing time ───────────────────────────────────────────────────────────────
 
-def _compute_mixing_metrics(run_dir: Path, params: dict) -> dict:
+_COL_B0, _COL_B1, _COL_B2 = 12, 13, 14   # tr_oxy.dat bulk-liquid sums (runs from 2026-10-29 on)
+
+
+def _compute_mixing_bulk(run_dir: Path, params: dict) -> dict | None:
+    """dtmix from the bulk-liquid sums, or None for a run that predates them.
+
+    The old c2_liq_sum = sum c2*f counts c*f^2 (c2 is the TOTAL amount per cell in henry_oxy2), and the old
+    f > 0.5 seed put liquid concentration 1/f > 1 into interface cells; together they made dtmix ~2x slow at
+    chi = 0.2 (diary 2026-10-29, scripts/mix_bias_check.py). The solver now writes b0 b1 b2 = sum over cells
+    with f >= 0.5 of f, f*cl, f*cl^2 (cl = liquid concentration) every t_out, and the same sums at the release
+    step in mix_release.dat (chain root), so sigma^2_max is taken at the release, not one t_out later.
+    """
+    rel = next((seg / "mix_release.dat" for seg in _segment_chain(run_dir)
+                if (seg / "mix_release.dat").exists()), None)
+    if rel is None:
+        return None
+    try:
+        t, b0, b1, b2 = _joined_cols(run_dir, "tr_oxy.dat", [_COL_B0, _COL_B1, _COL_B2])
+    except (FileNotFoundError, ValueError, IndexError):
+        return None
+    r = np.atleast_2d(np.loadtxt(rel, skiprows=1))[0]
+    t_inject_nd, r0, r1, r2 = float(r[1]), float(r[2]), float(r[3]), float(r[4])
+    nan_result = {"dtmix_0.50": math.nan, "dtmix_0.75": math.nan, "dtmix_0.95": math.nan}
+    if r0 <= 0:
+        return {**nan_result, "sigma2_max": math.nan}
+    sigma2_max = r2 / r0 - (r1 / r0) ** 2
+    if not (_SIGMA2_MAX_EXACT * (1 - _SIGMA2_MAX_TOL) <= sigma2_max
+            <= _SIGMA2_MAX_EXACT * (1 + _SIGMA2_MAX_TOL)):
+        return {**nan_result, "sigma2_max": sigma2_max}
+    after = t > t_inject_nd
+    if not after.any():
+        return {**nan_result, "sigma2_max": sigma2_max}
+    t, b0, b1, b2 = t[after], b0[after], b1[after], b2[after]
+    sigma2 = b2 / b0 - (b1 / b0) ** 2
+    chi = np.clip(1.0 - sigma2 / sigma2_max, 0.0, 1.0)
+    T_bio, _ = _t_scales(params)
+    result = {"sigma2_max": sigma2_max}
+    for threshold in (0.50, 0.75, 0.95):
+        idx = int(np.argmax(chi >= threshold))
+        result[f"dtmix_{threshold:.2f}"] = ((float(t[idx]) - t_inject_nd) * T_bio
+                                            if chi[idx] >= threshold else math.nan)
+    return result
+
+
+def _compute_mixing_metrics(run_dir: Path, params: dict, use_bulk: bool = True) -> dict:
     """Compute dimensional mixing times in seconds at χ = 0.50, 0.75, and 0.95.
 
     The passive tracer (rhodamine-like dye) is injected into the **top half**
@@ -507,6 +551,10 @@ def _compute_mixing_metrics(run_dir: Path, params: dict) -> dict:
     vf_path = run_dir / "vol_frac_interf.dat"
     if not tr_path.exists() or not vf_path.exists():
         return nan_result
+
+    bulk = _compute_mixing_bulk(run_dir, params) if use_bulk else None   # False: the pre-2026-10-29 method
+    if bulk is not None:
+        return bulk
 
     # Joined across the whole segment chain (see _segment_chain). A later
     # segment restores an already-partly-mixed tracer, so its chi never starts

@@ -213,3 +213,42 @@ def test_streaming_vorticity_absent_is_nan_not_zero(tmp_path):
     from scripts.postprocess import _compute_streaming_vorticity
     got = _compute_streaming_vorticity(tmp_path, PARAMS)
     assert math.isnan(got["vor_streaming"])
+
+
+# ── bulk-liquid columns (diary 2026-10-29) ───────────────────────────────────
+# The old c2_liq_sum = sum c2*f counts c*f^2 (c2 is the TOTAL amount per cell in henry_oxy2) and, with the
+# f > 0.5 seed, made every dtmix ~2x slow at chi = 0.2 (scripts/mix_bias_check.py). New runs write bulk-liquid
+# sums b0 b1 b2 (tr_oxy.dat columns 12-14) and the same sums at the release step (mix_release.dat). When both
+# are present dtmix must come from them, with sigma^2_max from the release row.
+
+def _write_bulk_run(tmp_path: Path, t: np.ndarray, chi_bulk: np.ndarray, chi_old: np.ndarray,
+                    t_inject: float) -> Path:
+    run = _write_run(tmp_path, t, chi_old)                      # old columns follow chi_old
+    lines = (run / "tr_oxy.dat").read_text().splitlines()
+    out = [lines[0] + " b0 b1 b2"]
+    for line, chi in zip(lines[1:], chi_bulk):
+        if chi < 0:
+            b0, b1, b2 = V_LIQ, 0.0, 0.0
+        else:
+            b0, b1, b2 = V_LIQ, 0.5 * V_LIQ, (0.25 * (1 - chi) + 0.25) * V_LIQ
+        out.append(f"{line} {b0:.17g} {b1:.17g} {b2:.17g}")
+    (run / "tr_oxy.dat").write_text("\n".join(out) + "\n")
+    (run / "mix_release.dat").write_text(
+        f"i t b0 b1 b2\n0 {t_inject:.17g} {V_LIQ:.17g} {0.5 * V_LIQ:.17g} {0.5 * V_LIQ:.17g}\n")
+    return run
+
+
+def test_bulk_columns_drive_dtmix_when_present(tmp_path):
+    """dtmix follows the bulk columns (tau) and ignores the old c2*f columns (2*tau)."""
+    t_inject = 10.0
+    t = np.concatenate([np.linspace(0, t_inject, 50, endpoint=False),
+                        t_inject + 0.02 + np.linspace(0, 60.0, 4000)])     # first sample late, as t_out does
+    chi_bulk = np.where(t < t_inject, -1.0, 1.0 - np.exp(-(t - t_inject) / TAU_ND))
+    chi_old = np.where(t < t_inject, -1.0, 1.0 - np.exp(-(t - t_inject) / (2 * TAU_ND)))
+    got = _compute_mixing_metrics(_write_bulk_run(tmp_path, t, chi_bulk, chi_old, t_inject), PARAMS)
+    T_bio = _t_bio()
+    for thr in (0.50, 0.75, 0.95):
+        expected = TAU_ND * math.log(1.0 / (1.0 - thr)) * T_bio
+        assert got[f"dtmix_{thr:.2f}"] == pytest.approx(expected, rel=5e-3), (
+            f"dtmix_{thr:.2f}: got {got[f'dtmix_{thr:.2f}']:.4f} s, bulk analytic {expected:.4f} s")
+    assert got["sigma2_max"] == pytest.approx(0.25)

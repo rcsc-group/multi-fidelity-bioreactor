@@ -1286,7 +1286,7 @@ int main(int argc, char * argv[]){
 
   fprintf(fp_norm, "i t Omega_liq_avg Omega_liq_rms Omega_liq_vol Omega_liq_max ux_liq_avg ux_liq_rms ux_liq_vol ux_liq_max uy_liq_avg uy_liq_rms uy_liq_vol uy_liq_max ux_liq_savg uy_liq_savg uz_liq_savg uz_liq_rms \n");
   fprintf(fp_stats2, "i t f_liq_sum f_liq_interf posY_max posY_min posY_left posY_right \n");
-  fprintf(fp_stats3, "i t oxy_liq_sum oxy_liq_sum2 c_liq_sum c_liq_sum2 c1_liq_sum c1_liq_sum2 c2_liq_sum c2_liq_sum2 c3_liq_sum c3_liq_sum2 \n");
+  fprintf(fp_stats3, "i t oxy_liq_sum oxy_liq_sum2 c_liq_sum c_liq_sum2 c1_liq_sum c1_liq_sum2 c2_liq_sum c2_liq_sum2 c3_liq_sum c3_liq_sum2 b0 b1 b2 \n");
   fprintf(fp_tau,   "i t tau_95 tau_98 tau_100 tau_mean tau_100_strict tau_mean_strict tau_100_signed ediss_mean tau_mean_signed tau_kim_max tau_kim_mean ediss_kim_max ediss_kim_mean \n");
 
   NITERMAX = 1000;     // Max iterations per timestep
@@ -2123,6 +2123,23 @@ event clamp_f (i++)
 }
 #endif
 
+// Bulk-liquid tracer sums (cells with f >= 0.5), diary 2026-10-29. c2 is the TOTAL amount per cell (henry_oxy2:
+// phi1 = a f alpha, phi2 = a (1-f), a = c/(f alpha + 1 - f)); the liquid concentration phi1/f is bounded only
+// away from f -> 0. c2*f (the old c2_liq_sum) counts c f^2 and moves when the free surface crosses a grid row.
+// tr_oxy.dat columns 13-15 (b0 b1 b2) and mix_release.dat (the same at the release step) carry these sums.
+static void mix_bulk_sums (double * b0, double * b1, double * b2)
+{
+  double s0 = 0., s1 = 0., s2 = 0.;
+  foreach (reduction(+:s0) reduction(+:s1) reduction(+:s2))
+    if (f[] >= 0.5) {
+      double cl = c2[]/(f[]*c2.alpha + (1. - f[]))*c2.alpha;   // liquid concentration phi1/f
+      s0 += dv()*f[];
+      s1 += dv()*cl*f[];
+      s2 += dv()*sq(cl)*f[];
+    }
+  *b0 = s0, *b1 = s1, *b2 = s2;
+}
+
 // ================================================================== //
 //                           TRACER SETUP                             //
 // ================================================================== //
@@ -2217,6 +2234,9 @@ event tracer(t = t_mix){
       // f[]>0.5 (majority-liquid) instead of f[]==1 (exact) so that near-interface
       // cells are included — at coarse resolutions f never reaches exactly 1.0 in
       // the top liquid layer, causing c2 to remain 0 throughout the run.
+#ifndef SEED_KIM
+#define SEED_KIM 1   // default since 2026-10-29 (diary: f > 0.5 put liquid concentration 1/f > 1)
+#endif
 #if SEED_KIM   // Kim's rule: full liquid cells only (his BioReactor.c event tracer); diary 2026-10-29 seed test
       if ((f[] == 1) && (cs[]==1) && (y >= y_liq_mid))
 #else
@@ -2234,6 +2254,15 @@ event tracer(t = t_mix){
   }
   #endif
   }  // end if (!params.restart_continue)
+  if (REPLAY_FLUX || !params.restart_continue) {
+    double b0, b1, b2;
+    mix_bulk_sums (&b0, &b1, &b2);
+    if (pid() == 0) {
+      FILE * fr = fopen ("mix_release.dat", "w");
+      fprintf (fr, "i t b0 b1 b2\n%d %.17g %.17g %.17g %.17g\n", i, t, b0, b1, b2);
+      fclose (fr);
+    }
+  }
 
 #if REPLAY_FLUX
   }
@@ -3251,6 +3280,8 @@ event normcal (t+=t_out; t<=t_end){
     }
     #undef TAU_BINS
 
+   double mb0, mb1, mb2;   // collective: every rank, outside the pid() == 0 block
+   mix_bulk_sums (&mb0, &mb1, &mb2);
    // i, timestep, no of cells, real time elapsed, cpu time
    if (pid() == 0){
 
@@ -3260,7 +3291,7 @@ event normcal (t+=t_out; t<=t_end){
       fprintf(fp_stats2, "%i %g %g %g %g %g %g %g \n",i,t,f_liq_sum,f_liq_interf,posY_max,posY_min,y_left,y_right);
       fflush(fp_stats2);
 
-      fprintf(fp_stats3, "%i %g %g %g %g %g %g %g %g %g %g %g \n",i,t,oxy_liq_sum,oxy_liq_sum2,c_liq_sum,c_liq_sum2,c1_liq_sum,c1_liq_sum2,c2_liq_sum,c2_liq_sum2,c3_liq_sum,c3_liq_sum2);
+      fprintf(fp_stats3, "%i %g %g %g %g %g %g %g %g %g %g %g %.17g %.17g %.17g \n",i,t,oxy_liq_sum,oxy_liq_sum2,c_liq_sum,c_liq_sum2,c1_liq_sum,c1_liq_sum2,c2_liq_sum,c2_liq_sum2,c3_liq_sum,c3_liq_sum2,mb0,mb1,mb2);
       //fprintf(fp_stats3, "%i %g %g %g %g %g \n",i,t,oxy_liq_sum,oxy_liq_sum2,c_liq_sum,c_liq_sum2);
       fflush(fp_stats3);
 
@@ -3314,10 +3345,12 @@ event normcal (i++) {
     double c2_liq_sum2   = statsf2(c2_liq).sum2;
     double c3_liq_sum    = statsf2(c3_liq).sum;
     double c3_liq_sum2   = statsf2(c3_liq).sum2;
+    double mb0, mb1, mb2;   // collective: every rank, outside the pid() == 0 block
+    mix_bulk_sums (&mb0, &mb1, &mb2);
     if (pid() == 0) {
       fprintf(fp_stats2, "%i %g %g %g %g %g %g %g \n",i,t,f_liq_sum,f_liq_interf,posY_max,posY_min,y_left,y_right);
       fflush(fp_stats2);
-      fprintf(fp_stats3, "%i %g %g %g %g %g %g %g %g %g %g %g \n",i,t,oxy_liq_sum,oxy_liq_sum2,c_liq_sum,c_liq_sum2,c1_liq_sum,c1_liq_sum2,c2_liq_sum,c2_liq_sum2,c3_liq_sum,c3_liq_sum2);
+      fprintf(fp_stats3, "%i %g %g %g %g %g %g %g %g %g %g %g %.17g %.17g %.17g \n",i,t,oxy_liq_sum,oxy_liq_sum2,c_liq_sum,c_liq_sum2,c1_liq_sum,c1_liq_sum2,c2_liq_sum,c2_liq_sum2,c3_liq_sum,c3_liq_sum2,mb0,mb1,mb2);
       fflush(fp_stats3);
     }
   }
