@@ -68,10 +68,13 @@ def build() -> None:
         print(rg.build_binary(b.name.removeprefix("BioReactor-"), FLAGS[k], mpi=True))
 
 
-def dns(level: int) -> None:
+def dns(level: int, only: list[str] | None = None) -> None:
     wall = "01:00:00" if level <= 6 else "12:00:00"
-    jobs = {}
+    f = rg.WORK / f"prereg_dns_jobs_{level}.json"
+    jobs = json.loads(f.read_text()) if only and f.exists() else {}
     for tag, b, nt in (("A", "rec", NT_A), ("Akim", "kimrec", NT_A), ("B", "rec", NT_B)):
+        if only and tag not in only:
+            continue
         d = rec_dir(level, tag)
         if d.exists():
             shutil.rmtree(d)
@@ -79,7 +82,7 @@ def dns(level: int) -> None:
         p = base(level, rid(level, tag), BIN[b])
         p.update(n_rec_periods=N_REC, rec_dir=str(d))
         jobs[tag] = _submit(p, nt, wall)
-    (rg.WORK / f"prereg_dns_jobs_{level}.json").write_text(json.dumps(jobs))
+    f.write_text(json.dumps(jobs))
     print(jobs)
 
 
@@ -164,5 +167,7 @@ if __name__ == "__main__":
         build()
     elif cmd == "replay":
         replay(int(sys.argv[2]), sys.argv[3:] or None)     # optional tags: T1 H W S
+    elif cmd == "dns":
+        dns(int(sys.argv[2]), sys.argv[3:] or None)        # optional tags: A Akim B
     else:
-        {"dns": dns, "report": report}[cmd](int(sys.argv[2]))
+        report(int(sys.argv[2]))
