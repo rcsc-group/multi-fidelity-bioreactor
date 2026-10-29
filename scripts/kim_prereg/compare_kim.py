@@ -12,7 +12,7 @@ import numpy as np
 
 OUTROOT = Path("/oscar/scratch/eaguerov/kim_pipeline/prereg_out")
 T_PER = 0.607329   # the producer's T_per_st at 20 rpm, theta 7 (printed by pre_open as the record span / 3); checked below
-VARS = ("off_m1", "off_m1f0", "off_m3", "off_m3f0", "off_m4", "his_S", "his_H", "his_ship")
+VARS = ("off_m1", "off_m1f0", "off_m3", "off_m3f0", "off_m4", "his_S", "his_H", "his_ship", "his_loop")
 
 
 def load(p: Path) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
@@ -43,7 +43,7 @@ def main() -> None:
         m1 = np.max(np.abs(mi - ma[w]))
         m2 = np.max(np.abs(xi - xa[w]))
         w3 = (ta[w] - t0) / T_PER >= 0.25        # M3 window [0.25, 3] cycles (diary amendment 2)
-        m3 = np.nanmax(np.abs(oi[w3] / oa[w][w3] - 1))
+        m3 = np.nanmax(np.abs(oi[w3] / oa[w][w3] - 1)) if w3.any() else np.nan   # run ended before 0.25 cycle
         dt0 = (t[0] - t0) / T_PER
         rows.append(f"{name:9s} M1 {m1:.3e}  M2 {m2:.3e}  M3 {m3:.3e}  to {(t[-1] - t0) / T_PER:.3f} cyc  "
                     f"start offset {dt0:+.2e} cyc  rows {len(t)}")

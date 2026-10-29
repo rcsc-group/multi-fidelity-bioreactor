@@ -29,8 +29,8 @@ N_MIX, N_REC = 20, 3
 NT_A, NT_B = 16, 8
 EXCLUDE = "node2356"
 REC_ROOT = Path("/oscar/data/dharri15/eaguerov/replay_records/prereg")
-BIN = {"rec": rg.BIN_DIR / "BioReactor-pr2-rec", "kimrec": rg.BIN_DIR / "BioReactor-pr2-kimrec",
-       "rep": rg.BIN_DIR / "BioReactor-pr2-rep"}   # pr2: + per-step diag (-DPREREG_DIAG=1)
+BIN = {"rec": rg.BIN_DIR / "BioReactor-pr4-rec", "kimrec": rg.BIN_DIR / "BioReactor-pr2-kimrec",
+       "rep": rg.BIN_DIR / "BioReactor-pr4-rep"}   # pr2: + per-step diag (-DPREREG_DIAG=1)
 FLAGS = {"rec": ["-DRECORD_FLUX", "-DEXTRA_TRACERS=0", "-DPREREG_DIAG=1"],
          "kimrec": ["-DRECORD_FLUX", "-DEXTRA_TRACERS=0", "-DREC_KIM_FLUX=1", "-DPREREG_DIAG=1"],
          "rep": ["-DREPLAY_FLUX", "-DEXTRA_TRACERS=0", "-DPREREG_DIAG=1"]}
@@ -63,8 +63,10 @@ def _submit(params: dict, ntasks: int, walltime: str, checkpoint: str | None = N
                         mpi_scratch_root=rg.MPI_SCRATCH)
 
 
-def build() -> None:
+def build(only: list[str] | None = None) -> None:
     for k, b in BIN.items():
+        if only and k not in only:
+            continue
         if b.exists():
             raise RuntimeError(f"{b} exists: never overwrite a binary; remove it by hand if it is yours")
         print(rg.build_binary(b.name.removeprefix("BioReactor-"), FLAGS[k], mpi=True))
@@ -167,7 +169,7 @@ def report(level: int) -> None:
 if __name__ == "__main__":
     cmd = sys.argv[1]
     if cmd == "build":
-        build()
+        build(sys.argv[2:] or None)                       # optional keys: rec kimrec rep
     elif cmd == "replay":
         replay(int(sys.argv[2]), sys.argv[3:] or None)     # optional tags: T1 H W S
     elif cmd == "dns":

@@ -71,20 +71,36 @@ static void pre_name (char * name, size_t len)
 #if PREREG_DIAG
 static void pre_diag (double tt)
 {
-  double s0 = 0., s1 = 0., s2 = 0., so = 0.;
-  foreach (reduction(+:s0) reduction(+:s1) reduction(+:s2) reduction(+:so)) {
+  // S1, S2, O: f-weighted sums as in his normcal (c*f). C1, C2, OL: c is the TOTAL amount per cell
+  // (henry_oxy2_MK.h: phi1 = a*f*alpha, phi2 = a*(1-f), a = c/(f*alpha + 1 - f)); liquid part = sum phi1 dv.
+  // Same code as src/BioReactor.c pre_diag.
+  double s0 = 0., s1 = 0., s2 = 0., so = 0., c1 = 0., c2s = 0., ol = 0., b0 = 0., b1 = 0., b2 = 0.;
+  foreach (reduction(+:s0) reduction(+:s1) reduction(+:s2) reduction(+:so)
+           reduction(+:c1) reduction(+:c2s) reduction(+:ol)
+           reduction(+:b0) reduction(+:b1) reduction(+:b2)) {
     s0 += dv()*f[];
     s1 += dv()*c2[]*f[];
     s2 += dv()*sq(c2[])*f[];
     so += dv()*oxy[]*f[];
+    double ac = c2[]/(f[]*c2.alpha + (1. - f[]));
+    double ao = oxy[]/(f[]*oxy.alpha + (1. - f[]));
+    c1 += dv()*ac*f[]*c2.alpha;
+    c2s += f[] >= 1e-6 ? dv()*sq(ac*c2.alpha)*f[] : 0.;   // phi1/f blows up as f -> 0
+    ol += dv()*ao*f[]*oxy.alpha;
+    if (f[] >= 0.5) {           // bulk liquid: concentration phi1/f is bounded here (B = chi without f -> 0)
+      b0 += dv()*f[];
+      b1 += dv()*ac*f[]*c2.alpha;
+      b2 += dv()*sq(ac*c2.alpha)*f[];
+    }
   }
   static FILE * fpd = NULL;
   if (!fpd && pid() == 0) {
     fpd = fopen ("prereg_diag.dat", "w");
-    fprintf (fpd, "i t dt S0 S1 S2 O\n");
+    fprintf (fpd, "i t dt S0 S1 S2 O C1 C2 OL B0 B1 B2\n");
   }
   if (fpd) {
-    fprintf (fpd, "%d %.17g %.17g %.17g %.17g %.17g %.17g\n", iter, tt, dt, s0, s1, s2, so);
+    fprintf (fpd, "%d %.17g %.17g %.17g %.17g %.17g %.17g %.17g %.17g %.17g %.17g %.17g %.17g\n",
+             iter, tt, dt, s0, s1, s2, so, c1, c2s, ol, b0, b1, b2);
     fflush (fpd);
   }
 }
