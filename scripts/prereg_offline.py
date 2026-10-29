@@ -10,6 +10,7 @@ Usage: uv run python scripts/prereg_offline.py build | dns 6 | replay 6 | report
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -28,16 +29,17 @@ N_MIX, N_REC = 20, 3
 NT_A, NT_B = 16, 8
 EXCLUDE = "node2356"
 REC_ROOT = Path("/oscar/data/dharri15/eaguerov/replay_records/prereg")
-BIN = {"rec": rg.BIN_DIR / "BioReactor-pr-rec", "kimrec": rg.BIN_DIR / "BioReactor-pr-kimrec",
-       "rep": rg.BIN_DIR / "BioReactor-pr-rep"}
-FLAGS = {"rec": ["-DRECORD_FLUX", "-DEXTRA_TRACERS=0"],
-         "kimrec": ["-DRECORD_FLUX", "-DEXTRA_TRACERS=0", "-DREC_KIM_FLUX=1"],
-         "rep": ["-DREPLAY_FLUX", "-DEXTRA_TRACERS=0"]}
+BIN = {"rec": rg.BIN_DIR / "BioReactor-pr2-rec", "kimrec": rg.BIN_DIR / "BioReactor-pr2-kimrec",
+       "rep": rg.BIN_DIR / "BioReactor-pr2-rep"}   # pr2: + per-step diag (-DPREREG_DIAG=1)
+FLAGS = {"rec": ["-DRECORD_FLUX", "-DEXTRA_TRACERS=0", "-DPREREG_DIAG=1"],
+         "kimrec": ["-DRECORD_FLUX", "-DEXTRA_TRACERS=0", "-DREC_KIM_FLUX=1", "-DPREREG_DIAG=1"],
+         "rep": ["-DREPLAY_FLUX", "-DEXTRA_TRACERS=0", "-DPREREG_DIAG=1"]}
 OUT = ROOT / "docs/meetings/prereg"
+PFX = os.environ.get("PREREG_PFX", "pr")   # run-id prefix: "pr2" = rerun with the per-step diag
 
 
 def rid(level: int, tag: str) -> str:
-    return f"pr{level}_{tag}"
+    return f"{PFX}{level}_{tag}"
 
 
 def rec_dir(level: int, tag: str) -> Path:
@@ -70,7 +72,7 @@ def build() -> None:
 
 def dns(level: int, only: list[str] | None = None) -> None:
     wall = "01:00:00" if level <= 6 else "12:00:00"
-    f = rg.WORK / f"prereg_dns_jobs_{level}.json"
+    f = rg.WORK / f"prereg{PFX[2:]}_dns_jobs_{level}.json"
     jobs = json.loads(f.read_text()) if only and f.exists() else {}
     for tag, b, nt in (("A", "rec", NT_A), ("Akim", "kimrec", NT_A), ("B", "rec", NT_B)):
         if only and tag not in only:
@@ -87,7 +89,7 @@ def dns(level: int, only: list[str] | None = None) -> None:
 
 
 def replay(level: int, only: list[str] | None = None) -> None:
-    jobs = json.loads((rg.WORK / f"prereg_dns_jobs_{level}.json").read_text())
+    jobs = json.loads((rg.WORK / f"prereg{PFX[2:]}_dns_jobs_{level}.json").read_text())
     wall = "01:00:00" if level <= 6 else "06:00:00"
     out = {}
     for tag, src, extra in (("T1", "A", dict(n_rec_periods=N_REC, replay_loop=0)),

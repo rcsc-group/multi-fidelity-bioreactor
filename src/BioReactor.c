@@ -3334,6 +3334,44 @@ event rec_checkpoint (t = t_rec0)
 }
 #endif
 
+// -DPREREG_DIAG=1: per-step sums written at the start of every step from the release on, the SAME code as
+// Kim's side (kim_pipeline/prereg_src/prereg_MK.h, pre_diag), so the two solvers are measured identically
+// (diary 2026-10-29: tr_oxy.dat samples every t_out only, which put our chi = 0 point 0.022 cycle late).
+#ifndef PREREG_DIAG
+#define PREREG_DIAG 0
+#endif
+#if PREREG_DIAG
+static void pre_diag (double tt)
+{
+  // S1, S2, O: the f-weighted sums of Kim's normcal (c*f). C1, C2, OL: c is the TOTAL amount per cell
+  // (henry_oxy2.h splits it as phi1 = a*f*alpha, phi2 = a*(1-f), a = c/(f*alpha + 1 - f)), so the tracer in
+  // the liquid is sum phi1 dv; C2 = sum (phi1/f)^2 f dv is the liquid concentration variance moment.
+  double s0 = 0., s1 = 0., s2 = 0., so = 0., c1 = 0., c2s = 0., ol = 0.;
+  foreach (reduction(+:s0) reduction(+:s1) reduction(+:s2) reduction(+:so)
+           reduction(+:c1) reduction(+:c2s) reduction(+:ol)) {
+    s0 += dv()*f[];
+    s1 += dv()*c2[]*f[];
+    s2 += dv()*sq(c2[])*f[];
+    so += dv()*oxy[]*f[];
+    double ac = c2[]/(f[]*c2.alpha + (1. - f[]));
+    double ao = oxy[]/(f[]*oxy.alpha + (1. - f[]));
+    c1 += dv()*ac*f[]*c2.alpha;
+    c2s += f[] > 0. ? dv()*sq(ac*c2.alpha)*f[] : 0.;
+    ol += dv()*ao*f[]*oxy.alpha;
+  }
+  static FILE * fpd = NULL;
+  if (!fpd && pid() == 0) {
+    fpd = fopen ("prereg_diag.dat", "w");
+    fprintf (fpd, "i t dt S0 S1 S2 O C1 C2 OL\n");
+  }
+  if (fpd) {
+    fprintf (fpd, "%d %.17g %.17g %.17g %.17g %.17g %.17g %.17g %.17g %.17g\n",
+             iter, tt, dt, s0, s1, s2, so, c1, c2s, ol);
+    fflush (fpd);
+  }
+}
+#endif
+
 #if RECORD_FLUX || REPLAY_FLUX
 event vof (i++)
 {
@@ -3354,6 +3392,10 @@ event vof (i++)
 #endif
 #if REPLAY_FLUX
   replay_load_step();
+#endif
+#if PREREG_DIAG
+  if (t >= t_mix - REC_EPS*(1. + fabs (t)))
+    pre_diag (t);
 #endif
 }
 #endif
