@@ -50,7 +50,7 @@ for x, y, s, col in ((tt, yt, "ours", c8), (tk, yk, "rebuilt", c8), (tb, yb, "Ki
     ax.annotate(s, (x[-1], np.median(y)), xytext=(6, 0), textcoords="offset points", color=col, va="center", fontsize=10)
 ax.set_xlim(0, 1)
 ax.set_xlabel("rocking cycles")
-ax.set_ylabel(r"max cell flux imbalance / max $|u_f|$")
+ax.set_ylabel(r"$\max\,|\nabla\!\cdot u_f|\,\Delta\,/\,\max|u_f|$")
 ax.spines[["top", "right"]].set_visible(False)
 fig.subplots_adjust(right=0.84)
 OUT.mkdir(parents=True, exist_ok=True)
