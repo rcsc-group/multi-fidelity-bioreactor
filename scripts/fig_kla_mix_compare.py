@@ -69,7 +69,7 @@ for ax in axs:
     ax.set_xlabel("rocking cycles")
     ax.set_xlim(0, NCYC)
     ax.spines[["top", "right"]].set_visible(False)
-axs[0].plot([], [], color=fs.NEUTRAL, lw=2.0, label="reference")
+axs[0].plot([], [], color=fs.NEUTRAL, lw=2.0, label="projected")
 axs[0].plot([], [], color=fs.NEUTRAL, lw=2.0, ls=(0, (4, 2)), label="rebuilt")
 axs[0].legend(frameon=False, loc="upper left", fontsize=10)
 fig.tight_layout()

@@ -34,8 +34,8 @@ Repo: `rcsc-group/BioReactor3D`, folder `dev/rocking-bioreactor-2d-offline/` (re
 - Source: `talks/dfd2026/`. Next: Motivation (three storyboards to choose from).
 
 ## 3. Oxygen and mixing against time (`fig_oxygen_mixing_compare.png`)
-- Solid = reference flux (ours: projected replay; Kim: his producer). Dashed = rebuilt face field (ours: Kim-style replay; Kim: his offline solver). Blue = ours, black = Kim.
-- Left: liquid oxygen total, divided by the reference at 3 cycles. Right: mixing chi = 1 - var/var0 of the upper-half tracer.
+- Solid = projected flux (ours: replay of the recorded flux; Kim: his producer, the flux of its own Navier-Stokes projection). Dashed = rebuilt face field (ours: Kim-style replay; Kim: his offline solver). Blue = ours, black = Kim.
+- Left: liquid oxygen total, divided by the projected-flux value at 3 cycles. Right: mixing chi = 1 - var/var0 of the upper-half tracer.
 - At 3 cycles: ours oxygen +9 % with the rebuilt field (it grows to +44 % after 20 cycles, see section 1), chi 0.288 against 0.273. Kim: oxygen +60 %, chi 0.786 against 0.699.
 - The two solvers run different flows (ours 32.5 rpm, L8; his 20 rpm, N=128), so compare dashed against solid inside each colour, not blue against black.
 - Kim's oxygen reference is jagged because his definition sums oxygen times liquid fraction over interface cells; ours uses the C* definition of the paper. Different definitions, same direction.
