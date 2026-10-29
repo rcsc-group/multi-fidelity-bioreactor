@@ -32,3 +32,10 @@ Repo: `rcsc-group/BioReactor3D`, folder `dev/rocking-bioreactor-2d-offline/` (re
 ## 2. DFD talk deck (draft)
 - `2026-10-29_dfd_deck_draft.pdf`: title, definitions, methods. Other slides are empty. The title slide has since been made light; this PDF is the earlier render.
 - Source: `talks/dfd2026/`. Next: Motivation (three storyboards to choose from).
+
+## 3. Oxygen and mixing against time (`fig_oxygen_mixing_compare.png`)
+- Solid = reference flux (ours: projected replay; Kim: his producer). Dashed = rebuilt face field (ours: Kim-style replay; Kim: his offline solver). Blue = ours, black = Kim.
+- Left: liquid oxygen total, divided by the reference at 3 cycles. Right: mixing chi = 1 - var/var0 of the upper-half tracer.
+- At 3 cycles: ours oxygen +9 % with the rebuilt field (it grows to +44 % after 20 cycles, see section 1), chi 0.288 against 0.273. Kim: oxygen +60 %, chi 0.786 against 0.699.
+- The two solvers run different flows (ours 32.5 rpm, L8; his 20 rpm, N=128), so compare dashed against solid inside each colour, not blue against black.
+- Kim's oxygen reference is jagged because his definition sums oxygen times liquid fraction over interface cells; ours uses the C* definition of the paper. Different definitions, same direction.

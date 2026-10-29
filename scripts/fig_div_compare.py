@@ -46,13 +46,13 @@ c8 = fs.level_colour(8)
 ax.semilogy(tt, yt, color=c8, lw=2.0)
 ax.semilogy(tk, yk, color=c8, lw=2.0, ls=(0, (4, 2)))
 ax.semilogy(tb, yb, color=fs.KIM, lw=2.0)
-for x, y, s, col in ((tt, yt, "ours: projected flux", c8), (tk, yk, "ours: rebuilt from cell values", c8), (tb, yb, "Kim: rebuilt from cell values", fs.KIM)):
+for x, y, s, col in ((tt, yt, "ours", c8), (tk, yk, "rebuilt", c8), (tb, yb, "Kim", fs.KIM)):
     ax.annotate(s, (x[-1], np.median(y)), xytext=(6, 0), textcoords="offset points", color=col, va="center", fontsize=10)
 ax.set_xlim(0, 1)
 ax.set_xlabel("rocking cycles")
 ax.set_ylabel(r"max cell flux imbalance / max $|u_f|$")
 ax.spines[["top", "right"]].set_visible(False)
-fig.subplots_adjust(right=0.64)
+fig.subplots_adjust(right=0.84)
 OUT.mkdir(parents=True, exist_ok=True)
 for ext in ("png", "pdf"):
     fig.savefig(OUT / f"fig_divergence_compare.{ext}", dpi=200)
