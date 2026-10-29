@@ -59,4 +59,4 @@ item starts, give it a diary entry; when it lands, delete it here.
 - src/BioReactor.c ~l.368 comments geometry_a as 'bag half-length (m)', but snapshots show the bag spans the full L0 = 1 = 0.25 m. Check and fix the comment (2026-10-11, test I agent).
 - Kim offline comparison (2026-10-28): when jobs 8051486/8051487 end, compare kim_l8_rpm32.5_th7 with lf_l8_rpm32.5_th7 (tracer total, max concentration, kLa_1T_10, dtmix_0.50); then decide whether to emulate his T/100 snapshot hold and read the rest of TracerTest_test.c.
 
-- 2026-10-29: Kim vs ours offline-vs-DNS test pre-registered (docs/prereg_offline_vs_dns.md); gates G0-G2 next, then T0/T1.
+- 2026-10-29: Kim vs ours offline-vs-DNS test pre-registered (diary.md, 2026-10-29 PRE-REGISTERED); gates G0-G2 next, then T0/T1.

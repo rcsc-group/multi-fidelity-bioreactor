@@ -771,5 +771,46 @@ C. kLa: "convergence plausible" (archive) vs "falls 1.7-2.8x per level, not conv
 - Slide 1 made light (white ground; title_v2_light.mp4 re-render in progress); deck pushed to talks/dfd2026/ (public repo; *.mp4 gitignored).
 - RESULT Kim-style face field (jobs 8051486/87, L8, 32.5 rpm, theta 7, 22 replay cycles; scripts/cmp_kim_faithful.py): kLa_1T_10 56.31 vs 45.65 1/h faithful (x1.23); kLa_1T_25 65.6 vs 29.0 (x2.26); dtmix_0.50 10.58 vs 11.00 s (x0.96); dtmix_0.75 23.77 vs 22.19 (x1.07). Tracer total in the liquid (c2_liq_sum, relative to release): faithful 0.9931 after 20 cycles, Kim-style 0.7985 (0.9838 at half a cycle, 0.9106 at 5 cycles). Oxygen total after 20 cycles: 38.6 vs 26.8 (+44 %). Reading: a face field rebuilt from cell values is not divergence-free; the tracer leaks out of the liquid and oxygen transfer is overestimated. Sign differs from Kim's README (tracer grows 5 %): his solver and grid differ, his number is unverified. Power: ONE condition, ONE run each; no replicate; the noauto ghost effect (0.5 % of faces) is not separated. Next: a second condition before quoting this in the talk; emulate his T/100 hold only if it matters.
 - DIVERGENCE TEST (scripts/diag_div_record.py, jobs 8091214/15; replay_diag of src/BioReactor.c on the two L8 records, 32.5 rpm theta 7, 1 cycle = 1306 steps): d = |sum of the four face fluxes of a cell| / max|uf|. True recorded flux: median 1.4e-3, max 3.3e-3. Kim-style rebuild fm*face_value(u): median 5.8e-2, max 1.4e-1 (about 40 x more). Away-from-wall and all-cell values are the same. Caveats: true flux is small, not zero (projection tolerance); the noauto ghost effect (0.5 % of faces) is inside the Kim-style number; one condition.
-- STATUS (2026-10-29, after the PI meeting): the results above are one run per case, and the two solvers ran DIFFERENT conditions (ours 32.5 rpm, his 20 rpm). The cross-solver figures (fig_oxygen_mixing_compare, fig_divergence_compare) are RETRACTED as evidence. What still stands: inside each solver, the rebuilt face field is ~40-80x less divergence-free than a projected flux. Kim (meeting): uf was not stored for performance reasons, and he sees NEITHER workflow converge to the full DNS yet. Replaced by the pre-registration docs/prereg_offline_vs_dns.md (same condition 20 rpm theta 7, same grid, exact-replay control, one-factor ladder, measured noise floor).
+- STATUS (2026-10-29, after the PI meeting): the results above are one run per case, and the two solvers ran DIFFERENT conditions (ours 32.5 rpm, his 20 rpm). The cross-solver figures (fig_oxygen_mixing_compare, fig_divergence_compare) are RETRACTED as evidence. What still stands: inside each solver, the rebuilt face field is ~40-80x less divergence-free than a projected flux. Kim (meeting): uf was not stored for performance reasons, and he sees NEITHER workflow converge to the full DNS yet. Replaced by the pre-registration below (2026-10-29 PRE-REGISTERED) (same condition 20 rpm theta 7, same grid, exact-replay control, one-factor ladder, measured noise floor).
 - KIM'S OWN SOLVER (agent run 2026-10-29, scratch /oscar/scratch/eaguerov/kim_pipeline, his producer N=128, 100 snapshots/cycle, NMIX=10, tracer + oxygen on; his offline solver NCYCLE=3; only change to his code: read-only DIVDIAG diagnostic after the face-velocity line, diff in out/diagnostic.diff, byte-identical on the dry run only). d/max|uf| of his rebuilt uf: median 0.116, max 0.333 (ours true flux at L8: 1.4e-3). Offline vs his own producer: tracer total in liquid -2.3 % at cycle 1, -4.8 % at cycle 2, -7.2 % at 2.9 cycles (producer ~constant: opposite sign to his README); oxygen in liquid +64 % (c1), +77 % (c2) vs the producer (his README says 7-8 % slower). Mixing variance 2 % / 9 % lower. Confounds: N=128 not 512; producer flow after the dump window is not the replayed cycle; replay period 0.6074 vs true 0.607329; amplitude ramp ends at cycle 10 so the dumped cycle may not be periodic; producer job 8091545 had not finished; no replicate. Doc-vs-code: offline tr_oxy.dat is header-only; snapshot count 100 not 101; module load openmpi not documented.
+
+## 2026-10-29 PRE-REGISTERED: do the hydrodynamics-only scalar solvers converge to their own DNS? (ours vs Kim, written before any run)
+- **Question**
+Kim (meeting 2026-10-29): neither offline workflow (his rebuild, our stored flux) appears to converge to the full DNS. Our 2026-10-29 figures cannot settle this: the two solvers ran different conditions (ours 32.5 rpm, his 20 rpm). Retracted as evidence.
+
+- **Fixed setup**
+- Condition: 20 rpm, theta 7, a = 0.25 m, fill 0.5 (Kim's default case; same geometry as our params.json).
+- Grid: ours L8 (adaptive, max 256), his N = 256 (uniform). Second grid only in T4.
+- Protocol, both solvers: release tracer and oxygen at cycle 20 (after his amplitude ramp ends at cycle 10), then 3 cycles. The offline solver replays exactly those 3 cycles. No looping, except in factor W.
+- Reference for each offline run = the DNS of the same solver, same run, same window.
+
+- **Metrics (over cycles 0-3 after release)**
+- M1 tracer mass in the liquid: max |m(t)/m(0) - m_DNS(t)/m_DNS(0)|
+- M2 mixing chi(t) = 1 - var/var0 of the upper-half tracer: max |chi - chi_DNS|
+- M3 liquid oxygen: max |O/O_DNS - 1|, in each solver's own definition
+- M4 kLa at C* = 0.10 (only if the window reaches C* = 0.10; else M3 only)
+
+- **Noise floor F (measured, not assumed)**
+Two DNS of the same condition that differ only in the MPI rank count: the round-off is different and nothing else is. F = M1-M3 between them. Both solvers.
+
+- **Tests**
+- **T0 DNS agreement (ours vs his DNS).** Pass: kLa within 10 % (if available), max |chi_ours - chi_his| <= 0.05, and tracer mass drift <= 0.5 % in both. Fail: the two DNS solve different problems, so they must be explained before any offline result is compared across solvers.
+- **T1 exact replay (both solvers).** The offline solver reads the DNS's own per-step projected face flux, with no hold and no loop. Pass: M1-M3 <= max(F, 1e-3). Fail: an implementation defect in that offline solver. For Kim, this needs a test build that dumps uf every step. This is a scratch copy, not his code.
+- **T2 one-factor ladder (both solvers), each factor added alone to T1:**
+  - S (space): face field rebuilt as `fm*face_value(u,0)`. Ours: REC_KIM_FLUX. His: line 815.
+  - H (time): the field is held for T/100 between snapshots.
+  - W (wrap): one recorded cycle looped 3 times.
+  - Factor material iff M1 > max(2F, 0.5 %) or M2 > max(2F, 0.02) or M3 > max(2F, 2 %).
+- **T3 his workflow as shipped** (S+H+W) vs his DNS, and ours as shipped (W only) vs our DNS. "Converges to the DNS" iff no metric exceeds the material threshold.
+- **T4 grid (only if T2 finds a material factor):** repeat that factor at ours L9 / his N = 512. A spatial rebuild error should shrink with the grid. If it does not, the error has another cause.
+
+- **Power and limits**
+- The offline-vs-own-DNS comparisons are deterministic. Chaos enters only through F, which is measured.
+- One condition. A factor that matters only at other rpm is not detected; if T3 is within a factor of 2 of a threshold, repeat at 32.5 rpm.
+- Three cycles. Slow drifts (tracer leak about 1 % per cycle) are detectable; a smaller drift is not.
+- The definitions of liquid oxygen differ between the solvers. M3 is relative within each solver; across solvers (T0) only chi and kLa are compared.
+
+- **Gates before submission (code, not docs)**
+- G0: ours, `n_rec_periods = 3` records 3 cycles and the replay runs them without wrap (src/BioReactor.c lines 691, 1153).
+- G1: his test build dumps uf every step; a 6-step dry run is byte-identical in the scalars to the stock build.
+- G2: smoke test at the coarsest grid for each run type before any 256 run.
