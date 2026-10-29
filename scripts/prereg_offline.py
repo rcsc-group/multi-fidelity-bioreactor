@@ -30,10 +30,13 @@ NT_A, NT_B = 16, 8
 EXCLUDE = "node2356"
 REC_ROOT = Path("/oscar/data/dharri15/eaguerov/replay_records/prereg")
 BIN = {"rec": rg.BIN_DIR / "BioReactor-pr4-rec", "kimrec": rg.BIN_DIR / "BioReactor-pr2-kimrec",
-       "rep": rg.BIN_DIR / "BioReactor-pr4-rep"}   # pr2: + per-step diag (-DPREREG_DIAG=1)
+       "rep": rg.BIN_DIR / "BioReactor-pr4-rep",   # pr2/pr4: + per-step diag (-DPREREG_DIAG=1)
+       "recseed": rg.BIN_DIR / "BioReactor-pr5-recseed", "kimmask": rg.BIN_DIR / "BioReactor-pr5-kimmask"}
 FLAGS = {"rec": ["-DRECORD_FLUX", "-DEXTRA_TRACERS=0", "-DPREREG_DIAG=1"],
          "kimrec": ["-DRECORD_FLUX", "-DEXTRA_TRACERS=0", "-DREC_KIM_FLUX=1", "-DPREREG_DIAG=1"],
-         "rep": ["-DREPLAY_FLUX", "-DEXTRA_TRACERS=0", "-DPREREG_DIAG=1"]}
+         "rep": ["-DREPLAY_FLUX", "-DEXTRA_TRACERS=0", "-DPREREG_DIAG=1"],
+         "recseed": ["-DRECORD_FLUX", "-DEXTRA_TRACERS=0", "-DPREREG_DIAG=1", "-DSEED_KIM=1"],
+         "kimmask": ["-DRECORD_FLUX", "-DEXTRA_TRACERS=0", "-DREC_KIM_FLUX=1", "-DREC_KIM_MASK=1", "-DPREREG_DIAG=1"]}
 OUT = ROOT / "docs/meetings/prereg"
 PFX = os.environ.get("PREREG_PFX", "pr")   # run-id prefix: "pr2" = rerun with the per-step diag
 
@@ -76,7 +79,8 @@ def dns(level: int, only: list[str] | None = None) -> None:
     wall = "01:00:00" if level <= 6 else "12:00:00"
     f = rg.WORK / f"prereg{PFX[2:]}_dns_jobs_{level}.json"
     jobs = json.loads(f.read_text()) if only and f.exists() else {}
-    for tag, b, nt in (("A", "rec", NT_A), ("Akim", "kimrec", NT_A), ("B", "rec", NT_B)):
+    for tag, b, nt in (("A", "rec", NT_A), ("Akim", "kimrec", NT_A), ("B", "rec", NT_B),
+                       ("Aseed", "recseed", NT_A), ("Akimmask", "kimmask", NT_A)):
         if only and tag not in only:
             continue
         d = rec_dir(level, tag)
@@ -98,7 +102,8 @@ def replay(level: int, only: list[str] | None = None) -> None:
                             ("H", "A", dict(n_rec_periods=N_REC, replay_loop=0, replay_hold=100)),
                             ("W", "A", dict(n_rec_periods=1, replay_loop=1)),
                             ("S", "Akim", dict(n_rec_periods=N_REC, replay_loop=0)),
-                            ("WS", "Akim", dict(n_rec_periods=1, replay_loop=1))):   # flux from u, cycle 1 looped
+                            ("WS", "Akim", dict(n_rec_periods=1, replay_loop=1)),   # flux from u, cycle 1 looped
+                            ("WSm", "Akimmask", dict(n_rec_periods=1, replay_loop=1))):   # + Kim's solid-face mask
         if only and tag not in only:
             continue
         sp = base(level, rid(level, f"rep{tag}"), BIN["rep"])

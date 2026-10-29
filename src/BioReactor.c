@@ -440,6 +440,10 @@ static int next_period_count (double x) {
 // -DREC_KIM_FLUX=1 (with -DRECORD_FLUX; default 0): store ufk = fm*face_value(u) instead of uf. It emulates
 // an offline solver that rebuilds the advecting face velocity from the stored cell-centred velocity (not
 // divergence-free), to measure the error of that approach. Same record format; uf, u and the run are untouched.
+// -DREC_KIM_MASK=1: also set ufk = 0 on faces with fs = 0, as Kim's Field_define does (diary 2026-10-29).
+#ifndef REC_KIM_MASK
+#define REC_KIM_MASK 0
+#endif
 #ifndef REC_KIM_FLUX
 #define REC_KIM_FLUX 0
 #endif
@@ -615,7 +619,7 @@ static void rec_write_step (void)
   // u is only read, as the solver holds it; the faces that reach a ghost or halo cell of u (~0.5 % of them
   // at the first recorded step) use the value u has there.
   foreach_face (x, y, noauto)
-    ufk.x[] = fm.x[]*face_value (u.x, 0);
+    ufk.x[] = (REC_KIM_MASK && !fs.x[]) ? 0. : fm.x[]*face_value (u.x, 0);   // mask: Kim TracerTest_test.c:930
   boundary ((scalar *){ufk});
 #endif
   rec_gather (buf);
@@ -2213,7 +2217,11 @@ event tracer(t = t_mix){
       // f[]>0.5 (majority-liquid) instead of f[]==1 (exact) so that near-interface
       // cells are included — at coarse resolutions f never reaches exactly 1.0 in
       // the top liquid layer, causing c2 to remain 0 throughout the run.
+#if SEED_KIM   // Kim's rule: full liquid cells only (his BioReactor.c event tracer); diary 2026-10-29 seed test
+      if ((f[] == 1) && (cs[]==1) && (y >= y_liq_mid))
+#else
       if ((f[] > 0.5) && (cs[]==1) && (y >= y_liq_mid))
+#endif
         c2[] = 1.0;    // Upper half of liquid
     }
     // Synchronise MPI ghost cells after direct foreach() write.
