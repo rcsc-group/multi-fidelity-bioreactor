@@ -852,3 +852,17 @@ Jobs A 8099915, B 8096047, replays 8099916-18, S 8096051. B = A exactly (floor F
 - H (true flux held T/100): M1 5.9e-3 -> 4.8e-3, M3 0.157 -> 0.288. Does NOT shrink: a time error, as expected.
 - W (stored flux, looped): M1 6.95e-4 -> 3.8e-4. Not material at either level.
 - Caveat: M3 here uses the OLD c2*f sums (these runs predate the fix), so M3 is biased; M1, M2 are not affected.
+
+## 2026-10-30 Deck dtmix and open question "7.6 % vs 2.7 %"
+- Deck: definitions panel chi curve now from the corrected sums (run mix8_new_32p5_7, fixed binary); t_mix 50 % =
+  11.2 s (was 11.8 s with c2*f). Snapshots still from rec_l8_rpm32.5_th7 (illustration). Commit 1c88886.
+- Hypothesis H1: our rebuilt-flux replay ADVECTS f with the rebuilt (non-solenoidal) flux (src/BioReactor.c header:
+  replay runs vof_advection of f); Kim's Field_define RESETS f from the snapshot every step. So our f drifts and the
+  tracer (a VOF tracer of f) goes with it.
+- Evidence (L8, 3 cycles, liquid volume = col 3 of vol_frac_interf.dat; tracer C1 from prereg_diag.dat):
+  DNS A -0.002 % volume, 0.000 % tracer; stored flux looped (repW) -0.001 %, -0.001 %;
+  rebuilt flux looped (repWS) -3.74 % volume, -7.59 % tracer. Volume drift only where the flux is rebuilt.
+- Consistent with H1, not yet a falsification test. Decisive test: our rebuilt-flux replay with f reset from a
+  recorded f every step (Kim's rule). H1 predicts tracer loss falls to ~2.7 %. Needs f in the record (+50 % size).
+  Kim's own advected-f arms (off_m1f0, off_m3f0) blew up in the diffusion solve on 2026-10-29, so his side cannot
+  give the converse test as built.
