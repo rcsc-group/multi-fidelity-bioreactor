@@ -843,3 +843,12 @@ figure: docs/meetings/prereg/mixfix.png (scripts/fig_mixfix.py).
   0.95: 0.937 / 0.961 / 0.952 (1.026). All <= 1.10 -> PASS. Rank order of the 3 conditions is the same at every threshold.
 - Interpretation: at the database thresholds the bias is only 4-13 % (the 2x seen earlier was at chi 0.1-0.2, early
   in the transient). Database rankings stand; rescale dtmix by mean R (0.886, 0.931, 0.950). No rerun needed.
+
+## 2026-10-29 RESULT T4 (grid repeat, ours L9, same condition; scripts/prereg_offline.py report 9)
+Jobs A 8099915, B 8096047, replays 8099916-18, S 8096051. B = A exactly (floor F < 1e-6); T1 = 0.
+- S (flux rebuilt from u): M1 8.1e-2 -> 3.1e-2, M2 1.33e-2 -> 3.3e-3, M3 0.138 -> 0.055 (L8 -> L9). SHRINKS with the
+  grid (x2.6, x4, x2.5): the rebuild error is spatial, as predicted. It converges, but slowly; at L9 M1 is still 6x the
+  0.5 % margin.
+- H (true flux held T/100): M1 5.9e-3 -> 4.8e-3, M3 0.157 -> 0.288. Does NOT shrink: a time error, as expected.
+- W (stored flux, looped): M1 6.95e-4 -> 3.8e-4. Not material at either level.
+- Caveat: M3 here uses the OLD c2*f sums (these runs predate the fix), so M3 is biased; M1, M2 are not affected.
