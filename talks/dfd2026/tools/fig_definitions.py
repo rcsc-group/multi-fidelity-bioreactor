@@ -24,6 +24,7 @@ from scripts import postprocess as pp  # noqa: E402
 
 MODE = sys.argv[1] if len(sys.argv) > 1 else "light"
 RUN = REPO / "runs/rec_l8_rpm32.5_th7"
+MIXRUN = Path("/oscar/scratch/eaguerov/replay_gate/runs/mix8_new_32p5_7")
 OUT = Path(__file__).resolve().parent.parent / "public"
 cm = LinearSegmentedColormap.from_list
 if MODE == "dark":
@@ -103,13 +104,19 @@ def fig_kla():
 
 
 def fig_mix():
-    t, c1, c2 = pp._joined_cols(RUN, "tr_oxy.dat", [8, 9])
-    _, fl = pp._joined_cols(RUN, "vol_frac_interf.dat", [pp._COL_F_LIQ])
-    fm = fl.mean(); mean = c1 / fm; var = c2 / fm - mean ** 2
-    i0 = int(np.nonzero(c1 > 1e-10 * fm)[0][0]); chi = np.clip(1 - var / var[i0], 0, 1); chi[:i0] = 0
-    s = (t - t[i0]) * T_bio
-    m = (s >= 0) & (s <= 40)
-    tm = s[i0 + int(np.argmax(chi[i0:] >= 0.5))]
+    # chi from the corrected bulk-liquid sums (diary 2026-10-29), same condition and level, fixed binary;
+    # the snapshots below stay from RUN (illustration only)
+    pn = json.load(open(MIXRUN / "params.json")); Tb_n, _ = pp._t_scales(pn)
+    tn, b0, b1, b2 = pp._joined_cols(MIXRUN, "tr_oxy.dat", [pp._COL_B0, pp._COL_B1, pp._COL_B2])
+    r = np.loadtxt(MIXRUN / "mix_release.dat", skiprows=1)
+    s2max = r[4] / r[2] - (r[3] / r[2]) ** 2
+    k = tn > r[1]
+    s = np.concatenate([[0.0], (tn[k] - r[1]) * Tb_n])
+    chi = np.concatenate([[0.0], np.clip(1 - (b2[k] / b0[k] - (b1[k] / b0[k]) ** 2) / s2max, 0, 1)])
+    m = s <= 40
+    tm = s[int(np.argmax(chi >= 0.5))]
+    t, c1 = pp._joined_cols(RUN, "tr_oxy.dat", [8])
+    i0 = int(np.nonzero(c1 > 0)[0][0])
     fig = plt.figure(figsize=(6.0, 2.9))
     gs = fig.add_gridspec(3, 2, width_ratios=[1.35, 1], wspace=0.12, hspace=0.18)
     ax = fig.add_subplot(gs[:, 0])

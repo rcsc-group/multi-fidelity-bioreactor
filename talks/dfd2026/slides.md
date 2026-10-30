@@ -60,7 +60,7 @@ transition: fade
 
 [click] The dissipation rate is the energy loss in the liquid. It is the second stress measure.
 
-All four come from one run of 32.5 rpm and 7 degrees. The values are kLa 47 per hour and mixing time 11.8 seconds at the lowest fidelity.
+All four come from one run of 32.5 rpm and 7 degrees. The values are kLa 47 per hour and mixing time 11.2 seconds at the lowest fidelity.
 -->
 
 ---
