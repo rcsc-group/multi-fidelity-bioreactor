@@ -1,0 +1,3 @@
+ 17.5 rpm theta 5.5: 0.50 old   27.58 s new   24.87 s ratio 0.901  0.75 old   44.84 s new   42.71 s ratio 0.952  0.95 old  107.87 s new  101.05 s ratio 0.937
+   25 rpm theta 7: 0.50 old   20.79 s new   18.39 s ratio 0.885  0.75 old   40.39 s new   38.23 s ratio 0.947  0.95 old   90.57 s new   87.07 s ratio 0.961
+ 32.5 rpm theta 7: 0.50 old   12.89 s new   11.23 s ratio 0.871  0.75 old   26.69 s new   23.87 s ratio 0.894  0.95 old   60.92 s new   57.98 s ratio 0.952
