@@ -880,3 +880,16 @@ Jobs L8: DNS 8184447-58, replays 8184459-68. Same seed and sums as the database 
   at every rpm. Otherwise the loop does not carry over 150 cycles for that quantity.
 - Note: the loop was validated for 3 cycles only; 150 cycles is the real test. Compute saving if it passes: ~38 %
   at L8 (65 % of each run is after the release, replay ~2.4x faster).
+
+## 2026-10-31 RESULT: chained mfbml with the looped replay at L8 (pre-registered rule PASSES)
+Scripts: replay_chain.py report 8, replay_chain_flowcheck.py 8, replay_chain_mf.py; figure docs/meetings/prereg/replay_chain_L8.png.
+- Flow check: before the release the recording DNS has the same free surface as the database runs (0.0000 %),
+  tau_95 0.4-0.9 % lower (newer binary): worst 0.87 % <= 1 %: PASS, comparison valid.
+- Replay (1 recorded cycle looped for 150 cycles) vs database DNS, 10 rpm, theta 7:
+  kLa_10 within 10 % at 10/10 (worst +6.7 %, 27.5 rpm); kLa_1T_10 (the chain QoI) 10/10 (worst +9.7 %, 37.5 rpm);
+  dtmix_0.50 9/10 (37.5 rpm -10.4 %); dtmix_0.75 9/10 (22.5 rpm -10.9 %). Most points within 1 %. PASS.
+- Chain (L8 KRR -> L9 GP -> L10 GP), theta 7: replay-trained L10 mean inside the DNS-trained 95 % band at 49/49
+  grid rpm for kLa_1T_10 and dtmix_0.50: PASS. Max mean shift 6.3 % (kLa) and 10.6 % (dtmix), both at the
+  extrapolated 37.5-38.5 rpm edge where the band is widest.
+- Largest errors at 37.5 rpm (fastest rocking, least periodic flow?) and isolated others. Limits: L8 only, theta 7
+  only, one loop cycle. Next: same at L9 (fig9_l9_rpm*, ~9 h spin-up each, ~17 GB per recorded cycle).
