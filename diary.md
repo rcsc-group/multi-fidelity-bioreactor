@@ -893,3 +893,15 @@ Scripts: replay_chain.py report 8, replay_chain_flowcheck.py 8, replay_chain_mf.
   extrapolated 37.5-38.5 rpm edge where the band is widest.
 - Largest errors at 37.5 rpm (fastest rocking, least periodic flow?) and isolated others. Limits: L8 only, theta 7
   only, one loop cycle. Next: same at L9 (fig9_l9_rpm*, ~9 h spin-up each, ~17 GB per recorded cycle).
+
+## 2026-10-31 Replay in place of L8 DNS, under the ESTABLISHED protocols (user: use the mfbml protocols, not a new test)
+Script scripts/replay_chain_loo.py (calls test_s89_l8_to_l9.main and test_chain_l10_theta7.main with the theta-7 kmix_l8
+values swapped for rc8 replays; nothing else changes). Figure docs/meetings/prereg/replay_chain_loo.png. The DNS run
+reproduces the published chain numbers exactly (A 0.188, C 0.231, L9 ratio 0.167): the harness is faithful.
+RMS ln error (leave-out as published), DNS -> replay:
+- L8 -> L9, 17 theta-7 L9 runs (more than the 14 of 2026-10-19), leave-rpm-group-out: kLa_1T_10 MF 0.185 -> 0.171,
+  L8 x ratio 0.250 -> 0.241; dtmix_0.50 MF 0.173 -> 0.160, ratio 0.309 -> 0.292; coverage 17/17 both; verdict USEFUL both.
+- L8 -> L9 -> L10 kLa_1T_10, 7 L10 runs, LOO: A 0.188 -> 0.177 (coverage 6 -> 7 of 7), C 0.231 -> 0.211,
+  L9 ratio 0.167 -> 0.163, L10-only 0.225 (no L8). Verdict NOT USEFUL in both (A not below the L9 ratio): unchanged.
+Reading: replacing the L8 DNS by the replay changes no verdict and no error by more than 0.02 in ln. The supersedes the
+ad-hoc band check of 2026-10-31 (replay_chain_mf.py), which did not follow the leave-out protocol.

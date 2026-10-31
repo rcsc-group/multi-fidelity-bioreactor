@@ -42,13 +42,16 @@ def collect(patterns, q):
     return pts
 
 
-def main():
+def main(l8_swap=None, out_path=None):
+    """l8_swap: optional {q: {run name: value}} that replaces L8 points (scripts/replay_chain_loo.py)."""
     warnings.filterwarnings("ignore")
     old_only = "--old-only" in sys.argv
     out = {}
     for q in QS:
         l8 = collect(["t6_l8_*", "kmix_l8_*", "t5_l8_*", "e8_l8_*", "w_l8_*", "dose_l8_*"], q)
         l8 = [p for p in l8 if abs(p[0] - round(p[0], 3)) < 1e-9 or True]
+        if l8_swap:
+            l8 = [(a, b, l8_swap[q].get(n, v), n) for a, b, v, n in l8]
         X8 = np.array([[p[0], p[1]] for p in l8])
         lf = train_lf2d(X8, np.log([p[2] for p in l8]))
         l9 = collect(["fig9_l9_rpm*"] + ([] if old_only else ["e9_l9_rpm*_th7"]), q)
@@ -76,7 +79,8 @@ def main():
               f"coverage {cover}/{len(l9)} -> {verdict}")
         for r in sorted(rows, key=lambda r: r["rpm"]):
             print(f"   rpm {r['rpm']:6.2f} obs {math.exp(r['obs']):7.2f}  MF {math.exp(r['mf']):7.2f} [{math.exp(r['lo']):6.1f}, {math.exp(r['hi']):6.1f}]  L9-only {math.exp(r['hf']):7.2f}  L8 {math.exp(r['l8']):7.2f}")
-    (ROOT / f"experiments/multifidelity/test_s89_l8_to_l9{'_oldonly' if old_only else ''}.json").write_text(json.dumps(out, indent=1))
+    (out_path or ROOT / f"experiments/multifidelity/test_s89_l8_to_l9{'_oldonly' if old_only else ''}.json").write_text(json.dumps(out, indent=1))
+    return out
 
 
 if __name__ == "__main__":
