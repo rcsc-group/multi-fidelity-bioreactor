@@ -866,3 +866,17 @@ Jobs A 8099915, B 8096047, replays 8099916-18, S 8096051. B = A exactly (floor F
   recorded f every step (Kim's rule). H1 predicts tracer loss falls to ~2.7 %. Needs f in the record (+50 % size).
   Kim's own advected-f arms (off_m1f0, off_m3f0) blew up in the diffusion solve on 2026-10-29, so his side cannot
   give the converse test as built.
+
+## 2026-10-31 PRE-REGISTERED: chained mfbml with the looped replay in place of the L8 (then L9) DNS
+Script scripts/replay_chain.py. theta 7, all 10 rpm of kmix_l8_rpm* (then fig9_l9_rpm*). Per rpm: recording DNS
+(pr4-rec) from rest to cycle 80 + 1 recorded cycle, then that cycle looped (pr4-rep) to the database t_end
+(150 cycles after release at L8). Params identical to the database runs except the binary (checked: `diff`).
+Jobs L8: DNS 8184447-58, replays 8184459-68. Same seed and sums as the database (old), so the comparison is like for like.
+- Confound check first: the database binaries are older (lean-f1c11e0 at L8). The recording DNS must reproduce the
+  database flow up to the release (free-surface height, tau_95 over cycles 70-80) to 1 %. If not, the binary
+  changed the flow and the comparison below is void.
+- Decision rule, per quantity (kLa_10, dtmix_0.50, dtmix_0.75): PASS if |replay/DNS - 1| <= 10 % at >= 9 of 10 rpm,
+  AND the chained L10 prediction (fig_mf_grid.py chain, L8 replaced by replay) stays inside the DNS-trained 95 % band
+  at every rpm. Otherwise the loop does not carry over 150 cycles for that quantity.
+- Note: the loop was validated for 3 cycles only; 150 cycles is the real test. Compute saving if it passes: ~38 %
+  at L8 (65 % of each run is after the release, replay ~2.4x faster).
