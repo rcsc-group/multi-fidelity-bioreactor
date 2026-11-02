@@ -905,3 +905,8 @@ RMS ln error (leave-out as published), DNS -> replay:
   L9 ratio 0.167 -> 0.163, L10-only 0.225 (no L8). Verdict NOT USEFUL in both (A not below the L9 ratio): unchanged.
 Reading: replacing the L8 DNS by the replay changes no verdict and no error by more than 0.02 in ln. The supersedes the
 ad-hoc band check of 2026-10-31 (replay_chain_mf.py), which did not follow the leave-out protocol.
+
+## 2026-11-02 — L9 replay chain submitted
+- Same pre-registered design as L8 (entry 2026-10-31). `replay_chain.py diff 9 25`: no difference outside the replay keys.
+- Recording DNS rc9_rpm*_rec: jobs 8249920–8249930. Looped replays rc9_rpm*_rep: jobs 8249931–8249940 (afterok).
+- After they finish: flow check (`replay_chain_flowcheck.py 9`, limit 1 %), `replay_chain.py report 9`, the two published protocols with L9 swapped too, and the L9 overlay on the Kim replicas.
