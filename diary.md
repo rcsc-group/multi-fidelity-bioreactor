@@ -910,3 +910,9 @@ ad-hoc band check of 2026-10-31 (replay_chain_mf.py), which did not follow the l
 - Same pre-registered design as L8 (entry 2026-10-31). `replay_chain.py diff 9 25`: no difference outside the replay keys.
 - Recording DNS rc9_rpm*_rec: jobs 8249920–8249930. Looped replays rc9_rpm*_rep: jobs 8249931–8249940 (afterok).
 - After they finish: flow check (`replay_chain_flowcheck.py 9`, limit 1 %), `replay_chain.py report 9`, the two published protocols with L9 swapped too, and the L9 overlay on the Kim replicas.
+
+## 2026-11-02 — DFD deck: model slide (slide 5)
+- Left: two-phase NS in the bag frame (frame terms orange), VOF, Henry's law, quadtree with h_8,9,10 in level colours. Transport eq dropped (on slide 4); release protocol moved to slide-4 notes.
+- Right: MF build-up, tools/fig_mf_steps.py. Real L8->L10 kLa_10 at 7 deg gave rho = -0.03 (L8 noisy, ~3x high): a direct L8->L10 kLa fit does not work, which supports the L9 chain. The slide therefore uses synthetic data (labelled as such in the notes); `--real` keeps the real-data version.
+- Iteration video: Nelder-Mead on (rho, b, l, s, sigma_n), steps chosen evenly by curve motion; newest step strong, old steps thinner; changed parameters bold.
+- Cost on the slide: L10 ~4,000 CPU-h (3,600 measured at 32.5 rpm), L8 ~60.

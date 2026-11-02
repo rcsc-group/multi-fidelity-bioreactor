@@ -114,7 +114,7 @@ Protocol: we settle the flow for 80 rocking cycles. Then we release the tracer i
 
 
 ---
-clicks: 4
+clicks: 3
 ---
 
 <div class="mdl-left">
@@ -156,21 +156,21 @@ $${\color{#0072B2}h_8 = \tfrac{L}{2^{8}}} \quad {\color{#009E73}h_9 = \tfrac{L}{
 </div>
 </div>
 
-<div v-click="1" class="mdl-cost">one L10 run ≈ <b>4,000</b> CPU-h &nbsp;·&nbsp; one L8 run ≈ <b>60</b> CPU-h</div>
 </div>
 
-<div class="mdl-right" v-click="2">
+<div class="mdl-right" v-click="1">
 <div class="name">multi-fidelity</div>
 
 $${\color{#CC79A7}f_H(x)} = \rho\,{\color{#0072B2}f_L(x)} + b + \delta(x), \qquad \delta \sim \mathcal{GP}(0,\, s^2 k_\ell) $$
 
 <div class="mdl-fig">
-  <img v-if="$clicks <= 2" src="/mf_a.png" />
-  <img v-else-if="$clicks == 3" src="/mf_b.png" />
+  <img v-if="$clicks <= 1" src="/mf_a.png" />
+  <img v-else-if="$clicks == 2" src="/mf_b.png" />
   <video v-else src="/mf_iter.mp4" autoplay muted playsinline />
 </div>
+<div class="mdl-cost"><span style="color:#CC79A7">one L10 run ≈ <b>4,000</b> CPU-h</span> &nbsp;·&nbsp; <span style="color:#0072B2">one L8 run ≈ <b>60</b> CPU-h</span></div>
 
-<div v-click="4">
+<div v-click="3">
 
 $$\theta^\star = \arg\min_\theta\, \left[-\log p(\mathbf{y}_H \mid \theta)\right], \qquad \theta = (\rho,\, b,\, \ell,\, s,\, \sigma_n)$$
 
@@ -179,25 +179,23 @@ $$\theta^\star = \arg\min_\theta\, \left[-\log p(\mathbf{y}_H \mid \theta)\right
 
 <style>
 .mdl-left { position: absolute; left: 34px; top: 24px; width: 520px; }
-.mdl-right { position: absolute; right: 30px; top: 24px; width: 370px; }
+.mdl-right { position: absolute; right: 26px; top: 24px; width: 400px; }
 .mdl-left .katex-display, .mdl-right .katex-display { margin: 6px 0; }
-.mdl-left .katex-display .katex { font-size: 0.86em; }
+.mdl-left .katex-display .katex { font-size: 0.95em; }
 .mdl-row { display: flex; justify-content: space-around; margin-top: 4px; text-align: center; }
 .mdl-grid { display: flex; align-items: center; gap: 14px; margin-top: 8px; }
-.mdl-grid img { height: 90px; }
-.mdl-cost { margin-top: 14px; font-size: 20px; white-space: nowrap; color: var(--ink); }
-.mdl-fig img, .mdl-fig video { width: 370px; display: block; }
-.mdl-right .katex-display .katex { font-size: 0.68em; }
+.mdl-grid img { height: 92px; }
+.mdl-cost { margin-top: 2px; font-size: 15px; white-space: nowrap; color: var(--ink); }
+.mdl-fig img, .mdl-fig video { width: 400px; display: block; }
+.mdl-right .katex-display .katex { font-size: 0.76em; }
 .mdl-right .katex-display { overflow: visible; }
-.cap { color: var(--mute); font-size: 15px; }
+.cap { color: var(--mute); font-size: 18px; white-space: nowrap; }
 </style>
 
 <!--
 The solver is Basilisk. We solve the two-phase Navier–Stokes equations in the frame of the bag, so the walls do not move. The price is the frame terms, in orange: the angular acceleration, Coriolis and centrifugal terms. The volume fraction alpha marks the liquid. At the interface the oxygen follows Henry's law. The mesh is a quadtree. L8, L9 and L10 mean a cell size of L over 2 to the 8, 9 and 10.
 
-[click] The cost. One L10 run costs about 4,000 CPU hours (3,600 measured at 32.5 rpm; more at low rpm). One L8 run costs about 60. So we can afford few L10 runs.
-
-[click] Multi-fidelity. Blue dots: many cheap L8 runs. Pink dots: few expensive L10 runs.
+[click] Multi-fidelity. Blue dots: many cheap L8 runs. Pink dots: few expensive L10 runs. One L10 run costs about 4,000 CPU hours (3,600 measured at 32.5 rpm; more at low rpm). One L8 run costs about 60. So we can afford few L10 runs.
 
 [click] A kernel ridge regression fits the cheap data: f_L.
 

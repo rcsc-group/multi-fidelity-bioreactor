@@ -93,7 +93,7 @@ def main():
             p9 = np.array([qois(f"x8_l9_rpm{r:g}_th5.5")[q] for r in test_rpm])
             tr = np.ones(len(hk), bool)
             m2 = FullBayesKRRLRGP(BOUNDS, lf_model=ad, basis="linear").train(X, np.log(y10))
-            d9 = {**l9_pts, **{(r, 5.5): qois(f"x8_l9_rpm{r:g}_th5.5")[q] for r in test_rpm}}
+            d9 = {**{k: v[q] for k, v in l9_pts.items()}, **{(r, 5.5): qois(f"x8_l9_rpm{r:g}_th5.5")[q] for r in test_rpm}}
             kk = sorted(d9, key=lambda k: (k[1], k[0]))
             m1t = FullBayesKRRLRGP(BOUNDS, lf_model=lf, basis="linear").train(np.array(kk), np.log([d9[k] for k in kk]))
             m2t = FullBayesKRRLRGP(BOUNDS, lf_model=Offset(m1t), basis="linear").train(X, np.log(y10))

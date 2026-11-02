@@ -127,10 +127,12 @@ def models(mode, a8, a9, a10):
     return pred
 
 
-def main(mode):
+def main(mode, transpose=False):
     warnings.filterwarnings("ignore")
     plt.rcParams.update(fs.rcparams())
-    fig, axes = plt.subplots(5, 3, figsize=(9.4, 12.2), sharex=True, sharey="row")
+    fig, axes = (plt.subplots(3, 5, figsize=(17.0, 7.4), sharex=True, sharey="col") if transpose else plt.subplots(5, 3, figsize=(9.4, 12.2), sharex=True, sharey="row"))
+    if transpose:
+        axes = axes.T   # keep axes[row quantity, column angle] indexing below
     c10, cp = fs.level_colour(10), "0.25"
     rows = []
     for q, mk, stat, lab in HYDRO:
@@ -173,23 +175,31 @@ def main(mode):
                 ax.set_yscale("log")
             ax.set_xlim(14, 39)
             ax.grid(**fs.GRID_KW)
-            if i == 0:
-                ax.set_title(rf"$\theta$ = {th:g}$^\circ$", fontsize=10)
-            if j == 0:
-                ax.set_ylabel(lab)
-            if i == 4:
-                ax.set_xlabel("rocking speed (rpm)")
+            if transpose:
+                if j == 0:
+                    ax.set_title(lab, fontsize=10)
+                if i == 0:
+                    ax.set_ylabel(rf"$\theta$ = {th:g}$^\circ$")
+                if j == 2:
+                    ax.set_xlabel("rocking speed (rpm)")
+            else:
+                if i == 0:
+                    ax.set_title(rf"$\theta$ = {th:g}$^\circ$", fontsize=10)
+                if j == 0:
+                    ax.set_ylabel(lab)
+                if i == 4:
+                    ax.set_xlabel("rocking speed (rpm)")
     h = [Line2D([], [], color=fs.level_colour(L), marker="o", mfc=fs.level_colour(L), ls="none", ms=5, label=f"L{L}") for L in (8, 9, 10)] + \
         [Patch(facecolor=cp, alpha=0.3, label="L10 prediction"),
          Line2D([], [], color=fs.level_colour(9), marker="v", mfc="none", ls="none", ms=5, alpha=0.5, label="L9 warm start\n(mixing time)"),
          Line2D([], [], color="k", marker="o", mfc="none", ls="none", ms=8, label="Kim et al.\n(not trained on)")]
-    lg = axes[0, 2].legend(handles=h, fontsize=8, frameon=False, loc="upper left", bbox_to_anchor=(1.04, 1.0))
+    lg = (axes[4, 0].legend(handles=h, fontsize=8, frameon=False, loc="upper left", bbox_to_anchor=(1.04, 1.0)) if transpose else axes[0, 2].legend(handles=h, fontsize=8, frameon=False, loc="upper left", bbox_to_anchor=(1.04, 1.0)))
     fig.tight_layout()
-    out = MF / f"fig_mf_{mode}_5x3"
+    out = MF / (f"fig_mf_{mode}_3x5" if transpose else f"fig_mf_{mode}_5x3")
     for ext in ("png", "pdf"):
         fig.savefig(f"{out}.{ext}", dpi=200, bbox_inches="tight", bbox_extra_artists=[lg])
     print("wrote", out)
 
 
 if __name__ == "__main__":
-    main(sys.argv[1] if len(sys.argv) > 1 else "chain")
+    main(sys.argv[1] if len(sys.argv) > 1 else "chain", transpose=len(sys.argv) > 2 and sys.argv[2] == "t")
