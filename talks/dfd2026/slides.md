@@ -18,9 +18,70 @@ transition: fade
 
 ---
 transition: fade
+clicks: 2
 ---
 
-# Motivation
+<div class="mot-left">
+<div class="name">cultivated meat needs large, gentle bioreactors</div>
+
+<div class="mot-cost">
+<div><span class="big">$25–35</span><span class="u">/kg</span><div class="cap">stirred tanks, 42–211 m³<br/>Negulescu 2023</div></div>
+<div class="arrow">→</div>
+<div><span class="big">$9</span><span class="u">/kg</span><div class="cap">to compete with beef<br/>Negulescu 2023</div></div>
+</div>
+
+<div class="mot-eq">
+
+$$
+\underbrace{\tau < \tau_{\text{damage}}}_{\text{1–100 Pa}}
+\qquad
+\underbrace{k_La\,(C_{\text{sat}} - C) \;\ge\; \mathrm{OUR}}_{\text{oxygen}}
+\qquad
+\underbrace{t_{\text{mix}} < 1/k_La}_{\text{mixing}}
+$$
+
+</div>
+
+<div class="quote">"shear-induced cell damage will all limit practical bioreactor volume and attainable cell density"<span class="who"> — Humbird 2021</span></div>
+
+<div v-click="1" class="mot-cfd">
+<div class="name">one resolved condition costs</div>
+<div class="row"><span class="big2">≈ 4,000</span> CPU-h &nbsp;<span class="cap">(our L10)</span></div>
+<div class="quote">"highly time consuming and not practically feasible for a large number of operating conditions"<span class="who"> — Zhan 2019</span></div>
+</div>
+</div>
+
+<div class="mot-right" v-click="2">
+<img src="/lit_gap.png" />
+</div>
+
+<style>
+.mot-left { position: absolute; left: 34px; top: 24px; width: 520px; }
+.mot-right { position: absolute; right: 22px; top: 40px; width: 420px; }
+.mot-right img { width: 420px; }
+.mot-cost { display: flex; align-items: center; gap: 22px; margin: 10px 0 0 4px; }
+.mot-cost .big { font-size: 46px; font-weight: 300; color: var(--ink); }
+.mot-cost .u { font-size: 20px; color: var(--mute); }
+.mot-cost .arrow { font-size: 34px; color: var(--mute); }
+.mot-eq .katex-display { margin: 10px 0 4px; }
+.mot-eq .katex { font-size: 1.0em; }
+.quote { font-size: 16px; font-style: italic; color: var(--ink); margin-top: 4px; }
+.quote .who { font-style: normal; color: var(--mute); }
+.mot-cfd { margin-top: 18px; }
+.mot-cfd .row { font-size: 22px; color: var(--ink); margin-top: 2px; }
+.mot-cfd .big2 { font-size: 36px; font-weight: 300; }
+.cap { color: var(--mute); font-size: 15px; line-height: 1.2; }
+</style>
+
+<!--
+Cultivated meat is still far from the price of beef. Negulescu and co-workers estimate 25 to 35 dollars per kilo in stirred tanks of 42 to 211 cubic metres. To compete with beef, production must drop below 9 dollars per kilo. Media dominate the cost, but the bioreactor sets the cell density and the scale.
+
+The bioreactor must do three things at once. The shear stress must stay below the damage range, 1 to 100 pascal for mammalian cells. The oxygen transfer must supply the oxygen uptake of the cells. The mixing time must be shorter than one over kLa, so the oxygen spreads before the cells use it. These pull against each other: more agitation helps oxygen and mixing, but raises shear.
+
+[click] Simulations can map this trade-off before experiments. But one resolved condition costs about 4,000 CPU hours at our finest grid. Zhan and co-workers say this directly for their wave bag.
+
+[click] What earlier work did. Zhan, Seidel and Kim simulate rocking bags with a resolved interface, each on one grid, with no error bars. Cantarero-Rivera corrects a coarse mesh with a neural network, in a spinner flask, again with no error bars, and it does not generalise across speeds. Kiviat computes all three quantities, but in stirred tanks with RANS, which they say under-predicts shear. Martens uses a multi-fidelity Gaussian process, but the fidelities are culture scales from an ODE model, not grid levels. We do all five: rocking bag, resolved two-phase flow, all three quantities, grid levels used as data, and error bars.
+-->
 
 ---
 

@@ -916,3 +916,10 @@ ad-hoc band check of 2026-10-31 (replay_chain_mf.py), which did not follow the l
 - Right: MF build-up, tools/fig_mf_steps.py. Real L8->L10 kLa_10 at 7 deg gave rho = -0.03 (L8 noisy, ~3x high): a direct L8->L10 kLa fit does not work, which supports the L9 chain. The slide therefore uses synthetic data (labelled as such in the notes); `--real` keeps the real-data version.
 - Iteration video: Nelder-Mead on (rho, b, l, s, sigma_n), steps chosen evenly by curve motion; newest step strong, old steps thinner; changed parameters bold.
 - Cost on the slide: L10 ~4,000 CPU-h (3,600 measured at 32.5 rpm), L8 ~60.
+
+## 2026-11-02 — DFD deck: motivation + literature slide (slide 2)
+- 8 papers from the Zotero Bioreactor collection read in full (Haiku agents, quotes with pages): Humbird 2021, Negulescu 2023, Zhan 2019, Seidel 2022, Kim 2025, Cantarero-Rivera 2024, Kiviat 2025, Martens 2025.
+- Gap matrix (tools/fig_lit_gap.py): no prior work uses CFD grid levels as fidelities with error bars in a rocking bag. Closest: Cantarero-Rivera 2024 (coarse->fine ANN, spinner flask, no UQ, fails across speeds); Martens 2025 (MF GP over culture scales from an ODE model, no CFD).
+- Cost metrics differ: Humbird $/kg bulk wet cells vs Negulescu COGS; slide uses Negulescu only ($25-35 -> $9).
+- Kim 2025 states 120 CPU core-h per case (p.6) vs our ~3,600 at L10: same open 30x gap as F7.
+- Zotero: parents 9V3QYIDQ and DZRCB8PN open the wrong PDFs (Zhan, Seidel); correct attachments 2WNGLTFI, KK7E97KF.
