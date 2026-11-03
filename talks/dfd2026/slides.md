@@ -42,12 +42,9 @@ $$
 
 </div>
 
-<div class="quote">"shear-induced cell damage will all limit practical bioreactor volume and attainable cell density"<span class="who"> — Humbird 2021</span></div>
-
 <div v-click="1" class="mot-cfd">
 <div class="name">one resolved condition costs</div>
-<div class="row"><span class="big2">≈ 4,000</span> CPU-h &nbsp;<span class="cap">(our L10)</span></div>
-<div class="quote">"highly time consuming and not practically feasible for a large number of operating conditions"<span class="who"> — Zhan 2019</span></div>
+<div class="row"><span class="big2">≈ 4,000</span> CPU-h</div>
 </div>
 </div>
 
@@ -76,9 +73,9 @@ $$
 <!--
 Cultivated meat is still far from the price of beef. Negulescu and co-workers estimate 25 to 35 dollars per kilo in stirred tanks of 42 to 211 cubic metres. To compete with beef, production must drop below 9 dollars per kilo. Media dominate the cost, but the bioreactor sets the cell density and the scale.
 
-The bioreactor must do three things at once. The shear stress must stay below the damage range, 1 to 100 pascal for mammalian cells. The oxygen transfer must supply the oxygen uptake of the cells. The mixing time must be shorter than one over kLa, so the oxygen spreads before the cells use it. These pull against each other: more agitation helps oxygen and mixing, but raises shear.
+The bioreactor must do three things at once. The shear stress must stay below the damage range, 1 to 100 pascal for mammalian cells. The oxygen transfer must supply the oxygen uptake of the cells. The mixing time must be shorter than one over kLa, so the oxygen spreads before the cells use it. These pull against each other: more agitation helps oxygen and mixing, but raises shear. Humbird 2021: "shear-induced cell damage will all limit practical bioreactor volume and attainable cell density".
 
-[click] Simulations can map this trade-off before experiments. But one resolved condition costs about 4,000 CPU hours at our finest grid. Zhan and co-workers say this directly for their wave bag.
+[click] Simulations can map this trade-off before experiments. But one resolved condition costs about 4,000 CPU hours at our finest grid. Zhan 2019 say this directly for their wave bag: "highly time consuming and not practically feasible for a large number of operating conditions".
 
 [click] What earlier work did. Zhan, Seidel and Kim simulate rocking bags with a resolved interface, each on one grid, with no error bars. Cantarero-Rivera corrects a coarse mesh with a neural network, in a spinner flask, again with no error bars, and it does not generalise across speeds. Kiviat computes all three quantities, but in stirred tanks with RANS, which they say under-predicts shear. Martens uses a multi-fidelity Gaussian process, but the fidelities are culture scales from an ODE model, not grid levels. We do all five: rocking bag, resolved two-phase flow, all three quantities, grid levels used as data, and error bars.
 -->
