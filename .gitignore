@@ -48,3 +48,4 @@ __pycache__/
 !experiments/multifidelity/replicate_cv.png
 !experiments/canonical_case/**/*.mp4
 !docs_site/assets/**
+.claude/worktrees/

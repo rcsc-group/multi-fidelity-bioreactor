@@ -1,0 +1,6 @@
+B      M1 0.000e+00  M2 0.000e+00  M3 0.000e+00  (to 3.000 cycles)
+repT1  M1 0.000e+00  M2 0.000e+00  M3 0.000e+00  (to 2.986 cycles)
+repH   M1 4.778e-03  M2 7.292e-03  M3 2.877e-01  (to 2.986 cycles)
+repW   M1 3.782e-04  M2 9.149e-04  M3 2.985e-03  (to 3.000 cycles)
+repS   M1 3.076e-02  M2 3.277e-03  M3 5.463e-02  (to 2.986 cycles)
+repWS: missing ([Errno 2] No such file or directory: '/oscar/scratch/eaguerov/replay_gate/runs/pr9_repWS/params.json')
