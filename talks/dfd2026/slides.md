@@ -24,7 +24,7 @@ clicks: 2
 <div class="mot-left">
 <div class="name">cultivated meat needs large, gentle bioreactors</div>
 <img src="/cm_process.png" class="mot-proc" />
-<div class="cap">adapted from Post 2020; Guan 2021</div>
+<div class="cap">(Foodingredients 2021; Post et al. 2020; Guan et al. 2021)</div>
 
 <div class="mot-cost">
 <div><span class="big">$25–35</span><span class="u">/kg</span><div class="cap">stirred tanks, 42–211 m³<br/>Negulescu 2023</div></div>
@@ -55,21 +55,21 @@ $$
 </div>
 
 <style>
-.mot-left { position: absolute; left: 34px; top: 24px; width: 520px; }
-.mot-right { position: absolute; right: 22px; top: 40px; width: 420px; }
-.mot-right img { width: 420px; }
+.mot-left { position: absolute; left: 18px; top: 8px; width: 540px; }
+.mot-right { position: absolute; right: 8px; top: 30px; width: 470px; }
+.mot-right img { width: 470px; }
 .mot-cost { display: flex; align-items: center; gap: 22px; margin: 2px 0 0 4px; }
-.mot-cost .big { font-size: 36px; font-weight: 300; color: var(--ink); }
+.mot-cost .big { font-size: 44px; font-weight: 300; color: var(--ink); }
 .mot-cost .u { font-size: 20px; color: var(--mute); }
 .mot-cost .arrow { font-size: 34px; color: var(--mute); }
 .mot-eq .katex-display { margin: 4px 0 2px; }
-.mot-eq .katex { font-size: 1.0em; }
+.mot-eq .katex { font-size: 1.12em; }
 .quote { font-size: 16px; font-style: italic; color: var(--ink); margin-top: 4px; }
 .quote .who { font-style: normal; color: var(--mute); }
-.mot-proc { width: 380px; margin: 2px 0 0 0; }
-.mot-cfd { margin-top: 4px; }
+.mot-proc { width: 470px; margin: 0; }
+.mot-cfd { position: absolute; left: 600px; top: 410px; width: 400px; }
 .mot-cfd .row { font-size: 22px; color: var(--ink); margin-top: 2px; }
-.mot-cfd .big2 { font-size: 30px; font-weight: 300; }
+.mot-cfd .big2 { font-size: 44px; font-weight: 300; }
 .cap { color: var(--mute); font-size: 15px; line-height: 1.2; }
 </style>
 
@@ -239,16 +239,17 @@ $$\theta^\star = \arg\min_\theta\, \left[-\log p(\mathbf{y}_H \mid \theta)\right
 </div>
 
 <style>
-.mdl-left { position: absolute; left: 34px; top: 24px; width: 520px; }
-.mdl-right { position: absolute; right: 26px; top: 24px; width: 400px; }
+.mdl-left { position: absolute; left: 16px; top: 10px; width: 540px; }
+.mdl-right { position: absolute; right: 10px; top: 10px; width: 450px; }
 .mdl-left .katex-display, .mdl-right .katex-display { margin: 6px 0; }
-.mdl-left .katex-display .katex { font-size: 0.95em; }
-.mdl-row { display: flex; justify-content: space-around; margin-top: 4px; text-align: center; }
-.mdl-grid { display: flex; align-items: center; gap: 14px; margin-top: 8px; }
-.mdl-grid img { height: 92px; }
-.mdl-cost { margin-top: 2px; font-size: 15px; white-space: nowrap; color: var(--ink); }
-.mdl-fig img, .mdl-fig video { width: 400px; display: block; }
-.mdl-right .katex-display .katex { font-size: 0.76em; }
+.mdl-left .katex-display .katex { font-size: 1.05em; }
+.mdl-left .katex-display { margin: 14px 0 !important; }
+.mdl-row { display: flex; justify-content: space-around; margin-top: 18px; text-align: center; }
+.mdl-grid { display: flex; flex-direction: column; align-items: center; gap: 0; margin-top: 22px; }
+.mdl-grid img { height: 130px; }
+.mdl-cost { margin-top: 4px; font-size: 17px; white-space: nowrap; color: var(--ink); }
+.mdl-fig img, .mdl-fig video { width: 450px; display: block; }
+.mdl-right .katex-display .katex { font-size: 0.86em; }
 .mdl-right .katex-display { overflow: visible; }
 .cap { color: var(--mute); font-size: 18px; white-space: nowrap; }
 </style>

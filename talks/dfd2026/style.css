@@ -10,3 +10,4 @@
 /* equations: Computer Modern (KaTeX fonts ship with Slidev); variables in the italic math face */
 .eq, .eq * { font-family: "KaTeX_Main", "Latin Modern Math", "Latin Modern Roman", serif !important; font-weight: 400 !important; }
 .eq i, .eq .v { font-family: "KaTeX_Math", "KaTeX_Main", serif !important; font-style: italic; }
+.slidev-layout.default, .slidev-layout { padding: 14px 20px !important; }
