@@ -49,3 +49,4 @@ __pycache__/
 !experiments/canonical_case/**/*.mp4
 !docs_site/assets/**
 .claude/worktrees/
+talks/dfd2026/lit_pdfs/
