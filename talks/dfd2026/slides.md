@@ -84,8 +84,49 @@ The bioreactor must do three things at once. The shear stress must stay below th
 -->
 
 ---
+transition: fade
+---
 
-# Introduction
+<img src="/s3_kim.png" class="s3-img" style="left:16px; top:58px; width:269px; height:85px; object-fit:cover" />
+<div class="s3-lab" style="left:16px; top:200px; width:269px"><div class="au">Kim et al. 2025</div><div class="ct">resolved Basilisk model</div></div>
+
+<img src="/s3_seidel.png" class="s3-img" style="left:297px; top:10px; width:310px; height:175px" />
+<div class="s3-lab" style="left:297px; top:200px; width:319px"><div class="au">Seidel et al. 2022</div><div class="ct">kLa and mixing maps</div></div>
+
+<img src="/s3_zhan.png" class="s3-img" style="left:628px; top:10px; width:380px; height:180px" />
+<div class="s3-lab" style="left:628px; top:200px; width:380px"><div class="au">Zhan et al. 2019</div><div class="ct">first CFD of a wave bag</div></div>
+
+<img src="/s3_cantarero.png" class="s3-img" style="left:120px; top:250px; width:237px; height:215px" />
+<div class="s3-lab" style="left:120px; top:471px; width:300px"><div class="au">Cantarero-Rivera et al. 2024</div><div class="ct">coarse-to-fine correction</div></div>
+
+<img src="/s3_martens.png" class="s3-img" style="left:440px; top:280px; width:530px; height:153px" />
+<div class="s3-lab" style="left:440px; top:471px; width:530px"><div class="au">Martens et al. 2025</div><div class="ct">multi-fidelity GP, bioprocess</div></div>
+
+<div class="s3-close">Our goal: predict the flow over all operating conditions from cheap simulations, with error bars.</div>
+
+<style>
+.s3-img { position: absolute; display: block; }
+.s3-lab { position: absolute; font-size: 14px; line-height: 1.2; color: var(--ink); }
+.s3-lab .au { font-size: 15px; }
+.s3-lab .ct { color: var(--mute); }
+.s3-close { position: absolute; left: 16px; right: 16px; top: 528px; font-size: 18px; color: var(--ink); border-top: 2px solid #e8590c; padding-top: 6px; }
+</style>
+
+<!--
+Five earlier works. Each one gave us one piece of the problem.
+
+Zhan 2019 was the first resolved CFD of a 10 litre wave bag. They used a volume of fluid model in Fluent. They ran nine rocking speed and angle settings in 2D, and one 3D check (pages 58, 59, 61).
+
+Seidel 2022 modelled the CELL-tainer, a bag with two degrees of motion. They tracked the motion with a camera and scanned the bag in 3D. They fitted response surfaces for kLa and mixing time (pages 2 to 4, 12, 13).
+
+Kim 2025 is our solver base. It is a two-phase Basilisk solver in the frame of the bag, so the walls stay fixed. It transports oxygen across the interface. The kLa comes from the full oxygen field (pages 3 to 6, 9).
+
+Cantarero-Rivera 2024 corrects a coarse CFD mesh of a spinner flask with a neural network. The network learns the error at 90 rpm. It lowers the velocity error by about 20 percent across speeds (page 140). CFD takes 2.5 hours. The coarse mesh and the network take 15 minutes (page 141).
+
+Martens 2025 uses a multi-fidelity Gaussian process for batch Bayesian optimization. The fidelities are three reactor scales of one CHO model. The study is simulation only. The cost cut of 93 percent is from one run against industrial design of experiments (section 3.3).
+
+Our goal: predict the flow over all operating conditions from cheap simulations, with error bars.
+-->
 
 ---
 clicks: 3

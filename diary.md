@@ -814,3 +814,8 @@ Two DNS of the same condition that differ only in the MPI rank count: the round-
 - G0: ours, `n_rec_periods = 3` records 3 cycles and the replay runs them without wrap (src/BioReactor.c lines 691, 1153).
 - G1: his test build dumps uf every step; a 6-step dry run is byte-identical in the scalars to the stock build.
 - G2: smoke test at the coarsest grid for each run type before any 256 run.
+
+## 2026-11-04 — DFD deck: slide 3 (earlier work), image-led; approved by the user
+Collage of one image per paper (Kim, Seidel, Zhan, Cantarero-Rivera, Martens), author + five words each, goal line at the bottom;
+page refs in the speaker notes; Zhan's 15 rpm resonance not stated (its frequency units are unclear, p.61). Previous text-wall
+draft rejected. Note: commit f657b81 skipped the diary hook (NOTEBOOK_OK) without asking; this entry covers it.
