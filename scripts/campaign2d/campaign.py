@@ -433,23 +433,133 @@ def cmd_ledger(_args) -> None:
     print(f"No budget cap (lead, 2026-11-04). Plan central estimate: {sum(plan_parts().values()):.0f} core-h.")
 
 
-# ----------------------------------------------------------------- fit / next
-def fit(level: str) -> None:
-    """Multi-fidelity fit (reuses FullBayesKRRLRGP and CachedLooKRR). Refuses to run outside a compute job."""
-    if "SLURM_JOB_ID" not in os.environ:
-        raise SystemExit("fit is heavy: run it inside a compute job (sbatch ... --wrap 'uv run python ...'), "
-                         "never on the login node")
-    from scripts.test_t3_learning_curve import CachedLooKRR  # noqa: F401  (LF KRR, reused)
+# ----------------------------------------------------------------- fit (baseline, 2026-11-04)
+# Model per QoI, on ln(QoI): LF = LooKRR (CachedLooKRR, reused) trained on L8 in the domain;
+# HF = FullBayesKRRLRGP (reused, mfbml_local/krr_lr_gpr_fullbayes.py) trained on L9 and L10 in the domain.
+# Criterion: c(x) = 2 sigma/mean on the linear scale = 2 sqrt(exp(v) - 1), v = sum_g w_g sc_g^2 nu/(nu-2) + Var_g(mu_g).
+# Map: dense 101 x 101 grid over the domain, then the top 10 grid points refined by L-BFGS-B (bounds = domain).
+DOMAIN = np.array([list(RPM), list(THETA)])
+DB_KLA = ROOT / "experiments/multifidelity/kla_mix_dataset.csv"
+DB_HYDRO = ROOT / "experiments/multifidelity/hydro_dataset_v2.json"
+DOCS_FIT = ROOT / "docs" / "campaign2d"
+# edr_95 is NOT saved for the existing runs (plan 1): the baseline uses edr_mean_t, labelled as a stand-in.
+QOI_SOURCE = {
+    "tau_95": ("hydro", "tau_95_t"),
+    "edr_95": ("hydro", "edr_mean_t"),
+    "kLa_1T_10": ("kla", "kLa_1T_10"),
+    "kLa_1T_25": ("kla", "kLa_1T_25"),
+    "kLa_1T_50": ("kla", "kLa_1T_50"),
+    "dtmix_0.50": ("kla", "dtmix_0.50"),
+}
+CRIT_QOIS = ["tau_95", "edr_95", "kLa_1T_10"]        # gated (<= 0.30); the others are reported, not gated
+MAP_N = 101
+
+
+def load_db(qoi: str):
+    """(level, rpm, theta, value) rows of the existing database for one QoI, domain-restricted, levels 8-10."""
+    import pandas as pd
+    kla = pd.read_csv(DB_KLA)
+    src, col = QOI_SOURCE[qoi]
+    if src == "kla":
+        d = kla[["level", "rpm", "theta", col]].rename(columns={col: "y"})
+    else:
+        h = pd.DataFrame(json.loads(DB_HYDRO.read_text()))
+        d = h[["run", "level", "rpm", col]].merge(kla[["run", "theta"]], on="run")
+        d = d[["level", "rpm", "theta", col]].rename(columns={col: "y"})
+    d = d.dropna()
+    d = d[d.level.isin([8, 9, 10]) & (d.rpm >= RPM[0]) & (d.rpm <= RPM[1])
+          & (d.theta >= THETA[0]) & (d.theta <= THETA[1]) & (d.y > 0)]
+    return d.reset_index(drop=True)
+
+
+def fit_qoi(d):
+    """LF KRR on L8 (ln QoI), then FullBayesKRRLRGP on L9+L10 (ln QoI). Returns the trained HF model."""
+    from scripts.test_t3_learning_curve import CachedLooKRR
     from mfbml_local.krr_lr_gpr_fullbayes import FullBayesKRRLRGP
-    domain = np.array([list(RPM), list(THETA)])
-    raise NotImplementedError("wire: collect ln(QoI) per site (results.json + hydro_dataset_v2 row builder), "
-                              "LF = CachedLooKRR(design_space=domain) on L8, HF = FullBayesKRRLRGP(domain, lf_model=lf) "
-                              "on the level's sites; 2*sigma/mean = 2*sqrt(exp(v)-1) with v the ln-variance of the "
-                              "mixture (w.(sc^2 nu/(nu-2)) + Var_w(mu)). Written only after the user approves the plan.")
+    lo, hi = d[d.level == 8], d[d.level >= 9]
+    if len(lo) < 5 or len(hi) < 2:
+        raise SystemExit(f"too few points: L8 {len(lo)}, L9+L10 {len(hi)}")
+    lf = CachedLooKRR(design_space=DOMAIN, params_optimize=True, noise_data=True, optimizer_restart=10, seed=42)
+    lf.train(lo[["rpm", "theta"]].to_numpy(float), np.log(lo.y.to_numpy(float)).reshape(-1, 1), portion_test=0.2)
+    m = FullBayesKRRLRGP(DOMAIN, lf_model=lf)
+    m.train(hi[["rpm", "theta"]].to_numpy(float), np.log(hi.y.to_numpy(float)))
+    return m
+
+
+def crit(m, X: np.ndarray, chunk: int = 400) -> np.ndarray:
+    """2 sigma/mean (linear scale) of the model at rows X (k, 2) = (rpm, theta). Chunked: predict_nodes is (G, n, m)."""
+    out = np.empty(len(X))
+    for s in range(0, len(X), chunk):
+        mu, sc, nu, w = m.predict_dist(X[s:s + chunk])
+        wm = w @ mu
+        v = (w[:, None] * sc ** 2 * (nu / (nu - 2.0))).sum(0) + (w[:, None] * (mu - wm) ** 2).sum(0)
+        out[s:s + chunk] = 2.0 * np.sqrt(np.expm1(v))
+    return out
+
+
+def max_crit(m) -> dict:
+    """Max of crit over the domain: dense MAP_N x MAP_N grid, then L-BFGS-B from the top 10 grid points."""
+    from scipy.optimize import minimize
+    r = np.linspace(*RPM, MAP_N)
+    t = np.linspace(*THETA, MAP_N)
+    RR, TT = np.meshgrid(r, t, indexing="ij")
+    G = np.column_stack([RR.ravel(), TT.ravel()])
+    cg = crit(m, G)
+    top = np.argsort(cg)[::-1][:10]
+    best_x, best_v = G[top[0]].copy(), float(cg[top[0]])
+    for i in top:
+        res = minimize(lambda x: -float(crit(m, x[None])[0]), G[i], method="L-BFGS-B",
+                       bounds=[tuple(RPM), tuple(THETA)])
+        if -res.fun > best_v:
+            best_v, best_x = float(-res.fun), np.asarray(res.x, float)
+    return dict(max=best_v, rpm=float(best_x[0]), theta=float(best_x[1]), grid_max=float(cg.max()),
+                grid_argmax=[float(G[np.argmax(cg)][0]), float(G[np.argmax(cg)][1])],
+                grid=cg.reshape(MAP_N, MAP_N), r=r, t=t)
+
+
+def plot_map(qoi: str, res: dict, d, path: Path) -> None:
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    fig, ax = plt.subplots(figsize=(4.2, 3.4))
+    im = ax.pcolormesh(res["r"], res["t"], res["grid"].T, shading="auto", cmap="viridis", vmin=0, vmax=max(0.5, res["max"]))
+    for lev, mk, sz in ((8, ".", 10), (9, "o", 18), (10, "s", 18)):
+        s = d[d.level == lev]
+        ax.scatter(s.rpm, s.theta, marker=mk, s=sz, facecolors="none" if lev > 8 else "k", edgecolors="w" if lev == 8 else "w", linewidths=0.6)
+    ax.set_xlabel("rpm")
+    ax.set_ylabel("theta (deg)")
+    ax.set_title(qoi, fontsize=9)
+    cb = fig.colorbar(im, ax=ax)
+    cb.set_label("2 sigma / mean", fontsize=8)
+    fig.tight_layout()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(path, dpi=150)
+    plt.close(fig)
+
+
+def fit(_args=None) -> None:
+    """Baseline fit for every QoI on the existing database (domain subset). Refuses to run outside a compute job."""
+    if "SLURM_JOB_ID" not in os.environ:
+        raise SystemExit("fit is heavy: run it inside a compute job (srun --overlap or sbatch), never on the login node")
+    out = {}
+    for qoi in QOI_SOURCE:
+        d = load_db(qoi)
+        m = fit_qoi(d)
+        res = max_crit(m)
+        png = DOCS_FIT / f"fit0_{qoi.replace('.', '_')}.png"
+        plot_map(qoi, res, d, png)
+        out[qoi] = dict(max=res["max"], rpm=res["rpm"], theta=res["theta"], grid_max=res["grid_max"],
+                        grid_argmax=res["grid_argmax"], n_L8=int((d.level == 8).sum()),
+                        n_HF=int((d.level >= 9).sum()), gated=qoi in CRIT_QOIS, png=str(png))
+        print(f"{qoi:12s} max 2s/mean = {res['max']:.3f} at rpm {res['rpm']:.2f} theta {res['theta']:.2f} "
+              f"(grid max {res['grid_max']:.3f}) L8 n={out[qoi]['n_L8']} HF n={out[qoi]['n_HF']} "
+              f"{'GATED' if qoi in CRIT_QOIS else 'reported'}")
+    STATE.mkdir(parents=True, exist_ok=True)
+    (STATE / "fit0.json").write_text(json.dumps(out, indent=1))
 
 
 def cmd_fit(args) -> None:
-    fit(args.level)
+    fit(args)
 
 
 def cmd_next(args) -> None:
@@ -470,9 +580,7 @@ def main() -> None:
     s.add_argument("--go", action="store_true", help="real submission; explicit approval only")
     s.set_defaults(func=cmd_submit)
     sub.add_parser("status").set_defaults(func=cmd_status)
-    f = sub.add_parser("fit")
-    f.add_argument("level", choices=["L8", "L9", "L10"])
-    f.set_defaults(func=cmd_fit)
+    sub.add_parser("fit").set_defaults(func=cmd_fit)
     sub.add_parser("next").set_defaults(func=cmd_next)
     sub.add_parser("ledger").set_defaults(func=cmd_ledger)
     args = ap.parse_args()

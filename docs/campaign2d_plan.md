@@ -28,7 +28,10 @@ stubs: fit refuses outside a compute job; submit-stage L8 --go is not executed).
   v = sum_g w_g sc_g^2 nu/(nu-2) + Var_g(mu_g).
 - 2 sigma/mean on the linear scale is 2 sqrt(exp(v) - 1), about 2 sqrt(v) for small v.
   So the criterion 2 sigma/mean <= 0.30 is the same as sd_ln <= 0.15 at every point.
-- Map grid: 31 rpm x 11 theta (0.75 rpm, 0.5 deg). Criterion is the MAX over the grid, per QoI.
+- Criterion on the continuous domain (amended 2026-11-04, lead): the max of 2 sigma/mean over the whole square
+  theta in [2, 7] x rpm in [15, 37.5], NOT a grid max. Evaluate on a dense 101 x 101 grid, refine the top 10
+  points with scipy.optimize.minimize (L-BFGS-B, bounds = domain) on -2 sigma/mean. Report the max and its
+  location per QoI. Implementation: campaign.py max_crit().
 - sigma here is the surrogate (latent) uncertainty, not the run-to-run scatter. See Q1.
 
 ### 1.2 L8 (LHS)
@@ -57,7 +60,10 @@ stubs: fit refuses outside a compute job; submit-stage L8 --go is not executed).
   needs about 38 cycles, diary 2026-10-21).
 
 ### 1.5 Stop and gates
-- Stop (a): every QoI has max 2 sigma/mean <= 0.30 on the L10 map.
+- Gates (amended 2026-11-04, lead). Gated QoIs: tau_95, edr_95, kLa_1T_10. Each must have max 2 sigma/mean <= 0.30
+  over the whole continuous domain (section 1.1). kLa_1T_25, kLa_1T_50 and dtmix_0.50 are reported only (map and
+  max), not gated.
+- Stop (a): the three gated QoIs have max 2 sigma/mean <= 0.30 on the L10 map (continuous max, section 1.1).
 - Stop (b): an L10 batch lowers the max by less than 10 % and the max is still above 0.30. Report, do not add.
 - No budget cap. Each batch needs explicit lead approval (--go). Nothing is submitted without it.
 
