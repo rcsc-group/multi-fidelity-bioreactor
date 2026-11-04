@@ -104,7 +104,7 @@ Decision key: USE = in the campaign for the QoIs listed. NO = not used. Cost sav
 
 | Lever | Evidence (diary date, numbers) | Failures | Decision |
 |---|---|---|---|
-| Replay, L8 (one recorded period looped, scalar only) | 2026-10-21 night (replay_lf_mf): RMS ln error at n = 4/8/16 runs: kLa_1T_10 0.08/0.08/0.07; dtmix_0.50 0.11/0.10/0.10. 2026-10-31 (chain at L8, 150 cycles): kLa_1T_10 within 10 % at 10/10 (worst +9.7 %); dtmix_0.50 9/10 (worst -10.4 %); dtmix_0.75 9/10. | 2026-10-21 (periodic, K = 1/2/4): kLa_1T_25 +51.3 / +35.1 / +15.4 % (FAIL). 2026-10-21 (L6, F2): max abs dC* 0.0375 (bar 0.02), dtmix +5.5 % (FAIL). 2026-10-28 (Kim-style rebuilt flux): kLa_1T_10 x1.23, kLa_1T_25 x2.26 (not used). The replay overestimates kLa_1T_25 by about 11 % (mean ln(HF/replay) = -0.108, 2026-10-21 night). | USE (amended 2026-11-04, lead) for kLa_1T_10, kLa_1T_25 and dtmix_0.50 at L8, rpm < 35 only, after the flow check of 3.1. NO for kLa_1T_50 (any rpm) and rpm >= 35: coupled tail. Saving: zero while kLa_1T_50 is still reported at every point, because the coupled tail still runs (see 3.1). |
+| Replay, L8 (one recorded period looped, scalar only) | 2026-10-21 night (replay_lf_mf): RMS ln error at n = 4/8/16 runs: kLa_1T_10 0.08/0.08/0.07; dtmix_0.50 0.11/0.10/0.10. 2026-10-31 (chain at L8, 150 cycles): kLa_1T_10 within 10 % at 10/10 (worst +9.7 %); dtmix_0.50 9/10 (worst -10.4 %); dtmix_0.75 9/10. | 2026-10-21 (periodic, K = 1/2/4): kLa_1T_25 +51.3 / +35.1 / +15.4 % (FAIL). 2026-10-21 (L6, F2): max abs dC* 0.0375 (bar 0.02), dtmix +5.5 % (FAIL). 2026-10-28 (Kim-style rebuilt flux): kLa_1T_10 x1.23, kLa_1T_25 x2.26 (not used). The replay overestimates kLa_1T_25 by about 11 % (mean ln(HF/replay) = -0.108, 2026-10-21 night). | USE (amended 2026-11-04, lead) for kLa_1T_10, kLa_1T_25 and dtmix_0.50 at L8, rpm < 35 only, after the flow check of 3.1. NO for rpm >= 35: coupled tail. kLa_1T_50 is reported only (lead, 2026-11-04): taken where a coupled tail exists anyway, never forces one. Saving: zero under the decided rule, because tau_95 and edr_95 stay coupled-only (see 3.1). |
 | Replay, L9 | rc9 records and replays done (jobs 8249920-8249940). Diary 2026-11-04 (check_replay_kla25_L9.json): kLa_1T_10 10/10 within 10 %, kLa_1T_25 9/10, dtmix_0.50 9/10 (37.5 rpm -13.2 %), kLa_1T_50 7/10 (2 NaN). Flow check: tau_95 1.0-1.7 % low at every rpm (pre-registered limit 1 %: FAIL), posY_max within 0.8 %. | Pre-registered 1 % flow limit failed (see 3.1). | USE (amended 2026-11-04, lead) for kLa_1T_10, kLa_1T_25 and dtmix_0.50 at rpm < 35, after the flow check of 3.1. NO for kLa_1T_50 and rpm >= 35. Saving against cold L9 (580) only if DNS-81 plus replay (rc9 DNS 220-370 core-h plus replay tail) is cheaper; see 3.1. |
 | Replay, L10 | Job 7893240 COMPLETED (log dated 2026-10-25): kLa_1T_10 = 21.84 vs coupled 22.05 (cold) and 22.43 (warm): -0.9 % and -2.6 %. Diary never recorded this result. | dtmix NaN with kLa present (unexplained). Cost 927 core-h for 22 cycles (1 d 5 h x 32 ranks), about the same per cycle as the coupled L10 run (17-64 core-h/cycle). | NO at L10: no saving measured, and the mixing time is missing. Open: explain the NaN (Q6). |
 | Checkpointing across conditions (warm start from the previous dump, W9-type) | 2026-10-24 (W9, L8 -> L9, 12 cycles, release after 12): kLa_1T_10 +4.3 / +6.2 / -8.0 % at 17.5 / 25 / 32.5 rpm (PASS, 3/3 within 15 %). 2026-10-21 (settled check, 13 L10 points): median abs difference tau_95 1.7 %, tau_mean 1.1 %, EDR 0.2 %; 12 of 13 within 6 %. 2026-10-17 (R12): release at cycle 12 vs 80: kLa_1T_10 +0.006 (se 0.032). | 2026-10-24 (W9): dtmix_0.50 -21.9 / +0.2 / -45.7 % (FAIL); kLa_1T_25 -4.0 / +8.2 / +113.7 % (FAIL). W9 replicate (2026-10-24): dtmix_0.50 ln sd 0.33 across 8/12/18 warm-up cycles (intrinsic). 2026-10-21: 22.5 rpm (6-cycle xlevel start) NOT settled, tau_95 +21 %. 2026-10-12 (CURRENT STATE): 6-cycle L8 -> L10 start FAIL (tau_mean +7.3 %). | USE for tau_95, edr and kLa_1T_10, with >= 12 warm-up cycles and the settled check. NO for dtmix_0.50, kLa_1T_25, kLa_1T_50 (cold 80-cycle protocol required, 2.5-4k core-h per L10 point). |
@@ -122,11 +122,14 @@ Decision key: USE = in the campaign for the QoIs listed. NO = not used. Cost sav
   systematic offset, same sign as L8 at 0.4-0.9 %). The 2 % limit is a change made after seeing the L9 data; it is
   recorded here as an amendment, not as a pass of the original rule.
 - Speed. Replay tail about 2.4x faster than the coupled tail (diary 2026-10-31).
-- Budget consequence (computed by campaign.py: point_cost). A point costs the replay price only if none of its
-  QoIs needs the coupled tail. kLa_1T_50 is reported at every point and needs the coupled tail, so under the
-  rule above every planned point keeps the coupled tail. The replay therefore saves 0 core-h in the planned set
-  (budget unchanged, section 4.2). Saving only exists if kLa_1T_50 is dropped from the per-point set, which
-  the lead has not decided. Open question Q10.
+- kLa_1T_50 (lead decision, 2026-11-04): taken only from runs that have a coupled tail anyway (rpm >= 35, L10).
+  It is reported, not gated, and it does not force a coupled tail below 35 rpm. Q10 is answered by this.
+- Budget consequence (campaign.py replay_saving). A point saves the replay price only if none of its QoIs
+  needs the coupled tail. tau_95 and edr_95 are coupled-only in the decided rule, so every point still needs the
+  coupled tail: the saving is 0 core-h and the budget is unchanged (section 4.2).
+- Alternative, NOT decided (Q11): if tau_95 and edr_95 were also taken from a flow-checked replay below 35 rpm,
+  the points below 35 rpm would save 20 core-h each (L8 cold 55 minus replay 35, cost model). Of the 24 new L8
+  points, 22 are below 35 rpm, so the saving would be 440 core-h. The lead has not decided this.
 
 Cost saving summary: checkpointing and early release save about 2x per L10 point (12 warm cycles instead of
 80 cold). Replay saves nothing for the planned set (3.1). Chaining is a necessity (48 h cap), not a saving.
@@ -151,6 +154,8 @@ Cost saving summary: checkpointing and early release save about 2x per L10 point
 | Total | 22,590 |
 
 Range from the low and high cost bounds: about 14k (low) to about 42k (high). No cap (lead).
+Replay saving in this total: 0 core-h (decided rule, section 3.1; kLa_1T_50 reported only, tau_95 and edr_95 coupled).
+Alternative not in the total (Q11): 440 core-h on the 24 new L8 points if tau_95 and edr_95 were replay-sourced.
 
 ### 4.3 Ledger and Kim counterfactual
 - `campaign.py ledger` sums sacct over the job IDs in scripts/campaign2d/state/jobs.jsonl. That file is
@@ -208,9 +213,9 @@ smoke runs passed; dry-run lists node2356 excluded and no mbessa-condo; ledger r
 - Q6. L10 replay (7893240): the dtmix NaN is unexplained. Confirm the L10 replay is out of scope until explained.
 - Q7. Theta 2: include in the domain (flagged), or start at theta 4?
 - Q8. batch2 (512-core association) for a faster week? Not assumed in the estimate.
-- Q10. Replay saving (section 3.1). kLa_1T_50 needs the coupled tail at every point, so the amended replay rule saves
-  0 core-h. Keep kLa_1T_50 as a reported (not gated) QoI at every point (cost unchanged), or drop it from the
-  per-point set (saves the coupled tail at rpm < 35 at L8/L9)?
+- Q10. ANSWERED 2026-11-04 (lead): kLa_1T_50 is reported only, from runs with a coupled tail anyway (section 3.1).
+- Q11. Replay for tau_95 and edr_95 below 35 rpm (flow-checked, 2 % limit)? Decided rule: no (coupled-only), saving 0.
+  If yes: saving 440 core-h on the 24 new L8 points (section 3.1). Needs a decision before the L9 stage.
 - Q9. Deadline. The DFD talk is about 2026-11-22. A one-week campaign approved today ends about 2026-11-11 to 11-14.
   Confirm this order of work is acceptable.
 

@@ -236,3 +236,32 @@ def cstar_series(run: Path) -> tuple[np.ndarray, np.ndarray]:
 
 def load_results(run: Path) -> dict:
     return json.loads((run / "results.json").read_text())
+
+
+# ── flow gate before release (plan 3.1, amended 2026-11-04) ─────────────────
+# Replay runs must reproduce the recording DNS flow: tau_95 and posY_max, window mean over one period after
+# the release (absolute time [t_lo, t_lo + T)), each within the tolerance of campaign.REPLAY_FLOW_TOL (2 %).
+REPLAY_FLOW_QOIS = (("tau_95", "shear_stress.dat", 2), ("posY_max", "vol_frac_interf.dat", 4))
+_CAMPAIGN_DIR = ROOT / "scripts" / "campaign2d"
+
+
+def _window_mean(run: Path, fname: str, col: int, t_lo: float, t_hi: float) -> float:
+    a = np.loadtxt(run / fname, skiprows=1, ndmin=2)
+    m = (a[:, 1] >= t_lo) & (a[:, 1] < t_hi)
+    if not m.any():
+        raise ValueError(f"{run / fname}: no samples in [{t_lo:g}, {t_hi:g})")
+    return float(a[m, col].mean())
+
+
+def flow_gate(rec_dir: Path, rep_dir: Path, T: float, t_lo: float) -> tuple[bool, dict]:
+    """(ok, deviation in percent of replay from recording) for tau_95 and posY_max over [t_lo, t_lo + T).
+    ok uses campaign.flow_check_ok, the single definition of the tolerance."""
+    sys.path.insert(0, str(_CAMPAIGN_DIR))
+    from campaign import flow_check_ok
+    dev = {}
+    for name, fname, col in REPLAY_FLOW_QOIS:
+        a = _window_mean(Path(rec_dir), fname, col, t_lo, t_lo + T)
+        b = _window_mean(Path(rep_dir), fname, col, t_lo, t_lo + T)
+        dev[name] = 100.0 * (b / a - 1.0)
+    ok = flow_check_ok(dev["tau_95"] / 100.0, dev["posY_max"] / 100.0)
+    return ok, dev

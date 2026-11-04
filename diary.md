@@ -981,3 +981,35 @@ dtmix_0.50 except at 37.5 rpm. kLa_1T_50 is not reliable at L8 near 22.5-27.5 rp
   run printed cpus-per-task=1). Cancelled within ~1 min (2 had run 11 s); runs and jobs.jsonl moved to
   /oscar/scratch/eaguerov/tmp/c2d_cancelled_20261104. campaign.py now passes cpus=1, mem=4G. Resubmitted: 24 x 16 cpu, 4G.
 - Lesson: the dry run must print the exact command of the real path, not a separate template.
+
+## 2026-11-04 — Campaign 2D: gate in fit, flow gate, kLa_1T_50 rule, next, EDR bound (agent, tasks 2-6)
+- Task 2 (gate in fit). New: exclude_failed_gate (drops FAILED-GATE rows), gate_all_runs (shared by status and fit),
+  warm_provenance (refuses a warm submission without _source_run or _err_file, or with t_checkpoint = 0). fit drops
+  FAILED-GATE rows and prints the count. Test: tests/test_campaign_fit_gate.py, 6 tests, red first (functions missing),
+  green after. Baseline check: 0 rows dropped (all database rows are cold). campaign.py has no warm submission path yet
+  (L9/L10 submit raises), so warm_provenance is the step the warm builder must call.
+- Task 3 (flow gate). New: replay_gate.flow_gate. tau_95 and posY_max, window mean over [t_rel, t_rel + T), tolerance from
+  campaign.flow_check_ok (2 %). Wired into replay_chain.report, which prints FLOW PASS or FLOW FAIL per rpm. Test:
+  tests/test_replay_flow_gate.py, 4 tests, red first (no flow_gate), green after (match, +1.5 % pass, -3 % fail, limit).
+  Limit: the replay job itself does not wait for the gate; the report is the only place replay numbers are read.
+- Task 4 (kLa_1T_50). REPORTED_ONLY_QOIS = {kLa_1T_50}: scalar_source returns 'reported'; it never forces a coupled
+  tail. tau_95 and edr_95 stay coupled-only. Saving under the decided rule: 0 core-h (budget 22,590 unchanged).
+  Alternative, not decided (Q11): replay tau_95 and edr_95 below 35 rpm too: 440 core-h on the 24 new L8 points
+  (22 points below 35 rpm x 20 core-h). Plan sections 3, 3.1, 4.2 and Q10/Q11 updated. Test: tests/test_campaign_rules.py,
+  8 tests. Against the committed HEAD campaign.py, 4 fail (kLa_1T_50 rule, select_next); on the working tree, 8 pass.
+- Task 5 (next). select_next: greedy top-k on the L8 candidates, pick separation 0.05 in domain-normalised units.
+  cmd_next refits the gated QoIs (tau_95, edr_95, kLa_1T_10), scores each L8 site by max 2 sigma/mean divided by the
+  L9 warm cost (220), writes state/next_L9.json (not in --dry-run). Dry run on the baseline fit (node1854, job 8190096):
+  126 candidate sites, 0 FAILED-GATE rows dropped. Picks: (35.00, 5.50), (15.00, 4.00), (35.00, 4.00), (17.50, 4.00).
+  Scores: kLa_1T_10 0.73-0.76 at all picks. Note: the cost divisor is the same for every L9 candidate, so it does not
+  change the ranking. It matters only when L9 and L10 candidates are compared.
+- Task 6 (edr_95 < edr_mean, smoke t = 0.04). Cause is the definitions, not a histogram bug. edr_95 counts one per leaf
+  (BioReactor.c ~3327), as tau_95 does (~3240). ediss_mean is area-weighted, dA = cs * Delta^2 (~3166). Under these
+  definitions edr_mean <= edr_95 is not an invariant. Not checked numerically: no field snapshot at t = 0.04 survives
+  (the smoke run folder is gone). Decision: NO source change; edr_95 stays count-weighted to match tau_95. The check
+  edr_mean <= edr_95 (scripts/campaign2d/check_edr95_bounds.py) is not valid: flagged, script not edited. Only edr_95 <= edr_max holds by construction.
+  A numerical check needs an L6 rerun to t = 0.04 with a field dump. Not run. Lead decision needed only if the
+  area-weighted percentile is wanted (source change, STOP).
+- L8 health (10:10 check, 24 jobs): 20 running with logstats advancing, no NaN, no error lines in .err (only the
+  harmless libcuda/mca warnings). 4 pending in batch2 (8340750, 8340751, 8340752, 8340753). Outputs are in
+  /oscar/scratch/eaguerov/mpi_runs (purged after ~30 days): copy to /oscar/data before the fit.

@@ -67,7 +67,10 @@ COST = {
 REPLAY_LEVELS = (8, 9)
 REPLAY_RPM_MAX = 35.0                             # replay only for rpm < 35
 REPLAY_QOIS = frozenset({"kLa_1T_10", "kLa_1T_25", "dtmix_0.50"})
-COUPLED_ONLY_QOIS = frozenset({"kLa_1T_50", "tau_95", "edr_95"})   # always from the coupled DNS tail
+COUPLED_ONLY_QOIS = frozenset({"tau_95", "edr_95"})   # from the coupled DNS tail at every rpm
+# kLa_1T_50 (lead, 2026-11-04): taken only from runs that have a coupled tail anyway (rpm >= 35, L10). It is
+# reported, not gated, and it never forces a coupled tail elsewhere.
+REPORTED_ONLY_QOIS = frozenset({"kLa_1T_50"})
 REPLAY_FLOW_TOL = 0.02                            # amended from the pre-registered 1 % (L9 offset 1.0-1.7 %)
 REPLAY_SPEEDUP = 2.4                              # replay tail vs coupled tail (diary 2026-10-31)
 
@@ -164,7 +167,10 @@ def plan_parts() -> dict[str, float]:
 
 
 def scalar_source(level: int, rpm: float, qoi: str) -> str:
-    """'replay' or 'coupled' for one QoI at one point (plan section 3.1, amended 2026-11-04)."""
+    """'replay', 'coupled' or 'reported' for one QoI at one point (plan section 3.1, amended 2026-11-04).
+    'reported' (kLa_1T_50) is taken from a coupled tail where one exists; it never forces one."""
+    if qoi in REPORTED_ONLY_QOIS:
+        return "reported"
     if level in REPLAY_LEVELS and rpm < REPLAY_RPM_MAX and qoi in REPLAY_QOIS:
         return "replay"
     return "coupled"
@@ -177,7 +183,7 @@ def point_needs_coupled(level: int, rpm: float, qois) -> bool:
 
 def replay_saving(pts, level: int = 8, qois=None) -> float:
     """Core-h saved by the replay for the points `pts` (rpm, theta). Zero for any point that still needs the
-    coupled tail. With the criterion QoIs (kLa_1T_50 is reported at every point) it is zero for every point."""
+    coupled tail. With the rule as decided (tau_95 and edr_95 coupled-only) it is zero for every point."""
     qois = list(QOIS_CRITERION if qois is None else qois)
     saved = 0.0
     for rpm, _th in pts:
@@ -212,7 +218,9 @@ def cmd_plan(_args) -> None:
           f"~{tot / 288:.0f} h of full-cluster time; critical path 7-10 d with three adaptive rounds (plan section 2)")
     print(f"\nedr_95 saved per run: {EDR95_PRESENT}  (stand-in in fit: edr_mean_t, NOT the 95th percentile)")
     sav = replay_saving(pts, level=8)
-    print(f"Replay saving, L8 new points (plan 3.1; kLa_1T_50 keeps the coupled tail): {sav:.0f} core-h")
+    alt = replay_saving(pts, level=8, qois=[q for q in QOIS_CRITERION if q not in COUPLED_ONLY_QOIS])
+    print(f"Replay saving, L8 new points, decided rule (tau_95, edr_95 coupled-only): {sav:.0f} core-h")
+    print(f"   alternative, NOT decided (tau_95, edr_95 also replay-sourced, rpm < 35): {alt:.0f} core-h")
     print(f"Replay flow check tolerance: {REPLAY_FLOW_TOL:.0%} (amended from 1 %, plan 3.1)")
     print(f"Kim counterfactual: total / {KIM_CORE_H_PER_CASE:g} core-h per case (PENDING AUDIT)")
 
@@ -384,16 +392,8 @@ def warm_run_gate(run_dir: Path) -> tuple[str, dict]:
                         height_range, src_height, err_text)
 
 
-def cmd_status(_args) -> None:
-    sites = l8_sites()
-    inside = [(r, t) for r, t in sites if RPM[0] <= r <= RPM[1] and THETA[0] <= t <= THETA[1]]
-    print(f"L8 finished sites in domain: {len(inside)} (all levels: {len(sites)})")
-    jobs = [json.loads(x) for x in JOBS.read_text().splitlines()] if JOBS.exists() else []
-    print(f"campaign jobs recorded: {len(jobs)}")
-    if jobs:
-        st = _sacct([j["job"] for j in jobs])
-        for j in jobs:
-            print(f"   {j['job']:>10s} {j['run']:32s} {st.get(j['job'], ('?', '?', 'not in sacct'))[2]}")
+def gate_all_runs(verbose: bool = False) -> dict[str, str]:
+    """Gate every warm-started run in runs/ (t_checkpoint > 0) and write state/gates.json. Returns name -> status."""
     gates = {}
     for d in sorted((ROOT / "runs").glob("*")):
         pf = d / "params.json"
@@ -406,9 +406,44 @@ def cmd_status(_args) -> None:
         except (KeyError, IndexError, ValueError, FileNotFoundError, json.JSONDecodeError):
             status, det = "PENDING", {"reason": "data not readable yet"}
         gates[d.name] = status
-        print(f"GATE {d.name:24s} {status}")
+        if verbose:
+            print(f"GATE {d.name:24s} {status}")
     STATE.mkdir(parents=True, exist_ok=True)
     GATES_JSON.write_text(json.dumps(gates, indent=1))
+    return gates
+
+
+def exclude_failed_gate(d, gates: dict):
+    """Drop the rows of FAILED-GATE runs (warm starts that did not settle). Rows without a gate entry (cold runs,
+    or PASS / PENDING) are kept. `d` needs a 'run' column (the run folder name)."""
+    bad = {k for k, v in gates.items() if v == "FAILED-GATE"}
+    return d[~d["run"].isin(bad)].reset_index(drop=True)
+
+
+def warm_provenance(params: dict, source_run, err_file) -> dict:
+    """Params of a warm submission with the keys the settled gate reads: _source_run (the source run folder, for the
+    height check) and _err_file (the .err that must hold the fs sanity line). Refuses anything else, so a warm run
+    cannot be submitted un-gateable (plan 1.4 / 3)."""
+    if float(params.get("t_checkpoint", 0.0)) <= 0.0:
+        raise ValueError("not a warm start: t_checkpoint must be > 0 for a warm submission")
+    if not source_run:
+        raise ValueError("warm submission needs _source_run (the gate reads the source run's last cycle)")
+    if not err_file:
+        raise ValueError("warm submission needs _err_file (the gate reads the fs sanity line from it)")
+    return {**params, "_source_run": str(source_run), "_err_file": str(err_file)}
+
+
+def cmd_status(_args) -> None:
+    sites = l8_sites()
+    inside = [(r, t) for r, t in sites if RPM[0] <= r <= RPM[1] and THETA[0] <= t <= THETA[1]]
+    print(f"L8 finished sites in domain: {len(inside)} (all levels: {len(sites)})")
+    jobs = [json.loads(x) for x in JOBS.read_text().splitlines()] if JOBS.exists() else []
+    print(f"campaign jobs recorded: {len(jobs)}")
+    if jobs:
+        st = _sacct([j["job"] for j in jobs])
+        for j in jobs:
+            print(f"   {j['job']:>10s} {j['run']:32s} {st.get(j['job'], ('?', '?', 'not in sacct'))[2]}")
+    gates = gate_all_runs(verbose=True)
     print(f"warm-started runs gated: {len(gates)}; FAILED-GATE (excluded from fit): "
           f"{sum(v == 'FAILED-GATE' for v in gates.values())}")
 
@@ -463,11 +498,11 @@ def load_db(qoi: str):
     kla = pd.read_csv(DB_KLA)
     src, col = QOI_SOURCE[qoi]
     if src == "kla":
-        d = kla[["level", "rpm", "theta", col]].rename(columns={col: "y"})
+        d = kla[["level", "rpm", "theta", "run", col]].rename(columns={col: "y"})
     else:
         h = pd.DataFrame(json.loads(DB_HYDRO.read_text()))
         d = h[["run", "level", "rpm", col]].merge(kla[["run", "theta"]], on="run")
-        d = d[["level", "rpm", "theta", col]].rename(columns={col: "y"})
+        d = d[["level", "rpm", "theta", "run", col]].rename(columns={col: "y"})
     d = d.dropna()
     d = d[d.level.isin([8, 9, 10]) & (d.rpm >= RPM[0]) & (d.rpm <= RPM[1])
           & (d.theta >= THETA[0]) & (d.theta <= THETA[1]) & (d.y > 0)]
@@ -544,15 +579,19 @@ def fit(_args=None) -> None:
     if "SLURM_JOB_ID" not in os.environ:
         raise SystemExit("fit is heavy: run it inside a compute job (srun --overlap or sbatch), never on the login node")
     out = {}
+    gates = gate_all_runs()
     for qoi in QOI_SOURCE:
-        d = load_db(qoi)
+        d_all = load_db(qoi)
+        d = exclude_failed_gate(d_all, gates)
+        n_excl = len(d_all) - len(d)
         m = fit_qoi(d)
         res = max_crit(m)
         png = DOCS_FIT / f"fit0_{qoi.replace('.', '_')}.png"
         plot_map(qoi, res, d, png)
         out[qoi] = dict(max=res["max"], rpm=res["rpm"], theta=res["theta"], grid_max=res["grid_max"],
                         grid_argmax=res["grid_argmax"], n_L8=int((d.level == 8).sum()),
-                        n_HF=int((d.level >= 9).sum()), gated=qoi in CRIT_QOIS, png=str(png))
+                        n_HF=int((d.level >= 9).sum()), n_failed_gate_excluded=n_excl,
+                        gated=qoi in CRIT_QOIS, png=str(png))
         print(f"{qoi:12s} max 2s/mean = {res['max']:.3f} at rpm {res['rpm']:.2f} theta {res['theta']:.2f} "
               f"(grid max {res['grid_max']:.3f}) L8 n={out[qoi]['n_L8']} HF n={out[qoi]['n_HF']} "
               f"{'GATED' if qoi in CRIT_QOIS else 'reported'}")
@@ -564,10 +603,62 @@ def cmd_fit(args) -> None:
     fit(args)
 
 
+# ----------------------------------------------------------------- next (acquisition, 2026-11-04)
+NEXT_SEP = 0.05          # min distance between picks, as a fraction of the domain size in each axis (Euclidean)
+NEXT_COST_L9 = COST["L9_warm"][0]   # a warm L9 point at an L8 site (plan 1.3)
+
+
+def select_next(sites, scores: dict, k: int, sep: float = NEXT_SEP) -> list:
+    """Greedy top-k by score. A site within `sep` (domain-normalised) of an already picked site is skipped, so one
+    ridge does not take the whole batch. Returns (rpm, theta, score) tuples, best first."""
+    picked = []
+    for s in sorted(sites, key=lambda s: -scores[s]):
+        if len(picked) >= k:
+            break
+        if all(math.hypot((s[0] - p[0]) / (RPM[1] - RPM[0]), (s[1] - p[1]) / (THETA[1] - THETA[0])) >= sep
+               for p in picked):
+            picked.append((float(s[0]), float(s[1]), float(scores[s])))
+    return picked
+
+
 def cmd_next(args) -> None:
-    raise SystemExit("next needs the fit map (fit output). Not run in this draft. Rule: argmax over L8 sites of "
-                     "max_q(2sigma/mean) divided by the cost of the cheapest level that informs it; batch 2 at L10, "
-                     "4 at L9.")
+    """Acquisition for L9. Candidates: finished L8 sites in the domain (a warm L9 start needs the L8 checkpoint at
+    the same rpm and theta). Score(x) = max over the gated QoIs of 2 sigma/mean at x, divided by the L9 warm cost.
+    Gated QoIs and FAILED-GATE exclusion as in fit. Writes state/next_L9.json unless --dry-run. Compute node only."""
+    if "SLURM_JOB_ID" not in os.environ:
+        raise SystemExit("next is heavy: run it inside a compute job (srun --overlap or sbatch), never on the login node")
+    gates = gate_all_runs()
+    sites = [(r, t) for r, t in l8_sites() if RPM[0] <= r <= RPM[1] and THETA[0] <= t <= THETA[1]]
+    if not sites:
+        raise SystemExit("no finished L8 sites in the domain")
+    X = np.array(sites, float)
+    worst = np.zeros(len(X))
+    per_qoi = {}
+    for qoi in CRIT_QOIS:
+        d_all = load_db(qoi)
+        d = exclude_failed_gate(d_all, gates)
+        m = fit_qoi(d)
+        cq = crit(m, X)
+        per_qoi[qoi] = cq
+        worst = np.maximum(worst, cq)
+        print(f"{qoi:12s} candidate max 2s/mean {cq.max():.3f} (n HF {int((d.level >= 9).sum())}, "
+              f"FAILED-GATE rows dropped {len(d_all) - len(d)})")
+    scores = {s: float(worst[i]) / NEXT_COST_L9 for i, s in enumerate(sites)}
+    picks = select_next(sites, scores, k=args.k)
+    print(f"candidates: {len(sites)} L8 sites; continuous-domain max is in fit0.json (not re-evaluated here)")
+    for rpm, th, sc in picks:
+        i = sites.index((rpm, th))
+        print(f"  pick rpm {rpm:6.2f} theta {th:4.2f}  score {sc:.3e}  "
+              + "  ".join(f"{q} {per_qoi[q][i]:.3f}" for q in CRIT_QOIS))
+    if args.dry_run:
+        print("(dry run: state/next_L9.json not written)")
+        return
+    out = dict(level="L9", cost_per_point=NEXT_COST_L9, source="warm from the L8 site (same rpm, theta)",
+               points=[[rpm, th] for rpm, th, _ in picks], scores=[sc for *_, sc in picks],
+               qois=CRIT_QOIS, fit_gates=dict(n_gate_entries=len(gates),
+                                              n_failed=sum(v == "FAILED-GATE" for v in gates.values())))
+    (STATE / "next_L9.json").write_text(json.dumps(out, indent=1))
+    print(f"wrote {STATE / 'next_L9.json'}")
 
 
 def main() -> None:
@@ -583,7 +674,10 @@ def main() -> None:
     s.set_defaults(func=cmd_submit)
     sub.add_parser("status").set_defaults(func=cmd_status)
     sub.add_parser("fit").set_defaults(func=cmd_fit)
-    sub.add_parser("next").set_defaults(func=cmd_next)
+    nx = sub.add_parser("next")
+    nx.add_argument("--k", type=int, default=4, help="L9 batch size (plan 1.3: 4)")
+    nx.add_argument("--dry-run", action="store_true", help="print the picks, do not write state/next_L9.json")
+    nx.set_defaults(func=cmd_next)
     sub.add_parser("ledger").set_defaults(func=cmd_ledger)
     args = ap.parse_args()
     args.func(args)

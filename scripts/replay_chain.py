@@ -100,8 +100,15 @@ def report(level: int) -> None:
             continue
         r = json.loads((run / "results.json").read_text()) if (run / "results.json").exists() else pp.main(str(run))
         d = json.loads((ROOT / "runs" / DB[level].format(rpm) / "results.json").read_text())
-        print(f"{rpm:5g} rpm  " + "  ".join(f"{q} DNS {d[q]:7.2f} replay {r[q]:7.2f} ({100 * (r[q] / d[q] - 1):+5.1f} %)"
-                                          for q in ("kLa_10", "dtmix_0.50", "dtmix_0.75")))
+        # Flow gate before the replay scalars are used (plan 3.1, amended 2026-11-04): tau_95 and posY_max of the
+        # replay within campaign.REPLAY_FLOW_TOL of the recording DNS over the first period after the release.
+        rec = rec_params(level, rpm)
+        _, T = pp._t_scales(rec)
+        ok, dev = rg.flow_gate(rg.RUNS / rid(level, rpm, "rec"), run, T, t_lo=rec["n_mix_cycles"] * T)
+        flag = "FLOW PASS" if ok else "FLOW FAIL (scalars not usable)"
+        print(f"{rpm:5g} rpm  {flag}  tau_95 {dev['tau_95']:+.2f} %  posY_max {dev['posY_max']:+.2f} %  "
+              + "  ".join(f"{q} DNS {d[q]:7.2f} replay {r[q]:7.2f} ({100 * (r[q] / d[q] - 1):+5.1f} %)"
+                          for q in ("kLa_10", "dtmix_0.50", "dtmix_0.75")))
 
 
 if __name__ == "__main__":
