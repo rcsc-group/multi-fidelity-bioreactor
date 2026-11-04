@@ -6,7 +6,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=4
 #SBATCH --cpus-per-task=1
-#SBATCH --mem-per-cpu=4G
+
 #SBATCH --time=00:30:00
 #SBATCH --output=logs/c2d_smoke_%j.out
 #SBATCH --error=logs/c2d_smoke_%j.err
@@ -17,4 +17,4 @@ mkdir -p "$OUT"
 cp "$PARAMS" "$OUT/params.json"
 cd "$OUT"
 echo "partition=${SLURM_JOB_PARTITION:-?} account=${SLURM_JOB_ACCOUNT:-?} binary=$BIN host=$(hostname)"
-srun --mpi=pmix -n 4 "$BIN" "$OUT/params.json"
+srun --mpi=pmix --mem=0 -n 4 "$BIN" "$OUT/params.json"

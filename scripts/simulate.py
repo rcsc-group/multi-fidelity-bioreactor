@@ -135,6 +135,7 @@ def submit_slurm(
     mpi_scratch_root: Path | str | None = None,
     account: str | None = None,
     qos: str | None = None,
+    partition: str | None = None,
 ) -> str:
     """Write params.json and submit a SLURM job via sbatch.
 
@@ -237,6 +238,9 @@ def submit_slurm(
         cmd.insert(1, f"--account={account}")
     if qos:
         cmd.insert(1, f"--qos={qos}")
+    # [PROJECT ADDED, 2026-11-04] partition for the Campaign 2D split (batch 312 cpu cap, batch2 512 cpu cap).
+    if partition:
+        cmd.insert(1, f"--partition={partition}")
 
     result = subprocess.run(cmd, capture_output=True, text=True, check=True)
     # sbatch stdout: "Submitted batch job 123456"

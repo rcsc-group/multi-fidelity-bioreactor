@@ -44,7 +44,10 @@ FORBIDDEN_PARTITION = "mbessa-condo"              # hard rule: never planned or 
 KIM_CORE_H_PER_CASE = 120.0                       # Kim 2025 p.6. PENDING AUDIT (another agent). Do not cite as final.
 SEED = 20261104
 # Persistent binary (scratch copy of lean-f1c11e0 was purged; kmix params still point there). Pre-flight: see plan.
-BINARY_L8 = "/oscar/data/dharri15/eaguerov/bin/BioReactor-mpi-lean-f1c11e0"
+BINARY_L8 = "/oscar/data/dharri15/eaguerov/bin/BioReactor-mpi-lean-2ef5b07"   # amended 2026-11-04: edr_95 build
+# Partitions (sacctmgr 2026-11-04, user eaguerov): batch under account default, batch2 under account batch2.
+# Value = (account, cpu cap for this user's QOS). mbessa-condo is never listed here (hard rule).
+PARTITIONS = {"batch": ("default", 312), "batch2": ("batch2", 512)}
 
 # Central estimates (core-h per point) with [low, high]. Sources in docs/campaign2d_plan.md section 4.
 COST = {
@@ -121,12 +124,31 @@ def run_id(level: int, rpm: float, theta: float, tag: str) -> str:
     return f"{tag}_l{level}_rpm{rpm:.2f}_th{theta:.2f}"
 
 
-def sbatch_argv(level: str, rid: str, rpm: float, theta: float) -> tuple[list[str], str]:
+def sbatch_argv(level: str, rid: str, rpm: float, theta: float, partition: str = "batch",
+                account: str = "default") -> tuple[list[str], str]:
     st = STAGES[level]
-    argv = ["sbatch", "--no-requeue", f"--time={st['walltime']}", "--mem-per-cpu=4G",
+    argv = ["sbatch", "--no-requeue", f"--partition={partition}", f"--account={account}", "--nodes=1",
+            f"--time={st['walltime']}",   # no --mem-per-cpu: srun --mem=0 in the template conflicts with it (smoke 8340540)
             "--cpus-per-task=1", f"--ntasks={st['ranks']}", f"--exclude={EXCLUDE}",
             f"--job-name=c2d-{level.lower()}-{rid}"]
     return argv, f"# run_id={rid} rpm={rpm:g} theta={theta:g} protocol: {st['protocol']}"
+
+
+def assign_partitions(ranks: list[int], mode: str = "split") -> list[tuple[str, str]]:
+    """(partition, account) per job. mode batch|batch2 puts every job on one partition. mode split fills batch
+    up to its 312-cpu cap, then batch2 up to its 512-cpu cap (plan 2). Jobs past both caps are queued on the
+    partition with the lower fill, and the dry run says so."""
+    if mode in PARTITIONS:
+        return [(mode, PARTITIONS[mode][0])] * len(ranks)
+    used = {p: 0 for p in PARTITIONS}
+    out = []
+    for r in ranks:
+        choice = next((p for p in ("batch", "batch2") if used[p] + r <= PARTITIONS[p][1]), None)
+        if choice is None:
+            choice = min(PARTITIONS, key=lambda p: used[p] / PARTITIONS[p][1])   # over both caps: waits
+        used[choice] += r
+        out.append((choice, PARTITIONS[choice][0]))
+    return out
 
 
 def plan_parts() -> dict[str, float]:
@@ -212,30 +234,36 @@ def cmd_submit(args) -> None:
         if not nxt.exists():
             raise SystemExit(f"no acquisition batch yet: run `next` after `fit` ({nxt} missing)")
         todo = [tuple(map(float, p)) for p in json.loads(nxt.read_text())["points"]]
-    for rpm, th in todo:
+    ranks = STAGES[level]["ranks"]
+    placement = assign_partitions([ranks] * len(todo), args.partition)
+    for (rpm, th), (part, acct) in zip(todo, placement):
         rid = run_id(int(level[1:]), rpm, th, tag="c2d")
-        argv, note = sbatch_argv(level, rid, rpm, th)
-        print(" ".join(argv), "#", note)
+        argv, note = sbatch_argv(level, rid, rpm, th, partition=part, account=acct)
+        print(" ".join(argv), "#", note, f"binary={BINARY_L8}")
         if args.go:
             if level != "L8":
                 raise SystemExit("--go is wired for L8 only; L9/L10 need the warm builder reviewed first")
-            _real_submit_l8(rid, rpm, th)
+            _real_submit_l8(rid, rpm, th, part, acct)
+    for p in PARTITIONS:
+        n = sum(1 for q, _ in placement if q == p)
+        print(f"# partition {p}: {n} jobs x {ranks} ranks = {n * ranks} cpu concurrently "
+              f"(cap {PARTITIONS[p][1]} cpu, plan 2)")
     if not args.go:
         print(f"(dry run: {len(todo)} commands printed; nothing submitted)")
 
 
-def _real_submit_l8(rid: str, rpm: float, th: float) -> None:
-    """Real submission path (never executed by this draft). Reuses simulate.submit_slurm."""
+def _real_submit_l8(rid: str, rpm: float, th: float, partition: str, account: str) -> None:
+    """Real submission path. Reuses simulate.submit_slurm (partition and account passed through)."""
     from scripts import simulate
     p = json.loads((ROOT / "runs/kmix_l8_rpm32.5/params.json").read_text())
     p.update(run_id=rid, omega_b=2 * math.pi * rpm / 60.0, theta_max=[th, 0.0, 0.0], _binary=BINARY_L8)
     jid = simulate.submit_slurm(p, project_root=ROOT, runs_root=ROOT / "runs",
                                 walltime=STAGES["L8"]["walltime"], ntasks=STAGES["L8"]["ranks"],
-                                exclude=EXCLUDE)
+                                exclude=EXCLUDE, partition=partition, account=account)
     STATE.mkdir(parents=True, exist_ok=True)
     with JOBS.open("a") as f:
         f.write(json.dumps(dict(job=str(jid), level="L8", run=rid, rpm=rpm, theta=th,
-                                ranks=STAGES["L8"]["ranks"],
+                                ranks=STAGES["L8"]["ranks"], partition=partition, account=account,
                                 submitted=datetime.now(timezone.utc).isoformat())) + "\n")
 
 
@@ -261,6 +289,99 @@ def _hours(s: str) -> float:
     return days * 24 + int(h) + int(m) / 60 + float(sec) / 3600
 
 
+# ----------------------------------------------------------------- warm-start settled gate (2026-11-04)
+# Every warm-started run (params t_checkpoint > 0) is gated. Plan section 1.4 / 3. Status is PASS, FAILED-GATE
+# (excluded from the fit) or PENDING (data not yet sufficient). The gate is evaluated by `status`.
+WARM_CYCLES = 12                       # warm-up cycles after the source checkpoint (plan 1.4)
+GATE_DRIFT_TOL = 0.02                  # max relative change per cycle, tau_95 and EDR, last 3 complete cycles
+GATE_HEIGHT_TOL = 0.01                 # free-surface height range at release vs the source run
+GATE_FS_LINE = "fs sanity [post-solid]: OK"   # must be in the run's .err (BioReactor3D CLAUDE.md, restart rule)
+GATES_JSON = STATE / "gates.json"
+
+
+def _rel(a: float, b: float) -> float:
+    return abs(a - b) / abs(b) if b else math.inf
+
+
+def settled_gate(t, tau95, edr, period, warm_end, release_t, height_range, src_height_range, err_text):
+    """Settled-state gate for one warm-started run. Returns (status, detail).
+
+    Drift: cycle means of tau_95 and EDR over the last 3 complete cycles after warm_end. The two cycle-to-cycle
+    relative changes must each be below GATE_DRIFT_TOL. Height: free-surface range at release vs the source run,
+    relative change below GATE_HEIGHT_TOL. fs sanity: GATE_FS_LINE must be in err_text.
+    None for a check means its data are not there yet (PENDING). Any False gives FAILED-GATE.
+    """
+    t = np.asarray(t, float)
+    tau95 = np.asarray(tau95, float)
+    edr = np.asarray(edr, float)
+    det = {"drift_ok": None, "height_ok": None, "fs_ok": None}
+    post = t >= warm_end
+    if post.any():
+        n_done = int(math.floor((t[post].max() - warm_end) / period + 1e-9))   # complete cycles after warm-up
+    else:
+        n_done = 0
+    if n_done >= 3:
+        ks = range(n_done - 3, n_done)
+        means = {"tau95": [], "edr": []}
+        for k in ks:
+            m = post & (t >= warm_end + k * period) & (t < warm_end + (k + 1) * period)
+            means["tau95"].append(float(tau95[m].mean()))
+            means["edr"].append(float(edr[m].mean()))
+        drifts = {}
+        for name, vals in means.items():
+            drifts[name] = [_rel(vals[i + 1], vals[i]) for i in range(len(vals) - 1)]
+        worst = max(max(d) for d in drifts.values())
+        det.update(drift_ok=bool(worst < GATE_DRIFT_TOL), drift_max=worst, drift=drifts)
+    if release_t is not None and height_range is not None and src_height_range is not None:
+        dh = _rel(height_range, src_height_range)
+        det.update(height_ok=bool(dh < GATE_HEIGHT_TOL), height_rel=dh)
+    if err_text is not None:
+        det["fs_ok"] = bool(GATE_FS_LINE in err_text)
+    vals = [det["drift_ok"], det["height_ok"], det["fs_ok"]]
+    if any(v is False for v in vals):
+        status = "FAILED-GATE"
+    elif any(v is None for v in vals):
+        status = "PENDING"
+    else:
+        status = "PASS"
+    return status, det
+
+
+def warm_run_gate(run_dir: Path) -> tuple[str, dict]:
+    """Read one warm-started run and its source run (params _source_run, a runs/ dir name) and gate it."""
+    from scripts.postprocess import _load_dat, _t_scales   # reuse the repo's readers and nondim scales
+    params = json.loads((run_dir / "params.json").read_text())
+    _, period = _t_scales(params)
+    t_ck = float(params["t_checkpoint"])
+    warm_end = t_ck + WARM_CYCLES * period
+    release_t = t_ck + period * float(params.get("n_mix_cycles", 0))
+    sh = _load_dat(run_dir / "shear_stress.dat")
+    t, tau95 = sh[:, 1], sh[:, 2]
+    edr = sh[:, 9] if sh.shape[1] >= 10 else np.full_like(tau95, math.nan)
+    height_range = src_height = None
+    vol = run_dir / "vol_frac_interf.dat"
+    if vol.exists():
+        v = _load_dat(vol)
+        h = v[:, 4] - v[:, 5]                              # posY_max - posY_min
+        m = (v[:, 1] >= release_t) & (v[:, 1] < release_t + period)
+        if m.any():
+            height_range = float(h[m].mean())
+    src_name = params.get("_source_run")
+    if src_name:
+        src = ROOT / "runs" / src_name
+        sv = _load_dat(src / "vol_frac_interf.dat")
+        tend = float(sv[:, 1].max())
+        ms = sv[:, 1] >= tend - period
+        src_height = float((sv[ms, 4] - sv[ms, 5]).mean())
+    err_text = None
+    if params.get("_err_file") and Path(params["_err_file"]).exists():
+        err_text = Path(params["_err_file"]).read_text(errors="replace")
+    # `release_t` is passed only when the run has reached it, so the release check can be PENDING.
+    reached = bool(t.max() >= release_t)
+    return settled_gate(t, tau95, edr, period, warm_end, release_t if reached else None,
+                        height_range, src_height, err_text)
+
+
 def cmd_status(_args) -> None:
     sites = l8_sites()
     inside = [(r, t) for r, t in sites if RPM[0] <= r <= RPM[1] and THETA[0] <= t <= THETA[1]]
@@ -271,6 +392,23 @@ def cmd_status(_args) -> None:
         st = _sacct([j["job"] for j in jobs])
         for j in jobs:
             print(f"   {j['job']:>10s} {j['run']:32s} {st.get(j['job'], ('?', '?', 'not in sacct'))[2]}")
+    gates = {}
+    for d in sorted((ROOT / "runs").glob("*")):
+        pf = d / "params.json"
+        if not pf.exists():
+            continue
+        try:
+            if float(json.loads(pf.read_text()).get("t_checkpoint", 0.0)) <= 0.0:
+                continue
+            status, det = warm_run_gate(d)
+        except (KeyError, IndexError, ValueError, FileNotFoundError, json.JSONDecodeError):
+            status, det = "PENDING", {"reason": "data not readable yet"}
+        gates[d.name] = status
+        print(f"GATE {d.name:24s} {status}")
+    STATE.mkdir(parents=True, exist_ok=True)
+    GATES_JSON.write_text(json.dumps(gates, indent=1))
+    print(f"warm-started runs gated: {len(gates)}; FAILED-GATE (excluded from fit): "
+          f"{sum(v == 'FAILED-GATE' for v in gates.values())}")
 
 
 def cmd_ledger(_args) -> None:
@@ -327,6 +465,8 @@ def main() -> None:
     s = sub.add_parser("submit-stage")
     s.add_argument("level", choices=["L8", "L9", "L10"])
     s.add_argument("--dry-run", action="store_true")
+    s.add_argument("--partition", choices=["batch", "batch2", "split"], default="split",
+                   help="batch (account default, 312 cpu), batch2 (account batch2, 512 cpu), or split (fill batch, then batch2)")
     s.add_argument("--go", action="store_true", help="real submission; explicit approval only")
     s.set_defaults(func=cmd_submit)
     sub.add_parser("status").set_defaults(func=cmd_status)
