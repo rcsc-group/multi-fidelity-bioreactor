@@ -14,7 +14,6 @@
     "variant": null
    },
    "L10 GP, ours": null,
-   "L10 GP, Kim code (120/run)": null,
    "H1 (L8 to L10)": {
     "x": 15.72,
     "core_h": 10484,
@@ -41,12 +40,6 @@
     "n": null,
     "variant": null
    },
-   "L10 GP, Kim code (120/run)": {
-    "x": 10.0,
-    "core_h": 1200,
-    "n": null,
-    "variant": null
-   },
    "H1 (L8 to L10)": {
     "x": 6.23,
     "core_h": 4153,
@@ -70,7 +63,6 @@
     "variant": null
    },
    "L10 GP, ours": null,
-   "L10 GP, Kim code (120/run)": null,
    "H1 (L8 to L10)": null
   },
   "20%": {
@@ -87,7 +79,6 @@
     "variant": null
    },
    "L10 GP, ours": null,
-   "L10 GP, Kim code (120/run)": null,
    "H1 (L8 to L10)": null
   }
  }
