@@ -307,7 +307,7 @@ double (* gradient) (double, double, double) = minmod2;   // Custom slope limite
 
 // Buffers for file naming and output file pointers for statistics
 char buf1[100], buf2[100], buf3[100], buf4[100];
-FILE * fp_stats, * fp_norm, * fp_stats2, * fp_stats3, * fp_tau;
+FILE * fp_stats, * fp_norm, * fp_stats2, * fp_stats3, * fp_tau, * fp_edr;
 
 // ── Steady-streaming vorticity, Kim's <|xi_bar_b'|> ───────────────────────
 // [PROJECT ADDED, 2026-09-15] Kim's Fig 9/10/11/12 right-hand axis is the
@@ -1279,6 +1279,10 @@ int main(int argc, char * argv[]){
   fp_stats2= fopen(name3,"w");
   fp_stats3= fopen(name4,"w");
   fp_tau   = fopen(name5,"w");
+  // [PROJECT ADDED, 2026-11-04] edr_95 goes to its own file, not to
+  // shear_stress.dat: that file must stay byte-identical to the pre-change build.
+  fp_edr   = fopen("edr_pct.dat","w");
+  fprintf(fp_edr, "i t edr_95 edr_max \n");
 #if STREAMING_VORTICITY
   fp_streaming = fopen("streaming.dat","w");
   fprintf(fp_streaming, "i t vor_stream_mean vor_stream_max liq_vol window_dt \n");
@@ -1296,7 +1300,7 @@ int main(int argc, char * argv[]){
   run();
   
   // Close all output files
-  fclose(fp_stats); fclose(fp_norm); fclose(fp_stats2); fclose(fp_stats3); fclose(fp_tau);
+  fclose(fp_stats); fclose(fp_norm); fclose(fp_stats2); fclose(fp_stats3); fclose(fp_tau); fclose(fp_edr);
 #if STREAMING_VORTICITY
   if (fp_streaming) fclose(fp_streaming);
 #endif
@@ -3280,6 +3284,81 @@ event normcal (t+=t_out; t<=t_end){
     }
     #undef TAU_BINS
 
+    // [PROJECT ADDED, 2026-11-04] edr_95: 95th percentile of the local EDR
+    // ediss = mu*(2 du/dx^2 + 2 dv/dy^2 + (du/dy+dv/dx)^2), on the SAME mask as
+    // tau_95 (cs>0, f>0.5), with the same stencil as the ediss_mean pass above.
+    // Same two-pass 2000-bin histogram as tau_95 (per-thread bins, no pragma
+    // inside foreach). Also writes the per-step spatial max, so that
+    // edr_mean(t) <= edr_95(t) <= edr_max(t) can be checked sample by sample.
+    // Collective: every rank runs it, outside the pid() == 0 block.
+    double edr_max_val = 0.;
+    foreach(reduction(max:edr_max_val)) {
+      if (cs[] > 0. && f[] > 0.5) {
+        double du_dx = (u.x[1]   - u.x[-1])   / (2.*Delta);
+        double dv_dy = (u.y[0,1] - u.y[0,-1]) / (2.*Delta);
+        double du_dy = (u.x[0,1] - u.x[0,-1]) / (2.*Delta);
+        double dv_dx = (u.y[1]   - u.y[-1])   / (2.*Delta);
+        double edr_cell = mu(f[]) * (2.*du_dx*du_dx + 2.*dv_dy*dv_dy + (du_dy+dv_dx)*(du_dy+dv_dx));
+        if (edr_cell > edr_max_val) edr_max_val = edr_cell;
+      }
+    }
+    if (edr_max_val < 1e-14) edr_max_val = 1e-14;  // guard /0
+
+    #define EDR_BINS 2000
+    int _edr_nthreads = 1;
+    #if _OPENMP
+      _edr_nthreads = omp_get_max_threads();
+    #endif
+    long *_edr_tbins = (long *) calloc(_edr_nthreads * EDR_BINS, sizeof(long));
+    foreach() {
+      if (cs[] > 0. && f[] > 0.5) {
+        double du_dx = (u.x[1]   - u.x[-1])   / (2.*Delta);
+        double dv_dy = (u.y[0,1] - u.y[0,-1]) / (2.*Delta);
+        double du_dy = (u.x[0,1] - u.x[0,-1]) / (2.*Delta);
+        double dv_dx = (u.y[1]   - u.y[-1])   / (2.*Delta);
+        double edr_cell = mu(f[]) * (2.*du_dx*du_dx + 2.*dv_dy*dv_dy + (du_dy+dv_dx)*(du_dy+dv_dx));
+        int eb = (int)(edr_cell / edr_max_val * (EDR_BINS - 1));
+        if (eb < 0)         eb = 0;
+        if (eb >= EDR_BINS) eb = EDR_BINS - 1;
+        int _etid = 0;
+        #if _OPENMP
+          _etid = omp_get_thread_num();
+        #endif
+        _edr_tbins[_etid * EDR_BINS + eb]++;
+      }
+    }
+    long ebins[EDR_BINS];
+    for (int k = 0; k < EDR_BINS; k++) {
+      ebins[k] = 0;
+      for (int th = 0; th < _edr_nthreads; th++)
+        ebins[k] += _edr_tbins[th * EDR_BINS + k];
+    }
+    free(_edr_tbins);
+    #if _MPI
+    {
+      long gebins[EDR_BINS];
+      MPI_Allreduce(ebins, gebins, EDR_BINS, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+      for (int k = 0; k < EDR_BINS; k++) ebins[k] = gebins[k];
+    }
+    #endif
+    long etotal = 0, ecumul = 0;
+    for (int k = 0; k < EDR_BINS; k++) etotal += ebins[k];
+    double edr_95_val = edr_max_val;
+    int    e_found    = 0;
+    double _edr_w = edr_max_val / (EDR_BINS - 1.0);
+    for (int k = 0; k < EDR_BINS; k++) {
+      long eprev = ecumul;
+      ecumul += ebins[k];
+      if (!e_found && ecumul >= (long)(0.95 * (double)etotal)) {
+        double fr = ebins[k] > 0 ? (0.95*(double)etotal - (double)eprev) / (double)ebins[k] : 0.;
+        if (fr < 0.) fr = 0.; if (fr > 1.) fr = 1.;
+        edr_95_val = _edr_w * (k + fr);
+        e_found    = 1;
+        break;
+      }
+    }
+    #undef EDR_BINS
+
    double mb0, mb1, mb2;   // collective: every rank, outside the pid() == 0 block
    mix_bulk_sums (&mb0, &mb1, &mb2);
    // i, timestep, no of cells, real time elapsed, cpu time
@@ -3297,6 +3376,9 @@ event normcal (t+=t_out; t<=t_end){
 
       fprintf(fp_tau, "%i %g %g %g %g %g %g %g %g %g %g %g %g %g %g \n", i, t, tau_95_val, tau_98_val, tau_max_val, tau_mean_val, tau_max_strict, tau_mean_strict, tau_max_signed, ediss_mean_val, tau_mean_signed, tau_kim_max, tau_kim_mean, ediss_kim_max, ediss_kim_mean);
       fflush(fp_tau);
+
+      fprintf(fp_edr, "%i %g %g %g \n", i, t, edr_95_val, edr_max_val);
+      fflush(fp_edr);
    }
 }
 #endif

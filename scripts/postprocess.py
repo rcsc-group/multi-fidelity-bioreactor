@@ -925,7 +925,33 @@ def _compute_tau98_kpis(run_dir: Path, params: dict) -> dict:
         "tau_mean_max_strict": _qss_max(tau_mean_strict) if has_strict else math.nan,
         "tau_100_max_signed":  _qss_max(tau_100_signed) if has_signed else math.nan,
         "ediss_mean_qss": _qss_median(ediss_mean_col, ediss_scale) if has_ediss else math.nan,
+        **_edr95_kpis(run_dir, t_ramp, t_inject, ediss_scale),
     }
+
+
+def _edr95_kpis(run_dir: Path, t_ramp: float, t_inject: float | None, ediss_scale: float) -> dict:
+    """edr_95 (2026-11-04): 95th percentile of the local EDR, from edr_pct.dat (BioReactor.c normcal).
+
+    Columns: i t edr_95 edr_max (W/m^3 after scaling). edr_95 = median over the QSS window of the per-step
+    95th percentile; edr_max = max over the QSS window of the per-step spatial maximum. Same window as tau_95.
+    NaN if the file is absent (runs written before the 2026-11-04 binary).
+    """
+    out = {"edr_95": math.nan, "edr_max_qss": math.nan}
+    edr_path = run_dir / "edr_pct.dat"
+    if not edr_path.exists():
+        return out
+    ea = _load_dat(edr_path)
+    if ea is None or ea.ndim != 2 or ea.shape[0] < 3 or ea.shape[1] < 4:
+        return out
+    te = ea[:, 1]
+    em = te > t_ramp
+    if t_inject is not None:
+        em &= te < t_inject
+    if em.sum() < 3:
+        return out
+    out["edr_95"] = float(np.median(ea[em, 2]) * ediss_scale)
+    out["edr_max_qss"] = float(ea[em, 3].max() * ediss_scale)
+    return out
 
 
 # ── main entry point ──────────────────────────────────────────────────────────
@@ -993,6 +1019,7 @@ def main(run_dir: str, params: dict | None = None) -> dict:
         "tau_100_max_strict": math.nan, "tau_mean_max_strict": math.nan,
         "tau_100_max_signed": math.nan,
         "ediss_mean_qss": math.nan,
+        "edr_95": math.nan, "edr_max_qss": math.nan,
     }
 
     try:
