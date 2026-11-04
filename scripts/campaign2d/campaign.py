@@ -13,7 +13,9 @@ Rules encoded here
   * Warm L9/L10 starts need a settled L8 checkpoint at the SAME (rpm, theta): candidates are L8 sites only.
   * dtmix_0.50 and kLa_1T_25 / kLa_1T_50 at L10 are NOT validated for warm starts (diary 2026-10-24 W9):
     the L10 scalar points for those QoIs are flagged 'cold' in the plan and cost ~3x more.
-  * The replay (looped period) is used only as a low fidelity for kLa_1T_10 and dtmix_0.50 at L8.
+  * Replay (looped period), amended 2026-11-04 (lead; plan section 3.1): the source of kLa_1T_10, kLa_1T_25 and
+    dtmix_0.50 at L8 and L9 for rpm < 35. kLa_1T_50, tau_95, edr_95 and rpm >= 35 use the coupled DNS tail.
+    Each replay run passes a flow check (tau_95 and posY_max within REPLAY_FLOW_TOL of its recording DNS).
 
 Usage: uv run python scripts/campaign2d/campaign.py <subcommand> [options]
 """
@@ -53,7 +55,18 @@ COST = {
     "L10_hydro":      (500.0, 250.0, 960.0),  # 12 warm + 3 window cycles x 17-64 core-h/cycle (l10_cost_per_cycle)
     "L10_replay":     (927.0, 900.0, 950.0),  # sacct 7893240: 1d 4h59m x 32 ranks (22 replay cycles; NOT cheaper)
     "edr95_backfill_L10": (105.0, 60.0, 190.0),  # 3 window cycles from the end checkpoint
+    # Replay point at L8 (plan 3.1): DNS to cycle 81 (sacct 8184447 = 29, 8184458 = 11) plus a 150-cycle replay
+    # tail at 1/2.4 of the cold per-cycle cost (55/230 per cycle; 15 core-h). Estimate, not measured.
+    "L8_replay":      (35.0, 25.0, 45.0),
 }
+
+# Replay rule, amended 2026-11-04 (lead; plan section 3.1). Sources of the scalar QoIs.
+REPLAY_LEVELS = (8, 9)
+REPLAY_RPM_MAX = 35.0                             # replay only for rpm < 35
+REPLAY_QOIS = frozenset({"kLa_1T_10", "kLa_1T_25", "dtmix_0.50"})
+COUPLED_ONLY_QOIS = frozenset({"kLa_1T_50", "tau_95", "edr_95"})   # always from the coupled DNS tail
+REPLAY_FLOW_TOL = 0.02                            # amended from the pre-registered 1 % (L9 offset 1.0-1.7 %)
+REPLAY_SPEEDUP = 2.4                              # replay tail vs coupled tail (diary 2026-10-31)
 
 STAGES = {
     "L8": dict(ranks=16, walltime="16:00:00", n_new=24, protocol="cold, 80-cycle spin-up, release, 150 cycles"),
@@ -128,6 +141,34 @@ def plan_parts() -> dict[str, float]:
     }
 
 
+def scalar_source(level: int, rpm: float, qoi: str) -> str:
+    """'replay' or 'coupled' for one QoI at one point (plan section 3.1, amended 2026-11-04)."""
+    if level in REPLAY_LEVELS and rpm < REPLAY_RPM_MAX and qoi in REPLAY_QOIS:
+        return "replay"
+    return "coupled"
+
+
+def point_needs_coupled(level: int, rpm: float, qois) -> bool:
+    """True if any QoI of the point must come from the coupled DNS tail (so the replay saves nothing)."""
+    return any(scalar_source(level, rpm, q) == "coupled" for q in qois)
+
+
+def replay_saving(pts, level: int = 8, qois=None) -> float:
+    """Core-h saved by the replay for the points `pts` (rpm, theta). Zero for any point that still needs the
+    coupled tail. With the criterion QoIs (kLa_1T_50 is reported at every point) it is zero for every point."""
+    qois = list(QOIS_CRITERION if qois is None else qois)
+    saved = 0.0
+    for rpm, _th in pts:
+        if not point_needs_coupled(level, rpm, qois):
+            saved += COST[f"L{level}_cold"][0] - COST[f"L{level}_replay"][0]
+    return saved
+
+
+def flow_check_ok(dev_tau95: float, dev_posY: float) -> bool:
+    """Replay flow check: relative deviation of tau_95 and posY_max from the recording DNS, both within REPLAY_FLOW_TOL."""
+    return abs(dev_tau95) <= REPLAY_FLOW_TOL and abs(dev_posY) <= REPLAY_FLOW_TOL
+
+
 # ----------------------------------------------------------------- plan
 def cmd_plan(_args) -> None:
     pts = lhs_maximin(STAGES["L8"]["n_new"])
@@ -148,6 +189,9 @@ def cmd_plan(_args) -> None:
     print(f"WALL at 288 cores (priority QOS 312 cap; sacct queue median 0.2 h, p90 5.6 h): "
           f"~{tot / 288:.0f} h of full-cluster time; critical path 7-10 d with three adaptive rounds (plan section 2)")
     print(f"\nedr_95 saved per run: {EDR95_PRESENT}  (stand-in in fit: edr_mean_t, NOT the 95th percentile)")
+    sav = replay_saving(pts, level=8)
+    print(f"Replay saving, L8 new points (plan 3.1; kLa_1T_50 keeps the coupled tail): {sav:.0f} core-h")
+    print(f"Replay flow check tolerance: {REPLAY_FLOW_TOL:.0%} (amended from 1 %, plan 3.1)")
     print(f"Kim counterfactual: total / {KIM_CORE_H_PER_CASE:g} core-h per case (PENDING AUDIT)")
 
 

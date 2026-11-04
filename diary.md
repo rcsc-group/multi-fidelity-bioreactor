@@ -949,3 +949,8 @@ Reading: the 10-21 statement "replay fails kLa_1T_25" is superseded by the 150-c
 the 10-21 K-test still reproduces, cause not isolated). Replay is valid for kLa_1T_10 and kLa_1T_25 except at 37.5 rpm, and for
 dtmix_0.50 except at 37.5 rpm. kLa_1T_50 is not reliable at L8 near 22.5-27.5 rpm. kLa still uses the f-weighted oxygen sum
 (tr_oxy col 2) on both sides; the 10-29 C1/OL correction is not available for the DNS runs, so that question stays open.
+
+## 2026-11-04 — Replay amendment (lead decision) in the campaign 2D plan and driver
+- Changed: docs/campaign2d_plan.md (1.3 score text, section 3 rows for replay L8/L9, new 3.1, Q10); scripts/campaign2d/campaign.py (replay constants, scalar_source, point_needs_coupled, replay_saving, flow_check_ok, plan prints the saving).
+- Rule now: replay is the source of kLa_1T_10, kLa_1T_25, dtmix_0.50 at L8 and L9 for rpm < 35. kLa_1T_50, tau_95, edr_95, and rpm >= 35 keep the coupled tail. Flow check tolerance 2 % (amendment; the pre-registered 1 % failed on L9 at 1.0-1.7 %, systematic). This is recorded as an amendment, not a pass of the original rule.
+- Test: `campaign.py plan` on node1854 (job 8190096). Budget unchanged, 22,590 core-h. Replay saving for the 24 L8 points: 0 core-h, because kLa_1T_50 is in every point's QoI set and needs the coupled tail. The replay saves only if kLa_1T_50 is dropped per point: open question Q10.
