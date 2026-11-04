@@ -127,9 +127,8 @@ Decision key: USE = in the campaign for the QoIs listed. NO = not used. Cost sav
 - Budget consequence (campaign.py replay_saving). A point saves the replay price only if none of its QoIs
   needs the coupled tail. tau_95 and edr_95 are coupled-only in the decided rule, so every point still needs the
   coupled tail: the saving is 0 core-h and the budget is unchanged (section 4.2).
-- Alternative, NOT decided (Q11): if tau_95 and edr_95 were also taken from a flow-checked replay below 35 rpm,
-  the points below 35 rpm would save 20 core-h each (L8 cold 55 minus replay 35, cost model). Of the 24 new L8
-  points, 22 are below 35 rpm, so the saving would be 440 core-h. The lead has not decided this.
+- Alternative (Q11, CLOSED: not taken, lead 2026-11-04): replay for tau_95 and edr_95 below 35 rpm would have saved
+  440 core-h on the 24 new L8 points (22 below 35 rpm x 20 core-h). Not used.
 
 Cost saving summary: checkpointing and early release save about 2x per L10 point (12 warm cycles instead of
 80 cold). Replay saves nothing for the planned set (3.1). Chaining is a necessity (48 h cap), not a saving.
@@ -155,7 +154,7 @@ Cost saving summary: checkpointing and early release save about 2x per L10 point
 
 Range from the low and high cost bounds: about 14k (low) to about 42k (high). No cap (lead).
 Replay saving in this total: 0 core-h (decided rule, section 3.1; kLa_1T_50 reported only, tau_95 and edr_95 coupled).
-Alternative not in the total (Q11): 440 core-h on the 24 new L8 points if tau_95 and edr_95 were replay-sourced.
+Q11 closed (lead): tau_95 and edr_95 stay coupled. No replay saving is taken.
 
 ### 4.3 Ledger and Kim counterfactual
 - `campaign.py ledger` sums sacct over the job IDs in scripts/campaign2d/state/jobs.jsonl. That file is
@@ -214,8 +213,8 @@ smoke runs passed; dry-run lists node2356 excluded and no mbessa-condo; ledger r
 - Q7. Theta 2: include in the domain (flagged), or start at theta 4?
 - Q8. batch2 (512-core association) for a faster week? Not assumed in the estimate.
 - Q10. ANSWERED 2026-11-04 (lead): kLa_1T_50 is reported only, from runs with a coupled tail anyway (section 3.1).
-- Q11. Replay for tau_95 and edr_95 below 35 rpm (flow-checked, 2 % limit)? Decided rule: no (coupled-only), saving 0.
-  If yes: saving 440 core-h on the 24 new L8 points (section 3.1). Needs a decision before the L9 stage.
+- Q11. CLOSED 2026-11-04 (lead): NO. tau_95 and edr_95 stay on the coupled tail. The 440 core-h alternative
+  (2 % of budget) is not taken and is not a lever for the gated QoIs.
 - Q9. Deadline. The DFD talk is about 2026-11-22. A one-week campaign approved today ends about 2026-11-11 to 11-14.
   Confirm this order of work is acceptable.
 
@@ -229,3 +228,11 @@ smoke runs passed; dry-run lists node2356 excluded and no mbessa-condo; ledger r
   (10-21); scripts/hydro_dataset_v2.py (10-22); experiments/multifidelity/hydro_dataset_v2.json (10-08, not used);
   experiments/multifidelity/kla_mix_dataset.csv (10-16, not used); config/slurm_mpi_template.sh (09-21, nodes = 1 rule);
   bin/BioReactor-mpi-lean-f1c11e0 (09-21, older than the 10-29 source).
+
+## 8. edr_95 backfill (list only, nothing submitted; lead 2026-11-04)
+- Until the backfill exists, the fit keeps edr_mean_t as the stand-in for every row (labelled in fit output).
+- List: scripts/campaign2d/state/edr_backfill_list.csv (script scripts/campaign2d/backfill_list.py). 27 distinct
+  runs the fit uses for the EDR QoI: 10 L8, 10 L9, 7 L10. All 27 have a checkpoint.dump.
+- Cost (sacct per-level median rate x 3 cycles x run period): L8 6, L9 125, L10 910, total about 1,040 core-h.
+  The L10 rate is a median over mixed runs and is likely high; treat 910 as an upper bound.
+- Restart: each run restarts from its last checkpoint for 3 cycles, binary BioReactor-mpi-lean-2ef5b07, reads edr_95.

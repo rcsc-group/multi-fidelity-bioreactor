@@ -1021,3 +1021,19 @@ dtmix_0.50 except at 37.5 rpm. kLa_1T_50 is not reliable at L8 near 22.5-27.5 rp
   edr_mean_t (the stand-in), not edr_95, so the edr_95 QoI stays one definition across all rows.
 - 2026-11-04 (health tool): scripts/campaign2d/l8_health.py prints, per L8 job: sacct state, cycles done (t / period),
   NaN lines, error lines in the .err. 10:21 check: 20 running, cycles 14-38 of 230, nan 0, errs 0; 4 pending (batch2).
+- 2026-11-04 (lead decisions, agent). Q11 CLOSED: NO. tau_95 and edr_95 stay coupled (plan 3.1, Q11 closed, section 4.2).
+- 2026-11-04 (BUG, fixed). kla_mix_dataset.csv lists six runs twice (sets design and t5_grid). load_db kept both, so every
+  fit counted them twice (edr/tau: 33 rows for 27 runs; kLa: 55 L8 rows for 49 runs). campaign.dedup_runs keeps one row per
+  run. Test: tests/test_campaign_db_rows.py, 2 new tests (red, then green). EFFECT ON THE BASELINE: kLa_1T_10 max moves from
+  0.764 (35.07, 5.49) to 2.395 (15.00, 2.00); tau_95 0.633 to 0.647; edr 0.675 to 0.680. The old baseline numbers are wrong.
+  Next dry run (dedup): picks (15.00, 2.00), (17.50, 2.00), (20.00, 2.00), (22.50, 2.00); all at theta 2 deg, kLa_1T_10 driven.
+- 2026-11-04 (edr backfill LIST, not submitted). scripts/campaign2d/backfill_list.py: 27 runs (10 L8, 10 L9, 7 L10), all with
+  checkpoint.dump. Cost for 3 cycles each: L8 6, L9 125, L10 910 core-h (L10 rate is an upper bound), total about 1,040.
+  Written to state/edr_backfill_list.csv and plan section 8. Nothing submitted.
+- 2026-11-04 (canonical path, checked). runs/ in multi-fidelity-bioreactor is a SYMLINK to
+  BioReactor3D/dev/rocking-bioreactor-2d/runs (since 2026-07-21). simulate.py stores run_dir.resolve(), so the c2d
+  _canonical_run_dir is the realpath of the same folder the fit reads. There is no data split. But the campaign writes into
+  the other project's directory. Not changed: it moves the shared 2,915-run database. Decision for lead (options: replace the
+  symlink with a real folder and copy the database, or keep and document).
+- 2026-11-04 (copy-back). The MPI template copies each job's output to _canonical_run_dir and runs postprocess there at job
+  end (config/slurm_mpi_template.sh). A separate rsync is therefore not needed; verify at first COMPLETED job.

@@ -39,3 +39,17 @@ def test_kla_value_read_from_results(tmp_path):
     assert row["y"] == 12.5 and row["level"] == 8
     assert abs(row["rpm"] - 20.0) < 1e-9 and abs(row["theta"] - 4.0) < 1e-9
     assert row["run"] == d.name
+
+
+def test_duplicate_run_rows_are_dropped_once():
+    import pandas as pd
+    d = pd.DataFrame({"level": [8, 8, 9], "rpm": [20.0, 20.0, 25.0], "theta": [7.0, 7.0, 4.0],
+                      "run": ["kmix_l8_rpm20", "kmix_l8_rpm20", "x"], "y": [1.0, 1.0, 2.0]})
+    out = c.dedup_runs(d)
+    assert list(out.run) == ["kmix_l8_rpm20", "x"]
+
+
+def test_database_fit_rows_are_one_per_run():
+    # kla CSV lists six runs twice (sets 'design' and 't5_grid'); the fit must see each run once
+    d = c.load_db("kLa_1T_10")
+    assert d.run.is_unique

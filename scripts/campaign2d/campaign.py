@@ -492,6 +492,12 @@ CRIT_QOIS = ["tau_95", "edr_95", "kLa_1T_10"]        # gated (<= 0.30); the othe
 MAP_N = 101
 
 
+def dedup_runs(d):
+    """One row per run folder (first kept). experiments/multifidelity/kla_mix_dataset.csv lists six runs in two sets
+    ('design' and 't5_grid'); without this the fit counts them twice (found 2026-11-04)."""
+    return d.drop_duplicates(subset="run", keep="first").reset_index(drop=True)
+
+
 def campaign_row(run_dir: Path, col: str, src: str):
     """One finished campaign run as a fit row (level, rpm, theta, run, y), or None if it has not finished.
     kla: the value from results.json. hydro: hydro_dataset_v2.qois (the database definition, so the stand-in
@@ -529,7 +535,7 @@ def load_db(qoi: str):
     crow = [r for r in (campaign_row(p, col, src) for p in sorted((ROOT / "runs").glob("c2d_*"))) if r is not None]
     if crow:
         d = pd.concat([d, pd.DataFrame(crow)], ignore_index=True)
-    d = d.dropna()
+    d = dedup_runs(d.dropna())
     d = d[d.level.isin([8, 9, 10]) & (d.rpm >= RPM[0]) & (d.rpm <= RPM[1])
           & (d.theta >= THETA[0]) & (d.theta <= THETA[1]) & (d.y > 0)]
     return d.reset_index(drop=True)
