@@ -1,85 +1,1087 @@
 {
  "tau_95": {
-  "max": 0.6334023423545457,
-  "rpm": 37.5,
+  "max": 0.6453642916236962,
+  "rpm": 15.0,
   "theta": 2.0,
-  "grid_max": 0.6334023417015421,
+  "grid_max": 0.6453642916236962,
   "grid_argmax": [
-   37.5,
+   15.0,
    2.0
   ],
-  "n_L8": 16,
+  "n_L8": 10,
   "n_HF": 17,
+  "n_failed_gate_excluded": 0,
+  "floor": 0.017,
+  "selected_seed": 6,
+  "lf_seeds": [
+   {
+    "seed": 1,
+    "noise_std": 0.017,
+    "lml": -30.84765603501443,
+    "ok": true,
+    "lengthscales": [
+     1.7724,
+     566.0321
+    ]
+   },
+   {
+    "seed": 2,
+    "noise_std": 0.017,
+    "lml": -81.52030513821472,
+    "ok": true,
+    "lengthscales": [
+     0.227,
+     0.3108
+    ]
+   },
+   {
+    "seed": 3,
+    "noise_std": 0.017,
+    "lml": -30.841660619572124,
+    "ok": true,
+    "lengthscales": [
+     1.773,
+     0.1528
+    ]
+   },
+   {
+    "seed": 4,
+    "noise_std": 0.017,
+    "lml": -81.51920116648122,
+    "ok": true,
+    "lengthscales": [
+     0.227,
+     3.6033
+    ]
+   },
+   {
+    "seed": 5,
+    "noise_std": 0.017,
+    "lml": -13.13662478849968,
+    "ok": true,
+    "lengthscales": [
+     7.0403,
+     109.6845
+    ]
+   },
+   {
+    "seed": 6,
+    "noise_std": 0.017,
+    "lml": -9.342792400787516,
+    "ok": true,
+    "lengthscales": [
+     19.6021,
+     0.5204
+    ]
+   },
+   {
+    "seed": 7,
+    "noise_std": 0.017,
+    "lml": -81.52532449263401,
+    "ok": true,
+    "lengthscales": [
+     0.227,
+     306.5999
+    ]
+   },
+   {
+    "seed": 8,
+    "noise_std": 0.017,
+    "lml": -30.842435263883395,
+    "ok": true,
+    "lengthscales": [
+     1.7729,
+     858.9739
+    ]
+   },
+   {
+    "seed": 9,
+    "noise_std": 0.017,
+    "lml": -30.84185666689495,
+    "ok": true,
+    "lengthscales": [
+     1.773,
+     0.2717
+    ]
+   },
+   {
+    "seed": 10,
+    "noise_std": 0.017,
+    "lml": -30.84205709445096,
+    "ok": true,
+    "lengthscales": [
+     1.773,
+     0.1092
+    ]
+   }
+  ],
+  "hf_per_seed": [
+   {
+    "seed": 1,
+    "lf_lml": -30.84765603501443,
+    "lf_noise": 0.017,
+    "hf_log_evidence": 5.439985230466267
+   },
+   {
+    "seed": 2,
+    "lf_lml": -81.52030513821472,
+    "lf_noise": 0.017,
+    "hf_log_evidence": 4.1516246768773915
+   },
+   {
+    "seed": 3,
+    "lf_lml": -30.841660619572124,
+    "lf_noise": 0.017,
+    "hf_log_evidence": 5.440249342027129
+   },
+   {
+    "seed": 4,
+    "lf_lml": -81.51920116648122,
+    "lf_noise": 0.017,
+    "hf_log_evidence": 4.151629627100203
+   },
+   {
+    "seed": 5,
+    "lf_lml": -13.13662478849968,
+    "lf_noise": 0.017,
+    "hf_log_evidence": 6.595024007832778
+   },
+   {
+    "seed": 6,
+    "lf_lml": -9.342792400787516,
+    "lf_noise": 0.017,
+    "hf_log_evidence": 5.784523013582357
+   },
+   {
+    "seed": 7,
+    "lf_lml": -81.52532449263401,
+    "lf_noise": 0.017,
+    "hf_log_evidence": 4.151602159394246
+   },
+   {
+    "seed": 8,
+    "lf_lml": -30.842435263883395,
+    "lf_noise": 0.017,
+    "hf_log_evidence": 5.440215194092353
+   },
+   {
+    "seed": 9,
+    "lf_lml": -30.84185666689495,
+    "lf_noise": 0.017,
+    "hf_log_evidence": 5.440240699216647
+   },
+   {
+    "seed": 10,
+    "lf_lml": -30.84205709445096,
+    "lf_noise": 0.017,
+    "hf_log_evidence": 5.440231863754557
+   }
+  ],
   "gated": true,
   "png": "/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor/docs/campaign2d/fit0_tau_95.png"
  },
  "edr_95": {
-  "max": 0.6747587913203195,
-  "rpm": 37.5,
-  "theta": 5.268080908814437,
-  "grid_max": 0.6747580265524404,
+  "max": 0.5514983880315586,
+  "rpm": 15.0,
+  "theta": 2.0,
+  "grid_max": 0.5514983880315585,
   "grid_argmax": [
-   37.5,
-   5.25
+   15.0,
+   2.0
   ],
-  "n_L8": 16,
+  "n_L8": 10,
   "n_HF": 17,
+  "n_failed_gate_excluded": 0,
+  "floor": 0.0085,
+  "selected_seed": 7,
+  "lf_seeds": [
+   {
+    "seed": 1,
+    "noise_std": 0.0085,
+    "lml": -159.48057895072432,
+    "ok": true,
+    "lengthscales": [
+     1.4919,
+     565.3425
+    ]
+   },
+   {
+    "seed": 2,
+    "noise_std": 0.0085,
+    "lml": -1068.8298361969723,
+    "ok": true,
+    "lengthscales": [
+     0.0397,
+     0.3109
+    ]
+   },
+   {
+    "seed": 3,
+    "noise_std": 0.0085,
+    "lml": -159.47387105682557,
+    "ok": true,
+    "lengthscales": [
+     1.492,
+     0.1523
+    ]
+   },
+   {
+    "seed": 4,
+    "noise_std": 0.0085,
+    "lml": -159.47515649534625,
+    "ok": true,
+    "lengthscales": [
+     1.492,
+     3.6016
+    ]
+   },
+   {
+    "seed": 5,
+    "noise_std": 0.0085,
+    "lml": -159.53930731902915,
+    "ok": true,
+    "lengthscales": [
+     1.4909,
+     109.3983
+    ]
+   },
+   {
+    "seed": 6,
+    "noise_std": 0.0085,
+    "lml": -159.4742415481551,
+    "ok": true,
+    "lengthscales": [
+     1.492,
+     0.5204
+    ]
+   },
+   {
+    "seed": 7,
+    "noise_std": 0.0085,
+    "lml": -159.1128363837755,
+    "ok": true,
+    "lengthscales": [
+     1.4981,
+     309.6872
+    ]
+   },
+   {
+    "seed": 8,
+    "noise_std": 0.0085,
+    "lml": -159.20005785155357,
+    "ok": true,
+    "lengthscales": [
+     1.4966,
+     999.5797
+    ]
+   },
+   {
+    "seed": 9,
+    "noise_std": 0.0085,
+    "lml": -159.47476067517195,
+    "ok": true,
+    "lengthscales": [
+     1.492,
+     0.2717
+    ]
+   },
+   {
+    "seed": 10,
+    "noise_std": 0.0085,
+    "lml": -159.4754695364138,
+    "ok": true,
+    "lengthscales": [
+     1.492,
+     0.1092
+    ]
+   }
+  ],
+  "hf_per_seed": [
+   {
+    "seed": 1,
+    "lf_lml": -159.48057895072432,
+    "lf_noise": 0.0085,
+    "hf_log_evidence": 15.733846151025453
+   },
+   {
+    "seed": 2,
+    "lf_lml": -1068.8298361969723,
+    "lf_noise": 0.0085,
+    "hf_log_evidence": 15.40804256523565
+   },
+   {
+    "seed": 3,
+    "lf_lml": -159.47387105682557,
+    "lf_noise": 0.0085,
+    "hf_log_evidence": 15.733836280259421
+   },
+   {
+    "seed": 4,
+    "lf_lml": -159.47515649534625,
+    "lf_noise": 0.0085,
+    "hf_log_evidence": 15.733838172334444
+   },
+   {
+    "seed": 5,
+    "lf_lml": -159.53930731902915,
+    "lf_noise": 0.0085,
+    "hf_log_evidence": 15.733932414841014
+   },
+   {
+    "seed": 6,
+    "lf_lml": -159.4742415481551,
+    "lf_noise": 0.0085,
+    "hf_log_evidence": 15.733836825607424
+   },
+   {
+    "seed": 7,
+    "lf_lml": -159.1128363837755,
+    "lf_noise": 0.0085,
+    "hf_log_evidence": 15.733299107041537
+   },
+   {
+    "seed": 8,
+    "lf_lml": -159.20005785155357,
+    "lf_noise": 0.0085,
+    "hf_log_evidence": 15.73342993856238
+   },
+   {
+    "seed": 9,
+    "lf_lml": -159.47476067517195,
+    "lf_noise": 0.0085,
+    "hf_log_evidence": 15.733837589729932
+   },
+   {
+    "seed": 10,
+    "lf_lml": -159.4754695364138,
+    "lf_noise": 0.0085,
+    "hf_log_evidence": 15.73383863308155
+   }
+  ],
   "gated": true,
   "png": "/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor/docs/campaign2d/fit0_edr_95.png"
  },
  "kLa_1T_10": {
-  "max": 0.7646366945023104,
-  "rpm": 35.0665485513876,
-  "theta": 5.492374385513373,
-  "grid_max": 0.7644495907185462,
+  "max": 0.8401652999137283,
+  "rpm": 34.8844691268147,
+  "theta": 4.7899622578403465,
+  "grid_max": 0.8399693547266125,
   "grid_argmax": [
-   35.025000000000006,
-   5.5
+   34.8,
+   4.800000000000001
   ],
-  "n_L8": 55,
+  "n_L8": 49,
   "n_HF": 10,
+  "n_failed_gate_excluded": 0,
+  "floor": 0.095,
+  "selected_seed": 2,
+  "lf_seeds": [
+   {
+    "seed": 1,
+    "noise_std": 0.095,
+    "lml": -60.60856818520106,
+    "ok": true,
+    "lengthscales": [
+     1.8494,
+     565.8191
+    ]
+   },
+   {
+    "seed": 2,
+    "noise_std": 0.095,
+    "lml": -52.63554593871153,
+    "ok": true,
+    "lengthscales": [
+     30.3121,
+     7.7824
+    ]
+   },
+   {
+    "seed": 3,
+    "noise_std": 0.095,
+    "lml": -60.61025678545806,
+    "ok": true,
+    "lengthscales": [
+     1.849,
+     999.9999
+    ]
+   },
+   {
+    "seed": 4,
+    "noise_std": 0.095,
+    "lml": -53.00430011366812,
+    "ok": true,
+    "lengthscales": [
+     36.7077,
+     999.5151
+    ]
+   },
+   {
+    "seed": 5,
+    "noise_std": 0.095,
+    "lml": -52.635551401354334,
+    "ok": true,
+    "lengthscales": [
+     30.3121,
+     7.7824
+    ]
+   },
+   {
+    "seed": 6,
+    "noise_std": 0.095,
+    "lml": -60.609252523716954,
+    "ok": true,
+    "lengthscales": [
+     1.8493,
+     439.1353
+    ]
+   },
+   {
+    "seed": 7,
+    "noise_std": 0.095,
+    "lml": -60.60907269986366,
+    "ok": true,
+    "lengthscales": [
+     1.8493,
+     306.2317
+    ]
+   },
+   {
+    "seed": 8,
+    "noise_std": 0.095,
+    "lml": -60.6092800242109,
+    "ok": true,
+    "lengthscales": [
+     1.8493,
+     863.8569
+    ]
+   },
+   {
+    "seed": 9,
+    "noise_std": 0.095,
+    "lml": -60.60928951160554,
+    "ok": true,
+    "lengthscales": [
+     1.8493,
+     998.1166
+    ]
+   },
+   {
+    "seed": 10,
+    "noise_std": 0.095,
+    "lml": -60.61004127243031,
+    "ok": true,
+    "lengthscales": [
+     1.8491,
+     834.6244
+    ]
+   }
+  ],
+  "hf_per_seed": [
+   {
+    "seed": 1,
+    "lf_lml": -60.60856818520106,
+    "lf_noise": 0.095,
+    "hf_log_evidence": 4.790383940873933
+   },
+   {
+    "seed": 2,
+    "lf_lml": -52.63554593871153,
+    "lf_noise": 0.095,
+    "hf_log_evidence": 4.955562521191114
+   },
+   {
+    "seed": 3,
+    "lf_lml": -60.61025678545806,
+    "lf_noise": 0.095,
+    "hf_log_evidence": 4.790622465642606
+   },
+   {
+    "seed": 4,
+    "lf_lml": -53.00430011366812,
+    "lf_noise": 0.095,
+    "hf_log_evidence": 4.923313093960668
+   },
+   {
+    "seed": 5,
+    "lf_lml": -52.635551401354334,
+    "lf_noise": 0.095,
+    "hf_log_evidence": 4.955562268156518
+   },
+   {
+    "seed": 6,
+    "lf_lml": -60.609252523716954,
+    "lf_noise": 0.095,
+    "hf_log_evidence": 4.790480597353067
+   },
+   {
+    "seed": 7,
+    "lf_lml": -60.60907269986366,
+    "lf_noise": 0.095,
+    "hf_log_evidence": 4.790455197521271
+   },
+   {
+    "seed": 8,
+    "lf_lml": -60.6092800242109,
+    "lf_noise": 0.095,
+    "hf_log_evidence": 4.790484481836666
+   },
+   {
+    "seed": 9,
+    "lf_lml": -60.60928951160554,
+    "lf_noise": 0.095,
+    "hf_log_evidence": 4.790485821926895
+   },
+   {
+    "seed": 10,
+    "lf_lml": -60.61004127243031,
+    "lf_noise": 0.095,
+    "hf_log_evidence": 4.790592018372356
+   }
+  ],
   "gated": true,
   "png": "/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor/docs/campaign2d/fit0_kLa_1T_10.png"
  },
  "kLa_1T_25": {
-  "max": 1.522399234488239,
-  "rpm": 18.007474487619326,
-  "theta": 3.4230609309461575,
-  "grid_max": 1.5221177678131865,
+  "max": 1.1468632177208071,
+  "rpm": 17.053967224233062,
+  "theta": 3.999277841467439,
+  "grid_max": 1.146855098186659,
   "grid_argmax": [
-   17.925,
-   3.4000000000000004
+   17.025,
+   4.0
   ],
-  "n_L8": 55,
+  "n_L8": 49,
   "n_HF": 10,
+  "n_failed_gate_excluded": 0,
+  "floor": 0.189,
+  "selected_seed": 10,
+  "lf_seeds": [
+   {
+    "seed": 1,
+    "noise_std": 0.189,
+    "lml": -61.02506262090236,
+    "ok": true,
+    "lengthscales": [
+     27.6253,
+     565.3009
+    ]
+   },
+   {
+    "seed": 2,
+    "noise_std": 0.189,
+    "lml": -60.64909618379167,
+    "ok": true,
+    "lengthscales": [
+     24.2108,
+     9.1435
+    ]
+   },
+   {
+    "seed": 3,
+    "noise_std": 0.189,
+    "lml": -61.02515157870791,
+    "ok": true,
+    "lengthscales": [
+     27.6271,
+     1000.0
+    ]
+   },
+   {
+    "seed": 4,
+    "noise_std": 0.189,
+    "lml": -59.97309289644602,
+    "ok": true,
+    "lengthscales": [
+     5.3266,
+     429.8658
+    ]
+   },
+   {
+    "seed": 5,
+    "noise_std": 0.189,
+    "lml": -60.094413646648526,
+    "ok": true,
+    "lengthscales": [
+     5.2077,
+     14.5898
+    ]
+   },
+   {
+    "seed": 6,
+    "noise_std": 0.189,
+    "lml": -60.64909932799678,
+    "ok": true,
+    "lengthscales": [
+     24.2109,
+     9.1437
+    ]
+   },
+   {
+    "seed": 7,
+    "noise_std": 0.189,
+    "lml": -59.97246573748262,
+    "ok": true,
+    "lengthscales": [
+     5.3314,
+     305.7681
+    ]
+   },
+   {
+    "seed": 8,
+    "noise_std": 0.189,
+    "lml": -61.025102784777594,
+    "ok": true,
+    "lengthscales": [
+     27.6261,
+     863.8731
+    ]
+   },
+   {
+    "seed": 9,
+    "noise_std": 0.189,
+    "lml": -61.025009723055,
+    "ok": true,
+    "lengthscales": [
+     27.6242,
+     990.2875
+    ]
+   },
+   {
+    "seed": 10,
+    "noise_std": 0.189,
+    "lml": -59.972440676880055,
+    "ok": true,
+    "lengthscales": [
+     5.3316,
+     999.8729
+    ]
+   }
+  ],
+  "hf_per_seed": [
+   {
+    "seed": 1,
+    "lf_lml": -61.02506262090236,
+    "lf_noise": 0.189,
+    "hf_log_evidence": -2.3033198800936034
+   },
+   {
+    "seed": 2,
+    "lf_lml": -60.64909618379167,
+    "lf_noise": 0.189,
+    "hf_log_evidence": -2.284637955991843
+   },
+   {
+    "seed": 3,
+    "lf_lml": -61.02515157870791,
+    "lf_noise": 0.189,
+    "hf_log_evidence": -2.3033579094505248
+   },
+   {
+    "seed": 4,
+    "lf_lml": -59.97309289644602,
+    "lf_noise": 0.189,
+    "hf_log_evidence": -0.9730417698423866
+   },
+   {
+    "seed": 5,
+    "lf_lml": -60.094413646648526,
+    "lf_noise": 0.189,
+    "hf_log_evidence": -0.9084405716247446
+   },
+   {
+    "seed": 6,
+    "lf_lml": -60.64909932799678,
+    "lf_noise": 0.189,
+    "hf_log_evidence": -2.284639903537376
+   },
+   {
+    "seed": 7,
+    "lf_lml": -59.97246573748262,
+    "lf_noise": 0.189,
+    "hf_log_evidence": -0.9738366422639029
+   },
+   {
+    "seed": 8,
+    "lf_lml": -61.025102784777594,
+    "lf_noise": 0.189,
+    "hf_log_evidence": -2.30333705102543
+   },
+   {
+    "seed": 9,
+    "lf_lml": -61.025009723055,
+    "lf_noise": 0.189,
+    "hf_log_evidence": -2.303297262793361
+   },
+   {
+    "seed": 10,
+    "lf_lml": -59.972440676880055,
+    "lf_noise": 0.189,
+    "hf_log_evidence": -0.9738684758623242
+   }
+  ],
   "gated": false,
   "png": "/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor/docs/campaign2d/fit0_kLa_1T_25.png"
  },
  "kLa_1T_50": {
-  "max": 2.567669225933564,
-  "rpm": 34.93443536462693,
-  "theta": 3.772224973146905,
-  "grid_max": 2.5672712971859544,
+  "max": 3.400571843104759,
+  "rpm": 35.013161334651166,
+  "theta": 5.5011426877782075,
+  "grid_max": 3.4001305346572375,
   "grid_argmax": [
    35.025000000000006,
-   3.75
+   5.5
   ],
-  "n_L8": 55,
+  "n_L8": 49,
   "n_HF": 9,
+  "n_failed_gate_excluded": 0,
+  "floor": 0.0085,
+  "selected_seed": 2,
+  "lf_seeds": [
+   {
+    "seed": 1,
+    "noise_std": 0.29392382271507767,
+    "lml": -66.89415088821016,
+    "ok": true,
+    "lengthscales": [
+     1.9759,
+     563.981
+    ]
+   },
+   {
+    "seed": 2,
+    "noise_std": 0.18616492593024656,
+    "lml": -65.70598065971868,
+    "ok": true,
+    "lengthscales": [
+     880.495,
+     806.0904
+    ]
+   },
+   {
+    "seed": 3,
+    "noise_std": 0.0085,
+    "lml": -37361.47987023077,
+    "ok": true,
+    "lengthscales": [
+     0.5728,
+     0.0594
+    ]
+   },
+   {
+    "seed": 4,
+    "noise_std": 0.1236631927426924,
+    "lml": -153.63195411288757,
+    "ok": true,
+    "lengthscales": [
+     11.6165,
+     1.1742
+    ]
+   },
+   {
+    "seed": 5,
+    "noise_std": 0.0085,
+    "lml": -37361.36052079909,
+    "ok": true,
+    "lengthscales": [
+     0.5728,
+     0.0594
+    ]
+   },
+   {
+    "seed": 6,
+    "noise_std": 0.0085,
+    "lml": -37361.46474730276,
+    "ok": true,
+    "lengthscales": [
+     0.5727,
+     0.0594
+    ]
+   },
+   {
+    "seed": 7,
+    "noise_std": 0.5176923351726324,
+    "lml": -70.80260602976183,
+    "ok": true,
+    "lengthscales": [
+     35.307,
+     306.0607
+    ]
+   },
+   {
+    "seed": 8,
+    "noise_std": 0.29399312932124805,
+    "lml": -66.8892491377454,
+    "ok": true,
+    "lengthscales": [
+     1.9762,
+     861.1684
+    ]
+   },
+   {
+    "seed": 9,
+    "noise_std": 0.29383229741969724,
+    "lml": -66.90034006763872,
+    "ok": true,
+    "lengthscales": [
+     1.9757,
+     602.1849
+    ]
+   },
+   {
+    "seed": 10,
+    "noise_std": 0.1409987957782842,
+    "lml": -66.09390729369869,
+    "ok": true,
+    "lengthscales": [
+     747.9317,
+     716.8949
+    ]
+   }
+  ],
+  "hf_per_seed": [
+   {
+    "seed": 1,
+    "lf_lml": -66.89415088821016,
+    "lf_noise": 0.29392382271507767,
+    "hf_log_evidence": -5.046335543272731
+   },
+   {
+    "seed": 2,
+    "lf_lml": -65.70598065971868,
+    "lf_noise": 0.18616492593024656,
+    "hf_log_evidence": -6.082519033337924
+   },
+   {
+    "seed": 3,
+    "lf_lml": -37361.47987023077,
+    "lf_noise": 0.0085,
+    "hf_log_evidence": -4.885063697961082
+   },
+   {
+    "seed": 4,
+    "lf_lml": -153.63195411288757,
+    "lf_noise": 0.1236631927426924,
+    "hf_log_evidence": -5.471867855832504
+   },
+   {
+    "seed": 5,
+    "lf_lml": -37361.36052079909,
+    "lf_noise": 0.0085,
+    "hf_log_evidence": -4.885062973504315
+   },
+   {
+    "seed": 6,
+    "lf_lml": -37361.46474730276,
+    "lf_noise": 0.0085,
+    "hf_log_evidence": -4.885075762943221
+   },
+   {
+    "seed": 7,
+    "lf_lml": -70.80260602976183,
+    "lf_noise": 0.5176923351726324,
+    "hf_log_evidence": -5.500496014461521
+   },
+   {
+    "seed": 8,
+    "lf_lml": -66.8892491377454,
+    "lf_noise": 0.29399312932124805,
+    "hf_log_evidence": -5.046321918370334
+   },
+   {
+    "seed": 9,
+    "lf_lml": -66.90034006763872,
+    "lf_noise": 0.29383229741969724,
+    "hf_log_evidence": -5.046341433513549
+   },
+   {
+    "seed": 10,
+    "lf_lml": -66.09390729369869,
+    "lf_noise": 0.1409987957782842,
+    "hf_log_evidence": -6.143464935037789
+   }
+  ],
   "gated": false,
   "png": "/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor/docs/campaign2d/fit0_kLa_1T_50.png"
  },
  "dtmix_0.50": {
-  "max": 1.6650880513623723,
+  "max": 1.855169835974157,
   "rpm": 15.0,
-  "theta": 3.898176431380052,
-  "grid_max": 1.6650866505821784,
+  "theta": 3.9992631179111764,
+  "grid_max": 1.855155834633709,
   "grid_argmax": [
    15.0,
-   3.9000000000000004
+   4.0
   ],
-  "n_L8": 55,
+  "n_L8": 49,
   "n_HF": 10,
+  "n_failed_gate_excluded": 0,
+  "floor": 0.104,
+  "selected_seed": 1,
+  "lf_seeds": [
+   {
+    "seed": 1,
+    "noise_std": 0.10400000000000001,
+    "lml": -51.77702142373453,
+    "ok": true,
+    "lengthscales": [
+     0.2692,
+     570.5864
+    ]
+   },
+   {
+    "seed": 2,
+    "noise_std": 0.10400000000000001,
+    "lml": -51.78374894769988,
+    "ok": true,
+    "lengthscales": [
+     0.2689,
+     892.9616
+    ]
+   },
+   {
+    "seed": 3,
+    "noise_std": 0.10400000000000001,
+    "lml": -51.78350412716368,
+    "ok": true,
+    "lengthscales": [
+     0.2689,
+     968.1862
+    ]
+   },
+   {
+    "seed": 4,
+    "noise_std": 0.10400000000000001,
+    "lml": -51.78276149493258,
+    "ok": true,
+    "lengthscales": [
+     0.269,
+     999.1393
+    ]
+   },
+   {
+    "seed": 5,
+    "noise_std": 0.10400000000000001,
+    "lml": -51.783005613846136,
+    "ok": true,
+    "lengthscales": [
+     0.2689,
+     108.3973
+    ]
+   },
+   {
+    "seed": 6,
+    "noise_std": 0.10400000000000001,
+    "lml": -51.78318460886155,
+    "ok": true,
+    "lengthscales": [
+     0.2689,
+     998.6818
+    ]
+   },
+   {
+    "seed": 7,
+    "noise_std": 0.10400000000000001,
+    "lml": -51.78100206594497,
+    "ok": true,
+    "lengthscales": [
+     0.269,
+     306.2464
+    ]
+   },
+   {
+    "seed": 8,
+    "noise_std": 0.10400000000000001,
+    "lml": -51.78123859466538,
+    "ok": true,
+    "lengthscales": [
+     0.269,
+     863.6989
+    ]
+   },
+   {
+    "seed": 9,
+    "noise_std": 0.10400000000000001,
+    "lml": -51.78317234549173,
+    "ok": true,
+    "lengthscales": [
+     0.2689,
+     999.3382
+    ]
+   },
+   {
+    "seed": 10,
+    "noise_std": 0.10400000000000001,
+    "lml": -51.79020270944012,
+    "ok": true,
+    "lengthscales": [
+     0.2687,
+     1000.0
+    ]
+   }
+  ],
+  "hf_per_seed": [
+   {
+    "seed": 1,
+    "lf_lml": -51.77702142373453,
+    "lf_noise": 0.10400000000000001,
+    "hf_log_evidence": 4.340867315325921
+   },
+   {
+    "seed": 2,
+    "lf_lml": -51.78374894769988,
+    "lf_noise": 0.10400000000000001,
+    "hf_log_evidence": 4.340809854567063
+   },
+   {
+    "seed": 3,
+    "lf_lml": -51.78350412716368,
+    "lf_noise": 0.10400000000000001,
+    "hf_log_evidence": 4.340811941278243
+   },
+   {
+    "seed": 4,
+    "lf_lml": -51.78276149493258,
+    "lf_noise": 0.10400000000000001,
+    "hf_log_evidence": 4.3408182729598845
+   },
+   {
+    "seed": 5,
+    "lf_lml": -51.783005613846136,
+    "lf_noise": 0.10400000000000001,
+    "hf_log_evidence": 4.340813311421223
+   },
+   {
+    "seed": 6,
+    "lf_lml": -51.78318460886155,
+    "lf_noise": 0.10400000000000001,
+    "hf_log_evidence": 4.340814665116416
+   },
+   {
+    "seed": 7,
+    "lf_lml": -51.78100206594497,
+    "lf_noise": 0.10400000000000001,
+    "hf_log_evidence": 4.340833285988267
+   },
+   {
+    "seed": 8,
+    "lf_lml": -51.78123859466538,
+    "lf_noise": 0.10400000000000001,
+    "hf_log_evidence": 4.340831266724874
+   },
+   {
+    "seed": 9,
+    "lf_lml": -51.78317234549173,
+    "lf_noise": 0.10400000000000001,
+    "hf_log_evidence": 4.340814769658904
+   },
+   {
+    "seed": 10,
+    "lf_lml": -51.79020270944012,
+    "lf_noise": 0.10400000000000001,
+    "hf_log_evidence": 4.340754966152058
+   }
+  ],
   "gated": false,
   "png": "/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor/docs/campaign2d/fit0_dtmix_0_50.png"
  }

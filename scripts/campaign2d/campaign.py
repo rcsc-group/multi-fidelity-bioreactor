@@ -541,18 +541,115 @@ def load_db(qoi: str):
     return d.reset_index(drop=True)
 
 
-def fit_qoi(d):
-    """LF KRR on L8 (ln QoI), then FullBayesKRRLRGP on L9+L10 (ln QoI). Returns the trained HF model."""
-    from scripts.test_t3_learning_curve import CachedLooKRR
+# ----------------------------------------------------------------- LF/HF fit with a noise floor (2026-11-04)
+# Lead decision: (a) restart selection by marginal likelihood among restarts with noise_std >= the run-to-run floor;
+# (b) the optimiser's noise lower bound is that floor. Old baseline (seed 42, one start, unfloored, LOO) is superseded:
+# the LOO objective has several local optima and the fit's seed chose between them (diary 2026-11-04).
+NOISE_FLOOR_LN = {"kLa_1T_10": 0.095, "kLa_1T_25": 0.189, "dtmix_0.50": 0.104, "tau_95": 0.017}   # diary 2026-10-15 E0
+LF_SEEDS = tuple(range(1, 11))
+
+
+def noise_floor(qoi: str) -> float:
+    """Run-to-run ln sd floor. Without a measured floor: 0.5 x the smallest measured floor (lead, 2026-11-04)."""
+    return NOISE_FLOOR_LN.get(qoi, 0.5 * min(NOISE_FLOOR_LN.values()))
+
+
+_LF_CLS = None
+
+
+def _lf_class():
+    """FastLooKRR (closed-form LOO, production LF) with the noise lower bound at self.noise_floor (ln units)."""
+    global _LF_CLS
+    if _LF_CLS is None:
+        from scripts.fast_loo_krr import FastLooKRR
+
+        class FlooredLOO(FastLooKRR):
+            noise_floor = 0.0
+
+            def _bound_definition_for_optimization(self, noise_bound=(10 ** -3, 10)):
+                b = super()._bound_definition_for_optimization(list(noise_bound))
+                if self.noise_data and self.params_optimize:
+                    b[-1, 0] = max(b[-1, 0], self.noise_floor / self.y_std)
+                return b
+
+        _LF_CLS = FlooredLOO
+    return _LF_CLS
+
+
+def make_lf(seed: int, floor: float):
+    lf = _lf_class()(design_space=DOMAIN, params_optimize=True, noise_data=True, optimizer_restart=0, seed=seed)
+    lf.noise_floor = float(floor)
+    return lf
+
+
+def lf_log_ml(lf) -> float:
+    """Log marginal likelihood of the LF kernel model on its training data (scaled ln outputs)."""
+    X, y = lf.sample_x_scaled, np.asarray(lf.sample_y_scaled, float).ravel()
+    K = lf._training_kernel_matrix(scaled_x=X, scaled_noise_std=lf.noise_std / lf.y_std)
+    L = np.linalg.cholesky(K)
+    a = np.linalg.solve(L, y)
+    return float(-0.5 * a @ a - np.sum(np.log(np.diag(L))) - 0.5 * len(y) * np.log(2 * np.pi))
+
+
+def select_restart(rows) -> int:
+    """Index of the restart with the best marginal likelihood among rows with ok=True (noise_std >= floor)."""
+    ok = [i for i, r in enumerate(rows) if r["ok"]]
+    if not ok:
+        raise ValueError("no LF restart with noise_std at or above the floor")
+    return max(ok, key=lambda i: rows[i]["lml"])
+
+
+def hf_grid(floor: float, ystd: float):
+    """FullBayes (length, noise ratio, log prior) grid with the noise ratio floor/ystd as its lower bound.
+    If that bound exceeds the prior's upper limit 0.3, the upper limit is raised to 4 x the bound (reported)."""
+    from mfbml_local.krr_lr_gpr_fullbayes import default_grid
+    eta_lo = max(1e-3, float(floor) / float(ystd))
+    return default_grid(eta_lo=eta_lo, eta_hi=max(0.3, 4.0 * eta_lo))
+
+
+def fit_lf_selected(X, Y, floor: float):
+    """Run the LF optimisation from LF_SEEDS (one start each), keep the best-LML restart with noise >= floor."""
+    models, rows = [], []
+    for s in LF_SEEDS:
+        np.random.seed(s)
+        lf = make_lf(seed=s, floor=floor)
+        lf.train(X, Y, portion_test=0.2)
+        noise = float(np.asarray(lf.noise_std).ravel()[0])
+        rows.append(dict(seed=s, noise_std=noise, lml=lf_log_ml(lf), ok=noise >= floor - 1e-12,
+                         lengthscales=np.round(np.asarray(lf.kernel.param, float), 4).tolist()))
+        models.append(lf)
+    idx = select_restart(rows)
+    return models[idx], rows, models
+
+
+def fit_qoi_info(d, qoi: str):
+    """LF (floored, seed selected by LML) on L8, then FullBayesKRRLRGP on L9+L10 with the floored grid.
+    Returns (HF model, info) with the per-seed LF table and the HF evidence per seed (same rule, for the check)."""
     from mfbml_local.krr_lr_gpr_fullbayes import FullBayesKRRLRGP
     lo, hi = d[d.level == 8], d[d.level >= 9]
     if len(lo) < 5 or len(hi) < 2:
         raise SystemExit(f"too few points: L8 {len(lo)}, L9+L10 {len(hi)}")
-    lf = CachedLooKRR(design_space=DOMAIN, params_optimize=True, noise_data=True, optimizer_restart=10, seed=42)
-    lf.train(lo[["rpm", "theta"]].to_numpy(float), np.log(lo.y.to_numpy(float)).reshape(-1, 1), portion_test=0.2)
-    m = FullBayesKRRLRGP(DOMAIN, lf_model=lf)
-    m.train(hi[["rpm", "theta"]].to_numpy(float), np.log(hi.y.to_numpy(float)))
-    return m
+    floor = noise_floor(qoi)
+    Xl, Yl = lo[["rpm", "theta"]].to_numpy(float), np.log(lo.y.to_numpy(float)).reshape(-1, 1)
+    Xh, Yh = hi[["rpm", "theta"]].to_numpy(float), np.log(hi.y.to_numpy(float))
+    lf, rows, models = fit_lf_selected(Xl, Yl, floor)
+    grid = hf_grid(floor, float(np.std(Yh)))
+    m = FullBayesKRRLRGP(DOMAIN, lf_model=lf, grid=grid)
+    m.train(Xh, Yh)
+    per_seed = []
+    for r, lf_s in zip(rows, models):
+        ms = FullBayesKRRLRGP(DOMAIN, lf_model=lf_s, grid=grid)
+        ms.train(Xh, Yh)
+        lw = ms.logprior + ms.logml
+        per_seed.append(dict(seed=r["seed"], lf_lml=r["lml"], lf_noise=r["noise_std"], hf_log_evidence=float(
+            np.log(np.sum(np.exp(lw - lw.max()))) + lw.max())))
+    sel = [r["seed"] for r, _ in zip(rows, models)][select_restart(rows)]
+    return m, dict(floor=floor, selected_seed=sel, lf_rows=rows, hf_per_seed=per_seed,
+                   hf_eta_floor=floor / float(np.std(Yh)), hf_eta_hi=float(grid[1].max()))
+
+
+def fit_qoi(d, qoi: str):
+    return fit_qoi_info(d, qoi)[0]
 
 
 def crit(m, X: np.ndarray, chunk: int = 400) -> np.ndarray:
@@ -616,13 +713,13 @@ def fit(_args=None) -> None:
         d_all = load_db(qoi)
         d = exclude_failed_gate(d_all, gates)
         n_excl = len(d_all) - len(d)
-        m = fit_qoi(d)
+        m, finfo = fit_qoi_info(d, qoi)
         res = max_crit(m)
         png = DOCS_FIT / f"fit0_{qoi.replace('.', '_')}.png"
         plot_map(qoi, res, d, png)
         out[qoi] = dict(max=res["max"], rpm=res["rpm"], theta=res["theta"], grid_max=res["grid_max"],
                         grid_argmax=res["grid_argmax"], n_L8=int((d.level == 8).sum()),
-                        n_HF=int((d.level >= 9).sum()), n_failed_gate_excluded=n_excl,
+                        n_HF=int((d.level >= 9).sum()), n_failed_gate_excluded=n_excl, floor=finfo["floor"], selected_seed=finfo["selected_seed"], lf_seeds=finfo["lf_rows"], hf_per_seed=finfo["hf_per_seed"],
                         gated=qoi in CRIT_QOIS, png=str(png))
         print(f"{qoi:12s} max 2s/mean = {res['max']:.3f} at rpm {res['rpm']:.2f} theta {res['theta']:.2f} "
               f"(grid max {res['grid_max']:.3f}) L8 n={out[qoi]['n_L8']} HF n={out[qoi]['n_HF']} "
@@ -669,7 +766,7 @@ def cmd_next(args) -> None:
     for qoi in CRIT_QOIS:
         d_all = load_db(qoi)
         d = exclude_failed_gate(d_all, gates)
-        m = fit_qoi(d)
+        m, _finfo = fit_qoi_info(d, qoi)
         cq = crit(m, X)
         per_qoi[qoi] = cq
         worst = np.maximum(worst, cq)

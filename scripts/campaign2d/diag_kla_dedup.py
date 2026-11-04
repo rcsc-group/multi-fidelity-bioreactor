@@ -39,7 +39,7 @@ def run(label, d):
     k = int(np.argmin(dist.values))
     print(f"   nearest data to (15, 2): rpm {d.rpm.iloc[k]}, theta {d.theta.iloc[k]}, level {d.level.iloc[k]}, "
           f"normalised distance {dist.iloc[k]:.3f}")
-    m = c.fit_qoi(d)
+    m = c.fit_qoi(d, QOI)
     lf = next((getattr(m, a) for a in dir(m) if a.lower().startswith("lf")
                and hasattr(getattr(m, a), "kernel")), None)
     if lf is not None:

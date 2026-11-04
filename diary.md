@@ -1060,3 +1060,29 @@ dtmix_0.50 except at 37.5 rpm. kLa_1T_50 is not reliable at L8 near 22.5-27.5 rp
   best marginal likelihood over seeds, (b) floor noise_std at the data noise, (c) report both. Not implemented. The L9
   picks from the dry run (theta 2 corner) are INVALID as evidence. L9 picks only after the refit that follows the fix.
   HF path (FullBayes) not separately tested by seed. Next step: test the fix with the L8 data after the 24 L8 runs finish.
+- 2026-11-04 (LEAD DECISION (a)+(b), implemented and tested). Production LF is FastLooKRR (closed-form LOO over all rows); the
+  seed only sets the optimiser starts (rng(seed)), so the seed picks the local optimum. Change: LF = FlooredLOO (noise lower
+  bound = floor/y_std, lead (b)); LF_SEEDS 1..10, one start each; restart = best LF log marginal likelihood among restarts with
+  noise_std >= floor (select_restart, lead (a)). Floors (ln sd, diary 2026-10-15 E0): kLa_1T_10 0.095, kLa_1T_25 0.189,
+  dtmix_0.50 0.104, tau_95 0.017; kLa_1T_50 and edr_95 have no measured floor: 0.0085 (0.5 x 0.017). HF: FullBayes grid with the
+  noise ratio lower bound floor/std(y_HF) (hf_grid; the upper bound is raised to 4 x the lower bound if needed); HF evidence
+  reported per LF seed. Tests tests/test_campaign_lf_select.py, 6 tests: 6 red before the code, 33/33 campaign tests green after.
+  LIMITATION (stated, not hidden): the synthetic degenerate test checks the ok filter. Its degenerate candidate has much LOWER
+  LML (-1045 vs -13.9), so it does not show an LML contest. The real evidence is kLa_1T_50 below.
+- 2026-11-04 (NEW BASELINE, fit with floor; supersedes all earlier baselines). Max 2 sigma/mean on the continuous domain:
+  tau_95 0.645 at (15.00, 2.00), selected LF seed 6, gated;  edr_95 (stand-in edr_mean_t) 0.551 at (15.00, 2.00), seed 7, gated;
+  kLa_1T_10 0.840 at (34.88, 4.79), seed 2, gated;  kLa_1T_25 1.147 at (17.05, 4.00), reported;  kLa_1T_50 3.401 at (35.01, 5.50),
+  reported;  dtmix_0.50 1.855 at (15.00, 4.00), reported.  Floors active: LF noise equals the floor at most optima.
+  Degenerate LF optima exist with the floor: kLa_1T_50 seeds 3, 5, 6 (lengthscale 0.06, LML -37361) are NOT selected (seed 2,
+  LML -66). HF evidence across LF seeds moves by 0.2-1.3 nats (not seed-sensitive).
+  SUPERSEDED (wrong, do not cite): kLa_1T_10 0.764 at (35.07, 5.49) (duplicate rows, seed 42, unfloored); kLa_1T_10 2.395 at
+  (15.00, 2.00) (dedup, seed 42 degenerate LF mode, noise 2e-4); the fit0 values of tau 0.633, edr 0.675, kLa_1T_25 1.522,
+  kLa_1T_50 2.568, dtmix 1.665 (duplicate rows, unfloored). The old L9 dry-run picks (theta 2 corner) are INVALID.
+  Scratch note: the per-QoI LF table and HF evidence per seed are in state/fit0.json (lf_seeds, hf_per_seed).
+- 2026-11-04 (backfill window test, lead item 2). scripts/campaign2d/backfill_window_test.py: edr_mean (column 9, the hydro
+  scale) over pre = last 3 cycles before release, post = first 3 cycles after release, late = last 3 cycles of the run (the
+  backfill restart point). Existing database runs (not yet c2d): kmix_l8_rpm32.5 late +0.14 %, kmix_l8_rpm15 late +0.63 %,
+  kmix_l8_rpm25 late +0.44 %, fig9_l9_rpm25 late -0.01 %; post within 0.24 %. Worst 0.63 % < 2 %: AGREE on 4 runs.
+  NOT YET the required test: it must be repeated on the first c2d L8 run that completes (pending: 20 running, 4 pending).
+- 2026-11-04 (backfill jobs). 27 edr_95 restarts (8341463-8341489) still PENDING behind the L8 batch cap. Check .err for
+  "fs sanity [post-solid]: OK" once they run.
