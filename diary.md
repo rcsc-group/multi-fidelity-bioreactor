@@ -1097,3 +1097,17 @@ dtmix_0.50 except at 37.5 rpm. kLa_1T_50 is not reliable at L8 near 22.5-27.5 rp
   but a warm restart on binary 2ef5b07 from an f1c11e0 checkpoint is a binary change. Flagged for the lead, not decided.
 - Test: tests/test_campaign_warm_rule.py, 4 tests, all pass (37/37 campaign tests). Honest gap: the red run's output was lost
   behind a pipe, so no failing transcript is recorded; the tests were written before the patch was applied.
+- 2026-11-04 (lead items, cost and binary). COST VALUES, both kept: warm L9 median 97.7 core-h (n=54, all warm rows,
+  sacct cost_table.tsv corehc_all; used in code, planning value) and 69.2 core-h (talks/dfd2026/data/costs.json
+  median_L9_warm, the 6 x8_l9 runs only). Not the same population.
+- 2026-11-04 (CROSS-BINARY SOURCES FORBIDDEN, lead). A warm source must have the same binary sha256 as the restarting run
+  (BioReactor-mpi-lean-2ef5b07). binary_sha256, same_binary_map, and require_warm_sources (now takes the target binary) refuse
+  a cross-binary source, and a source whose binary is not on disk (hash unknown). cmd_next draws L9 candidates only from
+  same-binary sources; cmd_submit still refuses a file without sources.
+  Tests: tests/test_campaign_binary_rule.py (5 tests). RED transcript: /oscar/scratch/eaguerov/tmp/red_binary_rule.txt
+  (4 failed, 4 passed). GREEN: /oscar/scratch/eaguerov/tmp/green_binary_rule.txt (8/8). All campaign tests:
+  /oscar/scratch/eaguerov/tmp/green_all_campaign.txt (42/42).
+- 2026-11-04 (CHECK ON REAL RUNS). l8_source_map finds 151 completed L8 runs. Under the binary rule, 0 of 151 are sources for
+  2ef5b07 (script /oscar/scratch/eaguerov/tmp/check_sources.py). The kmix_l8_* runs (f1c11e0) are excluded, as the lead asked.
+  Consequence: the ONLY valid warm sources for L9/L10 are the 24 new c2d L8 runs, after they COMPLETE. No L9 proposal is
+  possible before then. The earlier dry-run candidates are not valid sources.

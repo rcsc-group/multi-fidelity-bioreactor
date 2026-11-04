@@ -763,12 +763,46 @@ def l8_source_map(runs_root=None) -> dict:
     return out
 
 
-def require_warm_sources(points, smap: dict) -> list:
-    """Source run folder for each (rpm, theta) point. Raises if any point has no completed L8 source (cold refused)."""
+def binary_sha256(path) -> str | None:
+    """sha256 of a binary file, or None if the file is not on disk (the hash is then unknown)."""
+    import hashlib
+    if not path:
+        return None
+    p = Path(path)
+    if not p.exists():
+        return None
+    return hashlib.sha256(p.read_bytes()).hexdigest()
+
+
+def same_binary_map(target_binary, runs_root=None) -> dict:
+    """l8_source_map restricted to sources whose binary has the target's sha256 (cross-binary sources dropped)."""
+    root = Path(runs_root) if runs_root else ROOT / "runs"
+    target = binary_sha256(target_binary)
+    out = {}
+    for key, name in l8_source_map(root).items():
+        sb = json.loads((root / name / "params.json").read_text()).get("_binary")
+        if target is not None and binary_sha256(sb) == target:
+            out[key] = name
+    return out
+
+
+def require_warm_sources(points, smap: dict, target_binary, runs_root=None) -> list:
+    """Source run folder for each (rpm, theta) point. Raises if a point has no completed L8 source (cold refused),
+    or if a source's binary is not the target binary by sha256 (cross-binary refused, lead 2026-11-04). A source whose
+    binary is not on disk has an unknown hash and is refused."""
+    root = Path(runs_root) if runs_root else ROOT / "runs"
+    target = binary_sha256(target_binary)
+    if target is None:
+        raise ValueError(f"target binary {target_binary} is not on disk")
     missing = [p for p in points if (float(p[0]), float(p[1])) not in smap]
     if missing:
         raise ValueError(f"no completed warm source L8 run at {missing}: cold L9/L10 points are refused")
-    return [smap[(float(p[0]), float(p[1]))] for p in points]
+    srcs = [smap[(float(p[0]), float(p[1]))] for p in points]
+    for name in srcs:
+        sb = json.loads((root / name / "params.json").read_text()).get("_binary")
+        if binary_sha256(sb) != target:
+            raise ValueError(f"source {name} binary {sb} is not the target binary (cross-binary refused)")
+    return srcs
 
 
 def source_checkpoint_time(run: str) -> float:
@@ -797,9 +831,10 @@ def cmd_next(args) -> None:
     if "SLURM_JOB_ID" not in os.environ:
         raise SystemExit("next is heavy: run it inside a compute job (srun --overlap or sbatch), never on the login node")
     gates = gate_all_runs()
-    sites = [(r, t) for r, t in l8_sites() if RPM[0] <= r <= RPM[1] and THETA[0] <= t <= THETA[1]]
+    same = same_binary_map(BINARY_L8)   # warm sources must be the same binary (lead 2026-11-04)
+    sites = [(r, t) for r, t in sorted(same) if RPM[0] <= r <= RPM[1] and THETA[0] <= t <= THETA[1]]
     if not sites:
-        raise SystemExit("no finished L8 sites in the domain")
+        raise SystemExit("no completed L8 source with the target binary in the domain: no L9 candidates")
     X = np.array(sites, float)
     worst = np.zeros(len(X))
     per_qoi = {}
@@ -822,9 +857,9 @@ def cmd_next(args) -> None:
     if args.dry_run:
         print("(dry run: state/next_L9.json not written)")
         return
-    smap = l8_source_map()
+    smap = same_binary_map(BINARY_L8)
     pts = [[rpm, th] for rpm, th, _ in picks]
-    srcs = require_warm_sources(pts, smap)
+    srcs = require_warm_sources(pts, smap, BINARY_L8)
     out = dict(level="L9", cost_per_point=NEXT_COST_L9, cost_basis="measured warm median, corehc_all, n=54",
                expected_core_h=round(NEXT_COST_L9 * len(pts), 1),
                source="warm from the completed L8 run at the same (rpm, theta)",

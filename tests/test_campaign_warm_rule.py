@@ -17,7 +17,7 @@ import campaign as c  # noqa: E402
 def _run(root: Path, name: str, rpm: float, theta: float, fidelity: int = 8, results=True, checkpoint=True):
     d = root / name
     d.mkdir(parents=True)
-    p = {"fidelity": fidelity, "omega_b": rpm * 2 * math.pi / 60.0, "theta_max": [theta, 0.0, 0.0]}
+    p = {"fidelity": fidelity, "omega_b": rpm * 2 * math.pi / 60.0, "theta_max": [theta, 0.0, 0.0], "_binary": __file__}
     (d / "params.json").write_text(json.dumps(p))
     if results:
         (d / "results.json").write_text("{}")
@@ -38,12 +38,15 @@ def test_only_completed_L8_runs_are_sources(tmp_path):
 def test_cold_point_is_refused():
     smap = {(20.0, 4.0): "done_l8"}
     with pytest.raises(ValueError, match="cold"):
-        c.require_warm_sources([[25.0, 4.0]], smap)
+        c.require_warm_sources([[25.0, 4.0]], smap, __file__)
 
 
-def test_warm_point_gets_its_source_run():
+def test_warm_point_gets_its_source_run(tmp_path):
+    _run(tmp_path, "done_l8", 20.0, 4.0)
+    _run(tmp_path, "other_l8", 30.0, 6.0)
     smap = {(20.0, 4.0): "done_l8", (30.0, 6.0): "other_l8"}
-    assert c.require_warm_sources([[20.0, 4.0], [30.0, 6.0]], smap) == ["done_l8", "other_l8"]
+    got = c.require_warm_sources([[20.0, 4.0], [30.0, 6.0]], smap, __file__, runs_root=tmp_path)
+    assert got == ["done_l8", "other_l8"]
 
 
 def test_measured_warm_cost_is_the_recorded_median():
