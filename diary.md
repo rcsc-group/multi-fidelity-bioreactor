@@ -923,3 +923,16 @@ ad-hoc band check of 2026-10-31 (replay_chain_mf.py), which did not follow the l
 - Cost metrics differ: Humbird $/kg bulk wet cells vs Negulescu COGS; slide uses Negulescu only ($25-35 -> $9).
 - Kim 2025 states 120 CPU core-h per case (p.6) vs our ~3,600 at L10: same open 30x gap as F7.
 - Zotero: parents 9V3QYIDQ and DZRCB8PN open the wrong PDFs (Zhan, Seidel); correct attachments 2WNGLTFI, KK7E97KF.
+
+## 2026-11-04 — Cost audit (sacct) and 2D campaign plan (draft, nothing submitted)
+- Cost, measured from sacct 2026-11-04 (/oscar/scratch/eaguerov/tmp/cost_audit/cost_table.tsv): cold L8 N=231 median 37 core-h
+  (0.21/cycle), cold L9 N=37 median 500 (2.8/cycle), cold L10 N=6 112-4,522 (the full cold run l10c_rpm32.5_seg1 = 4,522, 64 ranks,
+  ~260 cycles); warm L10 segments 26-66 core-h/cycle. SUPERSEDES the cost lines of 10-12..10-23 ("3,600 measured" is in no sacct record).
+  Many L10 segments end at 1,501.6 core-h = 47 h cap (partial runs).
+- Kim 2025 arXiv p.6: n_L = 2^10, 1.05e6 cells, "120 cores and 120 CPU core hours" at 7 deg, 32.5 rpm. Same grid as our L10. That is
+  1 h wall for ~82 cycles (0.7 min/cycle) vs our 42-168 min/cycle at 32 ranks: not plausible; probably an error in the paper. To ask Kim.
+  The deck shows no "30x" until then.
+- 2D campaign plan (theta 2-7 x 15-37.5 rpm; tau_95, edr_95, kLa_1T_10/25/50, dtmix_0.50; target 2 sigma/mean <= 0.30): draft by a
+  subagent in docs/campaign2d_plan.md + scripts/campaign2d/campaign.py on branch campaign-2d. Not reviewed in full yet; not approved.
+  Found: edr_95 is not saved per run (needs a second histogram in src/BioReactor.c); L10 replay job 7893240 gave dtmix NaN and was never
+  recorded here (to check).
