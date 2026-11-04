@@ -936,3 +936,16 @@ ad-hoc band check of 2026-10-31 (replay_chain_mf.py), which did not follow the l
   subagent in docs/campaign2d_plan.md + scripts/campaign2d/campaign.py on branch campaign-2d. Not reviewed in full yet; not approved.
   Found: edr_95 is not saved per run (needs a second histogram in src/BioReactor.c); L10 replay job 7893240 gave dtmix NaN and was never
   recorded here (to check).
+
+## 2026-11-04 — Replay vs DNS for kLa_1T_25 and kLa_1T_50 (L8 and L9, theta 7, 10 rpm, 150-cycle tail)
+Scripts scripts/check_replay_kla25_*.py; data experiments/multifidelity/check_replay_kla25_L{8,9}.json. Control: kLa_1T_10 and
+dtmix_0.50 reproduce the 10-31 numbers exactly. Within 10 % of DNS:
+- L8: kLa_1T_10 10/10, kLa_1T_25 8/10 (fails 25 rpm +14.2 %, 37.5 rpm +123 %), kLa_1T_50 5/10 (fails 22.5, 25, 27.5, 35, 37.5;
+  up to +111 %), dtmix_0.50 9/10 (37.5 rpm -10.4 %).
+- L9: kLa_1T_10 10/10, kLa_1T_25 9/10 (37.5 rpm +13.6 %), kLa_1T_50 7/10 (2 NaN: C* = 0.5 not reached in the window; 32.5 rpm
+  +10.1 %), dtmix_0.50 9/10 (37.5 rpm -13.2 %). L9 flow check: tau_95 1.0-1.7 % low at every rpm (limit 1 %): FAIL by the
+  pre-registered rule; systematic offset, same sign as at L8 (0.4-0.9 %, newer binary). posY_max within 0.8 %.
+Reading: the 10-21 statement "replay fails kLa_1T_25" is superseded by the 150-cycle chain replay (different binary and record;
+the 10-21 K-test still reproduces, cause not isolated). Replay is valid for kLa_1T_10 and kLa_1T_25 except at 37.5 rpm, and for
+dtmix_0.50 except at 37.5 rpm. kLa_1T_50 is not reliable at L8 near 22.5-27.5 rpm. kLa still uses the f-weighted oxygen sum
+(tr_oxy col 2) on both sides; the 10-29 C1/OL correction is not available for the DNS runs, so that question stays open.
