@@ -1,0 +1,35 @@
+{
+ "vmin": 0.015650270341748804,
+ "vmax": 0.09979419906010777,
+ "percentiles": "5th and 60th of pooled liquid cells, each level equal weight",
+ "saturation": {
+  "L8": {
+   "high": 0.30743243243243246,
+   "low": 0.08372043918918919,
+   "n_liquid": 9472
+  },
+  "L9": {
+   "high": 0.5121637896427138,
+   "low": 0.021517462866318747,
+   "n_liquid": 37365
+  },
+  "L10": {
+   "high": 0.3651245122906112,
+   "low": 0.05248188029955228,
+   "n_liquid": 149423
+  }
+ },
+ "saturation_all_levels": {
+  "above_vmax": 0.3903342504840518,
+  "below_vmin": 0.048094364618363396
+ },
+ "crop_rows": [
+  84,
+  156
+ ],
+ "picked": {
+  "L8": "snap_000025.bin",
+  "L9": "snap_001269.bin",
+  "L10": "snap_000140.bin"
+ }
+}

@@ -833,3 +833,15 @@ draft rejected. Note: commit f657b81 skipped the diary hook (NOTEBOOK_OK) withou
 - The slide 8 notes carry these numbers. The Kim 20 % fact is in the notes, not on the slide.
 - Open: the cheap variants' EDR errors are large (24 to 1,080 %). The error curves are unchanged from the earlier learning-curve runs (chain_variants_lc.py, same draws).
 - Not done: the deck is not pushed; the commit is local to main.
+
+## 2026-11-04 — DFD talk: slides 6 to 8, final rounds (deck work, no new simulation)
+
+- Deck: talks/dfd2026/slides_s68draft.md (slides.md unchanged). Renders checked by eye.
+- Slide 6 (chain): three tanks in the right half, cropped to liquid plus a thin gas band, equal aspect. One shared colour scale: vmin 0.0228, vmax 0.2026 (10th and 90th percentiles of pooled liquid |u|, each level equally weighted). Saturated liquid cells above vmax: L8 8.4 %, L9 12.0 %, L10 7.2 %. The upper limit moved from the 85th percentile, which left 19 % of L9 saturated. The colour bar is removed from the slide; the limits are in the notes. Equations: f_8 = KRR(D_8); f_9 and f_10 with beta, rho and delta; the GP and weight line at the bottom. Run counts and rates: L8 40 runs at 0.22 core-h/cycle; L9 16 runs at 5.76; L10 13 runs at 64.9.
+- Warm-L9 cost (corrected in this round): the x8_l9 warm runs simulate 11.8 cycles each, not the cold tail. The estimate for each of the 10 cold fig9 theta-7 points is 5.76 core-h/cycle x 11.8 cycles = 68.2 core-h (682 core-h in total). The QoI window for L9 (cycles 8 to 11 after restart) lies inside the simulated cycles. The earlier 7,353 core-h tail-based estimate is withdrawn.
+- Warm vs cold per-cycle rate: the warm x8_l9 steady rate is 5.72, the cold fig9 steady rate 2.84 (32 ranks in both). Start-up is not visible in the logs (steady and full rates agree within 1 %). The binaries differ (xlevel-chain for warm, prod for cold); this is the likely cause and is not verified.
+- L10 per-cycle rate: steady 64.9 core-h/cycle (n = 13). The logs do not separate start-up from steady running, so no start-up correction is applied. Flagged in the notes.
+- Slide 8 (accuracy against cost): x axis in L10-run equivalents (1 unit = 666.7 core-h, the measured L10 run of our code; Kim code = n at 120 core-h per run, assumed). Approved chain base 3,170 core-h, 667 per L10 run. Crossings at 10 % tau_95: chain envelope 4.5 units (3,028 core-h), approved chain 7.8 (5,170), H1 15.7 (10,484). At 20 %: envelope 4.5, H1 6.2 (4,153), L10 GP 10.9 (7,262), Kim code 10.0 (1,200, assumed). EDR: only the approved chain reaches 10 % and 20 %, at 7.8 units.
+- Withdrawn metric: the white-pixel fraction. Layout is judged by eye.
+- Open: the cheap chain variants fail on EDR (24 to 1,080 %), kept in the envelope for tau_95 only.
+- Not done: the deck is not pushed to the Drive folder; the commit is on main of the public repo.

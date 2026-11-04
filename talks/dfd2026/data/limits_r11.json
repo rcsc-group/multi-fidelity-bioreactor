@@ -1,0 +1,27 @@
+{
+ "vmin": 0.02278776274548392,
+ "vmax": 0.20264720259021113,
+ "percentiles": "10th and 85th of pooled liquid |u|, common 256 grid, each level equal weight",
+ "saturation": {
+  "L8": {
+   "n_liquid": 9472,
+   "above_vmax": 0.08361486486486487,
+   "below_vmin": 0.1657516891891892
+  },
+  "L9": {
+   "n_liquid": 37365,
+   "above_vmax": 0.12035327177840224,
+   "below_vmin": 0.05098354074668808
+  },
+  "L10": {
+   "n_liquid": 149423,
+   "above_vmax": 0.07170248221492007,
+   "below_vmin": 0.09520622661839208
+  }
+ },
+ "picked": {
+  "L8": "snap_000025.bin",
+  "L9": "snap_001269.bin",
+  "L10": "snap_000140.bin"
+ }
+}

@@ -1,0 +1,121 @@
+{
+ "rate_core_h_per_cycle": 5.76028504014073,
+ "cycles": 11.832978294015033,
+ "estimate_per_run": 68.16132784732478,
+ "sum_est": 681.6132784732479,
+ "step2": {
+  "runs": {
+   "fig9_l9_rpm15": {
+    "t_end": 179.1246,
+    "T": 0.6073291616284131,
+    "n_mix": 80,
+    "tail_cycles": 214.94,
+    "cold_cost": 781.0,
+    "warm_est_tail_only": 999.0,
+    "warm_est": 68.2,
+    "cycles_used": 11.83,
+    "rate_used": 5.76
+   },
+   "fig9_l9_rpm17.5": {
+    "t_end": 166.0602,
+    "T": 0.6073291616284131,
+    "n_mix": 80,
+    "tail_cycles": 193.43,
+    "cold_cost": 1112.6,
+    "warm_est_tail_only": 899.0,
+    "warm_est": 68.2,
+    "cycles_used": 11.83,
+    "rate_used": 5.76
+   },
+   "fig9_l9_rpm20": {
+    "t_end": 168.8243,
+    "T": 0.6073291616284131,
+    "n_mix": 80,
+    "tail_cycles": 197.98,
+    "cold_cost": 2393.3,
+    "warm_est_tail_only": 920.2,
+    "warm_est": 68.2,
+    "cycles_used": 11.83,
+    "rate_used": 5.76
+   },
+   "fig9_l9_rpm22.5": {
+    "t_end": 130.127,
+    "T": 0.6073291616284131,
+    "n_mix": 80,
+    "tail_cycles": 134.26,
+    "cold_cost": 885.6,
+    "warm_est_tail_only": 624.0,
+    "warm_est": 68.2,
+    "cycles_used": 11.83,
+    "rate_used": 5.76
+   },
+   "fig9_l9_rpm25": {
+    "t_end": 143.9475,
+    "T": 0.6073291616284131,
+    "n_mix": 80,
+    "tail_cycles": 157.02,
+    "cold_cost": 968.9,
+    "warm_est_tail_only": 729.8,
+    "warm_est": 68.2,
+    "cycles_used": 11.83,
+    "rate_used": 5.76
+   },
+   "fig9_l9_rpm27.5": {
+    "t_end": 138.4193,
+    "T": 0.6073291616284131,
+    "n_mix": 80,
+    "tail_cycles": 147.91,
+    "cold_cost": 663.9,
+    "warm_est_tail_only": 687.5,
+    "warm_est": 68.2,
+    "cycles_used": 11.83,
+    "rate_used": 5.76
+   },
+   "fig9_l9_rpm30": {
+    "t_end": 134.2732,
+    "T": 0.6073291616284131,
+    "n_mix": 80,
+    "tail_cycles": 141.09,
+    "cold_cost": 606.1,
+    "warm_est_tail_only": 655.8,
+    "warm_est": 68.2,
+    "cycles_used": 11.83,
+    "rate_used": 5.76
+   },
+   "fig9_l9_rpm32.5": {
+    "t_end": 127.3629,
+    "T": 0.6073291616284131,
+    "n_mix": 80,
+    "tail_cycles": 129.71,
+    "cold_cost": 581.5,
+    "warm_est_tail_only": 602.9,
+    "warm_est": 68.2,
+    "cycles_used": 11.83,
+    "rate_used": 5.76
+   },
+   "fig9_l9_rpm35": {
+    "t_end": 120.4527,
+    "T": 0.6073291616284131,
+    "n_mix": 80,
+    "tail_cycles": 118.33,
+    "cold_cost": 517.6,
+    "warm_est_tail_only": 550.0,
+    "warm_est": 68.2,
+    "cycles_used": 11.83,
+    "rate_used": 5.76
+   },
+   "fig9_l9_rpm37.5": {
+    "t_end": 65.1709,
+    "T": 0.6073291616284131,
+    "n_mix": 80,
+    "tail_cycles": 27.31,
+    "cold_cost": 247.3,
+    "warm_est_tail_only": 126.9,
+    "warm_est": 68.2,
+    "cycles_used": 11.83,
+    "rate_used": 5.76
+   }
+  },
+  "sum_est": 681.6132784732479
+ }
+}

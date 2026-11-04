@@ -309,38 +309,53 @@ The solver is Basilisk. We solve the two-phase Navier–Stokes equations in the 
 transition: fade
 ---
 
+<img src="/s6_slide_r11.png" class="s6-bg" />
+
 <div class="s6-head">Extending the multi-fidelity algorithm to three levels</div>
 
-<div class="s6-left">
+<div class="s6-eq" style="top:70px">
 
-$$f_\ell(x) = \beta_0^{(\ell)} + \rho_\ell\, f_{\ell-1}(x) + \delta_\ell(x)$$
+$$f_8(x) = \mathrm{KRR}(\mathcal{D}_8)$$
 
-$$\ell = 9,\ 10$$
+</div>
+<div class="s6-sub" style="top:150px">40 runs &middot; 0.22 core-h/cycle</div>
 
-$$w_g \propto p(\lambda_g)\, p(\eta_g)\, p(y \mid \lambda_g, \eta_g)$$
+<div class="s6-eq" style="top:215px">
+
+$$f_9(x) = \beta_9 + \rho_9\, f_8(x) + \delta_9(x)$$
+
+</div>
+<div class="s6-sub" style="top:295px">16 runs &middot; 5.76 core-h/cycle</div>
+
+<div class="s6-eq" style="top:360px">
+
+$$f_{10}(x) = \beta_{10} + \rho_{10}\, f_9(x) + \delta_{10}(x)$$
+
+</div>
+<div class="s6-sub" style="top:440px">13 runs &middot; 64.9 core-h/cycle</div>
+
+<div class="s6-strip">
+
+$$\delta_\ell \sim \mathcal{GP}, \qquad w_g \propto p(\lambda_g)\, p(\eta_g)\, p(y \mid \lambda_g, \eta_g)$$
 
 </div>
 
-<img src="/s6_profile.png" class="s6-img" />
-
 <style>
-.s6-head { position: absolute; left: 32px; top: 14px; font-size: 26px; line-height: 1.5; padding-bottom: 6px; color: var(--ink); }
-.s6-left { position: absolute; left: 32px; top: 90px; width: 460px; height: 360px; display: flex; flex-direction: column; justify-content: center; font-size: 31px; color: var(--ink); }
-.s6-left .katex { font-size: 1.0em; }
-.s6-left .katex-display { margin: 14px 0; }
-.s6-img { position: absolute; left: 520px; top: 90px; width: 470px; }
+.s6-head { position: absolute; left: 32px; top: 12px; font-size: 26px; line-height: 1.5; color: var(--ink); }
+.s6-bg { position: absolute; left: 0; top: 0; width: 1024px; height: 576px; }
+.s6-eq { position: absolute; left: 32px; width: 450px; font-size: 30px; color: var(--ink); text-align: left; }
+.s6-eq .katex { font-size: 1.0em; }
+.s6-sub { position: absolute; left: 32px; width: 450px; font-size: 22px; color: var(--ink); }
+.s6-strip { position: absolute; left: 0; right: 0; top: 508px; text-align: center; font-size: 26px; color: var(--ink); }
 </style>
 
 <!--
-The recursion has three levels. Level 8 is a kernel ridge fit. Levels 9 and 10 are Gaussian processes. Each level's mean is a linear map of the level below. The weights are the prior times the marginal likelihood over a grid of length scale lambda and noise eta.
-
-Full forms, for reference. Level 8: the length scale and noise minimise the mean squared closed-form leave-one-out residual, the mean over i of ([K^-1 y]_i / [K^-1]_ii)^2 (fast_loo_krr.py lines 14 to 18; test_h1_mfbml.py lines 101 to 107, 10 restarts). Levels 9 and 10: the kernel is k_lambda(x, x') = exp(-||x - x'||^2 / (2 lambda^2)). The grid kernel is K_g = k_lambda + eta^2 I (krr_lr_gpr_fullbayes.py line 126). The posterior shape parameters are a_n = a0 + (n - p)/2 and b_n = b0 + r^T K^-1 r / 2 (line 137). The basis is F = [1, standardised f_below] (lines 99 to 106). The below-level mean enters as a plug-in (h3_band_check.py lines 23 to 27).
-
-The log-normal prior on lambda is at krr_lr_gpr_fullbayes.py line 79. The log marginal likelihood is at line 140. The grid weights are at line 142. The prediction is the weighted mean (lines 169 to 171).
-
-Right: the speed along one vertical line, from the bottom wall up. The line is at x = -0.369 (domain units, origin at the centre). It runs from the wall at y = -0.143 up to y = -0.010. Distance is measured from the first liquid cell. The line goes through the same physical point at all three levels. The curves end at distance 0.13 because the line stops at the crop centre. The separation is largest within about 0.02 of the wall.
-
-Cost labels use the slide 8 rule, applied to the full chain set. Each run is charged its own cost, plus its source cost when the source is not in the set. The labels show the mean per run. L8: 51 core-h (40 runs, cold). L9: 575 core-h (16 runs; warm sources are in the set, so only their own cost counts). L10: 667 core-h (13 runs; each source is in the set).
+Rows, top to bottom: L8, L9, L10. Each row has the equation for that level on the left, and the cropped tank on the right.
+Row 1 (L8): f_8 is a kernel ridge fit on 40 cold L8 runs. Median cost 0.22 core-h per simulated cycle (IQR 0.16 to 0.26).
+Row 2 (L9): the chain trains on 16 L9 runs. Six are measured warm runs (x8_l9) at 5.76 core-h per cycle (wall-clock logs; 11.8 simulated cycles each). The other 10 are cold fig9 theta-7 runs, costed as warm estimates: 5.76 core-h per cycle times 11.8 cycles, about 68 core-h per point, 682 core-h in total. The 16-run figure includes these 10.
+Row 3 (L10): 13 warm runs. Median 64.9 core-h per cycle, steady rate excluding the first two cycles. Each run simulates about 6 cycles (x8 about 12). The logs do not separate start-up from steady running, so the rate is not corrected for it.
+Bottom: the level below is the mean basis (beta, rho) of the level above, with a Gaussian process delta. The weights over the length scale lambda and noise eta are the prior times the marginal likelihood. Code: krr_lr_gpr_fullbayes.py lines 99 to 106 (basis), 126 (K_g), 137 (a_n, b_n), 140 (log marginal likelihood), 142 (weights), 169 to 171 (prediction). The level below enters as a plug-in mean (h3_band_check.py lines 23 to 27).
+Tanks: cropped to the liquid plus a thin gas band, equal aspect. One shared colour scale: the 10th and 90th percentiles of |u| over the pooled liquid cells of the three levels, each level weighted equally (vmin 0.0228, vmax 0.2026, nondimensional speed). Saturated liquid cells above vmax: L8 8.4 %, L9 12.0 %, L10 7.2 %. Below vmin: L8 16.6 %, L9 5.1 %, L10 9.5 %. The upper limit moved from the 85th to the 90th percentile because the 85th left 19 % of L9 saturated.
 -->
 
 ---
@@ -383,21 +398,26 @@ transition: fade
 </style>
 
 <!--
-Each curve shows error against training cost, in core-hours. The axis is logarithmic. Every curve uses one accounting rule. Each run is charged its own accounting cost, plus its warm-start source when that source is not already in the method's set.
+x axis: training cost in L10-run equivalents. One unit is the measured cost of one L10 run of our code, 666.7 core-h. Each curve is core-h divided by that unit. The Kim code is divided by its assumed 120 core-h per run.
 
-The approved chain uses 40 L8 runs and 16 L9 runs. Each L10 run then adds about 670 core-hours.
+Warm-start accounting (round 10). Every chain level is warm-started from the level below. The cost of the 10 cold fig9 theta-7 L9 runs is replaced by a warm estimate: 5.76 core-h per simulated cycle (the six measured x8_l9 runs) times 11.8 simulated cycles, which is 68.2 core-h per run, 682 core-h in total. The QoI window for L9 is cycles 8 to 11 after restart, inside the 11.8 cycles simulated.
 
-The cheaper chain variants use 10 or 20 L8 runs and 6 warm L9 runs. Their L10 runs start from cold L9 runs that are not in the set. Each L10 run then costs about 1,220 core-hours. Each variant point is one subset size, and the solid line is the lower envelope of all variants.
+Per-run rule (same for every curve): each run is charged its own cost plus its warm-start source when the source is not already in the method's set.
+- Approved chain: base 3,170 core-h (40 L8 runs at 2,043; 16 L9 runs at 682 estimated plus 445 measured), then 667 core-h per L10 run.
+- Cheap chain variants (10 or 20 L8 runs, 6 warm L9 runs): base 918 to 2,488 core-h, then 703 core-h per L10 run.
+- H1: 2,043 core-h for the 40 L8 runs, then 703 core-h per L10 run.
+- L10 GP, ours: 726 core-h per L10 run, including sources.
+- Kim code: 120 core-h per run, no sources (assumed).
 
-The L10 GP (ours) costs 1,244 core-hours per run, including the source. The H1 model costs 2,043 core-hours for the 40 L8 runs, then 1,220 core-hours per L10 run. The Kim code is assumed to cost 120 core-hours per run, with no sources. Its error values are the same as our L10 GP.
+Crossings at 10 % held-out error (relative RMS), in L10-run equivalents, with core-h in brackets:
+- tau 95: the chain envelope reaches 10 % at 4.5 (3,028 core-h; cheap variant warm9_L8_10, 3 L10 runs). The approved chain reaches it at 7.8 (5,170). H1 reaches it at 15.7 (10,484). The L10 GP does not reach it by 12 runs. The Kim code does not reach it.
+- EDR: only the approved chain reaches 10 %, at 7.8 (5,170 core-h).
 
-Crossings at 10 % error, relative RMS, from the cost table of this round.
-- tau 95: the chain envelope reaches 10 % at 4,582 core-hours (6 warm L9 runs, 10 L8 runs, 3 L10 runs). The approved chain reaches it at 13,246. H1 reaches it at 16,700, with 12 L10 runs. The L10 GP does not reach it by 12 runs.
-- EDR: only the chain reaches 10 %, at 13,246 core-hours (approved set, 3 L10 runs). The cheap variants do not.
+Crossings at 20 % held-out error:
+- tau 95: the chain envelope at 4.5 (3,028 core-h). H1 at 6.2 (4,153). The L10 GP at 10.9 (7,262). The Kim code at 10.0 (1,200 core-h, 10 runs). The chain envelope is now cheaper than the Kim code at this level, because the warm L9 cost is lower. The Kim cost is assumed, not measured.
+- EDR: only the approved chain reaches 20 %, at 7.8 (5,170 core-h).
 
-Crossings at 20 % error.
-- tau 95: the chain envelope reaches 20 % at 4,582 core-hours. H1 reaches it at 5,707. The L10 GP reaches it at 12,442. The Kim code, at the assumed 120 core-hours per run, reaches it at 1,200 core-hours (10 L10 runs). So the Kim code is cheaper than the chain at 20 %. This is an assumed cost, not a measured one.
-- EDR: only the chain reaches 20 %, at 13,246 core-hours.
+Cheap variants: they are cheaper on tau_95 but fail on EDR (errors 24 to 1,080 %). The envelope keeps them for tau_95 only.
 -->
 
 ---

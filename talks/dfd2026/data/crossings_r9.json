@@ -1,0 +1,94 @@
+{
+ "tau_95_t": {
+  "10%": {
+   "chain envelope": {
+    "x": 6.28,
+    "core_h": 4189,
+    "n": 3,
+    "variant": "warm9_L8_10"
+   },
+   "chain, full set": {
+    "x": 17.76,
+    "core_h": 11841,
+    "n": null,
+    "variant": null
+   },
+   "L10 GP, ours": null,
+   "L10 GP, Kim code (120/run)": null,
+   "H1 (L8 to L10)": {
+    "x": 22.69,
+    "core_h": 15129,
+    "n": null,
+    "variant": null
+   }
+  },
+  "20%": {
+   "chain envelope": {
+    "x": 6.28,
+    "core_h": 4189,
+    "n": 3,
+    "variant": "warm9_L8_10"
+   },
+   "chain, full set": {
+    "x": 17.76,
+    "core_h": 11841,
+    "n": null,
+    "variant": null
+   },
+   "L10 GP, ours": {
+    "x": 16.7,
+    "core_h": 11133,
+    "n": null,
+    "variant": null
+   },
+   "L10 GP, Kim code (120/run)": {
+    "x": 10.0,
+    "core_h": 1200,
+    "n": null,
+    "variant": null
+   },
+   "H1 (L8 to L10)": {
+    "x": 7.97,
+    "core_h": 5314,
+    "n": null,
+    "variant": null
+   }
+  }
+ },
+ "edr_max_t": {
+  "10%": {
+   "chain envelope": {
+    "x": 17.76,
+    "core_h": 11841,
+    "n": 3,
+    "variant": "full"
+   },
+   "chain, full set": {
+    "x": 17.76,
+    "core_h": 11841,
+    "n": null,
+    "variant": null
+   },
+   "L10 GP, ours": null,
+   "L10 GP, Kim code (120/run)": null,
+   "H1 (L8 to L10)": null
+  },
+  "20%": {
+   "chain envelope": {
+    "x": 17.76,
+    "core_h": 11841,
+    "n": 3,
+    "variant": "full"
+   },
+   "chain, full set": {
+    "x": 17.76,
+    "core_h": 11841,
+    "n": null,
+    "variant": null
+   },
+   "L10 GP, ours": null,
+   "L10 GP, Kim code (120/run)": null,
+   "H1 (L8 to L10)": null
+  }
+ }
+}
