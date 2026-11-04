@@ -492,6 +492,28 @@ CRIT_QOIS = ["tau_95", "edr_95", "kLa_1T_10"]        # gated (<= 0.30); the othe
 MAP_N = 101
 
 
+def campaign_row(run_dir: Path, col: str, src: str):
+    """One finished campaign run as a fit row (level, rpm, theta, run, y), or None if it has not finished.
+    kla: the value from results.json. hydro: hydro_dataset_v2.qois (the database definition, so the stand-in
+    edr_mean_t stays the same QoI for every row)."""
+    run_dir = Path(run_dir)
+    pf, rf = run_dir / "params.json", run_dir / "results.json"
+    if not (pf.exists() and rf.exists()):
+        return None
+    p = json.loads(pf.read_text())
+    if src == "kla":
+        y = json.loads(rf.read_text()).get(col)
+        if y is None:
+            return None
+    else:
+        if not (run_dir / "shear_stress.dat").exists():
+            return None
+        from scripts.hydro_dataset_v2 import qois
+        y = qois(run_dir.name)[col]
+    rpm = round(float(p["omega_b"]) * 60.0 / (2 * math.pi), 3)
+    return dict(level=int(p["fidelity"]), rpm=rpm, theta=float(p["theta_max"][0]), run=run_dir.name, y=float(y))
+
+
 def load_db(qoi: str):
     """(level, rpm, theta, value) rows of the existing database for one QoI, domain-restricted, levels 8-10."""
     import pandas as pd
@@ -503,6 +525,10 @@ def load_db(qoi: str):
         h = pd.DataFrame(json.loads(DB_HYDRO.read_text()))
         d = h[["run", "level", "rpm", col]].merge(kla[["run", "theta"]], on="run")
         d = d[["level", "rpm", "theta", "run", col]].rename(columns={col: "y"})
+    # Finished campaign runs (runs/c2d_*) are not in the database files: add them here (2026-11-04).
+    crow = [r for r in (campaign_row(p, col, src) for p in sorted((ROOT / "runs").glob("c2d_*"))) if r is not None]
+    if crow:
+        d = pd.concat([d, pd.DataFrame(crow)], ignore_index=True)
     d = d.dropna()
     d = d[d.level.isin([8, 9, 10]) & (d.rpm >= RPM[0]) & (d.rpm <= RPM[1])
           & (d.theta >= THETA[0]) & (d.theta <= THETA[1]) & (d.y > 0)]

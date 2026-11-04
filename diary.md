@@ -1013,3 +1013,11 @@ dtmix_0.50 except at 37.5 rpm. kLa_1T_50 is not reliable at L8 near 22.5-27.5 rp
 - L8 health (10:10 check, 24 jobs): 20 running with logstats advancing, no NaN, no error lines in .err (only the
   harmless libcuda/mca warnings). 4 pending in batch2 (8340750, 8340751, 8340752, 8340753). Outputs are in
   /oscar/scratch/eaguerov/mpi_runs (purged after ~30 days): copy to /oscar/data before the fit.
+- 2026-11-04 (fit input, agent): the database builders (build_kla_mix_dataset.py, hydro_dataset_v2.py) read fixed run
+  lists, so the c2d_* folders would never reach fit. campaign.campaign_row + load_db now append every finished runs/c2d_*
+  run (kLa from results.json; hydro QoIs from hydro_dataset_v2.qois). The database files are not changed. Test:
+  tests/test_campaign_db_rows.py, 2 tests, red first (campaign_row missing), green after. Regression: `next --dry-run`
+  on the baseline (no c2d run finished yet) gives the same picks as before. DECISION FOR LEAD: the c2d rows carry
+  edr_mean_t (the stand-in), not edr_95, so the edr_95 QoI stays one definition across all rows.
+- 2026-11-04 (health tool): scripts/campaign2d/l8_health.py prints, per L8 job: sacct state, cycles done (t / period),
+  NaN lines, error lines in the .err. 10:21 check: 20 running, cycles 14-38 of 230, nan 0, errs 0; 4 pending (batch2).
