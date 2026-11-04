@@ -1,0 +1,75 @@
+{
+ "cross": {
+  "tau_95_t": {
+   "chain": {
+    "10%": {
+     "n": 3,
+     "cost_core_h": 13246
+    },
+    "5%": {
+     "n": 10,
+     "cost_core_h": 17912
+    }
+   },
+   "ratio": {
+    "10%": {
+     "n": 3,
+     "cost_core_h": 11499
+    },
+    "5%": {
+     "n": 10,
+     "cost_core_h": 16166
+    }
+   },
+   "loglin": {
+    "10%": {
+     "n": 4,
+     "cost_core_h": 12165
+    },
+    "5%": {
+     "n": 8,
+     "cost_core_h": 14832
+    }
+   },
+   "l10": {
+    "10%": "not reached by n = 12",
+    "5%": "not reached by n = 12"
+   }
+  },
+  "edr_max_t": {
+   "chain": {
+    "10%": {
+     "n": 3,
+     "cost_core_h": 13246
+    },
+    "5%": "not reached by n = 12"
+   },
+   "ratio": {
+    "10%": {
+     "n": 3,
+     "cost_core_h": 11499
+    },
+    "5%": "not reached by n = 12"
+   },
+   "loglin": {
+    "10%": {
+     "n": 4,
+     "cost_core_h": 12165
+    },
+    "5%": {
+     "n": 12,
+     "cost_core_h": 17499
+    }
+   },
+   "l10": {
+    "10%": "not reached by n = 12",
+    "5%": "not reached by n = 12"
+   }
+  }
+ },
+ "base_chain": 11245.4,
+ "inc_chain": 666.7076923076922,
+ "base_ratio": 9498.6,
+ "inc_ratio": 666.7076923076922,
+ "inc_l10": 1244.223076923077
+}

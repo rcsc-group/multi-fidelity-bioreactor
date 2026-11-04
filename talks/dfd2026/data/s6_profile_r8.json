@@ -1,0 +1,39 @@
+{
+ "labels": {
+  "L8": "51 core-h",
+  "L9": "575 core-h",
+  "L10": "667 core-h"
+ },
+ "mean_charge": {
+  "L8": 51.065,
+  "L9": 575.175,
+  "L10": 666.7076923076922
+ },
+ "meta": {
+  "L8": {
+   "n": 256,
+   "first_liquid_row": 91,
+   "top_row": 125,
+   "col": 33,
+   "file": "snap_000025.bin"
+  },
+  "L9": {
+   "n": 512,
+   "first_liquid_row": 183,
+   "top_row": 250,
+   "col": 66,
+   "file": "snap_001269.bin"
+  },
+  "L10": {
+   "n": 1024,
+   "first_liquid_row": 366,
+   "top_row": 500,
+   "col": 132,
+   "file": "snap_000140.bin"
+  }
+ },
+ "x_phys": -0.369140625,
+ "y_wall": -0.142578125,
+ "y_top": -0.009765625,
+ "dmax": 0.134765625
+}

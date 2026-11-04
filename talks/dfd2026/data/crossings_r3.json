@@ -1,0 +1,49 @@
+{
+ "cross": {
+  "tau_95_t": {
+   "chain": {
+    "10%": {
+     "n": 3,
+     "cost_core_h": 13246
+    },
+    "5%": {
+     "n": 10,
+     "cost_core_h": 17912
+    }
+   },
+   "l10": {
+    "10%": "not reached by n = 12",
+    "5%": "not reached by n = 12"
+   },
+   "h1": {
+    "10%": {
+     "n": 12,
+     "cost_core_h": 16700
+    },
+    "5%": "not reached by n = 12"
+   }
+  },
+  "edr_max_t": {
+   "chain": {
+    "10%": {
+     "n": 3,
+     "cost_core_h": 13246
+    },
+    "5%": "not reached by n = 12"
+   },
+   "l10": {
+    "10%": "not reached by n = 12",
+    "5%": "not reached by n = 12"
+   },
+   "h1": {
+    "10%": "not reached by n = 12",
+    "5%": "not reached by n = 12"
+   }
+  }
+ },
+ "base_chain": 11245.4,
+ "inc_chain": 666.7076923076922,
+ "inc_l10": 1244.223076923077,
+ "base_h1": 2042.6,
+ "inc_h1": 1221.4692307692308
+}

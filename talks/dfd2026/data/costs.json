@@ -1,0 +1,116 @@
+{
+ "base_chain": 11245.4,
+ "inc_chain": 666.7076923076922,
+ "base_ratio": 9498.6,
+ "inc_ratio": 666.7076923076922,
+ "base_l10": 0.0,
+ "inc_l10": 1244.223076923077,
+ "base_h1": 2042.6,
+ "inc_h1": 1221.4692307692308,
+ "n_base_chain": 56,
+ "n_base_ratio": 22,
+ "median_L8": 49.599999999999994,
+ "median_L9": 549.55,
+ "median_L10": 541.7,
+ "median_L9_warm": 69.19999999999999,
+ "median_L9_cold": 722.45,
+ "L9_cold_runs": [
+  "fig9_l9_rpm15",
+  "fig9_l9_rpm17.5",
+  "fig9_l9_rpm20",
+  "fig9_l9_rpm22.5",
+  "fig9_l9_rpm25",
+  "fig9_l9_rpm27.5",
+  "fig9_l9_rpm30",
+  "fig9_l9_rpm32.5",
+  "fig9_l9_rpm35",
+  "fig9_l9_rpm37.5"
+ ],
+ "L9_warm_runs": [
+  "x8_l9_rpm17.5_th4",
+  "x8_l9_rpm25_th4",
+  "x8_l9_rpm32.5_th4",
+  "x8_l9_rpm17.5_th9",
+  "x8_l9_rpm25_th9",
+  "x8_l9_rpm32.5_th9"
+ ],
+ "levels": {
+  "L8_own": 49.599999999999994,
+  "L8_n": 40,
+  "L9_own": 549.55,
+  "L9_incl": 549.55,
+  "L9_cold_incl": 722.45,
+  "L9_warm_incl": 121.99999999999999,
+  "L10_own": 541.7,
+  "L10_incl": 1139.3000000000002
+ },
+ "per_L10_own": {
+  "x8_l10_rpm17.5_th4": 1130.1,
+  "x8_l10_rpm25_th4": 776.8,
+  "x8_l10_rpm32.5_th4": 1110.4,
+  "l10_fig13a_xlevel_rpm17.5": 541.7,
+  "l10_fig13a_xlevel_rpm20": 249.9,
+  "l10_fig13a_xlevel_rpm22.5": 651.7,
+  "l10_fig13a_xlevel_rpm25": 530.4,
+  "l10_fig13a_xlevel_rpm27.5": 381.4,
+  "l10_fig13a_xlevel_rpm30": 497.3,
+  "l10_fig13a_xlevel_rpm32.5": 386.2,
+  "x8_l10_rpm17.5_th9": 1292.2,
+  "x8_l10_rpm25_th9": 784.3,
+  "x8_l10_rpm32.5_th9": 334.8
+ },
+ "per_L10_source": {
+  "x8_l10_rpm17.5_th4": [
+   "t6_l8_rpm17.5_th4",
+   61.5
+  ],
+  "x8_l10_rpm25_th4": [
+   "t6_l8_rpm25_th4",
+   45.8
+  ],
+  "x8_l10_rpm32.5_th4": [
+   "t6_l8_rpm32.5_th4",
+   28.9
+  ],
+  "l10_fig13a_xlevel_rpm17.5": [
+   "fig9_l9_rpm17.5",
+   1112.6
+  ],
+  "l10_fig13a_xlevel_rpm20": [
+   "fig9_l9_rpm20",
+   2393.3
+  ],
+  "l10_fig13a_xlevel_rpm22.5": [
+   "fig9_l9_rpm22.5",
+   885.6
+  ],
+  "l10_fig13a_xlevel_rpm25": [
+   "fig9_l9_rpm25",
+   968.9
+  ],
+  "l10_fig13a_xlevel_rpm27.5": [
+   "fig9_l9_rpm27.5",
+   663.9
+  ],
+  "l10_fig13a_xlevel_rpm30": [
+   "fig9_l9_rpm30",
+   606.1
+  ],
+  "l10_fig13a_xlevel_rpm32.5": [
+   "fig9_l9_rpm32.5",
+   581.5
+  ],
+  "x8_l10_rpm17.5_th9": [
+   "t6_l8_rpm17.5_th9",
+   62.7
+  ],
+  "x8_l10_rpm25_th9": [
+   "t6_l8_rpm25_th9",
+   59.8
+  ],
+  "x8_l10_rpm32.5_th9": [
+   "t6_l8_rpm32.5_th9",
+   37.1
+  ]
+ }
+}

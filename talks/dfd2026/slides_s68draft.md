@@ -1,0 +1,439 @@
+---
+theme: default
+title: Multi-fidelity Bayesian optimization of mixing in two-phase rocking bioreactors
+aspectRatio: 16/9
+canvasWidth: 1024
+mdc: true
+colorSchema: light
+transition: fade
+---
+
+<video src="/title_v2_light.mp4" autoplay loop muted playsinline class="absolute inset-0 w-full h-full object-cover" />
+
+<div class="absolute left-14 top-12 right-14">
+  <div style="font-size: 40px; line-height: 1.15; font-weight: 300; letter-spacing: -0.5px; color: #14202e">Multi-fidelity Bayesian optimization of mixing in two-phase rocking bioreactors</div>
+  <div class="mt-5" style="font-size: 22px; font-weight: 200; color: #14202e"><b style="font-weight: 300">Elvis Aguero</b> · Minki Kim · Radu Cimpeanu · Miguel Bessa · Daniel Harris</div>
+  <div class="mt-1" style="font-size: 17px; font-weight: 200; color: #7a8797">Brown University · Kookmin University · University of Warwick</div>
+</div>
+
+---
+transition: fade
+clicks: 2
+---
+
+<div class="mot-left">
+<div class="name">cultivated meat needs large, gentle bioreactors</div>
+<img src="/cm_process.png" class="mot-proc" />
+<div class="cap">(Foodingredients 2021; Post et al. 2020; Guan et al. 2021)</div>
+
+<div class="mot-cost">
+<div><span class="big">$25–35</span><span class="u">/kg</span><div class="cap">stirred tanks, 42–211 m³<br/>Negulescu 2023</div></div>
+<div class="arrow">→</div>
+<div><span class="big">$9</span><span class="u">/kg</span><div class="cap">to compete with beef<br/>Negulescu 2023</div></div>
+</div>
+
+<div class="mot-eq">
+
+$$
+\underbrace{\tau < \tau_{\text{damage}}}_{\text{1–100 Pa}}
+\qquad
+\underbrace{k_La\,(C_{\text{sat}} - C) \;\ge\; \mathrm{OUR}}_{\text{oxygen}}
+\qquad
+\underbrace{t_{\text{mix}} < 1/k_La}_{\text{mixing}}
+$$
+
+</div>
+
+<div v-click="1" class="mot-cfd">
+<div class="name">one resolved condition costs</div>
+<div class="row"><span class="big2">≈ 4,000</span> CPU-h</div>
+</div>
+</div>
+
+<div class="mot-right" v-click="2">
+<img src="/lit_gap.png" />
+</div>
+
+<style>
+.mot-left { position: absolute; left: 18px; top: 8px; width: 540px; }
+.mot-right { position: absolute; right: 8px; top: 30px; width: 470px; }
+.mot-right img { width: 470px; }
+.mot-cost { display: flex; align-items: center; gap: 22px; margin: 2px 0 0 4px; }
+.mot-cost .big { font-size: 44px; font-weight: 300; color: var(--ink); }
+.mot-cost .u { font-size: 20px; color: var(--mute); }
+.mot-cost .arrow { font-size: 34px; color: var(--mute); }
+.mot-eq .katex-display { margin: 4px 0 2px; }
+.mot-eq .katex { font-size: 1.12em; }
+.quote { font-size: 16px; font-style: italic; color: var(--ink); margin-top: 4px; }
+.quote .who { font-style: normal; color: var(--mute); }
+.mot-proc { width: 470px; margin: 0; }
+.mot-cfd { position: absolute; left: 600px; top: 410px; width: 400px; }
+.mot-cfd .row { font-size: 22px; color: var(--ink); margin-top: 2px; }
+.mot-cfd .big2 { font-size: 44px; font-weight: 300; }
+.cap { color: var(--mute); font-size: 15px; line-height: 1.2; }
+</style>
+
+<!--
+Cultivated meat is still far from the price of beef. Negulescu and co-workers estimate 25 to 35 dollars per kilo in stirred tanks of 42 to 211 cubic metres. To compete with beef, production must drop below 9 dollars per kilo. Media dominate the cost, but the bioreactor sets the cell density and the scale.
+
+The bioreactor must do three things at once. The shear stress must stay below the damage range, 1 to 100 pascal for mammalian cells. The oxygen transfer must supply the oxygen uptake of the cells. The mixing time must be shorter than one over kLa, so the oxygen spreads before the cells use it. These pull against each other: more agitation helps oxygen and mixing, but raises shear. Humbird 2021: "shear-induced cell damage will all limit practical bioreactor volume and attainable cell density".
+
+[click] Simulations can map this trade-off before experiments. But one resolved condition costs about 4,000 CPU hours at our finest grid. Zhan 2019 say this directly for their wave bag: "highly time consuming and not practically feasible for a large number of operating conditions".
+
+[click] What earlier work did. Zhan, Seidel and Kim simulate rocking bags with a resolved interface, each on one grid, with no error bars. Cantarero-Rivera corrects a coarse mesh with a neural network, in a spinner flask, again with no error bars, and it does not generalise across speeds. Kiviat computes all three quantities, but in stirred tanks with RANS, which they say under-predicts shear. Martens uses a multi-fidelity Gaussian process, but the fidelities are culture scales from an ODE model, not grid levels. We do all five: rocking bag, resolved two-phase flow, all three quantities, grid levels used as data, and error bars.
+-->
+
+---
+transition: fade
+---
+
+<img src="/s3_kim.png" class="s3-img" style="left:16px; top:58px; width:269px; height:85px; object-fit:cover" />
+<div class="s3-lab" style="left:16px; top:200px; width:269px"><div class="au">Kim et al. 2025</div><div class="ct">resolved Basilisk model</div></div>
+
+<img src="/s3_seidel.png" class="s3-img" style="left:297px; top:10px; width:310px; height:175px" />
+<div class="s3-lab" style="left:297px; top:200px; width:319px"><div class="au">Seidel et al. 2022</div><div class="ct">kLa and mixing maps</div></div>
+
+<img src="/s3_zhan.png" class="s3-img" style="left:628px; top:10px; width:380px; height:180px" />
+<div class="s3-lab" style="left:628px; top:200px; width:380px"><div class="au">Zhan et al. 2019</div><div class="ct">first CFD of a wave bag</div></div>
+
+<img src="/s3_cantarero.png" class="s3-img" style="left:120px; top:250px; width:237px; height:215px" />
+<div class="s3-lab" style="left:120px; top:471px; width:300px"><div class="au">Cantarero-Rivera et al. 2024</div><div class="ct">coarse-to-fine correction</div></div>
+
+<img src="/s3_martens.png" class="s3-img" style="left:440px; top:280px; width:530px; height:153px" />
+<div class="s3-lab" style="left:440px; top:471px; width:530px"><div class="au">Martens et al. 2025</div><div class="ct">multi-fidelity GP, bioprocess</div></div>
+
+<div class="s3-close">Our goal: predict the flow over all operating conditions from cheap simulations, with error bars.</div>
+
+<style>
+.s3-img { position: absolute; display: block; }
+.s3-lab { position: absolute; font-size: 14px; line-height: 1.2; color: var(--ink); }
+.s3-lab .au { font-size: 15px; }
+.s3-lab .ct { color: var(--mute); }
+.s3-close { position: absolute; left: 16px; right: 16px; top: 528px; font-size: 18px; color: var(--ink); border-top: 2px solid #e8590c; padding-top: 6px; }
+</style>
+
+<!--
+Five earlier works. Each one gave us one piece of the problem.
+
+Zhan 2019 was the first resolved CFD of a 10 litre wave bag. They used a volume of fluid model in Fluent. They ran nine rocking speed and angle settings in 2D, and one 3D check (pages 58, 59, 61).
+
+Seidel 2022 modelled the CELL-tainer, a bag with two degrees of motion. They tracked the motion with a camera and scanned the bag in 3D. They fitted response surfaces for kLa and mixing time (pages 2 to 4, 12, 13).
+
+Kim 2025 is our solver base. It is a two-phase Basilisk solver in the frame of the bag, so the walls stay fixed. It transports oxygen across the interface. The kLa comes from the full oxygen field (pages 3 to 6, 9).
+
+Cantarero-Rivera 2024 corrects a coarse CFD mesh of a spinner flask with a neural network. The network learns the error at 90 rpm. It lowers the velocity error by about 20 percent across speeds (page 140). CFD takes 2.5 hours. The coarse mesh and the network take 15 minutes (page 141).
+
+Martens 2025 uses a multi-fidelity Gaussian process for batch Bayesian optimization. The fidelities are three reactor scales of one CHO model. The study is simulation only. The cost cut of 93 percent is from one run against industrial design of experiments (section 3.3).
+
+Our goal: predict the flow over all operating conditions from cheap simulations, with error bars.
+-->
+
+---
+clicks: 3
+---
+
+<div class="g4">
+<div class="cell">
+<div class="head"><span class="name">shear stress</span><div class="eq4">
+
+$\tau = \mu\left(\dfrac{\partial u}{\partial y} + \dfrac{\partial v}{\partial x}\right)$
+
+</div></div>
+<div class="vid">
+  <SwapVideo loop="/tau_loop.mp4" rel="/oxy_rel.mp4" :on="$clicks >= 1" />
+  <div class="cbar" :class="{ shown: $clicks >= 1 }"><span class="bar"></span><span class="eq"><i>c</i></span></div>
+</div>
+</div>
+<div class="cell" v-click="1">
+<div class="head"><span class="name">oxygen transfer</span><div class="eq4">
+
+$\dfrac{\mathrm{d}C^*}{\mathrm{d}t} = k_La\,(1 - C^*)$
+
+</div></div>
+<img src="/def4_kla.png" class="plot" />
+<div class="note4">
+
+$C^* = \dfrac{1}{V_\ell}\displaystyle\int_{V_\ell} \dfrac{c}{c_{\mathrm{sat}}}\,\mathrm{d}V$
+
+</div>
+</div>
+<div class="cell" v-click="2">
+<div class="head"><span class="name">dissipation rate</span><div class="eq4">
+
+$\varepsilon = 2\mu\,\mathbf{S}\!:\!\mathbf{S}$
+
+</div></div>
+<div class="vid">
+  <SwapVideo loop="/edr_loop.mp4" rel="/tracer_rel.mp4" :on="$clicks >= 3" />
+  <div class="cbar" :class="{ shown: $clicks >= 3 }"><span class="bar"></span><span class="eq"><i>c</i></span></div>
+</div>
+</div>
+<div class="cell" v-click="3">
+<div class="head"><span class="name">mixing time</span><div class="eq4">
+
+$\chi = 1 - \dfrac{\sigma^2}{\sigma_0^2}$
+
+</div></div>
+<img src="/def4_mix.png" class="plot" />
+<div class="note4">
+
+$\sigma^2 = \dfrac{1}{V_\ell}\displaystyle\int_{V_\ell} (c - \bar{c})^2\,\mathrm{d}V$
+
+</div>
+</div>
+</div>
+
+<style>
+.g4 { position: absolute; inset: 26px 34px 20px 34px; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 14px 40px; }
+.cell { position: relative; display: flex; flex-direction: column; min-height: 0; }
+.head { display: flex; align-items: center; gap: 18px; height: 62px; }
+.head .name { font-size: 26px; }
+.eq4 p, .note4 p { margin: 0; }
+.eq4 .katex { font-size: 1.32em; color: var(--ink); }
+.vid { position: relative; flex: 1; display: flex; flex-direction: column; justify-content: center; }
+.plot { height: 178px; margin: 0 !important; align-self: flex-start; }
+.note4 { position: absolute; left: 64px; top: 66px; }
+.note4 .katex { font-size: 0.95em; color: var(--mute); }
+.cbar { display: flex; align-items: center; gap: 8px; align-self: flex-end; margin-top: 8px; opacity: 0; transition: opacity 0.8s; }
+.cbar.shown { opacity: 1; }
+.cbar .bar { width: 110px; height: 8px; border-radius: 4px; background: linear-gradient(90deg, #eef3f8, #b9dcee, #5fb7d6, #1f6fc0, #1d2a78); }
+.cbar .eq { font-size: 20px; color: var(--ink); }
+</style>
+
+<!--
+Each quantity comes from one run: L8, 32.5 rpm, 7 degrees. The videos are in real time and in the lab frame.
+
+Shear stress hurts the cells. The colour is the magnitude of the shear stress. We report the 95th percentile over the liquid.
+
+[click] kLa is the speed of the oxygen transfer. At this click the oxygen starts to enter at the free surface (left video). C* is the mean dissolved oxygen in the liquid, divided by the saturation value. We fit the law over one rocking period at C* = 0.10. Here kLa = 47 per hour.
+
+[click] The dissipation rate is the loss of kinetic energy in the liquid. S is the strain-rate tensor, one half of (grad u + grad u transpose). The colour is the log of epsilon.
+
+[click] Mixing time. At this click the tracer is released in the top half of the liquid (left video). sigma squared is the variance of the tracer over the liquid; c bar is its mean. sigma_0 squared is the variance at the release. chi goes from 0 (not mixed) to 1 (fully mixed). We stop the clock at chi = 0.5: here 11.2 seconds.
+
+Protocol: we settle the flow for 80 rocking cycles. Then we release the tracer in the top half of the liquid and start the oxygen at the same time.
+-->
+
+
+---
+clicks: 3
+---
+
+<div class="mdl-left">
+<div class="name">two-phase Navier–Stokes, in the frame of the bag</div>
+
+$$
+\begin{aligned}
+\underbrace{\rho\left(\partial_t\mathbf{u} + \mathbf{u}\cdot\nabla\mathbf{u}\right)}_{\text{inertia}}
+&= \underbrace{-\nabla p}_{\text{pressure}}
++ \underbrace{\nabla\cdot(2\mu\mathbf{D})}_{\text{viscosity}}
++ \underbrace{\rho\,\mathbf{g}(t)}_{\text{gravity}}
++ \underbrace{\gamma\kappa\,\mathbf{n}\,\delta_s}_{\text{surface tension}} \\
+&\quad \underbrace{{\color{#D55E00}-\,\rho\left(\dot{\boldsymbol\Omega}\times\mathbf{x} + 2\boldsymbol\Omega\times\mathbf{u} + \boldsymbol\Omega\times\boldsymbol\Omega\times\mathbf{x}\right)}}_{\color{#D55E00}\text{frame: angular acceleration, Coriolis, centrifugal}}
+\end{aligned}
+$$
+
+<div class="mdl-row">
+<div>
+
+$$\partial_t\alpha + \mathbf{u}\cdot\nabla\alpha = 0$$
+
+<div class="cap">volume of fluid</div>
+</div>
+<div>
+
+$$c_g = H\,c_\ell$$
+
+<div class="cap">Henry's law at the interface</div>
+</div>
+</div>
+
+<div class="mdl-grid">
+<img src="/quadtree.png" />
+<div>
+
+$${\color{#0072B2}h_8 = \tfrac{L}{2^{8}}} \quad {\color{#009E73}h_9 = \tfrac{L}{2^{9}}} \quad {\color{#CC79A7}h_{10} = \tfrac{L}{2^{10}}}$$
+
+<div class="cap">Basilisk, adaptive quadtree</div>
+</div>
+</div>
+
+</div>
+
+<div class="mdl-right" v-click="1">
+<div class="name">multi-fidelity</div>
+
+$${\color{#CC79A7}f_H(x)} = \rho\,{\color{#0072B2}f_L(x)} + b + \delta(x), \qquad \delta \sim \mathcal{GP}(0,\, s^2 k_\ell) $$
+
+<div class="mdl-fig">
+  <img v-if="$clicks <= 1" src="/mf_a.png" />
+  <img v-else-if="$clicks == 2" src="/mf_b.png" />
+  <video v-else src="/mf_iter.mp4" autoplay muted playsinline />
+</div>
+<div class="mdl-cost"><span style="color:#CC79A7">one L10 run ≈ <b>4,000</b> CPU-h</span> &nbsp;·&nbsp; <span style="color:#0072B2">one L8 run ≈ <b>60</b> CPU-h</span></div>
+
+<div v-click="3">
+
+$$\theta^\star = \arg\min_\theta\, \left[-\log p(\mathbf{y}_H \mid \theta)\right], \qquad \theta = (\rho,\, b,\, \ell,\, s,\, \sigma_n)$$
+
+</div>
+</div>
+
+<style>
+.mdl-left { position: absolute; left: 16px; top: 10px; width: 540px; }
+.mdl-right { position: absolute; right: 10px; top: 10px; width: 450px; }
+.mdl-left .katex-display, .mdl-right .katex-display { margin: 6px 0; }
+.mdl-left .katex-display .katex { font-size: 1.05em; }
+.mdl-left .katex-display { margin: 14px 0 !important; }
+.mdl-row { display: flex; justify-content: space-around; margin-top: 18px; text-align: center; }
+.mdl-grid { display: flex; flex-direction: column; align-items: center; gap: 0; margin-top: 22px; }
+.mdl-grid img { height: 130px; }
+.mdl-cost { margin-top: 4px; font-size: 17px; white-space: nowrap; color: var(--ink); }
+.mdl-fig img, .mdl-fig video { width: 450px; display: block; }
+.mdl-right .katex-display .katex { font-size: 0.86em; }
+.mdl-right .katex-display { overflow: visible; }
+.cap { color: var(--mute); font-size: 18px; white-space: nowrap; }
+</style>
+
+<!--
+The solver is Basilisk. We solve the two-phase Navier–Stokes equations in the frame of the bag, so the walls do not move. The price is the frame terms, in orange: the angular acceleration, Coriolis and centrifugal terms. The volume fraction alpha marks the liquid. At the interface the oxygen follows Henry's law. The mesh is a quadtree. L8, L9 and L10 mean a cell size of L over 2 to the 8, 9 and 10.
+
+[click] Multi-fidelity. Blue dots: many cheap L8 runs. Pink dots: few expensive L10 runs. One L10 run costs about 4,000 CPU hours (3,600 measured at 32.5 rpm; more at low rpm). One L8 run costs about 60. So we can afford few L10 runs.
+
+[click] A kernel ridge regression fits the cheap data: f_L.
+
+[click] The expensive data are rho times f_L, plus b, plus a Gaussian process delta. We fit rho, b and the GP parameters by minimising the negative log-likelihood. Each pink curve is one step of the optimiser. The newest step is the strong line. On the right, the bold parameters are the ones that change at that step. At the end we get the prediction and its 95 % band. The data here are synthetic. Our data are in the results. We chain this: L8 to L9, then L9 to L10.
+-->
+
+---
+transition: fade
+---
+
+<div class="s6-head">Extending the multi-fidelity algorithm to three levels</div>
+
+<div class="s6-left">
+
+$$f_\ell(x) = \beta_0^{(\ell)} + \rho_\ell\, f_{\ell-1}(x) + \delta_\ell(x)$$
+
+$$\ell = 9,\ 10$$
+
+$$w_g \propto p(\lambda_g)\, p(\eta_g)\, p(y \mid \lambda_g, \eta_g)$$
+
+</div>
+
+<img src="/s6_profile.png" class="s6-img" />
+
+<style>
+.s6-head { position: absolute; left: 32px; top: 14px; font-size: 26px; line-height: 1.5; padding-bottom: 6px; color: var(--ink); }
+.s6-left { position: absolute; left: 32px; top: 90px; width: 460px; height: 360px; display: flex; flex-direction: column; justify-content: center; font-size: 31px; color: var(--ink); }
+.s6-left .katex { font-size: 1.0em; }
+.s6-left .katex-display { margin: 14px 0; }
+.s6-img { position: absolute; left: 520px; top: 90px; width: 470px; }
+</style>
+
+<!--
+The recursion has three levels. Level 8 is a kernel ridge fit. Levels 9 and 10 are Gaussian processes. Each level's mean is a linear map of the level below. The weights are the prior times the marginal likelihood over a grid of length scale lambda and noise eta.
+
+Full forms, for reference. Level 8: the length scale and noise minimise the mean squared closed-form leave-one-out residual, the mean over i of ([K^-1 y]_i / [K^-1]_ii)^2 (fast_loo_krr.py lines 14 to 18; test_h1_mfbml.py lines 101 to 107, 10 restarts). Levels 9 and 10: the kernel is k_lambda(x, x') = exp(-||x - x'||^2 / (2 lambda^2)). The grid kernel is K_g = k_lambda + eta^2 I (krr_lr_gpr_fullbayes.py line 126). The posterior shape parameters are a_n = a0 + (n - p)/2 and b_n = b0 + r^T K^-1 r / 2 (line 137). The basis is F = [1, standardised f_below] (lines 99 to 106). The below-level mean enters as a plug-in (h3_band_check.py lines 23 to 27).
+
+The log-normal prior on lambda is at krr_lr_gpr_fullbayes.py line 79. The log marginal likelihood is at line 140. The grid weights are at line 142. The prediction is the weighted mean (lines 169 to 171).
+
+Right: the speed along one vertical line, from the bottom wall up. The line is at x = -0.369 (domain units, origin at the centre). It runs from the wall at y = -0.143 up to y = -0.010. Distance is measured from the first liquid cell. The line goes through the same physical point at all three levels. The curves end at distance 0.13 because the line stops at the crop centre. The separation is largest within about 0.02 of the wall.
+
+Cost labels use the slide 8 rule, applied to the full chain set. Each run is charged its own cost, plus its source cost when the source is not in the set. The labels show the mean per run. L8: 51 core-h (40 runs, cold). L9: 575 core-h (16 runs; warm sources are in the set, so only their own cost counts). L10: 667 core-h (13 runs; each source is in the set).
+-->
+
+---
+transition: fade
+---
+
+<img src="/s7a_kim.png" class="s7-a" />
+<img src="/s7b_predict.png" class="s7-b" />
+
+<style>
+.s7-a { position: absolute; left: 47px; top: 56px; width: 930px; }
+.s7-b { position: absolute; left: 47px; top: 318px; width: 930px; }
+</style>
+
+<!--
+Top: our L10 runs and the digitised Kim et al. 2025 curves at 7 degrees. Both statistics follow Kim. The 22.5 rpm bump is in both.
+
+At 25 rpm there are two L10 runs. The filled point is the training run. The open point is the second run. They differ by about 8 % in the EDR. We show both, so the spread is visible.
+
+Bottom: the model predicts each run before it sees that run. The bars show the 95 % band.
+
+Left: the 13 training runs, each left out once.
+
+Right: six new runs at 5.5 degrees. Their predictions use no refit.
+
+The EDR is the maximum over time, as Kim defines it. At the new angle, the time mean is more accurate than this maximum.
+-->
+
+---
+transition: fade
+---
+
+<div class="s8-head">accuracy against cost</div>
+<img src="/s8_cost.png" class="s8-img" />
+
+<style>
+.s8-head { position: absolute; left: 32px; top: 14px; font-size: 26px; line-height: 1.5; padding-bottom: 6px; color: var(--ink); }
+.s8-img { position: absolute; left: 42px; top: 46px; width: 940px; }
+.s8-cap { position: absolute; left: 32px; right: 32px; top: 470px; font-size: 18px; line-height: 1.3; color: var(--ink); }
+</style>
+
+<!--
+Each curve shows error against training cost, in core-hours. The axis is logarithmic. Every curve uses one accounting rule. Each run is charged its own accounting cost, plus its warm-start source when that source is not already in the method's set.
+
+The approved chain uses 40 L8 runs and 16 L9 runs. Each L10 run then adds about 670 core-hours.
+
+The cheaper chain variants use 10 or 20 L8 runs and 6 warm L9 runs. Their L10 runs start from cold L9 runs that are not in the set. Each L10 run then costs about 1,220 core-hours. Each variant point is one subset size, and the solid line is the lower envelope of all variants.
+
+The L10 GP (ours) costs 1,244 core-hours per run, including the source. The H1 model costs 2,043 core-hours for the 40 L8 runs, then 1,220 core-hours per L10 run. The Kim code is assumed to cost 120 core-hours per run, with no sources. Its error values are the same as our L10 GP.
+
+Crossings at 10 % error, relative RMS, from the cost table of this round.
+- tau 95: the chain envelope reaches 10 % at 4,582 core-hours (6 warm L9 runs, 10 L8 runs, 3 L10 runs). The approved chain reaches it at 13,246. H1 reaches it at 16,700, with 12 L10 runs. The L10 GP does not reach it by 12 runs.
+- EDR: only the chain reaches 10 %, at 13,246 core-hours (approved set, 3 L10 runs). The cheap variants do not.
+
+Crossings at 20 % error.
+- tau 95: the chain envelope reaches 20 % at 4,582 core-hours. H1 reaches it at 5,707. The L10 GP reaches it at 12,442. The Kim code, at the assumed 120 core-hours per run, reaches it at 1,200 core-hours (10 L10 runs). So the Kim code is cheaper than the chain at 20 %. This is an assumed cost, not a measured one.
+- EDR: only the chain reaches 20 %, at 13,246 core-hours.
+-->
+
+---
+transition: fade
+---
+
+<img src="/s9_heatmaps.png" class="s9-img" />
+
+<style>
+.s9-img { position: absolute; left: 32px; top: 8px; width: 960px; }
+</style>
+
+<!--
+This slide shows the 2D campaign as a template. The data are the baseline runs only. No new run is included.
+
+Rows are the three gated quantities: tau 95, the energy dissipation rate, and kLa at 10 percent oxygen. Columns are the predicted median on the left, and the relative uncertainty on the right.
+
+The uncertainty is two sigma over the mean. The black line marks 0.30, the gate for a point to count as known.
+
+The coloured dots are the runs. Blue is L8, green is L9 and pink is L10.
+
+The energy dissipation rows use the time mean as a stand-in. The 95th percentile (edr_95) is not yet saved for the existing runs. Its backfill jobs are queued and not finished. The final version will use edr_95.
+-->
+
+---
+
+# Results 1
+
+---
+
+# Results 2
+
+---
+
+# Conclusions
+
+---
+
+# Questions?

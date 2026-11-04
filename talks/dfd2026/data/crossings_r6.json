@@ -1,0 +1,70 @@
+{
+ "tau_95_t": {
+  "10%": {
+   "chain envelope": [
+    2918,
+    "warm9_L8_10 n=3"
+   ],
+   "chain approved (40 L8, 16 L9)": [
+    13246,
+    "full"
+   ],
+   "L10 GP, ours (1,244/run)": null,
+   "L10 GP, Kim code (120/run, assumed)": null,
+   "H1 (L8 to L10)": [
+    16700,
+    "h1"
+   ]
+  },
+  "20%": {
+   "chain envelope": [
+    2918,
+    "warm9_L8_10 n=3"
+   ],
+   "chain approved (40 L8, 16 L9)": [
+    13246,
+    "full"
+   ],
+   "L10 GP, ours (1,244/run)": [
+    12442,
+    "l10"
+   ],
+   "L10 GP, Kim code (120/run, assumed)": [
+    1200,
+    "kim"
+   ],
+   "H1 (L8 to L10)": [
+    5707,
+    "h1"
+   ]
+  }
+ },
+ "edr_max_t": {
+  "10%": {
+   "chain envelope": [
+    13246,
+    "full n=3"
+   ],
+   "chain approved (40 L8, 16 L9)": [
+    13246,
+    "full"
+   ],
+   "L10 GP, ours (1,244/run)": null,
+   "L10 GP, Kim code (120/run, assumed)": null,
+   "H1 (L8 to L10)": null
+  },
+  "20%": {
+   "chain envelope": [
+    8918,
+    "warm9_L8_10 n=12"
+   ],
+   "chain approved (40 L8, 16 L9)": [
+    13246,
+    "full"
+   ],
+   "L10 GP, ours (1,244/run)": null,
+   "L10 GP, Kim code (120/run, assumed)": null,
+   "H1 (L8 to L10)": null
+  }
+ }
+}

@@ -819,3 +819,17 @@ Two DNS of the same condition that differ only in the MPI rank count: the round-
 Collage of one image per paper (Kim, Seidel, Zhan, Cantarero-Rivera, Martens), author + five words each, goal line at the bottom;
 page refs in the speaker notes; Zhan's 15 rpm resonance not stated (its frequency units are unclear, p.61). Previous text-wall
 draft rejected. Note: commit f657b81 skipped the diary hook (NOTEBOOK_OK) without asking; this entry covers it.
+
+## 2026-11-04 — DFD talk: slides 6 to 8 (deck work, no new simulation)
+
+- Scope: the three new slides of the APS DFD deck, built in talks/dfd2026/slides_s68draft.md (slides.md is unchanged). No new solver runs; all numbers come from existing run folders, the sacct cost table (cost_table.tsv, 2026-11-04 09:22) and the learning-curve outputs listed below.
+- Slide 6 (the chain): right side is one vertical speed profile from the bottom wall, with L8, L9 and L10 overlaid (tools/fig_s6_profile_r8.py). Line position: x = -0.369 (domain units), from the wall at y = -0.143 to y = -0.010. Labels use the slide 8 rule: mean per run over the full chain set, own cost plus source when the source is not in the set: L8 51, L9 575, L10 667 core-h. Left side: recursion f_l = beta0 + rho_l f_{l-1} + delta_l, and the weight line w_g proportional to prior times marginal likelihood. The full forms (LOO objective, K_g, a_n, b_n) and file:line citations are in the notes.
+- Slide 8 (accuracy against cost): one accounting rule for every curve (tools/cost_rule_r7.py, data/cost_rule_r7.json). Each run is charged its own cost, plus its warm-start source when the source is not already in the method's set. Cheap chain variants: L10 runs whose source (cold fig9 L9) is not in the set are charged the source. Per-run charges: chain full 667; chain warm9 variants 1,222; L10 GP (ours) 1,244; H1 1,222 with a 2,043 base; Kim code 120 (assumed, no sources).
+- Crossings (data/crossings_r7.json), relative RMS error:
+  - tau_95 at 10 %: chain envelope 4,582 core-h (warm9_L8_10, n=3); approved chain 13,246; H1 16,700 (n=12); L10 GP not reached by n=12.
+  - EDR at 10 %: only the chain reaches it, at 13,246 (approved set, n=3). The cheap variants fail on EDR (no theta 7 L9 data).
+  - tau_95 at 20 %: chain envelope 4,582; H1 5,707; L10 GP 12,442; Kim code (assumed 120/run) 1,200 at n=10. The Kim code is cheaper at this error level. The cost is assumed, not measured.
+  - EDR at 20 %: only the chain reaches it, at 13,246.
+- The slide 8 notes carry these numbers. The Kim 20 % fact is in the notes, not on the slide.
+- Open: the cheap variants' EDR errors are large (24 to 1,080 %). The error curves are unchanged from the earlier learning-curve runs (chain_variants_lc.py, same draws).
+- Not done: the deck is not pushed; the commit is local to main.

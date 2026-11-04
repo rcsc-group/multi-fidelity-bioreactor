@@ -1,0 +1,82 @@
+{
+ "tau_95_t": {
+  "10%": {
+   "chain envelope": {
+    "cost": 4582,
+    "n": 3,
+    "variant": "warm9_L8_10"
+   },
+   "chain, approved set": {
+    "cost": 13246,
+    "n": null,
+    "variant": null
+   },
+   "L10 GP, ours": null,
+   "L10 GP, Kim code (120/run)": null,
+   "H1 (L8 to L10)": {
+    "cost": 16700,
+    "n": null,
+    "variant": null
+   }
+  },
+  "20%": {
+   "chain envelope": {
+    "cost": 4582,
+    "n": 3,
+    "variant": "warm9_L8_10"
+   },
+   "chain, approved set": {
+    "cost": 13246,
+    "n": null,
+    "variant": null
+   },
+   "L10 GP, ours": {
+    "cost": 12442,
+    "n": null,
+    "variant": null
+   },
+   "L10 GP, Kim code (120/run)": {
+    "cost": 1200,
+    "n": null,
+    "variant": null
+   },
+   "H1 (L8 to L10)": {
+    "cost": 5707,
+    "n": null,
+    "variant": null
+   }
+  }
+ },
+ "edr_max_t": {
+  "10%": {
+   "chain envelope": {
+    "cost": 13246,
+    "n": 3,
+    "variant": "full"
+   },
+   "chain, approved set": {
+    "cost": 13246,
+    "n": null,
+    "variant": null
+   },
+   "L10 GP, ours": null,
+   "L10 GP, Kim code (120/run)": null,
+   "H1 (L8 to L10)": null
+  },
+  "20%": {
+   "chain envelope": {
+    "cost": 13246,
+    "n": 3,
+    "variant": "full"
+   },
+   "chain, approved set": {
+    "cost": 13246,
+    "n": null,
+    "variant": null
+   },
+   "L10 GP, ours": null,
+   "L10 GP, Kim code (120/run)": null,
+   "H1 (L8 to L10)": null
+  }
+ }
+}
