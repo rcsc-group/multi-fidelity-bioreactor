@@ -79,9 +79,9 @@ for ax, q, qn in zip(axes, QS, [r"$\tau_{95}$", r"$\varepsilon_{\max}$ (EDR)"]):
     ax.plot([x for x, _, _ in h1], [100 * e for _, _, e in h1], color=BLUE, ls=":", lw=1.4, marker="o", ms=6, mfc="white", mec=BLUE)
     ax.set_xscale("log")
     ax.set_yscale("log")
-    ax.set_xlim(0.5, 60)
-    ax.set_xticks([1, 2, 5, 10, 20, 50])
-    ax.set_xticklabels(["1", "2", "5", "10", "20", "50"])
+    ax.set_xlim(2, 20)
+    ax.set_xticks([2, 5, 10, 20])
+    ax.set_xticklabels(["2", "5", "10", "20"])
     ax.xaxis.set_minor_formatter(NullFormatter())
     ax.set_ylim(1.5, 400)
     ax.yaxis.set_major_locator(FixedLocator([2, 3, 5, 10, 20, 50, 100, 200, 400]))
@@ -114,6 +114,10 @@ t10, t20, e10 = res["tau_95_t"]["10%"], res["tau_95_t"]["20%"], res["edr_max_t"]
 ch = res["tau_95_t"]["10%"]["chain envelope"]
 h1_10 = res["tau_95_t"]["10%"]["H1 (L8 to L10)"]
 ce = res["edr_max_t"]["10%"]["chain, full set"]
+_xs = [p["x"] for q in QS for p in chain_pts[q]]
+print("data x range (all series incl. variants):", round(min(_xs), 2), round(max(_xs), 2))
+for _q in QS:
+    _e = envelope(chain_pts[_q])
 fig.savefig(OUT, dpi=200)
 (TALK / "data" / "crossings_r10.json").write_text(json.dumps(res, indent=1))
 print("wrote", OUT, "unit", round(UNIT, 1))
