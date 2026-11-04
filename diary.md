@@ -973,3 +973,11 @@ dtmix_0.50 except at 37.5 rpm. kLa_1T_50 is not reliable at L8 near 22.5-27.5 rp
   Open: fit does not yet read state/gates.json (FAILED-GATE exclusion not wired into fit); the database runs carry no _source_run / _err_file, so gate status is PENDING for them.
 - 2026-11-04 (task 2, status run): `campaign.py status` on runs/: 1421 warm-started runs gated, 247 FAILED-GATE, rest PENDING (historical params carry no _source_run).
 - Plan: sections 1.1 (continuous-domain criterion) and 1.5 (gates: tau_95, edr_95, kLa_1T_10 gated at 0.30) amended.
+
+## 2026-11-04 — Campaign 2D: L8 LHS stage submitted (24 cold runs, theta 2-7 x 15-37.5 rpm)
+- Binary BioReactor-mpi-lean-2ef5b07 (edr_95 added; L6 cmp vs base: all old outputs byte-identical). Protocol kmix (80-cycle
+  spin-up, release, 150 cycles), 16 ranks. 19 jobs on batch, 5 on batch2.
+- Error and fix: the first --go submitted 19 jobs at 64 cpu each (simulate.submit_slurm defaults cpus=4, 12G per cpu; the dry
+  run printed cpus-per-task=1). Cancelled within ~1 min (2 had run 11 s); runs and jobs.jsonl moved to
+  /oscar/scratch/eaguerov/tmp/c2d_cancelled_20261104. campaign.py now passes cpus=1, mem=4G. Resubmitted: 24 x 16 cpu, 4G.
+- Lesson: the dry run must print the exact command of the real path, not a separate template.

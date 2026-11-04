@@ -259,7 +259,9 @@ def _real_submit_l8(rid: str, rpm: float, th: float, partition: str, account: st
     p.update(run_id=rid, omega_b=2 * math.pi * rpm / 60.0, theta_max=[th, 0.0, 0.0], _binary=BINARY_L8)
     jid = simulate.submit_slurm(p, project_root=ROOT, runs_root=ROOT / "runs",
                                 walltime=STAGES["L8"]["walltime"], ntasks=STAGES["L8"]["ranks"],
-                                exclude=EXCLUDE, partition=partition, account=account)
+                                exclude=EXCLUDE, partition=partition, account=account,
+                                cpus=1, mem="4G")  # MPI: 1 cpu per rank, 4G per rank (template default); the
+                                # submit_slurm defaults (cpus=4, 12G) gave 64-cpu jobs on 2026-11-04 (cancelled)
     STATE.mkdir(parents=True, exist_ok=True)
     with JOBS.open("a") as f:
         f.write(json.dumps(dict(job=str(jid), level="L8", run=rid, rpm=rpm, theta=th,

@@ -1,0 +1,86 @@
+{
+ "tau_95": {
+  "max": 0.6334023423545457,
+  "rpm": 37.5,
+  "theta": 2.0,
+  "grid_max": 0.6334023417015421,
+  "grid_argmax": [
+   37.5,
+   2.0
+  ],
+  "n_L8": 16,
+  "n_HF": 17,
+  "gated": true,
+  "png": "/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor/docs/campaign2d/fit0_tau_95.png"
+ },
+ "edr_95": {
+  "max": 0.6747587913203195,
+  "rpm": 37.5,
+  "theta": 5.268080908814437,
+  "grid_max": 0.6747580265524404,
+  "grid_argmax": [
+   37.5,
+   5.25
+  ],
+  "n_L8": 16,
+  "n_HF": 17,
+  "gated": true,
+  "png": "/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor/docs/campaign2d/fit0_edr_95.png"
+ },
+ "kLa_1T_10": {
+  "max": 0.7646366945023104,
+  "rpm": 35.0665485513876,
+  "theta": 5.492374385513373,
+  "grid_max": 0.7644495907185462,
+  "grid_argmax": [
+   35.025000000000006,
+   5.5
+  ],
+  "n_L8": 55,
+  "n_HF": 10,
+  "gated": true,
+  "png": "/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor/docs/campaign2d/fit0_kLa_1T_10.png"
+ },
+ "kLa_1T_25": {
+  "max": 1.522399234488239,
+  "rpm": 18.007474487619326,
+  "theta": 3.4230609309461575,
+  "grid_max": 1.5221177678131865,
+  "grid_argmax": [
+   17.925,
+   3.4000000000000004
+  ],
+  "n_L8": 55,
+  "n_HF": 10,
+  "gated": false,
+  "png": "/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor/docs/campaign2d/fit0_kLa_1T_25.png"
+ },
+ "kLa_1T_50": {
+  "max": 2.567669225933564,
+  "rpm": 34.93443536462693,
+  "theta": 3.772224973146905,
+  "grid_max": 2.5672712971859544,
+  "grid_argmax": [
+   35.025000000000006,
+   3.75
+  ],
+  "n_L8": 55,
+  "n_HF": 9,
+  "gated": false,
+  "png": "/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor/docs/campaign2d/fit0_kLa_1T_50.png"
+ },
+ "dtmix_0.50": {
+  "max": 1.6650880513623723,
+  "rpm": 15.0,
+  "theta": 3.898176431380052,
+  "grid_max": 1.6650866505821784,
+  "grid_argmax": [
+   15.0,
+   3.9000000000000004
+  ],
+  "n_L8": 55,
+  "n_HF": 10,
+  "gated": false,
+  "png": "/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor/docs/campaign2d/fit0_dtmix_0_50.png"
+ }
+}
