@@ -1086,3 +1086,14 @@ dtmix_0.50 except at 37.5 rpm. kLa_1T_50 is not reliable at L8 near 22.5-27.5 rp
   NOT YET the required test: it must be repeated on the first c2d L8 run that completes (pending: 20 running, 4 pending).
 - 2026-11-04 (backfill jobs). 27 edr_95 restarts (8341463-8341489) still PENDING behind the L8 batch cap. Check .err for
   "fs sanity [post-solid]: OK" once they run.
+- 2026-11-04 (LEAD RULE: warm sources only, implemented). Every L9 and L10 point must warm-start from a COMPLETED L8 run at
+  the same (rpm, theta). Cold L9/L10 points are refused. Code: l8_source_map (completed L8 folders: fidelity 8, results.json,
+  checkpoint.dump), require_warm_sources (ValueError on a cold point), cmd_next writes sources and checkpoint_t per point and
+  expected_core_h, cmd_submit refuses an L9/L10 next file without a source per point.
+- Cost basis (measured, sacct cost_table.tsv, warm rows, corehc_all): L9 median 97.7 core-h (n=54; completed-only median 84.6);
+  L10 median 764.5 (n=82). The user quoted 69 core-h for the warm L9 median: NOT reproduced by this table. Discrepancy flagged;
+  the measured value is used. Old COST L9_warm = 220 is no longer the score divisor.
+- Sources in runs/ include the older DB L8 runs (kmix_l8_*, f1c11e0 binary). Those are completed L8 runs, so the rule admits them,
+  but a warm restart on binary 2ef5b07 from an f1c11e0 checkpoint is a binary change. Flagged for the lead, not decided.
+- Test: tests/test_campaign_warm_rule.py, 4 tests, all pass (37/37 campaign tests). Honest gap: the red run's output was lost
+  behind a pipe, so no failing transcript is recorded; the tests were written before the patch was applied.

@@ -241,7 +241,10 @@ def cmd_submit(args) -> None:
         nxt = STATE / f"next_{level}.json"
         if not nxt.exists():
             raise SystemExit(f"no acquisition batch yet: run `next` after `fit` ({nxt} missing)")
-        todo = [tuple(map(float, p)) for p in json.loads(nxt.read_text())["points"]]
+        data = json.loads(nxt.read_text())
+        if not data.get("sources") or len(data["sources"]) != len(data["points"]):
+            raise SystemExit(f"{nxt} has no warm source per point: cold L9/L10 refused (lead rule 2026-11-04)")
+        todo = [tuple(map(float, p)) for p in data["points"]]
     ranks = STAGES[level]["ranks"]
     placement = assign_partitions([ranks] * len(todo), args.partition)
     for (rpm, th), (part, acct) in zip(todo, placement):
@@ -734,7 +737,44 @@ def cmd_fit(args) -> None:
 
 # ----------------------------------------------------------------- next (acquisition, 2026-11-04)
 NEXT_SEP = 0.05          # min distance between picks, as a fraction of the domain size in each axis (Euclidean)
-NEXT_COST_L9 = COST["L9_warm"][0]   # a warm L9 point at an L8 site (plan 1.3)
+# Measured warm medians (sacct cost audit, cost_table.tsv, warm rows, core-h per run, corehc_all): L9 n=54 97.7,
+# L10 n=82 764.5 (2026-11-04). Lead rule: every L9 and L10 point warm-starts from a COMPLETED L8 run at the same
+# (rpm, theta). Cold L9/L10 points are refused.
+WARM_MEDIAN_CORE_H = {9: 97.7, 10: 764.5}
+NEXT_COST_L9 = WARM_MEDIAN_CORE_H[9]
+
+
+def l8_source_map(runs_root=None) -> dict:
+    """(rpm, theta) -> run folder of a COMPLETED L8 run: params fidelity 8, results.json and checkpoint.dump present."""
+    root = Path(runs_root) if runs_root else ROOT / "runs"
+    out = {}
+    for d in sorted(root.glob("*")):
+        pf = d / "params.json"
+        if not (pf.exists() and (d / "results.json").exists() and (d / "checkpoint.dump").exists()):
+            continue
+        try:
+            p = json.loads(pf.read_text())
+        except json.JSONDecodeError:
+            continue
+        if p.get("fidelity") != 8:
+            continue
+        key = (round(float(p["omega_b"]) * 60.0 / (2 * math.pi), 3), float(p["theta_max"][0]))
+        out.setdefault(key, d.name)
+    return out
+
+
+def require_warm_sources(points, smap: dict) -> list:
+    """Source run folder for each (rpm, theta) point. Raises if any point has no completed L8 source (cold refused)."""
+    missing = [p for p in points if (float(p[0]), float(p[1])) not in smap]
+    if missing:
+        raise ValueError(f"no completed warm source L8 run at {missing}: cold L9/L10 points are refused")
+    return [smap[(float(p[0]), float(p[1]))] for p in points]
+
+
+def source_checkpoint_time(run: str) -> float:
+    """Last logged time of the source run (the warm start time). Same definition as submit_continue.py."""
+    import numpy as np
+    return float(np.loadtxt(ROOT / "runs" / run / "shear_stress.dat", skiprows=1)[-1, 1])
 
 
 def select_next(sites, scores: dict, k: int, sep: float = NEXT_SEP) -> list:
@@ -782,8 +822,14 @@ def cmd_next(args) -> None:
     if args.dry_run:
         print("(dry run: state/next_L9.json not written)")
         return
-    out = dict(level="L9", cost_per_point=NEXT_COST_L9, source="warm from the L8 site (same rpm, theta)",
-               points=[[rpm, th] for rpm, th, _ in picks], scores=[sc for *_, sc in picks],
+    smap = l8_source_map()
+    pts = [[rpm, th] for rpm, th, _ in picks]
+    srcs = require_warm_sources(pts, smap)
+    out = dict(level="L9", cost_per_point=NEXT_COST_L9, cost_basis="measured warm median, corehc_all, n=54",
+               expected_core_h=round(NEXT_COST_L9 * len(pts), 1),
+               source="warm from the completed L8 run at the same (rpm, theta)",
+               points=pts, sources=srcs, checkpoint_t=[source_checkpoint_time(s) for s in srcs],
+               scores=[sc for *_, sc in picks],
                qois=CRIT_QOIS, fit_gates=dict(n_gate_entries=len(gates),
                                               n_failed=sum(v == "FAILED-GATE" for v in gates.values())))
     (STATE / "next_L9.json").write_text(json.dumps(out, indent=1))
