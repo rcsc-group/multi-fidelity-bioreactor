@@ -236,3 +236,10 @@ smoke runs passed; dry-run lists node2356 excluded and no mbessa-condo; ledger r
 - Cost (sacct per-level median rate x 3 cycles x run period): L8 6, L9 125, L10 910, total about 1,040 core-h.
   The L10 rate is a median over mixed runs and is likely high; treat 910 as an upper bound.
 - Restart: each run restarts from its last checkpoint for 3 cycles, binary BioReactor-mpi-lean-2ef5b07, reads edr_95.
+
+## 9. Storage and paths (lead decision 2026-11-04)
+- runs/ in this repo is a symlink to BioReactor3D/dev/rocking-bioreactor-2d/runs (kept, not moved; the 2,915-run database
+  stays where it is). Campaign outputs therefore land in that folder, and _canonical_run_dir is its realpath.
+- Outputs for the campaign are read from the same folder by the fit, so there is no split.
+- The edr_95 backfill runs use the suffix _e95 (source folders never overwritten).
+- The kLa_1T_10 fit is optimizer-dependent (see diary 2026-11-04): the LF seed selects the hyperparameter mode.

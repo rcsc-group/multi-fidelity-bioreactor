@@ -1037,3 +1037,26 @@ dtmix_0.50 except at 37.5 rpm. kLa_1T_50 is not reliable at L8 near 22.5-27.5 rp
   symlink with a real folder and copy the database, or keep and document).
 - 2026-11-04 (copy-back). The MPI template copies each job's output to _canonical_run_dir and runs postprocess there at job
   end (config/slurm_mpi_template.sh). A separate rsync is therefore not needed; verify at first COMPLETED job.
+- 2026-11-04 (symlink, lead decision b): kept. Documented in plan section 9. Database not moved.
+- 2026-11-04 (edr_95 backfill SUBMITTED, lead approved). scripts/campaign2d/submit_edr95_backfill.py --go. 27 restarts
+  from the last checkpoint, 3 cycles each, binary /oscar/data/dharri15/eaguerov/bin/BioReactor-mpi-lean-2ef5b07, run ids
+  <source>_e95. Each sbatch printed in full: partition batch, account default, cpus-per-task=1, mem-per-cpu 4G, ntasks 16
+  (L8) or 32 (L9, L10), exclude node2356, no mbessa. Job ids in state/jobs_edr95.jsonl (8341463 8341489). Walltime 4 h (L8),
+  8 h (L9), 12 h (L10). Restarts queue behind the L8 jobs (batch cap 312 cpu). Pending: check the face-field line
+  "fs sanity [post-solid]: OK" in each .err before using any output. Expected cost about 1,040 core-h (plan 8).
+  Caveat: the source runs are older binaries; restart uses 2ef5b07 (the lead's rule). Also the window: restart samples
+  post-release cycles, while edr_mean_t uses the 3 cycles before release. Not the same window; flagged.
+- 2026-11-04 (kLa_1T_10 2.4 check, falsified and explained). scripts/campaign2d/diag_kla_dedup.py: with duplicates, L8 has
+  55 rows, theta 4.0 / 5.5 / 7.0 only; dedup 49 rows, same theta set. NO database run lies below theta 4 for kLa, so the
+  corner (15, 2) is an extrapolation in both cases. The change is NOT the data: the LF hyperparameter optimum is seed-
+  dependent. scripts/campaign2d/diag_kla_seed.py (LF only, seeds 42, 1, 2, 3):
+  with duplicates: seed 42 lengthscales (25.4, 374.1), noise_std 0.0112, prediction at (15, 2) 3.65 (ln);
+           seeds 1-3: (11.6, 1.53), noise 0.0115, prediction 4.56.
+  dedup:   seed 42 lengthscales (0.023, 0.051), noise 0.00023, prediction 5.46;
+           seeds 1-3: (14.9, 2.14), noise 0.0157, prediction 4.38.
+  So seed 42 (the fit's seed) lands in a degenerate mode on the dedup data (noise 2e-4, 50 times below the data noise,
+  lengthscale 0.02 on the normalised domain). The 2.395 max is that mode. The 0.764 baseline was also a seed-42 mode.
+  DECISION NEEDED: the LF optimiser must not pick a noise floor-violating mode. Options: (a) choose the LF restart by
+  best marginal likelihood over seeds, (b) floor noise_std at the data noise, (c) report both. Not implemented. The L9
+  picks from the dry run (theta 2 corner) are INVALID as evidence. L9 picks only after the refit that follows the fix.
+  HF path (FullBayes) not separately tested by seed. Next step: test the fix with the L8 data after the 24 L8 runs finish.
