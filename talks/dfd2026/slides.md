@@ -71,7 +71,6 @@ $$
 .mot-cfd { position: absolute; left: 600px; top: 410px; width: 400px; }
 .mot-cfd .row { font-size: 22px; color: var(--ink); margin-top: 2px; }
 .mot-cfd .big2 { font-size: 44px; font-weight: 300; }
-.cap { color: var(--mute); font-size: 15px; line-height: 1.2; }
 </style>
 
 <!--
@@ -99,20 +98,20 @@ transition: fade
 <img src="/s3_zhan.png" class="s3-img" style="left:628px; top:10px; width:380px; height:180px" />
 <div class="s3-lab" style="left:628px; top:200px; width:380px"><div class="au">Zhan et al. 2019</div><div class="ct">first CFD of a wave bag</div></div>
 
-<img src="/s3_cantarero.png" class="s3-img" style="left:40px; top:284px; width:280px; height:165px" />
-<div class="s3-lab" style="left:40px; top:452px; width:360px"><div class="au">Cantarero-Rivera et al. 2024</div><div class="ct">coarse-to-fine correction</div></div>
+<img src="/s3_cantarero.png" class="s3-img" style="left:40px; top:278px; width:255px; height:150px" />
+<div class="s3-lab" style="left:40px; top:438px; width:360px"><div class="au">Cantarero-Rivera et al. 2024</div><div class="ct">coarse-to-fine correction</div></div>
 
 <img src="/s3_martens.png" class="s3-img" style="left:440px; top:280px; width:530px; height:153px" />
-<div class="s3-lab" style="left:440px; top:448px; width:530px"><div class="au">Martens et al. 2025</div><div class="ct">multi-fidelity GP, bioprocess</div></div>
+<div class="s3-lab" style="left:440px; top:436px; width:530px"><div class="au">Martens et al. 2025</div><div class="ct">multi-fidelity GP, bioprocess</div></div>
 
 </div>
 <div class="s3-close">Our goal: predict the flow over all operating conditions from cheap simulations, with error bars.</div>
 
 <style>
 .s3-img { position: absolute; display: block; }
-.s3-lab { position: absolute; font-size: 14px; line-height: 1.2; color: var(--ink); }
-.s3-lab .au { font-size: 15px; }
-.s3-lab .ct { color: var(--mute); }
+.s3-lab { position: absolute; font-size: 16px; line-height: 1.25; color: var(--ink); }
+.s3-lab .au { font-size: 16px; }
+.s3-lab .ct { color: var(--mute); font-size: 16px; }
 .s3-close { position: absolute; left: 16px; right: 16px; top: 530px; font-size: 18px; color: var(--ink); border-top: 2px solid #e8590c; padding-top: 6px; }
 </style>
 
@@ -298,7 +297,6 @@ $$\theta^\star = \arg\min_\theta\, \left[-\log p(\mathbf{y}_H \mid \theta)\right
 .mdl-fig img, .mdl-fig video { width: 450px; display: block; }
 .mdl-right .katex-display .katex { font-size: 0.86em; }
 .mdl-right .katex-display { overflow: visible; }
-.cap { color: var(--mute); font-size: 18px; white-space: nowrap; }
 </style>
 
 <!--
