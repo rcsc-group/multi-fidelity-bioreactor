@@ -88,8 +88,6 @@ The bioreactor must do three things at once. The shear stress must stay below th
 
 [click] Simulations can map this trade-off before experiments. But one resolved condition costs about 4,000 CPU hours at our finest grid. Zhan 2019 say this directly for their wave bag: "highly time consuming and not practically feasible for a large number of operating conditions".
 
-[click] What earlier work did. Zhan, Seidel and Kim simulate rocking bags with a resolved interface, each on one grid, with no error bars. Cantarero-Rivera corrects a coarse mesh with a neural network, in a spinner flask, again with no error bars, and it does not generalise across speeds. Kiviat computes all three quantities, but in stirred tanks with RANS, which they say under-predicts shear. Martens uses a multi-fidelity Gaussian process, but the fidelities are culture scales from an ODE model, not grid levels. We do all five: rocking bag, resolved two-phase flow, all three quantities, they correct one field with two meshes at one training speed, without error bars; we use three grid levels across the operating range, with error bars.
-
 The video shows a rocking bioreactor: a single-use bag on a platform that rocks by a few degrees. The free surface makes waves. The waves mix the medium and bring oxygen in, with no impeller and no bubbles. Mosa Meat uses this CELL-tainer system. Note: the CELL-tainer also translates; our model rocks only.
 -->
 
@@ -391,6 +389,8 @@ $$\delta_\ell \sim \mathcal{GP}, \qquad w_g \propto p(\lambda_g)\, p(\eta_g)\, p
 
 </div>
 
+<div class="cap s6-cite">extends Yi, Cheng & Bessa 2026 (Comput. Mech.) to three levels</div>
+
 <style>
 .s6-head { position: absolute; left: 32px; top: 12px; font-size: 26px; line-height: 1.5; color: var(--ink); }
 .s6-bg { position: absolute; left: 0; top: 0; width: 1024px; height: 576px; }
@@ -399,6 +399,7 @@ $$\delta_\ell \sim \mathcal{GP}, \qquad w_g \propto p(\lambda_g)\, p(\eta_g)\, p
 .s6-sub { position: absolute; left: 32px; width: 450px; font-size: 22px; color: var(--ink); }
 .s6-key { position: absolute; left: 32px; width: 460px; top: 470px; font-size: 12px; line-height: 1.3; color: var(--mute); }
 .s6-strip { position: absolute; left: 0; right: 0; top: 508px; text-align: center; font-size: 26px; color: var(--ink); }
+.s6-cite { position: absolute; left: 808px; width: 178px; top: 510px; }
 </style>
 
 <!--
@@ -496,6 +497,10 @@ transition: fade
 <style>
 .lit-bk { position: absolute; left: 60px; top: 50px; height: 470px; margin-top: 0 !important; }
 </style>
+
+<!--
+What earlier work did. Zhan, Seidel and Kim simulate rocking bags with a resolved interface, each on one grid, with no error bars. Cantarero-Rivera corrects a coarse mesh with a neural network, in a spinner flask, again with no error bars, and it does not generalise across speeds. Kiviat computes all three quantities, but in stirred tanks with RANS, which they say under-predicts shear. Martens uses a multi-fidelity Gaussian process, but the fidelities are culture scales from an ODE model, not grid levels. We do all five: rocking bag, resolved two-phase flow, all three quantities, they correct one field with two meshes at one training speed, without error bars; we use three grid levels across the operating range, with error bars.
+-->
 
 ---
 transition: fade
