@@ -3,7 +3,7 @@
 :root { --ground: #ffffff; --ink: #14202e; --mute: #7a8797; --accent: #e8590c; }
 /* Helvetica Neue Thin on the presenting machine; Inter ExtraLight is the stand-in where Helvetica Neue is not installed (Oscar previews) */
 .slidev-layout, .slidev-page { font-family: "Helvetica Neue", "Inter", sans-serif; font-weight: 200; background: var(--ground); color: var(--ink); }
-.cap { color: var(--mute); font-size: 16px; line-height: 1.25; }
+.cap { color: var(--mute); font-size: 12px; line-height: 1.2; }
 .name { color: var(--accent); font-size: 22px; font-weight: 300; }
 .slidev-layout img { margin-top: 10px; }
 

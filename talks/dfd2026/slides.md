@@ -23,14 +23,29 @@ clicks: 1
 ---
 
 <div class="slide-title">cultivated meat needs large, gentle bioreactors</div>
-<div class="mot-left">
+<div class="mot-all">
+<div class="mot-figs">
+<div class="mot-pcol">
 <img src="/cm_process.png" class="mot-proc" />
 <div class="cap">(Foodingredients 2021; Post et al. 2020; Guan et al. 2021)</div>
+</div>
+<div class="mot-vcol">
+<video src="/celltainer_rock.mp4" autoplay loop muted playsinline class="mot-vid"></video>
+<div class="cap">CELL-tainer Biotech BV, “CELL-tainer Corporate Movie”, youtube.com/watch?v=jC-eq9N16o4</div>
+</div>
+</div>
 
+<div class="mot-band">
 <div class="mot-cost">
-<div><span class="big">$25–35</span><span class="u">/kg</span><div class="cap">Negulescu 2023</div></div>
-<div class="arrow">→</div>
-<div><span class="big">$9</span><span class="u">/kg</span></div>
+<span class="big">$25–35</span><span class="u">/kg</span>
+<span class="arrow">→</span>
+<span class="big">$9</span><span class="u">/kg</span>
+<span class="cap">Negulescu 2023</span>
+</div>
+<div class="mot-cfd" v-click="1">
+<span class="name">one resolved condition costs</span>
+<span class="big2">≈ 4,000</span><span class="u">CPU-h</span>
+</div>
 </div>
 
 <div class="mot-eq">
@@ -52,33 +67,27 @@ $\tau$ shear stress · $\tau_{d}$ cell-damage threshold · $k_La$ oxygen transfe
 </div>
 </div>
 
-<div class="mot-right">
-<video src="/celltainer_rock.mp4" autoplay loop muted playsinline class="mot-vid"></video>
-<div class="cap">CELL-tainer Biotech BV, “CELL-tainer Corporate Movie”, youtube.com/watch?v=jC-eq9N16o4</div>
-<div v-click="1" class="mot-cfd">
-<div class="name">one resolved condition costs</div>
-<div class="row"><span class="big2">≈ 4,000</span> CPU-h</div>
-</div>
-</div>
-
 <style>
-.mot-left { position: absolute; left: 18px; top: 50px; width: 540px; }
-.mot-right { position: absolute; right: 8px; top: 60px; width: 470px; }
-.mot-vid { display: block; width: 470px; margin: 0; }
-.mot-right .cap { margin-top: 6px; }
-.mot-cost { display: flex; align-items: center; gap: 22px; margin: 2px 0 0 4px; }
-.mot-cost .big { font-size: 44px; font-weight: 300; color: var(--ink); }
+.mot-all { position: absolute; left: 32px; right: 32px; top: 56px; display: flex; flex-direction: column; }
+.mot-figs { display: flex; gap: 24px; align-items: flex-start; }
+.mot-pcol { width: 476px; flex: none; }
+.mot-vcol { width: 460px; flex: none; }
+.mot-proc { display: block; width: 476px; margin: 0 !important; }
+.mot-vid { display: block; width: 460px; margin: 0; }
+.mot-figs .cap { margin-top: 4px; }
+.mot-band { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; }
+.mot-cost { display: flex; align-items: baseline; gap: 12px; white-space: nowrap; }
+.mot-cost .big { font-size: 36px; font-weight: 300; color: var(--ink); }
 .mot-cost .u { font-size: 20px; color: var(--mute); }
 .mot-cost .arrow { font-size: 34px; color: var(--mute); }
+.mot-cost .cap { align-self: center; margin-left: 4px; white-space: nowrap; }
+.mot-cfd { display: flex; align-items: baseline; gap: 10px; white-space: nowrap; }
+.mot-cfd .big2 { font-size: 36px; font-weight: 300; color: var(--ink); }
+.mot-cfd .u { font-size: 20px; color: var(--mute); }
+.mot-eq { margin-top: 6px; text-align: center; }
 .mot-eq .katex-display { margin: 4px 0 2px; }
-.mot-eq .katex { font-size: 1.12em; }
-.quote { font-size: 16px; font-style: italic; color: var(--ink); margin-top: 4px; }
-.quote .who { font-style: normal; color: var(--mute); }
-.mot-proc { width: 400px; margin: 0; }
-.mot-right .mot-cfd { margin-top: 22px; width: 400px; }
-.mot-left .key { width: 510px; }
-.mot-cfd .row { font-size: 22px; color: var(--ink); margin-top: 2px; }
-.mot-cfd .big2 { font-size: 44px; font-weight: 300; }
+.mot-eq .katex { font-size: 1.0em; }
+.key { margin-top: 8px; }
 </style>
 
 <!--

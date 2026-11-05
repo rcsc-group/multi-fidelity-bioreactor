@@ -7,10 +7,10 @@
 <style scoped>
 .slnum-global {
   position: absolute;
-  right: 14px;
-  bottom: 8px;
-  font-size: 12px;
-  color: var(--mute, #7a8797);
+  right: 18px;
+  bottom: 10px;
+  font-size: 20px;
+  color: var(--ink, #1f2933);
   z-index: 50;
 }
 </style>
