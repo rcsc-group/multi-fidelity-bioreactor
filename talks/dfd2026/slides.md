@@ -159,6 +159,12 @@ $$
 \end{aligned}
 $$
 
+<div class="key">
+
+$\mathbf{u}$ velocity · $p$ pressure · $\rho$ density · $\mu$ viscosity · $\mathbf{D}$ rate of strain · $\mathbf{g}(t)$ gravity in the bag frame · $\gamma$ surface tension · $\kappa$ curvature · $\mathbf{n}$ interface normal · $\delta_s$ interface delta · $\boldsymbol\Omega$ rocking rate · $\mathbf{x}$ position
+
+</div>
+
 <div class="mdl-row">
 <div>
 
@@ -174,13 +180,25 @@ $$c_g = H\,c_\ell$$
 </div>
 </div>
 
+<div class="key mdl-key2">
+
+$\alpha$ liquid fraction · $c_g$, $c_\ell$ gas and liquid oxygen · $H$ Henry constant
+
+</div>
+
 <div class="mdl-grid">
-<img src="/basilisk.png" style="height:56px; margin-bottom:6px" />
+<img src="/basilisk.png" style="height:40px; margin-bottom:0" />
 <div>
 
 $${\color{#0072B2}h_8 = \tfrac{L}{2^{8}}} \quad {\color{#009E73}h_9 = \tfrac{L}{2^{9}}} \quad {\color{#CC79A7}h_{10} = \tfrac{L}{2^{10}}}$$
 
 <div class="cap">Basilisk, uniform grid, no refinement</div>
+
+<div class="key">
+
+$h_\ell$ cell size at level ℓ · $L$ tank length
+
+</div>
 
 </div>
 </div>
@@ -199,9 +217,17 @@ $${\color{#CC79A7}f_H(x)} = \rho\,{\color{#0072B2}f_L(x)} + b + \delta(x), \qqua
   <img v-else src="/mf_stage4.png" />
 </div>
 
+<div class="key mdl-key3">
+
+$f_H$ high-fidelity output · $f_L$ low-fidelity output · $\rho$ scale factor · $b$ offset · $\delta$ discrepancy · $s$, $k_\ell$ its amplitude and kernel · $\theta$ hyperparameters · $\sigma_n$ noise · $y_H$ high-fidelity data
+
+</div>
+
 <div v-click="3">
 
 $$\theta^\star = \arg\min_\theta\, \left[-\log p(\mathbf{y}_H \mid \theta)\right], \qquad \theta = (\rho,\, b,\, \ell,\, s,\, \sigma_n)$$
+
+<div class="cap">Yi, Cheng & Bessa 2026, Comput. Mech.</div>
 
 </div>
 </div>
@@ -212,13 +238,18 @@ $$\theta^\star = \arg\min_\theta\, \left[-\log p(\mathbf{y}_H \mid \theta)\right
 .mdl-left .katex-display, .mdl-right .katex-display { margin: 6px 0; }
 .mdl-left .katex-display .katex { font-size: 1.05em; }
 .mdl-left .katex-display { margin: 14px 0 !important; }
-.mdl-row { display: flex; justify-content: space-around; margin-top: 18px; text-align: center; }
-.mdl-grid { display: flex; flex-direction: column; align-items: center; gap: 0; margin-top: 22px; }
+.mdl-row { display: flex; justify-content: space-around; margin-top: 0; text-align: center; }
+.mdl-grid { display: flex; flex-direction: row; align-items: center; gap: 14px; margin-top: 0; }
+.mdl-grid > div { text-align: center; }
 .mdl-grid img { height: 130px; }
 .mdl-cost { margin-top: 4px; font-size: 17px; white-space: nowrap; color: var(--ink); }
-.mdl-fig img, .mdl-fig video { width: 450px; display: block; }
+.mdl-fig img, .mdl-fig video { width: 320px; display: block; }
+.mdl-left .mdl-grid .katex-display { margin: 0 !important; }
 .mdl-right .katex-display .katex { font-size: 0.86em; }
 .mdl-right .katex-display { overflow: visible; }
+.mdl-left .key { margin-top: 2px; }
+.mdl-key2 { margin: 2px 0 0; }
+.mdl-right .mdl-key3 { margin: 0 0 4px; }
 </style>
 
 <!--
