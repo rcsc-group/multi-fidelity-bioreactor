@@ -361,7 +361,7 @@ transition: fade
 
 <div class="s6-head">Extending the multi-fidelity algorithm to three levels</div>
 
-<div class="cap s6-cite">extends Yi, Cheng & Bessa 2026 (Comput. Mech.) to three levels</div>
+<div class="cap s6-cite">extends Yi, Cheng & Bessa 2026, Comput. Mech.</div>
 
 <div class="s6-eq" style="top:56px">
 
