@@ -132,6 +132,95 @@ Our goal: predict the flow over all operating conditions from cheap simulations,
 -->
 
 ---
+clicks: 4
+---
+
+<div class="slide-title">two-phase Navier–Stokes, in the frame of the bag</div>
+<div class="mdl-left">
+
+$$
+\begin{aligned}
+\underbrace{\rho\left(\partial_t\mathbf{u} + \mathbf{u}\cdot\nabla\mathbf{u}\right)}_{\text{inertia}}
+&= \underbrace{-\nabla p}_{\text{pressure}}
++ \underbrace{\nabla\cdot(2\mu\mathbf{D})}_{\text{viscosity}}
++ \underbrace{\rho\,\mathbf{g}(t)}_{\text{gravity}}
++ \underbrace{\gamma\kappa\,\mathbf{n}\,\delta_s}_{\text{surface tension}} \\
+&\quad \underbrace{{\color{#D55E00}-\,\rho\left(\dot{\boldsymbol\Omega}\times\mathbf{x} + 2\boldsymbol\Omega\times\mathbf{u} + \boldsymbol\Omega\times\boldsymbol\Omega\times\mathbf{x}\right)}}_{\color{#D55E00}\text{frame: angular acceleration, Coriolis, centrifugal}}
+\end{aligned}
+$$
+
+<div class="mdl-row">
+<div>
+
+$$\partial_t\alpha + \mathbf{u}\cdot\nabla\alpha = 0$$
+
+<div class="cap">volume of fluid</div>
+</div>
+<div>
+
+$$c_g = H\,c_\ell$$
+
+<div class="cap">Henry's law at the interface</div>
+</div>
+</div>
+
+<div class="mdl-grid">
+<img src="/basilisk.png" style="height:56px; margin-bottom:6px" />
+<div>
+
+$${\color{#0072B2}h_8 = \tfrac{L}{2^{8}}} \quad {\color{#009E73}h_9 = \tfrac{L}{2^{9}}} \quad {\color{#CC79A7}h_{10} = \tfrac{L}{2^{10}}}$$
+
+<div class="cap">Basilisk, uniform grid, no refinement</div>
+</div>
+</div>
+
+</div>
+
+<div class="mdl-right" v-click="1">
+<div class="col-label">multi-fidelity</div>
+
+$${\color{#CC79A7}f_H(x)} = \rho\,{\color{#0072B2}f_L(x)} + b + \delta(x), \qquad \delta \sim \mathcal{GP}(0,\, s^2 k_\ell) $$
+
+<div class="mdl-fig">
+  <img v-if="$clicks <= 1" src="/mf_stage1.png" />
+  <img v-else-if="$clicks == 2" src="/mf_stage2.png" />
+  <img v-else-if="$clicks == 3" src="/mf_stage3.png" />
+  <img v-else src="/mf_stage4.png" />
+</div>
+
+<div v-click="3">
+
+$$\theta^\star = \arg\min_\theta\, \left[-\log p(\mathbf{y}_H \mid \theta)\right], \qquad \theta = (\rho,\, b,\, \ell,\, s,\, \sigma_n)$$
+
+</div>
+</div>
+
+<style>
+.mdl-left { position: absolute; left: 16px; top: 62px; width: 540px; }
+.mdl-right { position: absolute; right: 10px; top: 62px; width: 450px; }
+.mdl-left .katex-display, .mdl-right .katex-display { margin: 6px 0; }
+.mdl-left .katex-display .katex { font-size: 1.05em; }
+.mdl-left .katex-display { margin: 14px 0 !important; }
+.mdl-row { display: flex; justify-content: space-around; margin-top: 18px; text-align: center; }
+.mdl-grid { display: flex; flex-direction: column; align-items: center; gap: 0; margin-top: 22px; }
+.mdl-grid img { height: 130px; }
+.mdl-cost { margin-top: 4px; font-size: 17px; white-space: nowrap; color: var(--ink); }
+.mdl-fig img, .mdl-fig video { width: 450px; display: block; }
+.mdl-right .katex-display .katex { font-size: 0.86em; }
+.mdl-right .katex-display { overflow: visible; }
+</style>
+
+<!--
+The solver is Basilisk. We solve the two-phase Navier–Stokes equations in the frame of the bag, so the walls do not move. The price is the frame terms, in orange: the angular acceleration, Coriolis and centrifugal terms. The volume fraction alpha marks the liquid. At the interface the oxygen follows Henry's law. The mesh is a uniform grid with no refinement. L8, L9 and L10 mean a cell size of L over 2 to the 8, 9 and 10.
+
+[click] Multi-fidelity. Blue dots: many cheap L8 runs. Pink dots: few expensive L10 runs. Measured cost. One L10 run costs about 26 core-hours per rocking cycle; one L8 run costs about 0.22. The cost slide uses about 700 core-hours per warm L10 run. So we can afford few L10 runs.
+
+[click] A kernel ridge regression fits the cheap data: f_L.
+
+[click] The expensive data are rho times f_L, plus b, plus a Gaussian process delta. We fit rho, b and the GP parameters by minimising the negative log-likelihood. Each pink curve is one step of the optimiser. The newest step is the strong line. On the right, the bold parameters are the ones that change at that step. At the end we get the prediction and its 95 % band. The data here are synthetic. Our data are in the results. We chain this: L8 to L9, then L9 to L10.
+-->
+
+---
 clicks: 3
 ---
 
@@ -220,96 +309,6 @@ Protocol: we settle the flow for 80 rocking cycles. Then we release the tracer i
 
 
 ---
-clicks: 4
----
-
-<div class="slide-title">two-phase Navier–Stokes, in the frame of the bag</div>
-<div class="mdl-left">
-
-$$
-\begin{aligned}
-\underbrace{\rho\left(\partial_t\mathbf{u} + \mathbf{u}\cdot\nabla\mathbf{u}\right)}_{\text{inertia}}
-&= \underbrace{-\nabla p}_{\text{pressure}}
-+ \underbrace{\nabla\cdot(2\mu\mathbf{D})}_{\text{viscosity}}
-+ \underbrace{\rho\,\mathbf{g}(t)}_{\text{gravity}}
-+ \underbrace{\gamma\kappa\,\mathbf{n}\,\delta_s}_{\text{surface tension}} \\
-&\quad \underbrace{{\color{#D55E00}-\,\rho\left(\dot{\boldsymbol\Omega}\times\mathbf{x} + 2\boldsymbol\Omega\times\mathbf{u} + \boldsymbol\Omega\times\boldsymbol\Omega\times\mathbf{x}\right)}}_{\color{#D55E00}\text{frame: angular acceleration, Coriolis, centrifugal}}
-\end{aligned}
-$$
-
-<div class="mdl-row">
-<div>
-
-$$\partial_t\alpha + \mathbf{u}\cdot\nabla\alpha = 0$$
-
-<div class="cap">volume of fluid</div>
-</div>
-<div>
-
-$$c_g = H\,c_\ell$$
-
-<div class="cap">Henry's law at the interface</div>
-</div>
-</div>
-
-<div class="mdl-grid">
-<img src="/basilisk.png" style="height:56px; margin-bottom:6px" />
-<div>
-
-$${\color{#0072B2}h_8 = \tfrac{L}{2^{8}}} \quad {\color{#009E73}h_9 = \tfrac{L}{2^{9}}} \quad {\color{#CC79A7}h_{10} = \tfrac{L}{2^{10}}}$$
-
-<div class="cap">Basilisk, uniform grid, no refinement</div>
-</div>
-</div>
-
-</div>
-
-<div class="mdl-right" v-click="1">
-<div class="col-label">multi-fidelity</div>
-
-$${\color{#CC79A7}f_H(x)} = \rho\,{\color{#0072B2}f_L(x)} + b + \delta(x), \qquad \delta \sim \mathcal{GP}(0,\, s^2 k_\ell) $$
-
-<div class="mdl-fig">
-  <img v-if="$clicks <= 1" src="/mf_stage1.png" />
-  <img v-else-if="$clicks == 2" src="/mf_stage2.png" />
-  <img v-else-if="$clicks == 3" src="/mf_stage3.png" />
-  <img v-else src="/mf_stage4.png" />
-</div>
-<div class="mdl-cost"><span style="color:#CC79A7">one L10 run ≈ <b>4,000</b> CPU-h</span> &nbsp;·&nbsp; <span style="color:#0072B2">one L8 run ≈ <b>60</b> CPU-h</span></div>
-
-<div v-click="3">
-
-$$\theta^\star = \arg\min_\theta\, \left[-\log p(\mathbf{y}_H \mid \theta)\right], \qquad \theta = (\rho,\, b,\, \ell,\, s,\, \sigma_n)$$
-
-</div>
-</div>
-
-<style>
-.mdl-left { position: absolute; left: 16px; top: 62px; width: 540px; }
-.mdl-right { position: absolute; right: 10px; top: 62px; width: 450px; }
-.mdl-left .katex-display, .mdl-right .katex-display { margin: 6px 0; }
-.mdl-left .katex-display .katex { font-size: 1.05em; }
-.mdl-left .katex-display { margin: 14px 0 !important; }
-.mdl-row { display: flex; justify-content: space-around; margin-top: 18px; text-align: center; }
-.mdl-grid { display: flex; flex-direction: column; align-items: center; gap: 0; margin-top: 22px; }
-.mdl-grid img { height: 130px; }
-.mdl-cost { margin-top: 4px; font-size: 17px; white-space: nowrap; color: var(--ink); }
-.mdl-fig img, .mdl-fig video { width: 450px; display: block; }
-.mdl-right .katex-display .katex { font-size: 0.86em; }
-.mdl-right .katex-display { overflow: visible; }
-</style>
-
-<!--
-The solver is Basilisk. We solve the two-phase Navier–Stokes equations in the frame of the bag, so the walls do not move. The price is the frame terms, in orange: the angular acceleration, Coriolis and centrifugal terms. The volume fraction alpha marks the liquid. At the interface the oxygen follows Henry's law. The mesh is a uniform grid with no refinement. L8, L9 and L10 mean a cell size of L over 2 to the 8, 9 and 10.
-
-[click] Multi-fidelity. Blue dots: many cheap L8 runs. Pink dots: few expensive L10 runs. One L10 run costs about 4,000 CPU hours (3,600 measured at 32.5 rpm; more at low rpm). One L8 run costs about 60. So we can afford few L10 runs.
-
-[click] A kernel ridge regression fits the cheap data: f_L.
-
-[click] The expensive data are rho times f_L, plus b, plus a Gaussian process delta. We fit rho, b and the GP parameters by minimising the negative log-likelihood. Each pink curve is one step of the optimiser. The newest step is the strong line. On the right, the bold parameters are the ones that change at that step. At the end we get the prediction and its 95 % band. The data here are synthetic. Our data are in the results. We chain this: L8 to L9, then L9 to L10.
--->
-
----
 transition: fade
 ---
 
@@ -362,34 +361,6 @@ Row 2 (L9): the chain trains on 16 L9 runs. Six are measured warm runs (x8_l9) a
 Row 3 (L10): 13 warm runs. Median 64.9 core-h per cycle, steady rate excluding the first two cycles. Each run simulates about 6 cycles (x8 about 12). The logs do not separate start-up from steady running, so the rate is not corrected for it.
 Bottom: the level below is the mean basis (beta, rho) of the level above, with a Gaussian process delta. The weights over the length scale lambda and noise eta are the prior times the marginal likelihood. Code: krr_lr_gpr_fullbayes.py lines 99 to 106 (basis), 126 (K_g), 137 (a_n, b_n), 140 (log marginal likelihood), 142 (weights), 169 to 171 (prediction). The level below enters as a plug-in mean (h3_band_check.py lines 23 to 27).
 Tanks: cropped to the liquid plus a thin gas band, equal aspect. One shared colour scale: the 10th and 90th percentiles of |u| over the pooled liquid cells of the three levels, each level weighted equally (vmin 0.0228, vmax 0.2026, nondimensional speed). Saturated liquid cells above vmax: L8 8.4 %, L9 12.0 %, L10 7.2 %. Below vmin: L8 16.6 %, L9 5.1 %, L10 9.5 %. The upper limit moved from the 85th to the 90th percentile because the 85th left 19 % of L9 saturated.
--->
-
----
-transition: fade
----
-
-<div class="s7-head">validation and held-out prediction</div>
-<img src="/s7a_kim.png" class="s7-a" />
-<img src="/s7b_predict.png" class="s7-b" />
-
-<style>
-.s7-head { position: absolute; left: 32px; top: 14px; font-size: 26px; line-height: 1.5; color: var(--ink); }
-.s7-a { position: absolute; left: 47px; top: 56px; width: 930px; }
-.s7-b { position: absolute; left: 47px; top: 318px; width: 930px; }
-</style>
-
-<!--
-Top: our L10 runs and the digitised Kim et al. 2025 curves at 7 degrees. Both statistics follow Kim. The 22.5 rpm bump is in both.
-
-At 25 rpm we have a second L10 run. It differs by about 8 % in the EDR. The plot shows the training run only.
-
-Bottom: the model predicts each run before it sees that run. The bars show the 95 % band.
-
-Left: the 13 training runs, each left out once.
-
-Right: six new runs at 5.5 degrees. Their predictions use no refit.
-
-The EDR is the maximum over time, as Kim defines it. At the new angle, the time mean is more accurate than this maximum.
 -->
 
 ---
@@ -461,3 +432,37 @@ The energy dissipation rows use the time mean as a stand-in. The 95th percentile
 ---
 
 <div class="slide-title">Questions?</div>
+
+---
+transition: fade
+---
+
+<div class="slide-title">backup</div>
+
+---
+transition: fade
+---
+
+<div class="s7-head">validation and held-out prediction</div>
+<img src="/s7a_kim.png" class="s7-a" />
+<img src="/s7b_predict.png" class="s7-b" />
+
+<style>
+.s7-head { position: absolute; left: 32px; top: 14px; font-size: 26px; line-height: 1.5; color: var(--ink); }
+.s7-a { position: absolute; left: 47px; top: 56px; width: 930px; }
+.s7-b { position: absolute; left: 47px; top: 318px; width: 930px; }
+</style>
+
+<!--
+Top: our L10 runs and the digitised Kim et al. 2025 curves at 7 degrees. Both statistics follow Kim. The 22.5 rpm bump is in both.
+
+At 25 rpm we have a second L10 run. It differs by about 8 % in the EDR. The plot shows the training run only.
+
+Bottom: the model predicts each run before it sees that run. The bars show the 95 % band.
+
+Left: the 13 training runs, each left out once.
+
+Right: six new runs at 5.5 degrees. Their predictions use no refit.
+
+The EDR is the maximum over time, as Kim defines it. At the new angle, the time mean is more accurate than this maximum.
+-->
