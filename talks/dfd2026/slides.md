@@ -147,9 +147,9 @@ Our goal: predict the flow over all operating conditions from cheap simulations,
 -->
 
 ---
-clicks: 6
+clicks: 7
 dragPos:
-  basilisk: 16,353,66,56
+  basilisk: 0,-156,0,0
 ---
 
 <div class="slide-title">two-phase Navier–Stokes, in the frame of the bag</div>
@@ -190,17 +190,17 @@ $$c_g = H\,c_\ell$$
 
 <div class="key slide-key">
 
-$\mathbf{u}$ velocity · $p$ pressure · $\rho$ density · $\mu$ viscosity · $\mathbf{D}$ rate of strain · $\mathbf{g}(t)$ gravity in the bag frame · $\gamma$ surface tension · $\kappa$ curvature · $\mathbf{n}$ interface normal · $\delta_s$ interface delta · $\boldsymbol\Omega$ rocking rate · $\mathbf{x}$ position · $\alpha$ liquid fraction · $c_g$, $c_\ell$ gas and liquid oxygen · $H$ Henry constant · $h_\ell$ cell size at level ℓ · $L$ tank length · $f_H$, $f_L$ high- and low-fidelity output · $\rho$ scale factor · $b$ offset · $\delta$ discrepancy · $s$, $k_\ell$ its amplitude and kernel · $\theta$ hyperparameters · $\sigma_n$ noise · $y_H$ high-fidelity data
+$\mathbf{u}$ velocity · $p$ pressure · $\rho$ density · $\mu$ viscosity · $\mathbf{D}$ rate of strain · $\mathbf{g}(t)$ gravity in the bag frame · $\gamma$ surface tension · $\kappa$ curvature · $\mathbf{n}$ interface normal · $\delta_s$ interface delta · $\boldsymbol\Omega$ rocking rate · $\mathbf{x}$ position · $\alpha$ liquid fraction · $c_g$, $c_\ell$ gas and liquid oxygen · $H$ Henry constant · $f_H$, $f_L$ high- and low-fidelity output · $r$ scale factor · $b$ offset · $\Delta$ discrepancy, a GP (Gaussian process) · $s$, $k_\lambda$ its amplitude and kernel · $\lambda$ length scale · $\theta$ hyperparameters · $\sigma_n$ noise · $y_H$ high-fidelity data
 
 </div>
 
-<div class="mdl-right" v-click="1">
+<div class="mdl-right" v-click="2">
 <div class="col-label">multi-fidelity
 <div class="cap">Yi, Cheng & Bessa 2026, Comput. Mech.</div></div>
 
 
 
-$${\color{#CC79A7}f_H(x)} = \rho\,{\color{#0072B2}f_L(x)} + b + \delta(x), \qquad \delta \sim \mathcal{GP}(0,\, s^2 k_\ell) $$
+$${\color{#CC79A7}f_H(x)} = r\,{\color{#0072B2}f_L(x)} + b + \Delta(x), \qquad \Delta \sim \mathcal{GP}(0,\, s^2 k_\lambda) $$
 
 <div class="mdl-fig">
   <img v-if="$clicks <= 1" src="/mf_stage1.png" />
@@ -213,7 +213,7 @@ $${\color{#CC79A7}f_H(x)} = \rho\,{\color{#0072B2}f_L(x)} + b + \delta(x), \qqua
 
 <div v-click="1">
 
-$$\theta^\star = \arg\min_\theta\, \left[-\log p(\mathbf{y}_H \mid \theta)\right], \qquad \theta = (\rho,\, b,\, \ell,\, s,\, \sigma_n)$$
+$$\theta^\star = \arg\min_\theta\, \left[-\log p(\mathbf{y}_H \mid \theta)\right], \qquad \theta = (r,\, b,\, \lambda,\, s,\, \sigma_n)$$
 
 
 </div>
@@ -244,9 +244,9 @@ The solver is Basilisk. We solve the two-phase Navier–Stokes equations in the 
 
 [click] A kernel ridge regression fits the cheap data: f_L.
 
-[click] The expensive data enter. We start from rho = 1 and b = 0: the pink curve is the cheap curve, moved by a Gaussian process delta. The values on the right are the hyperparameters at this step.
+[click] The expensive data enter. We start from r = 1 and b = 0: the pink curve is the cheap curve, moved by a Gaussian process delta. The values on the right are the hyperparameters at this step.
 
-[click] We fit rho, b and the GP parameters by minimising the negative log-likelihood. This is step 8 of the optimiser.
+[click] We fit r, b and the GP parameters by minimising the negative log-likelihood. This is step 8 of the optimiser.
 
 [click] Step 56. The curve moves toward the pink points.
 
@@ -257,7 +257,7 @@ The solver is Basilisk. We solve the two-phase Navier–Stokes equations in the 
 clicks: 3
 ---
 
-<div class="slide-title">what we measure</div>
+<div class="slide-title">Quantities of Interest</div>
 <div class="g4">
 <div class="cell">
 <div class="head"><span class="name">shear stress</span><div class="eq4">
@@ -345,7 +345,6 @@ Shear stress hurts the cells. The colour is the magnitude of the shear stress. W
 Protocol: we settle the flow for 80 rocking cycles. Then we release the tracer in the top half of the liquid and start the oxygen at the same time.
 -->
 
-
 ---
 transition: fade
 ---
@@ -365,26 +364,26 @@ $$f_8(x) = \mathrm{KRR}(\mathcal{D}_8)$$
 
 <div class="s6-eq" style="top:165px">
 
-$$f_9(x) = \beta_9 + \rho_9\, f_8(x) + \delta_9(x)$$
+$$f_9(x) = b_9 + r_9\, f_8(x) + \Delta_9(x)$$
 
 </div>
 <div class="s6-sub" style="top:236px">5.76 core-h/cycle</div>
 
 <div class="s6-eq" style="top:275px">
 
-$$f_{10}(x) = \beta_{10} + \rho_{10}\, f_9(x) + \delta_{10}(x)$$
+$$f_{10}(x) = b_{10} + r_{10}\, f_9(x) + \Delta_{10}(x)$$
 
 </div>
 <div class="s6-sub" style="top:346px">64.9 core-h/cycle</div>
 
 <div class="key s6-key">
 
-$f_\ell$ prediction at level $\ell$ · KRR kernel ridge regression · $\mathcal{D}_8$ L8 training data · $\beta_\ell$ offset · $\rho_\ell$ scale factor · $\delta_\ell$ GP correction · GP Gaussian process · $w_g$ weight of grid point $g$ · $\lambda_g$ kernel length scale · $\eta_g$ noise level · $y$ training values
+$f_\ell$ prediction at level $\ell$ · KRR kernel ridge regression · $\mathcal{D}_8$ L8 training data · $w_g$ weight of grid point $g$ in $(\lambda, \eta)$ · $\eta$ noise ratio
 
 </div>
 <div class="s6-strip">
 
-$$\delta_\ell \sim \mathcal{GP}, \qquad w_g \propto p(\lambda_g)\, p(\eta_g)\, p(y \mid \lambda_g, \eta_g)$$
+$$\Delta_\ell \sim \mathcal{GP}, \qquad w_g \propto p(\lambda_g)\, p(\eta_g)\, p(y \mid \lambda_g, \eta_g)$$
 
 </div>
 
@@ -404,7 +403,7 @@ Rows, top to bottom: L8, L9, L10. Each row has the equation for that level on th
 Row 1 (L8): f_8 is a kernel ridge fit on 40 cold L8 runs. Median cost 0.22 core-h per simulated cycle (IQR 0.16 to 0.26).
 Row 2 (L9): the chain trains on 16 L9 runs. Six are measured warm runs (x8_l9) at 5.76 core-h per cycle (wall-clock logs; 11.8 simulated cycles each). The other 10 are cold fig9 theta-7 runs, costed as warm estimates: 5.76 core-h per cycle times 11.8 cycles, about 68 core-h per point, 682 core-h in total. The 16-run figure includes these 10.
 Row 3 (L10): 13 warm runs. Median 64.9 core-h per cycle, steady rate excluding the first two cycles. Each run simulates about 6 cycles (x8 about 12). The logs do not separate start-up from steady running, so the rate is not corrected for it.
-Bottom: the level below is the mean basis (beta, rho) of the level above, with a Gaussian process delta. The weights over the length scale lambda and noise eta are the prior times the marginal likelihood. Code: krr_lr_gpr_fullbayes.py lines 99 to 106 (basis), 126 (K_g), 137 (a_n, b_n), 140 (log marginal likelihood), 142 (weights), 169 to 171 (prediction). The level below enters as a plug-in mean (h3_band_check.py lines 23 to 27).
+Bottom: the level below is the mean basis (b, r) of the level above, with a Gaussian process Delta. The weights over the length scale lambda and noise eta are the prior times the marginal likelihood. Code: krr_lr_gpr_fullbayes.py lines 99 to 106 (basis), 126 (K_g), 137 (a_n, b_n), 140 (log marginal likelihood), 142 (weights), 169 to 171 (prediction). The level below enters as a plug-in mean (h3_band_check.py lines 23 to 27).
 Tanks: cropped to the liquid plus a thin gas band, equal aspect. One shared colour scale: the 10th and 90th percentiles of |u| over the pooled liquid cells of the three levels, each level weighted equally (vmin 0.0228, vmax 0.2026, nondimensional speed). Saturated liquid cells above vmax: L8 8.4 %, L9 12.0 %, L10 7.2 %. Below vmin: L8 16.6 %, L9 5.1 %, L10 9.5 %. The upper limit moved from the 85th to the 90th percentile because the 85th left 19 % of L9 saturated.
 -->
 

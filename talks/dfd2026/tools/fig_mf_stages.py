@@ -105,7 +105,7 @@ def base(ax):
 
 
 PCOL = {"rho": "#D55E00", "b": "#117733", "l": "#882255", "s": "#8c6d31", "n": "#555555"}
-PTEX = {"rho": r"$\rho$", "b": r"$b$", "l": r"$\ell$", "s": r"$s$", "n": r"$\sigma_n$"}
+PTEX = {"rho": r"$r$", "b": r"$b$", "l": r"$\lambda$", "s": r"$s$", "n": r"$\sigma_n$"}
 
 
 def vals(th):
