@@ -1142,3 +1142,11 @@ dtmix_0.50 except at 37.5 rpm. kLa_1T_50 is not reliable at L8 near 22.5-27.5 rp
   Postprocess: the template ran postprocess in-job (results.json present for 23 c2d runs and 27 backfills). The backfill
   results.json edr_95 is None by the QSS rule (n_mix = 0); the fit uses edr95_late instead.
   Row-group check: edr/tau median ratio is 10.8 (c2d) and 13.7 (backfill): different, same order. Flagged, not corrected.
+- 2026-11-05 (LEAD A: L9 submitted, batch only). Rule in code (test first: tests/test_campaign_l9_submit.py, 3 tests; red
+  transcript /oscar/scratch/eaguerov/tmp/red_l9_submit.txt, green /oscar/scratch/eaguerov/tmp/green_l9_submit.txt). check_mpi_partition
+  refuses any partition other than batch; every MPI job in cmd_submit now uses batch (L8 included). L9 params: l9_warm_params (fidelity 9,
+  t_checkpoint = source last time, 12 warm-up + 40 post cycles, binary 2ef5b07, exact source forcing, _source_run); _err_file stamped
+  after sbatch. Walltime 12 h (measured warm L9 6-7 h for 52 cycles). Submitted through `campaign.py submit-stage L9 --go` (same flags checked
+  line by line: batch, exclude node2356, 32 ranks, 4G per rank, no mbessa): jobs 8388842 (16.35, 2.33), 8388843 (23.14, 2.13),
+  8388844 (34.38, 2.66), 8388845 (19.14, 2.89). Sources: c2d_l8_rpm16.35_th2.33, c2d_l8_rpm23.13_th2.13, c2d_l8_rpm34.38_th2.66,
+  c2d_l8_rpm19.14_th2.89 (same rpm and theta, same binary). The L9 submit transcript: /oscar/scratch/eaguerov/tmp/go_l9_transcript.txt.

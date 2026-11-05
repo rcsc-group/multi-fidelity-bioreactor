@@ -76,7 +76,7 @@ REPLAY_SPEEDUP = 2.4                              # replay tail vs coupled tail 
 
 STAGES = {
     "L8": dict(ranks=16, walltime="16:00:00", n_new=24, protocol="cold, 80-cycle spin-up, release, 150 cycles"),
-    "L9": dict(ranks=32, walltime="40:00:00", n_new=12, protocol="warm from L8 site (12 cycles), release, 40 cycles"),
+    "L9": dict(ranks=32, walltime="12:00:00", n_new=12, protocol="warm from L8 site (12 cycles), release, 40 cycles"),
     "L10": dict(ranks=32, walltime="47:00:00", n_new=8, protocol="warm from L8/L9 site (12 cycles), release, 40 cycles; chained"),
 }
 
@@ -246,21 +246,80 @@ def cmd_submit(args) -> None:
             raise SystemExit(f"{nxt} has no warm source per point: cold L9/L10 refused (lead rule 2026-11-04)")
         todo = [tuple(map(float, p)) for p in data["points"]]
     ranks = STAGES[level]["ranks"]
-    placement = assign_partitions([ranks] * len(todo), args.partition)
-    for (rpm, th), (part, acct) in zip(todo, placement):
+    # Lead rule (2026-11-05): every MPI job runs on batch only (no batch2: UCX wireup failure on gpu4001).
+    placement = assign_partitions([ranks] * len(todo), "batch")
+    srcs = data["sources"] if level != "L8" else [None] * len(todo)
+    for i, ((rpm, th), (part, acct)) in enumerate(zip(todo, placement)):
         rid = run_id(int(level[1:]), rpm, th, tag="c2d")
         argv, note = sbatch_argv(level, rid, rpm, th, partition=part, account=acct)
         print(" ".join(argv), "#", note, f"binary={BINARY_L8}")
         if args.go:
-            if level != "L8":
-                raise SystemExit("--go is wired for L8 only; L9/L10 need the warm builder reviewed first")
-            _real_submit_l8(rid, rpm, th, part, acct)
+            check_mpi_partition(part)
+            if level == "L8":
+                _real_submit_l8(rid, rpm, th, part, acct)
+            elif level == "L9":
+                _real_submit_warm(rid, rpm, th, srcs[i], part, acct)
+            else:
+                raise SystemExit("L10 warm submission is not wired yet")
     for p in PARTITIONS:
         n = sum(1 for q, _ in placement if q == p)
         print(f"# partition {p}: {n} jobs x {ranks} ranks = {n * ranks} cpu concurrently "
               f"(cap {PARTITIONS[p][1]} cpu, plan 2)")
     if not args.go:
         print(f"(dry run: {len(todo)} commands printed; nothing submitted)")
+
+
+N_WARM_L9, N_POST_L9 = 12, 40          # plan 1.3: warm-up cycles, then release, then post cycles
+
+
+def check_mpi_partition(partition: str) -> None:
+    """MPI jobs run on batch only. batch2 gave a UCX wireup failure on gpu4001 (job 8340753, 2026-11-05)."""
+    if partition != "batch":
+        raise ValueError(f"MPI jobs run on batch only (got {partition}: UCX wireup failure on gpu4001)")
+
+
+def l9_warm_params(src_params: dict, source_run: str, t_ck: float, rpm: float, theta: float, binary: str) -> dict:
+    """L9 warm start (plan 1.3, W9 type): the completed L8 source at the same (rpm, theta), fidelity 9, the same binary,
+    t_checkpoint = the source's last logged time, N_WARM_L9 warm-up cycles, release, N_POST_L9 post cycles."""
+    from scripts.postprocess import _t_scales
+    p = dict(src_params)
+    for k in ("_canonical_run_dir", "next_run_id", "_err_file", "_source_run"):
+        p.pop(k, None)
+    _, T = _t_scales(p)
+    p.update(run_id=run_id(9, rpm, theta, tag="c2d"), fidelity=9, t_checkpoint=float(t_ck),
+             n_mix_cycles=N_WARM_L9, t_end=round((N_WARM_L9 + N_POST_L9) * T, 6),
+             _binary=binary, _source_run=source_run)   # forcing kept exactly as the source (no rpm change)
+    if abs(float(src_params["omega_b"]) * 60.0 / (2 * math.pi) - rpm) > 0.01 or \
+            abs(float(src_params["theta_max"][0]) - theta) > 0.01:
+        raise ValueError("source forcing does not match (rpm, theta) of the point")
+    return p
+
+
+def _real_submit_warm(rid: str, rpm: float, th: float, source: str, partition: str, account: str) -> None:
+    """Real L9 warm submission. Refuses a non-batch partition and a cross-binary source. Stamps _err_file after sbatch
+    (the job's log name is only known then), since the settled gate reads it."""
+    from scripts import simulate
+    check_mpi_partition(partition)
+    require_warm_sources([[rpm, th]], {(rpm, th): source}, BINARY_L8, runs_root=ROOT / "runs")
+    sd = ROOT / "runs" / source
+    p = l9_warm_params(json.loads((sd / "params.json").read_text()), source, source_checkpoint_time(source),
+                       rpm, th, BINARY_L8)
+    if p["run_id"] != rid:
+        raise SystemExit(f"run id mismatch {p['run_id']} != {rid}")
+    jid = simulate.submit_slurm(p, project_root=ROOT, runs_root=ROOT / "runs",
+                                walltime=STAGES["L9"]["walltime"], ntasks=STAGES["L9"]["ranks"],
+                                template=ROOT / "config" / "slurm_mpi_template.sh",
+                                checkpoint=str((sd / "checkpoint.dump").resolve()),
+                                exclude=EXCLUDE, partition=partition, account=account, cpus=1, mem="4G")
+    rp = ROOT / "runs" / rid / "params.json"
+    stamped = warm_provenance(json.loads(rp.read_text()), source, ROOT / "logs" / f"slurm_{jid}.err")
+    rp.write_text(json.dumps(stamped, indent=1))
+    STATE.mkdir(parents=True, exist_ok=True)
+    with JOBS.open("a") as f:
+        f.write(json.dumps(dict(job=str(jid), level="L9", run=rid, rpm=rpm, theta=th, ranks=STAGES["L9"]["ranks"],
+                                partition=partition, account=account, source=source,
+                                t_checkpoint=p["t_checkpoint"], submitted=datetime.now(timezone.utc).isoformat())) + "\n")
+    print(f"    job={jid}")
 
 
 def _real_submit_l8(rid: str, rpm: float, th: float, partition: str, account: str) -> None:
