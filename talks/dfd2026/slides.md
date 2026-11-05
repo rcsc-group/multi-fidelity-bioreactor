@@ -31,7 +31,7 @@ clicks: 1
 </div>
 <div class="mot-vcol">
 <video src="/celltainer_rock.mp4" autoplay loop muted playsinline class="mot-vid"></video>
-<div class="cap">CELL-tainer Biotech BV, “CELL-tainer Corporate Movie”, youtube.com/watch?v=jC-eq9N16o4</div>
+<div class="cap">CELL-tainer Biotech BV, youtube.com/watch?v=jC-eq9N16o4</div>
 </div>
 </div>
 
@@ -84,10 +84,10 @@ $\tau$ shear stress · $\tau_{d}$ cell-damage threshold · $k_La$ oxygen transfe
 .mot-cfd { display: flex; align-items: baseline; gap: 10px; white-space: nowrap; }
 .mot-cfd .big2 { font-size: 36px; font-weight: 300; color: var(--ink); }
 .mot-cfd .u { font-size: 20px; color: var(--mute); }
-.mot-eq { margin-top: 6px; text-align: center; }
-.mot-eq .katex-display { margin: 4px 0 2px; }
+.mot-eq { margin-top: 13px; text-align: center; }
+.mot-eq .katex-display { margin: 0; }
 .mot-eq .katex { font-size: 1.0em; }
-.key { margin-top: 8px; }
+.key { margin-top: -12px; } /* trims the KaTeX display strut: visible gap to the equations is about 24 px */
 </style>
 
 <!--
@@ -520,7 +520,7 @@ transition: fade
 ---
 
 <div class="s7-head">validation and held-out prediction</div>
-<img src="/s7a_kim.png" class="s7-a" />
+<img src="/s7a_band.png" class="s7-a" />
 <img src="/s7b_predict.png" class="s7-b" />
 
 <style>
@@ -530,9 +530,7 @@ transition: fade
 </style>
 
 <!--
-Top: our L10 runs and the digitised Kim et al. 2025 curves at 7 degrees. Both statistics follow Kim. The 22.5 rpm bump is in both.
-
-At 25 rpm we have a second L10 run. It differs by about 8 % in the EDR. The plot shows the training run only.
+Top: our L10 runs and Kim et al. 2025 at 7 degrees. The pink band is plus and minus two sigma of the aleatoric spread. Each point has its own sigma, from its own run: we resample the run's rocking cycles and recompute the three-cycle statistic. Sigma is 0.1 to 2.6 percent; it is largest at 22.5 to 25 rpm. So the band is thin. Our shear amplitude is 10 to 15 percent above Kim from 25 to 32.5 rpm, far outside the band: this gap is systematic, not noise. The dissipation agrees with Kim. Limits: each sigma comes from four cycles only. At 22.5 rpm (both statistics) and 32.5 rpm (dissipation) the cycles still drift, so part of that sigma is transient, not noise.
 
 Bottom: the model predicts each run before it sees that run. The bars show the 95 % band.
 
