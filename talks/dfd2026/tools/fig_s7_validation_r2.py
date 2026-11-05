@@ -73,7 +73,6 @@ for ax, key, kv, ylab, ttl in [
     mk = "o" if key.startswith("tau") else "s"
     ax.plot(rk, kv, color=KIM, marker=mk, ms=6.5, mfc=KIM, mec=KIM, lw=1.3, ls="-")
     ax.plot(rpm_th7, [ours[r][key] for r in rpm_th7], color=PINK, marker=mk, ms=5.5, mfc=PINK, mec=PINK, lw=1.1, ls=":")
-    ax.plot([25.0], [second[key]], color=PINK, marker=mk, ms=6.5, mfc="white", mec=PINK, mew=1.4, ls="none")
     ax.set_yscale("log")
     ax.set_xlabel("rpm", fontsize=14)
     ax.set_ylabel(ylab, fontsize=14)
@@ -83,8 +82,8 @@ for ax, key, kv, ylab, ttl in [
     ax.set_xticks([20, 25, 30])
 handles = [Line2D([], [], color=KIM, marker="o", ms=6.5, mfc=KIM, lw=1.3, ls="-"),
            Line2D([], [], color=PINK, marker="o", ms=5.5, mfc=PINK, lw=1.1, ls=":"),
-           Line2D([], [], color=PINK, marker="o", ms=6.5, mfc="white", mew=1.4, ls="none")]
-figa.legend(handles, ["Kim et al. 2025 (digitised)", "ours, L10 (training run)", "ours, L10 (second run, 25 rpm)"],
+           ]
+figa.legend(handles, ["Kim et al. 2025 (digitised)", "ours, L10 (training run)"],
             loc="upper center", ncol=3, frameon=False, fontsize=13, bbox_to_anchor=(0.5, 1.01), handlelength=2.2, columnspacing=1.2)
 figa.subplots_adjust(left=0.135, right=0.985, top=0.66, bottom=0.2, wspace=0.42)
 figa.savefig(OUT / "s7a_kim.png", dpi=200)
