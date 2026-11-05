@@ -253,7 +253,7 @@ $$\theta^\star = \arg\min_\theta\, \left[-\log p(\mathbf{y}_H \mid \theta)\right
 <!--
 The solver is Basilisk. We solve the two-phase Navier–Stokes equations in the frame of the bag, so the walls do not move. The price is the frame terms, in orange: the angular acceleration, Coriolis and centrifugal terms. The volume fraction alpha marks the liquid. At the interface the oxygen follows Henry's law. The mesh is a uniform grid with no refinement. L8, L9 and L10 mean a cell size of L over 2 to the 8, 9 and 10.
 
-[click] Multi-fidelity. Blue dots: many cheap L8 runs. Pink dots: few expensive L10 runs. Measured cost. One L10 run costs about 26 core-hours per rocking cycle; one L8 run costs about 0.22. The cost slide uses about 700 core-hours per warm L10 run. So we can afford few L10 runs.
+[click] Multi-fidelity. Blue dots: many cheap L8 runs. Pink dots: few expensive L10 runs. Measured cost. One L10 run costs about 65 core-hours per rocking cycle (median of the 13 training runs); one L8 run costs about 0.22. The cost slide uses about 670 core-hours per warm L10 run. So we can afford few L10 runs.
 
 [click] A kernel ridge regression fits the cheap data: f_L.
 
@@ -361,35 +361,39 @@ transition: fade
 
 <div class="s6-head">Extending the multi-fidelity algorithm to three levels</div>
 
-<div class="s6-eq" style="top:70px">
+<div class="cap s6-cite">extends Yi, Cheng & Bessa 2026 (Comput. Mech.) to three levels</div>
+
+<div class="s6-eq" style="top:56px">
 
 $$f_8(x) = \mathrm{KRR}(\mathcal{D}_8)$$
 
 </div>
-<div class="s6-sub" style="top:150px">0.22 core-h/cycle</div>
+<div class="s6-sub" style="top:128px">0.22 core-h/cycle</div>
 
-<div class="s6-eq" style="top:215px">
+<div class="s6-eq" style="top:165px">
 
 $$f_9(x) = \beta_9 + \rho_9\, f_8(x) + \delta_9(x)$$
 
 </div>
-<div class="s6-sub" style="top:295px">5.76 core-h/cycle</div>
+<div class="s6-sub" style="top:236px">5.76 core-h/cycle</div>
 
-<div class="s6-eq" style="top:360px">
+<div class="s6-eq" style="top:275px">
 
 $$f_{10}(x) = \beta_{10} + \rho_{10}\, f_9(x) + \delta_{10}(x)$$
 
 </div>
-<div class="s6-sub" style="top:440px">64.9 core-h/cycle</div>
+<div class="s6-sub" style="top:346px">64.9 core-h/cycle</div>
 
-<div class="s6-key">f<sub>ℓ</sub> prediction at level ℓ · KRR kernel ridge regression · D<sub>8</sub> L8 training data · β<sub>ℓ</sub> offset · ρ<sub>ℓ</sub> scale factor · δ<sub>ℓ</sub> GP correction · GP Gaussian process · w<sub>g</sub> weight of grid point g · λ<sub>g</sub> kernel length scale · η<sub>g</sub> noise level · y training values</div>
+<div class="key s6-key">
+
+$f_\ell$ prediction at level $\ell$ · KRR kernel ridge regression · $\mathcal{D}_8$ L8 training data · $\beta_\ell$ offset · $\rho_\ell$ scale factor · $\delta_\ell$ GP correction · GP Gaussian process · $w_g$ weight of grid point $g$ · $\lambda_g$ kernel length scale · $\eta_g$ noise level · $y$ training values
+
+</div>
 <div class="s6-strip">
 
 $$\delta_\ell \sim \mathcal{GP}, \qquad w_g \propto p(\lambda_g)\, p(\eta_g)\, p(y \mid \lambda_g, \eta_g)$$
 
 </div>
-
-<div class="cap s6-cite">extends Yi, Cheng & Bessa 2026 (Comput. Mech.) to three levels</div>
 
 <style>
 .s6-head { position: absolute; left: 32px; top: 12px; font-size: 26px; line-height: 1.5; color: var(--ink); }
@@ -397,9 +401,9 @@ $$\delta_\ell \sim \mathcal{GP}, \qquad w_g \propto p(\lambda_g)\, p(\eta_g)\, p
 .s6-eq { position: absolute; left: 32px; width: 450px; font-size: 30px; color: var(--ink); text-align: left; }
 .s6-eq .katex { font-size: 1.0em; }
 .s6-sub { position: absolute; left: 32px; width: 450px; font-size: 22px; color: var(--ink); }
-.s6-key { position: absolute; left: 32px; width: 460px; top: 470px; font-size: 12px; line-height: 1.3; color: var(--mute); }
+.s6-key { position: absolute; left: 32px; width: 440px; top: 392px; }
 .s6-strip { position: absolute; left: 0; right: 0; top: 508px; text-align: center; font-size: 26px; color: var(--ink); }
-.s6-cite { position: absolute; left: 808px; width: 178px; top: 510px; }
+.s6-cite { position: absolute; left: 32px; top: 54px; }
 </style>
 
 <!--
