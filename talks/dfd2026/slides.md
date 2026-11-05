@@ -250,12 +250,12 @@ $$c_g = H\,c_\ell$$
 </div>
 
 <div class="mdl-grid">
-<img src="/quadtree.png" />
+<img src="/basilisk.png" style="height:56px; margin-bottom:6px" />
 <div>
 
 $${\color{#0072B2}h_8 = \tfrac{L}{2^{8}}} \quad {\color{#009E73}h_9 = \tfrac{L}{2^{9}}} \quad {\color{#CC79A7}h_{10} = \tfrac{L}{2^{10}}}$$
 
-<div class="cap">Basilisk, adaptive quadtree</div>
+<div class="cap">Basilisk, uniform grid, no refinement</div>
 </div>
 </div>
 
@@ -297,7 +297,7 @@ $$\theta^\star = \arg\min_\theta\, \left[-\log p(\mathbf{y}_H \mid \theta)\right
 </style>
 
 <!--
-The solver is Basilisk. We solve the two-phase Navier–Stokes equations in the frame of the bag, so the walls do not move. The price is the frame terms, in orange: the angular acceleration, Coriolis and centrifugal terms. The volume fraction alpha marks the liquid. At the interface the oxygen follows Henry's law. The mesh is a quadtree. L8, L9 and L10 mean a cell size of L over 2 to the 8, 9 and 10.
+The solver is Basilisk. We solve the two-phase Navier–Stokes equations in the frame of the bag, so the walls do not move. The price is the frame terms, in orange: the angular acceleration, Coriolis and centrifugal terms. The volume fraction alpha marks the liquid. At the interface the oxygen follows Henry's law. The mesh is a uniform grid with no refinement. L8, L9 and L10 mean a cell size of L over 2 to the 8, 9 and 10.
 
 [click] Multi-fidelity. Blue dots: many cheap L8 runs. Pink dots: few expensive L10 runs. One L10 run costs about 4,000 CPU hours (3,600 measured at 32.5 rpm; more at low rpm). One L8 run costs about 60. So we can afford few L10 runs.
 
