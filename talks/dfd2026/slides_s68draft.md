@@ -27,9 +27,9 @@ clicks: 2
 <div class="cap">(Foodingredients 2021; Post et al. 2020; Guan et al. 2021)</div>
 
 <div class="mot-cost">
-<div><span class="big">$25–35</span><span class="u">/kg</span><div class="cap">stirred tanks, 42–211 m³<br/>Negulescu 2023</div></div>
+<div><span class="big">$25–35</span><span class="u">/kg</span><div class="cap">Negulescu 2023</div></div>
 <div class="arrow">→</div>
-<div><span class="big">$9</span><span class="u">/kg</span><div class="cap">to compete with beef<br/>Negulescu 2023</div></div>
+<div><span class="big">$9</span><span class="u">/kg</span></div>
 </div>
 
 <div class="mot-eq">
