@@ -1150,3 +1150,27 @@ dtmix_0.50 except at 37.5 rpm. kLa_1T_50 is not reliable at L8 near 22.5-27.5 rp
   line by line: batch, exclude node2356, 32 ranks, 4G per rank, no mbessa): jobs 8388842 (16.35, 2.33), 8388843 (23.14, 2.13),
   8388844 (34.38, 2.66), 8388845 (19.14, 2.89). Sources: c2d_l8_rpm16.35_th2.33, c2d_l8_rpm23.13_th2.13, c2d_l8_rpm34.38_th2.66,
   c2d_l8_rpm19.14_th2.89 (same rpm and theta, same binary). The L9 submit transcript: /oscar/scratch/eaguerov/tmp/go_l9_transcript.txt.
+- 2026-11-05 (LEAD B: uncertainty growth diagnosis, job 8388849, scripts/campaign2d/diag_uncertainty.py, log logs/c2d_diag_unc_8388849.out).
+  Data as fitted: database rows only (old) vs database plus 23 c2d runs (new). No fit was changed.
+  H1 binary offset (c2d 2ef5b07 minus database f1c11e0, nearest L8 neighbours within d theta 0.3, d rpm 2, ln units):
+     tau_95: n=2, mean -0.088 (5.2 floors), too few pairs to decide.
+     kLa_1T_10: n=9, mean -0.102 (1.07 floors), 44 % positive: no systematic sign.
+     VERDICT: NOT SUPPORTED for kLa_1T_10; tau_95 underpowered (n=2).
+  H2 group offset in EDR (ln edr = a + b ln tau + g*c2d, n=50: 23 c2d, 27 backfill): b = 1.93, g = +0.067 (se 0.028).
+     |g| = 0.67 of the floor 0.10. The 27 % edr/tau ratio gap is mostly explained by tau (b = 1.93).
+     VERDICT: REJECTED as a cause (below the floor, although 2.4 se).
+  H3 hyperparameters (old -> new):
+     tau_95 LF lengthscales (19.6, 0.52) -> (1.35, 3.07), LF noise 0.017 both (floor), HF length mean 0.79 -> 0.75, HF noise
+     ratio mean 0.252 -> 0.255 (the prior cap is 0.3: the posterior is at the cap in BOTH fits), HF rho (0.28, 1.41) -> (0.33, 1.66).
+     kLa_1T_10 LF lengthscales (30.3, 7.8) -> (24.0, 4.4), HF noise ratio mean 0.472 -> 0.484 (small).
+     VERDICT: SUPPORTED for tau_95 (LF lengthscale changed strongly, propagates into HF through rho); REJECTED for kLa_1T_10 (1.7 %
+     change in sigma). Caveat: the tau HF noise posterior sits at the prior cap 0.3, which bounds the sigma from below.
+  H4 curvature / extrapolation at theta < 3 (old model error on the 4 c2d runs at theta < 3, ln(pred/y)):
+     tau_95: mean +0.82, rms 0.83 (48.7 floors); the old model predicts 2.3x the c2d values.
+     kLa_1T_10: mean -0.76, rms 0.78 (8.2 floors); the old model predicts 0.47x the c2d values.
+     VERDICT: SUPPORTED. The database has no L8 run below theta 4, so the old model extrapolated there. Its sigma at theta 2 was
+     over-confident: the old max (0.645 at (15, 2)) sat exactly where the model was wrong by a factor of 2.
+  CONCLUSION: the growth of the tau_95 and kLa_1T_10 maxima is the correction of an over-confident extrapolation at theta < 3
+  (H4, and H3 for tau), not a binary or group effect (H1, H2 rejected). More data raised sigma because the old model was wrong.
+  Open: the tau HF noise ratio sits at the prior cap 0.3 in both fits. Decide whether the cap is binding before the next fit.
+  EDR: the old 0.551 used the edr_mean stand-in and is not comparable; the new edr_95 is 2.276 (see the fit entry above).
