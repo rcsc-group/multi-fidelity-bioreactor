@@ -19,7 +19,7 @@ transition: fade
 
 ---
 transition: fade
-clicks: 2
+clicks: 1
 ---
 
 <div class="slide-title">cultivated meat needs large, gentle bioreactors</div>
@@ -50,21 +50,22 @@ $$
 $\tau$ shear stress · $\tau_{d}$ cell-damage threshold · $k_La$ oxygen transfer coefficient · $C$ dissolved oxygen · $C_{\text{sat}}$ saturation value · OUR oxygen uptake rate of the cells · $t_{\text{mix}}$ mixing time
 
 </div>
+</div>
 
+<div class="mot-right">
+<video src="/celltainer_rock.mp4" autoplay loop muted playsinline class="mot-vid"></video>
+<div class="cap">CELL-tainer Biotech BV, “CELL-tainer Corporate Movie”, youtube.com/watch?v=jC-eq9N16o4</div>
 <div v-click="1" class="mot-cfd">
 <div class="name">one resolved condition costs</div>
 <div class="row"><span class="big2">≈ 4,000</span> CPU-h</div>
 </div>
 </div>
 
-<div class="mot-right" v-click="2">
-<img src="/lit_gap.png" />
-</div>
-
 <style>
-.mot-left { position: absolute; left: 18px; top: 62px; width: 540px; }
-.mot-right { position: absolute; right: 8px; top: 30px; width: 470px; }
-.mot-right img { width: 470px; }
+.mot-left { position: absolute; left: 18px; top: 50px; width: 540px; }
+.mot-right { position: absolute; right: 8px; top: 60px; width: 470px; }
+.mot-vid { display: block; width: 470px; margin: 0; }
+.mot-right .cap { margin-top: 6px; }
 .mot-cost { display: flex; align-items: center; gap: 22px; margin: 2px 0 0 4px; }
 .mot-cost .big { font-size: 44px; font-weight: 300; color: var(--ink); }
 .mot-cost .u { font-size: 20px; color: var(--mute); }
@@ -73,8 +74,9 @@ $\tau$ shear stress · $\tau_{d}$ cell-damage threshold · $k_La$ oxygen transfe
 .mot-eq .katex { font-size: 1.12em; }
 .quote { font-size: 16px; font-style: italic; color: var(--ink); margin-top: 4px; }
 .quote .who { font-style: normal; color: var(--mute); }
-.mot-proc { width: 470px; margin: 0; }
-.mot-cfd { position: absolute; left: 600px; top: 410px; width: 400px; }
+.mot-proc { width: 400px; margin: 0; }
+.mot-right .mot-cfd { margin-top: 22px; width: 400px; }
+.mot-left .key { width: 510px; }
 .mot-cfd .row { font-size: 22px; color: var(--ink); margin-top: 2px; }
 .mot-cfd .big2 { font-size: 44px; font-weight: 300; }
 </style>
@@ -87,6 +89,8 @@ The bioreactor must do three things at once. The shear stress must stay below th
 [click] Simulations can map this trade-off before experiments. But one resolved condition costs about 4,000 CPU hours at our finest grid. Zhan 2019 say this directly for their wave bag: "highly time consuming and not practically feasible for a large number of operating conditions".
 
 [click] What earlier work did. Zhan, Seidel and Kim simulate rocking bags with a resolved interface, each on one grid, with no error bars. Cantarero-Rivera corrects a coarse mesh with a neural network, in a spinner flask, again with no error bars, and it does not generalise across speeds. Kiviat computes all three quantities, but in stirred tanks with RANS, which they say under-predicts shear. Martens uses a multi-fidelity Gaussian process, but the fidelities are culture scales from an ODE model, not grid levels. We do all five: rocking bag, resolved two-phase flow, all three quantities, they correct one field with two meshes at one training speed, without error bars; we use three grid levels across the operating range, with error bars.
+
+The video shows a rocking bioreactor: a single-use bag on a platform that rocks by a few degrees. The free surface makes waves. The waves mix the medium and bring oxygen in, with no impeller and no bubbles. Mosa Meat uses this CELL-tainer system. Note: the CELL-tainer also translates; our model rocks only.
 -->
 
 ---
@@ -450,6 +454,17 @@ transition: fade
 ---
 
 <div class="slide-title">backup</div>
+
+---
+transition: fade
+---
+
+<div class="slide-title">earlier work, by feature</div>
+<img src="/lit_gap.png" class="lit-bk" />
+
+<style>
+.lit-bk { position: absolute; left: 60px; top: 50px; height: 470px; margin-top: 0 !important; }
+</style>
 
 ---
 transition: fade
