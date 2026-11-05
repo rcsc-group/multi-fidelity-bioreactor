@@ -19,7 +19,6 @@ transition: fade
 
 ---
 transition: fade
-clicks: 1
 ---
 
 <div class="slide-title">cultivated meat needs large, gentle bioreactors</div>
@@ -29,7 +28,7 @@ clicks: 1
 <img src="/cm_process.png" class="mot-proc" />
 <div class="cap">(Foodingredients 2021; Post et al. 2020; Guan et al. 2021)</div>
 </div>
-<div class="mot-vcol">
+<div class="mot-vcol" v-click>
 <video src="/celltainer_rock.mp4" autoplay loop muted playsinline class="mot-vid"></video>
 <div class="cap">CELL-tainer Biotech BV, youtube.com/watch?v=jC-eq9N16o4</div>
 </div>
@@ -42,13 +41,13 @@ clicks: 1
 <span class="big">$9</span><span class="u">/kg</span>
 <span class="cap">Negulescu 2023</span>
 </div>
-<div class="mot-cfd" v-click="1">
+<div class="mot-cfd" v-click>
 <span class="name">one resolved condition costs</span>
 <span class="big2">≈ 4,000</span><span class="u">CPU-h</span>
 </div>
 </div>
 
-<div class="mot-eq">
+<div class="mot-eq" v-click>
 
 $$
 \underbrace{\tau < \tau_{\text{damage}}}_{\text{1–100 Pa}}
@@ -58,12 +57,11 @@ $$
 \underbrace{t_{\text{mix}} < 1/k_La}_{\text{mixing}}
 $$
 
-</div>
-
 <div class="key">
 
 $\tau$ shear stress · $\tau_{d}$ cell-damage threshold · $k_La$ oxygen transfer coefficient · $C$ dissolved oxygen · $C_{\text{sat}}$ saturation value · OUR oxygen uptake rate of the cells · $t_{\text{mix}}$ mixing time
 
+</div>
 </div>
 </div>
 
@@ -150,6 +148,8 @@ Our goal: predict the flow over all operating conditions from cheap simulations,
 
 ---
 clicks: 6
+dragPos:
+  basilisk: 16,353,66,56
 ---
 
 <div class="slide-title">two-phase Navier–Stokes, in the frame of the bag</div>
@@ -166,7 +166,7 @@ $$
 \end{aligned}
 $$
 
-<div class="mdl-row">
+<div class="mdl-row" v-click>
 <div>
 
 $$\partial_t\alpha + \mathbf{u}\cdot\nabla\alpha = 0$$
@@ -182,14 +182,8 @@ $$c_g = H\,c_\ell$$
 </div>
 
 <div class="mdl-grid">
-<img src="/basilisk.png" style="height:56px; margin-bottom:0" />
-<div>
+<img v-drag="'basilisk'" src="/basilisk.png" style="height:56px; margin-bottom:0" />
 
-$${\color{#0072B2}h_8 = \tfrac{L}{2^{8}}} \quad {\color{#009E73}h_9 = \tfrac{L}{2^{9}}} \quad {\color{#CC79A7}h_{10} = \tfrac{L}{2^{10}}}$$
-
-<div class="cap">Basilisk, uniform grid, no refinement</div>
-
-</div>
 </div>
 
 </div>
