@@ -81,7 +81,7 @@ The bioreactor must do three things at once. The shear stress must stay below th
 
 [click] Simulations can map this trade-off before experiments. But one resolved condition costs about 4,000 CPU hours at our finest grid. Zhan 2019 say this directly for their wave bag: "highly time consuming and not practically feasible for a large number of operating conditions".
 
-[click] What earlier work did. Zhan, Seidel and Kim simulate rocking bags with a resolved interface, each on one grid, with no error bars. Cantarero-Rivera corrects a coarse mesh with a neural network, in a spinner flask, again with no error bars, and it does not generalise across speeds. Kiviat computes all three quantities, but in stirred tanks with RANS, which they say under-predicts shear. Martens uses a multi-fidelity Gaussian process, but the fidelities are culture scales from an ODE model, not grid levels. We do all five: rocking bag, resolved two-phase flow, all three quantities, grid levels used as data, and error bars.
+[click] What earlier work did. Zhan, Seidel and Kim simulate rocking bags with a resolved interface, each on one grid, with no error bars. Cantarero-Rivera corrects a coarse mesh with a neural network, in a spinner flask, again with no error bars, and it does not generalise across speeds. Kiviat computes all three quantities, but in stirred tanks with RANS, which they say under-predicts shear. Martens uses a multi-fidelity Gaussian process, but the fidelities are culture scales from an ODE model, not grid levels. We do all five: rocking bag, resolved two-phase flow, all three quantities, they correct one field with two meshes at one training speed, without error bars; we use three grid levels across the operating range, with error bars.
 -->
 
 ---
@@ -97,8 +97,8 @@ transition: fade
 <img src="/s3_zhan.png" class="s3-img" style="left:628px; top:10px; width:380px; height:180px" />
 <div class="s3-lab" style="left:628px; top:200px; width:380px"><div class="au">Zhan et al. 2019</div><div class="ct">first CFD of a wave bag</div></div>
 
-<img src="/s3_cantarero.png" class="s3-img" style="left:120px; top:250px; width:237px; height:215px" />
-<div class="s3-lab" style="left:120px; top:471px; width:300px"><div class="au">Cantarero-Rivera et al. 2024</div><div class="ct">coarse-to-fine correction</div></div>
+<img src="/s3_cantarero.png" class="s3-img" style="left:40px; top:290px; width:306px; height:180px" />
+<div class="s3-lab" style="left:40px; top:478px; width:360px"><div class="au">Cantarero-Rivera et al. 2024</div><div class="ct">coarse-to-fine correction</div></div>
 
 <img src="/s3_martens.png" class="s3-img" style="left:440px; top:280px; width:530px; height:153px" />
 <div class="s3-lab" style="left:440px; top:471px; width:530px"><div class="au">Martens et al. 2025</div><div class="ct">multi-fidelity GP, bioprocess</div></div>
@@ -122,7 +122,7 @@ Seidel 2022 modelled the CELL-tainer, a bag with two degrees of motion. They tra
 
 Kim 2025 is our solver base. It is a two-phase Basilisk solver in the frame of the bag, so the walls stay fixed. It transports oxygen across the interface. The kLa comes from the full oxygen field (pages 3 to 6, 9).
 
-Cantarero-Rivera 2024 corrects a coarse CFD mesh of a spinner flask with a neural network. The network learns the error at 90 rpm. It lowers the velocity error by about 20 percent across speeds (page 140). CFD takes 2.5 hours. The coarse mesh and the network take 15 minutes (page 141).
+Cantarero-Rivera 2024 corrects a coarse CFD mesh of a spinner flask with a neural network. The model uses a steady RANS k-epsilon spinner flask, with two meshes of about 44,500 and 1.03 million elements. It is trained at one speed, 90 rpm. It lowers the velocity error by about 20 percent (abstract, page 140). CFD takes 2.5 hours; the coarse mesh and the network take 15 minutes (page 141). At 30 rpm the correction makes the error worse, by 99 percent in RMSE (Table 5). There are no error bars.
 
 Martens 2025 uses a multi-fidelity Gaussian process for batch Bayesian optimization. The fidelities are three reactor scales of one CHO model. The study is simulation only. The cost cut of 93 percent is from one run against industrial design of experiments (section 3.3).
 
