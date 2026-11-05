@@ -1,0 +1,221 @@
+{
+ "runs": {
+  "l10_fig13a_xlevel_rpm17.5": {
+   "rpm": 17.5,
+   "tau_amp_t": 0.000807681060900829,
+   "edr_max_t": 0.04524499475825507,
+   "window": [
+    43.0,
+    46.0
+   ],
+   "n_win": 1,
+   "sd_ln_tau": null,
+   "sd_ln_edr": null
+  },
+  "l10_fig13a_xlevel_rpm20": {
+   "rpm": 20.0,
+   "tau_amp_t": 0.0009213494994229339,
+   "edr_max_t": 0.06400640873136507,
+   "window": [
+    69.0,
+    72.0
+   ],
+   "n_win": 1,
+   "sd_ln_tau": null,
+   "sd_ln_edr": null
+  },
+  "l10_fig13a_xlevel_rpm22.5": {
+   "rpm": 22.5,
+   "tau_amp_t": 0.002110336919965051,
+   "edr_max_t": 0.3106396804891633,
+   "window": [
+    95.0,
+    98.0
+   ],
+   "n_win": 1,
+   "sd_ln_tau": null,
+   "sd_ln_edr": null
+  },
+  "l10_fig13a_xlevel_rpm25": {
+   "rpm": 25.0,
+   "tau_amp_t": 0.0013890820027168387,
+   "edr_max_t": 0.14285987333709574,
+   "window": [
+    121.0,
+    124.0
+   ],
+   "n_win": 1,
+   "sd_ln_tau": null,
+   "sd_ln_edr": null
+  },
+  "l10_fig13a_xlevel_rpm27.5": {
+   "rpm": 27.5,
+   "tau_amp_t": 0.001507997830438861,
+   "edr_max_t": 0.17487071412692876,
+   "window": [
+    147.0,
+    150.0
+   ],
+   "n_win": 1,
+   "sd_ln_tau": null,
+   "sd_ln_edr": null
+  },
+  "l10_fig13a_xlevel_rpm30": {
+   "rpm": 30.0,
+   "tau_amp_t": 0.0017237568162110945,
+   "edr_max_t": 0.2381236204802004,
+   "window": [
+    173.0,
+    176.0
+   ],
+   "n_win": 1,
+   "sd_ln_tau": null,
+   "sd_ln_edr": null
+  },
+  "l10_fig13a_xlevel_rpm32.5": {
+   "rpm": 32.5,
+   "tau_amp_t": 0.001929151757558437,
+   "edr_max_t": 0.30924606751651534,
+   "window": [
+    199.0,
+    202.0
+   ],
+   "n_win": 1,
+   "sd_ln_tau": null,
+   "sd_ln_edr": null
+  },
+  "l10_fig13a_xlevel_rpm35": {
+   "rpm": 35.0,
+   "tau_amp_t": 0.002303499819893953,
+   "edr_max_t": 0.4908986747396072,
+   "window": [
+    225.0,
+    228.0
+   ],
+   "n_win": 1,
+   "sd_ln_tau": null,
+   "sd_ln_edr": null
+  },
+  "l10_fig13a_xlevel_rpm37.5": {
+   "rpm": 37.5,
+   "tau_amp_t": 0.003084758489862427,
+   "edr_max_t": 0.8517953863284567,
+   "window": [
+    251.0,
+    254.0
+   ],
+   "n_win": 1,
+   "sd_ln_tau": null,
+   "sd_ln_edr": null
+  },
+  "x8_l10_rpm17.5_th7": {
+   "rpm": 17.5,
+   "tau_amp_t": 0.0008083007715599411,
+   "edr_max_t": 0.045767811295762933,
+   "window": [
+    232.0,
+    235.0
+   ],
+   "n_win": 1,
+   "sd_ln_tau": null,
+   "sd_ln_edr": null
+  },
+  "x8_l10_rpm22.4_th7": {
+   "rpm": 22.4,
+   "tau_amp_t": 0.0018377126683722764,
+   "edr_max_t": 0.2689783698169101,
+   "window": [
+    238.0,
+    241.0
+   ],
+   "n_win": 3,
+   "sd_ln_tau": 0.03406976335251088,
+   "sd_ln_edr": 0.05090761315094006
+  },
+  "x8_l10_rpm22.6_th7": {
+   "rpm": 22.6,
+   "tau_amp_t": 0.0021469380208520355,
+   "edr_max_t": 0.35810791749516113,
+   "window": [
+    238.0,
+    241.0
+   ],
+   "n_win": 3,
+   "sd_ln_tau": 0.01612356307730161,
+   "sd_ln_edr": 0.025538033149699203
+  },
+  "x8_l10_rpm25_th7": {
+   "rpm": 25.0,
+   "tau_amp_t": 0.0013327441243069214,
+   "edr_max_t": 0.13243321728556018,
+   "window": [
+    232.0,
+    235.0
+   ],
+   "n_win": 1,
+   "sd_ln_tau": null,
+   "sd_ln_edr": null
+  },
+  "x8_l10_rpm29.9_th7": {
+   "rpm": 29.9,
+   "tau_amp_t": 0.0017040318087081488,
+   "edr_max_t": 0.23425676382078722,
+   "window": [
+    238.0,
+    241.0
+   ],
+   "n_win": 3,
+   "sd_ln_tau": 0.0005288067448166436,
+   "sd_ln_edr": 0.008011251859559887
+  },
+  "x8_l10_rpm30.1_th7": {
+   "rpm": 30.1,
+   "tau_amp_t": 0.001722376199606467,
+   "edr_max_t": 0.23962720647529615,
+   "window": [
+    238.0,
+    241.0
+   ],
+   "n_win": 3,
+   "sd_ln_tau": 0.0010671335932574066,
+   "sd_ln_edr": 0.007245332939447498
+  },
+  "x8_l10_rpm32.5_th7": {
+   "rpm": 32.5,
+   "tau_amp_t": 0.0019299262157804174,
+   "edr_max_t": 0.30344969243013287,
+   "window": [
+    232.0,
+    235.0
+   ],
+   "n_win": 1,
+   "sd_ln_tau": null,
+   "sd_ln_edr": null
+  }
+ },
+ "pairs": [
+  {
+   "a": "l10_fig13a_xlevel_rpm17.5",
+   "b": "x8_l10_rpm17.5_th7",
+   "rpm": 17.5,
+   "dln_tau": -0.0007669772976932857,
+   "dln_edr": -0.011488982946516759
+  },
+  {
+   "a": "l10_fig13a_xlevel_rpm25",
+   "b": "x8_l10_rpm25_th7",
+   "rpm": 25.0,
+   "dln_tau": 0.041403031250322755,
+   "dln_edr": 0.07578574522491877
+  },
+  {
+   "a": "l10_fig13a_xlevel_rpm32.5",
+   "b": "x8_l10_rpm32.5_th7",
+   "rpm": 32.5,
+   "dln_tau": -0.0004013695694815183,
+   "dln_edr": 0.018921456291568137
+  }
+ ],
+ "skip_cyc": 2,
+ "n_cyc": 3
+}
