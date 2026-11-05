@@ -84,15 +84,26 @@ transition: fade
 </style>
 
 <!--
-x axis: training cost in core-hours, log scale. Costs use one rule: each run is charged its own cost plus its warm-start source when the source is not already in the method's set.
-- Approved chain: base 3,170 core-h, then 667 core-h per L10 run. The 10 estimated warm L9 runs are included (5.76 core-h per cycle times 11.8 cycles, 68 core-h per run).
-- Cheap chain variants (10 or 20 L8 runs, 6 warm L9 runs): base 918 to 2,488 core-h, then 703 core-h per L10 run.
-- H1: 2,043 core-h for the 40 L8 runs, then 703 core-h per L10 run.
-- L10 GP only: 726 core-h per L10 run, including sources.
+x axis: training cost in core-hours, log scale.
+Plotted: the full-set chain only (solid line, filled markers), with all runs warm-started. Its cost is 40 L8 runs and 16 L9 runs (10 estimated warm, 6 measured warm) as the base, 3,170 core-h, then 667 core-h per L10 run. Each point is one number of L10 runs, n = 3, 4, 6, 8, 10, 12.
+Also shown: H1 (2,043 core-h base, then 703 per L10 run) and L10 GP only (726 core-h per run).
 
-Crossings at 10 % tau_95 (relative RMS): the chain envelope reaches 10 % at 3,028 core-h (cheap variant, 3 L10 runs). The approved chain reaches it at 5,170 core-h. H1 reaches it at 10,484 core-h (12 runs). L10 GP only does not reach it by 12 runs.
-Crossings at 20 % tau_95: the chain envelope at 3,028 core-h. H1 at 4,153 core-h. L10 GP only at 7,262 core-h.
-EDR: only the approved chain reaches 10 % and 20 %, at 5,170 core-h. The cheap variants fail on EDR (errors 24 to 1,080 %), so they are kept for tau_95 only.
+Variant table (cheap chain subsets, not plotted). Errors are relative RMS, held-out. Errors at n = 3, 4, 6, 8, 10, 12 L10 runs.
+| variant | n_L8 | n_L9 | base core-h | tau_95 error (%) | EDR error (%) |
+|---|---|---|---|---|---|
+| full set | 40 | 16 | 3,170 | 5.4, 5.8, 5.4, 5.2, 4.3, 2.3 | 8.7, 6.8, 8.9, 8.1, 6.6, 5.3 |
+| warm9 | 40 | 6 | 2,488 | 9.0, 9.7, 6.4, 5.7, 5.1, 2.7 | 23.9, 43.5, 33.1, 23.9, 17.8, 11.9 |
+| warm9, 20 L8 | 20 | 6 | 1,455 | 6.9, 6.9, 5.1, 5.1, 4.7, 3.4 | 48.9, 504, 58.9, 42.3, 28.4, 15.5 |
+| warm9, 10 L8 | 10 | 6 | 918 | 5.6, 5.2, 4.9, 5.1, 4.0, 3.3 | 53.6, 1,080, 64.6, 43.5, 31.3, 18.9 |
+Each cheap variant adds 703 core-h per L10 run.
+
+Crossings, full-set chain only (core-h):
+- tau_95 at 10 %: 5,170 core-h (n = 3, error 5.4 %).
+- tau_95 at 20 %: 5,170 core-h (n = 3).
+- tau_95 at 5 %: 9,837 core-h (n = 10, error 4.3 %). Not reached at n = 6 or 8.
+- EDR at 10 %: 5,170 core-h (n = 3, error 8.7 %).
+- EDR at 20 %: 5,170 core-h (n = 3).
+- EDR at 5 %: not reached by n = 12 (5.3 % at n = 12).
 
 Kim's code, measured on Oscar (job 8363941, N=1024, 64 ranks, steady t=0.1–0.4): ≈102 core-h per rocking cycle, against 26.3 for ours (v_l10_rpm32.5_th7); at N=256, 0.98 against 0.22.
 -->
