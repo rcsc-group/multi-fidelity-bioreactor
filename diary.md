@@ -1174,3 +1174,11 @@ dtmix_0.50 except at 37.5 rpm. kLa_1T_50 is not reliable at L8 near 22.5-27.5 rp
   (H4, and H3 for tau), not a binary or group effect (H1, H2 rejected). More data raised sigma because the old model was wrong.
   Open: the tau HF noise ratio sits at the prior cap 0.3 in both fits. Decide whether the cap is binding before the next fit.
   EDR: the old 0.551 used the edr_mean stand-in and is not comparable; the new edr_95 is 2.276 (see the fit entry above).
+- 2026-11-05 (tau LF rpm length scale, job 8388887, scripts/campaign2d/diag_tau_lengthscale.py, no model change).
+  Full data: L8 n=33, selected seed 6, lengthscales (rpm, theta) = (1.35, 3.07), noise 0.017 (floor).
+  LOO residuals (ln): theta < 3 (n=4): rms 0.027 (16.35/2.33 -0.021; 19.14/2.89 -0.013; 23.13/2.13 -0.003; 34.38/2.66 -0.047).
+  theta >= 4 (n=24): rms 0.042; largest |LOO| at 37.50 rpm kmix_l8_rpm37.5 (+0.146) and 22.50 kmix_l8_rpm22.5 (-0.066).
+  Drop-one refit (theta < 3 points, one removed at a time), rpm length scale: drop 16.35 -> 1.41; drop 19.14 -> 1.30;
+  drop 23.13 -> 6.74; drop 34.38 -> 1.42. VERDICT: c2d_l8_rpm23.13_th2.13 alone drives the short rpm length scale. Its
+  value (rpm 23.13, theta 2.13) sits between neighbours that the LF must fit with a short rpm scale.
+  Open: check the value of that run (checkpoint, cycles, FAILED-GATE status) before using it as an L9 source. Not changed.
