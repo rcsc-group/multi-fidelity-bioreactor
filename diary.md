@@ -1182,3 +1182,12 @@ dtmix_0.50 except at 37.5 rpm. kLa_1T_50 is not reliable at L8 near 22.5-27.5 rp
   drop 23.13 -> 6.74; drop 34.38 -> 1.42. VERDICT: c2d_l8_rpm23.13_th2.13 alone drives the short rpm length scale. Its
   value (rpm 23.13, theta 2.13) sits between neighbours that the LF must fit with a short rpm scale.
   Open: check the value of that run (checkpoint, cycles, FAILED-GATE status) before using it as an L9 source. Not changed.
+- 2026-11-05 (L9 WARM RESTARTS INVALID: grid not L9). The four L9 jobs (8388842-8388845, binary 2ef5b07, fidelity 9, restart from the
+  completed c2d L8 checkpoint at t 140.0, 12 warm-up + 40 post cycles) all log #Cells: 2048. The L8 source has 4096; database L9
+  runs (fig9_l9) have 8192; database L10 runs 32768. The restart therefore did not refine to the L9 grid, and the runs are not L9
+  data. Job 8388843 and 8388844 COMPLETED (19-23 min, 10 core-h each: a coarse grid). Jobs 8388842 and 8388845 were CANCELLED by
+  the standing rule (broken job stopped). Their outputs are not used. Likely cause (NOT verified): the cross-level refine() path
+  (BioReactor.c ~1528, the warm start from L8 onto a finer level) is not active in binary 2ef5b07. The L10 cross-level builder uses
+  BioReactor-mpi-xlevel-chain. Health checks that passed: fs sanity line present (1 per job), nan 0, errors 0, the QoI window
+  (cycles 267-270, 3 cycles before release) present. The fail is the grid, not the flow checks.
+  The L9 proposal above is withdrawn until the grid is confirmed. No new L9 is submitted.
