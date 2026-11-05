@@ -1111,3 +1111,18 @@ dtmix_0.50 except at 37.5 rpm. kLa_1T_50 is not reliable at L8 near 22.5-27.5 rp
   2ef5b07 (script /oscar/scratch/eaguerov/tmp/check_sources.py). The kmix_l8_* runs (f1c11e0) are excluded, as the lead asked.
   Consequence: the ONLY valid warm sources for L9/L10 are the 24 new c2d L8 runs, after they COMPLETE. No L9 proposal is
   possible before then. The earlier dry-run candidates are not valid sources.
+- 2026-11-05 (step 1, job 8340753). Cause: the job ran on gpu4001 (batch2) and its MPI wireup failed ("UCX ERROR wireup message
+  size 547 exceeds max bcopy size 504"), so the solver never started; no logstats or checkpoint, TIMEOUT at 16:00:22.
+  Resubmitted on batch through the campaign path (_real_submit_l8, exact LHS floats 27.43113405985031, 2.5177590695669654,
+  16 ranks, 4G per rank, exclude node2356, account default): sbatch printed and checked; job 8388741 (RUNNING, batch).
+  The interactive allocation 8190096 had expired, so this was submitted from a shell without srun (sbatch only).
+- 2026-11-05 (step 2, backfill sanity). All 27 e95 restarts COMPLETED; all 27 .err contain "fs sanity [post-solid]: OK".
+- 2026-11-05 (step 3, window test). First completed c2d L8 run: c2d_l8_rpm36.35_th5.24 (job 8340744). edr_mean pre [77,80) vs post
+  [80,83): +0.01 %; late [237,240) (the backfill restart point): +0.43 %. tau_mean post +0.03 %. Worst 0.43 %: PASS (limit 2 %).
+- 2026-11-05 (edr_95 for the fit, decision). The restart results.json edr_95 is None for all 27 backfills: the postprocess QSS
+  window needs mixing cycles, and restarts have n_mix_cycles = 0. The fit now uses edr95_late: median over the last 3 whole
+  cycles of edr_pct.dat, scaled as postprocess (c2d runs and the e95 backfill, both ending at the last checkpoint). The stand-in
+  edr_mean_t is no longer used for edr_95. Test: tests/test_campaign_edr95.py (red transcript /oscar/scratch/eaguerov/tmp/red_edr95.txt,
+  green /oscar/scratch/eaguerov/tmp/green_edr95.txt). Window choice: the late window, not the pre-release hydro window, for both kinds of row.
+- 2026-11-05 (fit and next run). Single-task batch job scripts/campaign2d/fit_next.sbatch (job 8388774): fit, then next (no dry run).
+  Results below when the job ends. L9 is NOT submitted.

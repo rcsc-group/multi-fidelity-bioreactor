@@ -523,8 +523,47 @@ def campaign_row(run_dir: Path, col: str, src: str):
     return dict(level=int(p["fidelity"]), rpm=rpm, theta=float(p["theta_max"][0]), run=run_dir.name, y=float(y))
 
 
+def edr95_late(run_dir):
+    """edr_95 for the fit (2026-11-05): median over the last 3 whole cycles of edr_pct.dat (raw column 2), scaled to
+    W/m^3 as postprocess.py (rho U^3 / L). Used for c2d runs and for the e95 backfill restarts; both end at the last
+    checkpoint (backfill_window_test.py: late vs pre-release EDR agrees within 0.63 % on 4 database runs). None if the
+    file is absent (the run predates the 2026-11-04 binary)."""
+    import pandas  # noqa: F401  (keeps the import order of load_db)
+    from scripts.postprocess import _load_dat, _t_scales
+    run_dir = Path(run_dir)
+    f, pf = run_dir / "edr_pct.dat", run_dir / "params.json"
+    if not (f.exists() and pf.exists()):
+        return None
+    p = json.loads(pf.read_text())
+    T_bio, T = _t_scales(p)
+    a = p.get("geometry", {}).get("a", 0.25)
+    escale = 1000.0 * (a / T_bio) ** 3 / a
+    arr = _load_dat(f)
+    if arr is None or arr.ndim != 2 or arr.shape[0] < 3:
+        return None
+    t, v = arr[:, 1], arr[:, 2]
+    m = t >= t.max() - 3.0 * T
+    return float(np.median(v[m]) * escale)
+
+
+def load_edr95_db():
+    """edr_95 rows (2026-11-05): the tau_95 row set (database and c2d) with the value edr95_late of the run folder:
+    the run itself for c2d runs, the _e95 backfill restart for database runs. No stand-in. Rows without a value drop."""
+    import pandas as pd
+    base = load_db("tau_95")[["level", "rpm", "theta", "run"]].drop_duplicates("run")
+    out = []
+    for r in base.itertuples(index=False):
+        folder = ROOT / "runs" / (r.run if r.run.startswith("c2d_") else r.run + "_e95")
+        y = edr95_late(folder)
+        if y is not None and y > 0:
+            out.append(dict(level=int(r.level), rpm=float(r.rpm), theta=float(r.theta), run=r.run, y=y))
+    return pd.DataFrame(out, columns=["level", "rpm", "theta", "run", "y"])
+
+
 def load_db(qoi: str):
     """(level, rpm, theta, value) rows of the existing database for one QoI, domain-restricted, levels 8-10."""
+    if qoi == "edr_95":
+        return load_edr95_db()
     import pandas as pd
     kla = pd.read_csv(DB_KLA)
     src, col = QOI_SOURCE[qoi]
