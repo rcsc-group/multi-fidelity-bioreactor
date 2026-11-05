@@ -146,7 +146,7 @@ $\tau = \mu\left(\dfrac{\partial u}{\partial y} + \dfrac{\partial v}{\partial x}
 </div></div>
 <div class="vid">
   <SwapVideo loop="/tau_loop.mp4" rel="/oxy_rel.mp4" :on="$clicks >= 1" />
-  <div class="cbar" :class="{ shown: $clicks >= 1 }"><span class="bar"></span><span class="eq"><i>c</i></span></div>
+  <div class="cbar"><span class="bar"></span><span class="eq" v-if="$clicks < 1">shear stress <i>τ</i></span><span class="eq" v-else>oxygen <i>c</i></span></div>
 </div>
 </div>
 <div class="cell" v-click="1">
@@ -170,7 +170,7 @@ $\varepsilon = 2\mu\,\mathbf{S}\!:\!\mathbf{S}$
 </div></div>
 <div class="vid">
   <SwapVideo loop="/edr_loop.mp4" rel="/tracer_rel.mp4" :on="$clicks >= 3" />
-  <div class="cbar" :class="{ shown: $clicks >= 3 }"><span class="bar"></span><span class="eq"><i>c</i></span></div>
+  <div class="cbar"><span class="bar"></span><span class="eq" v-if="$clicks < 3">dissipation <i>ε</i></span><span class="eq" v-else>tracer <i>c</i></span></div>
 </div>
 </div>
 <div class="cell" v-click="3">
@@ -199,7 +199,7 @@ $\sigma^2 = \dfrac{1}{V_\ell}\displaystyle\int_{V_\ell} (c - \bar{c})^2\,\mathrm
 .plot { height: 178px; margin: 0 !important; align-self: flex-start; }
 .note4 { position: absolute; left: 64px; top: 66px; }
 .note4 .katex { font-size: 0.95em; color: var(--mute); }
-.cbar { display: flex; align-items: center; gap: 8px; align-self: flex-end; margin-top: 8px; opacity: 0; transition: opacity 0.8s; }
+.cbar { display: flex; align-items: center; gap: 8px; align-self: flex-end; margin-top: 8px; }
 .cbar.shown { opacity: 1; }
 .cbar .bar { width: 110px; height: 8px; border-radius: 4px; background: linear-gradient(90deg, #eef3f8, #b9dcee, #5fb7d6, #1f6fc0, #1d2a78); }
 .cbar .eq { font-size: 20px; color: var(--ink); }
