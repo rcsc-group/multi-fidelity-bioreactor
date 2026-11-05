@@ -149,7 +149,7 @@ Our goal: predict the flow over all operating conditions from cheap simulations,
 -->
 
 ---
-clicks: 4
+clicks: 6
 ---
 
 <div class="slide-title">two-phase Navier–Stokes, in the frame of the bag</div>
@@ -212,7 +212,9 @@ $${\color{#CC79A7}f_H(x)} = \rho\,{\color{#0072B2}f_L(x)} + b + \delta(x), \qqua
   <img v-if="$clicks <= 1" src="/mf_stage1.png" />
   <img v-else-if="$clicks == 2" src="/mf_stage2.png" />
   <img v-else-if="$clicks == 3" src="/mf_stage3.png" />
-  <img v-else src="/mf_stage4.png" />
+  <img v-else-if="$clicks == 4" src="/mf_stage4.png" />
+  <img v-else-if="$clicks == 5" src="/mf_stage5.png" />
+  <img v-else src="/mf_stage6.png" />
 </div>
 
 <div v-click="1">
@@ -248,7 +250,13 @@ The solver is Basilisk. We solve the two-phase Navier–Stokes equations in the 
 
 [click] A kernel ridge regression fits the cheap data: f_L.
 
-[click] The expensive data are rho times f_L, plus b, plus a Gaussian process delta. We fit rho, b and the GP parameters by minimising the negative log-likelihood. Each pink curve is one step of the optimiser. The newest step is the strong line. On the right, the bold parameters are the ones that change at that step. At the end we get the prediction and its 95 % band. The data here are synthetic. Our data are in the results. We chain this: L8 to L9, then L9 to L10.
+[click] The expensive data enter. We start from rho = 1 and b = 0: the pink curve is the cheap curve, moved by a Gaussian process delta. The values on the right are the hyperparameters at this step.
+
+[click] We fit rho, b and the GP parameters by minimising the negative log-likelihood. This is step 8 of the optimiser.
+
+[click] Step 56. The curve moves toward the pink points.
+
+[click] The final fit, after 363 steps, with its 95 % band. The data here are synthetic.
 -->
 
 ---

@@ -1,8 +1,8 @@
 """Four click stages of the multi-fidelity fit (slide 4). One curve per stage, no ghost curves.
 Stage k shows the L8 data and KRR fit f_L, the L10 data, ONE curve rho f_L + b + delta at a step of the NLL
 optimisation, and the hyperparameter values at that step (the user asked to keep them).
-Stages: start (rho = 1, b = 0), 1/3 and 2/3 of the way (curve path length), final fit with 95 % band.
-Derived from fig_mf_steps.py (same data, same optimiser). Writes public/mf_stage1..4.png.
+Stages (one per click): 1 points only; 2 + L8 KRR f_L; 3 high fidelity enters (start, rho = 1, b = 0);\n4-5 iterations at 1/3 and 2/3 of the curve path; 6 final fit with 95 % band. Values panel from stage 3 on.
+Derived from fig_mf_steps.py (same data, same optimiser). Writes public/mf_stage1..6.png.
 """
 import sys
 from pathlib import Path
@@ -124,20 +124,24 @@ for frame in "ab":
 f = np.array([nll(t) for t in steps])
 means = np.array([predict(t)[0] for t in steps])
 path = np.r_[0, np.cumsum(np.sqrt(((np.diff(means, axis=0)) ** 2).mean(1)))]
-pick = [0, int(np.argmax(path >= path[-1] / 3)), int(np.argmax(path >= 2 * path[-1] / 3)), len(steps) - 1]
-for k, idx in enumerate(pick, 1):
+it = [0, int(np.argmax(path >= path[-1] / 3)), int(np.argmax(path >= 2 * path[-1] / 3)), len(steps) - 1]
+# stage 1: points only; 2: + KRR f_L; 3: high fidelity enters (start of the optimisation); 4-5: iterations; 6: final fit + band
+stages = [("pts", None), ("krr", None)] + [("hf", i) for i in it]
+for k, (kind, idx) in enumerate(stages, 1):
     fig, ax = plt.subplots(figsize=(7.2, 4.2))
     base(ax)
-    ax.plot(G, np.exp(fL(G)), color=C8, lw=2.2, zorder=3)
-    m, sd = predict(steps[idx])
-    ax.plot(G, np.exp(m), color=C10, lw=3.0, zorder=2)
-    if k == 4:
-        ax.fill_between(G, np.exp(m - 1.96 * sd), np.exp(m + 1.96 * sd), color=C10, alpha=0.15, lw=0, zorder=1)
-    v = vals(steps[idx])
-    fig.text(0.77, 0.85, r"$-\log p(\mathbf{y}_H\,|\,\theta)$" + f" = {f[idx]:.1f}", color=C10, fontsize=11)
-    for r, key in enumerate(PCOL):
-        fig.text(0.77, 0.72 - 0.09 * r, f"{PTEX[key]} = {v[key]:.2f}", color=PCOL[key], fontsize=14)
+    if kind != "pts":
+        ax.plot(G, np.exp(fL(G)), color=C8, lw=2.2, zorder=3)
+    if kind == "hf":
+        m, sd = predict(steps[idx])
+        ax.plot(G, np.exp(m), color=C10, lw=3.0, zorder=2)
+        if idx == it[-1]:
+            ax.fill_between(G, np.exp(m - 1.96 * sd), np.exp(m + 1.96 * sd), color=C10, alpha=0.15, lw=0, zorder=1)
+        v = vals(steps[idx])
+        fig.text(0.77, 0.85, r"$-\log p(\mathbf{y}_H\,|\,\theta)$" + f" = {f[idx]:.1f}", color=C10, fontsize=11)
+        for r, key in enumerate(PCOL):
+            fig.text(0.77, 0.72 - 0.09 * r, f"{PTEX[key]} = {v[key]:.2f}", color=PCOL[key], fontsize=14)
     fig.subplots_adjust(left=0.08, right=0.74, bottom=0.12, top=0.97)
     fig.savefig(OUT / f"mf_stage{k}.png", dpi=200, facecolor="white")
     plt.close(fig)
-print("stages at steps", pick, "of", len(steps) - 1)
+print("iteration stages at steps", it, "of", len(steps) - 1)
