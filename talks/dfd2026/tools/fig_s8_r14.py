@@ -71,11 +71,15 @@ for ax, q, qn in zip(axes, QS, [r"$\tau_{95}$", r"$\varepsilon_{\max}$ (EDR)"]):
     ax.plot([x for x, _, _ in l10], [100 * e for _, _, e in l10], color=GREY, ls=":", lw=1.4, marker="o", ms=6, mfc="white", mec=GREY)
     h1 = [(xval("H1", n), core_h("H1", n), LH[q]["learning_curve"][str(n)]["h1"]) for n in NS]
     ax.plot([x for x, _, _ in h1], [100 * e for _, _, e in h1], color=BLUE, ls=":", lw=1.4, marker="o", ms=6, mfc="white", mec=BLUE)
+    for _name, _ser in (("full", full), ("l10", l10), ("h1", h1)):
+        _xs = [x for x, _, _ in _ser]
+        assert min(_xs) >= 2000 and max(_xs) <= 12000, (_name, min(_xs), max(_xs))
+        print("x range", _name, round(min(_xs)), round(max(_xs)))
     ax.set_xscale("log")
     ax.set_yscale("log")
-    ax.set_xlim(4000, 12000)
-    ax.set_xticks([5000, 10000])
-    ax.set_xticklabels(["5k", "10k"])
+    ax.set_xlim(2000, 12000)
+    ax.set_xticks([2000, 5000, 10000])
+    ax.set_xticklabels(["2k", "5k", "10k"])
     ax.xaxis.set_minor_formatter(NullFormatter())
     ax.set_ylim(1.5, 400)
     ax.yaxis.set_major_locator(FixedLocator([2, 3, 5, 10, 20, 50, 100, 200, 400]))
