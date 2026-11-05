@@ -1126,3 +1126,19 @@ dtmix_0.50 except at 37.5 rpm. kLa_1T_50 is not reliable at L8 near 22.5-27.5 rp
   green /oscar/scratch/eaguerov/tmp/green_edr95.txt). Window choice: the late window, not the pre-release hydro window, for both kinds of row.
 - 2026-11-05 (fit and next run). Single-task batch job scripts/campaign2d/fit_next.sbatch (job 8388774): fit, then next (no dry run).
   Results below when the job ends. L9 is NOT submitted.
+- 2026-11-05 (fit and next RESULTS, job 8388774 COMPLETED in 1 min 57 s; fit0.json and next_L9.json written). Data: L8 rows
+  tau_95 n=33 (23 c2d + 10 backfilled DB), edr_95 n=33 (same set, edr95_late), kLa_1T_10 n=72 (49 DB + 23 c2d); 0 FAILED-GATE rows dropped.
+  Max 2 sigma/mean over the continuous domain (GATED): tau_95 0.971 at (16.82, 2.00); edr_95 2.276 at (22.83, 2.28); kLa_1T_10
+  0.854 at (35.02, 4.87). Reported: kLa_1T_25 1.327 at (16.65, 2.36); kLa_1T_50 3.101 at (29.24, 2.00); dtmix_0.50 1.406 at (22.16, 3.68).
+  NONE of the gated QoIs is at 0.30. The edr_95 maximum sits at theta ~2.3 where only c2d L8 sites exist.
+  L9 PROPOSAL (not submitted): state/next_L9.json. Four points, each warm from the completed c2d L8 run at the SAME (rpm, theta),
+  same binary 2ef5b07 (checked by sha256):
+    (16.35, 2.33) from c2d_l8_rpm16.35_th2.33, t_ck 139.76, score 0.02311
+    (23.14, 2.13) from c2d_l8_rpm23.13_th2.13, t_ck 140.02, score 0.02265
+    (34.38, 2.66) from c2d_l8_rpm34.38_th2.66, t_ck 140.00, score 0.02110
+    (19.14, 2.89) from c2d_l8_rpm19.14_th2.89, t_ck 139.84, score 0.02000
+  Expected core-h: 4 x 97.7 = 390.8 (measured warm median, n=54). With the DFD 69.2 value: 277. The proposal uses only the 23
+  completed sources. The 24th site (27.43, 2.52) is re-running as job 8388741; it becomes a candidate when it completes.
+  Postprocess: the template ran postprocess in-job (results.json present for 23 c2d runs and 27 backfills). The backfill
+  results.json edr_95 is None by the QSS rule (n_mix = 0); the fit uses edr95_late instead.
+  Row-group check: edr/tau median ratio is 10.8 (c2d) and 13.7 (backfill): different, same order. Flagged, not corrected.

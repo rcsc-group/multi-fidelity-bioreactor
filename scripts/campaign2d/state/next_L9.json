@@ -1,0 +1,52 @@
+{
+ "level": "L9",
+ "cost_per_point": 97.7,
+ "cost_basis": "measured warm median, corehc_all, n=54",
+ "expected_core_h": 390.8,
+ "source": "warm from the completed L8 run at the same (rpm, theta)",
+ "points": [
+  [
+   16.35,
+   2.3259216720214773
+  ],
+  [
+   23.135,
+   2.1268588765296426
+  ],
+  [
+   34.376,
+   2.6603607335906636
+  ],
+  [
+   19.142,
+   2.890074239864851
+  ]
+ ],
+ "sources": [
+  "c2d_l8_rpm16.35_th2.33",
+  "c2d_l8_rpm23.13_th2.13",
+  "c2d_l8_rpm34.38_th2.66",
+  "c2d_l8_rpm19.14_th2.89"
+ ],
+ "checkpoint_t": [
+  139.76,
+  140.02,
+  140.0,
+  139.84
+ ],
+ "scores": [
+  0.023111824035365578,
+  0.022650470419263997,
+  0.021100729420875552,
+  0.0200049388398857
+ ],
+ "qois": [
+  "tau_95",
+  "edr_95",
+  "kLa_1T_10"
+ ],
+ "fit_gates": {
+  "n_gate_entries": 1448,
+  "n_failed": 247
+ }
+}
