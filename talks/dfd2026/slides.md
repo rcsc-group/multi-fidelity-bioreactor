@@ -221,7 +221,7 @@ Protocol: we settle the flow for 80 rocking cycles. Then we release the tracer i
 
 
 ---
-clicks: 3
+clicks: 4
 ---
 
 <div class="slide-title">two-phase Navier–Stokes, in the frame of the bag</div>
@@ -271,9 +271,10 @@ $${\color{#0072B2}h_8 = \tfrac{L}{2^{8}}} \quad {\color{#009E73}h_9 = \tfrac{L}{
 $${\color{#CC79A7}f_H(x)} = \rho\,{\color{#0072B2}f_L(x)} + b + \delta(x), \qquad \delta \sim \mathcal{GP}(0,\, s^2 k_\ell) $$
 
 <div class="mdl-fig">
-  <img v-if="$clicks <= 1" src="/mf_a.png" />
-  <img v-else-if="$clicks == 2" src="/mf_b.png" />
-  <video v-else src="/mf_iter.mp4" autoplay muted playsinline />
+  <img v-if="$clicks <= 1" src="/mf_stage1.png" />
+  <img v-else-if="$clicks == 2" src="/mf_stage2.png" />
+  <img v-else-if="$clicks == 3" src="/mf_stage3.png" />
+  <img v-else src="/mf_stage4.png" />
 </div>
 <div class="mdl-cost"><span style="color:#CC79A7">one L10 run ≈ <b>4,000</b> CPU-h</span> &nbsp;·&nbsp; <span style="color:#0072B2">one L8 run ≈ <b>60</b> CPU-h</span></div>
 
