@@ -22,8 +22,8 @@ transition: fade
 clicks: 2
 ---
 
+<div class="slide-title">cultivated meat needs large, gentle bioreactors</div>
 <div class="mot-left">
-<div class="name">cultivated meat needs large, gentle bioreactors</div>
 <img src="/cm_process.png" class="mot-proc" />
 <div class="cap">(Foodingredients 2021; Post et al. 2020; Guan et al. 2021)</div>
 
@@ -56,7 +56,7 @@ $$
 </div>
 
 <style>
-.mot-left { position: absolute; left: 18px; top: 8px; width: 540px; }
+.mot-left { position: absolute; left: 18px; top: 62px; width: 540px; }
 .mot-right { position: absolute; right: 8px; top: 30px; width: 470px; }
 .mot-right img { width: 470px; }
 .mot-cost { display: flex; align-items: center; gap: 22px; margin: 2px 0 0 4px; }
@@ -88,6 +88,8 @@ The bioreactor must do three things at once. The shear stress must stay below th
 transition: fade
 ---
 
+<div class="slide-title">earlier work</div>
+<div style="position:absolute; left:0; top:44px; width:100%; height:100%">
 <img src="/s3_kim.png" class="s3-img" style="left:16px; top:58px; width:269px; height:85px; object-fit:cover" />
 <div class="s3-lab" style="left:16px; top:200px; width:269px"><div class="au">Kim et al. 2025</div><div class="ct">resolved Basilisk model</div></div>
 
@@ -97,12 +99,13 @@ transition: fade
 <img src="/s3_zhan.png" class="s3-img" style="left:628px; top:10px; width:380px; height:180px" />
 <div class="s3-lab" style="left:628px; top:200px; width:380px"><div class="au">Zhan et al. 2019</div><div class="ct">first CFD of a wave bag</div></div>
 
-<img src="/s3_cantarero.png" class="s3-img" style="left:40px; top:290px; width:306px; height:180px" />
-<div class="s3-lab" style="left:40px; top:478px; width:360px"><div class="au">Cantarero-Rivera et al. 2024</div><div class="ct">coarse-to-fine correction</div></div>
+<img src="/s3_cantarero.png" class="s3-img" style="left:40px; top:284px; width:280px; height:165px" />
+<div class="s3-lab" style="left:40px; top:452px; width:360px"><div class="au">Cantarero-Rivera et al. 2024</div><div class="ct">coarse-to-fine correction</div></div>
 
 <img src="/s3_martens.png" class="s3-img" style="left:440px; top:280px; width:530px; height:153px" />
-<div class="s3-lab" style="left:440px; top:471px; width:530px"><div class="au">Martens et al. 2025</div><div class="ct">multi-fidelity GP, bioprocess</div></div>
+<div class="s3-lab" style="left:440px; top:448px; width:530px"><div class="au">Martens et al. 2025</div><div class="ct">multi-fidelity GP, bioprocess</div></div>
 
+</div>
 <div class="s3-close">Our goal: predict the flow over all operating conditions from cheap simulations, with error bars.</div>
 
 <style>
@@ -110,7 +113,7 @@ transition: fade
 .s3-lab { position: absolute; font-size: 14px; line-height: 1.2; color: var(--ink); }
 .s3-lab .au { font-size: 15px; }
 .s3-lab .ct { color: var(--mute); }
-.s3-close { position: absolute; left: 16px; right: 16px; top: 528px; font-size: 18px; color: var(--ink); border-top: 2px solid #e8590c; padding-top: 6px; }
+.s3-close { position: absolute; left: 16px; right: 16px; top: 530px; font-size: 18px; color: var(--ink); border-top: 2px solid #e8590c; padding-top: 6px; }
 </style>
 
 <!--
@@ -133,6 +136,7 @@ Our goal: predict the flow over all operating conditions from cheap simulations,
 clicks: 3
 ---
 
+<div class="slide-title">what we measure</div>
 <div class="g4">
 <div class="cell">
 <div class="head"><span class="name">shear stress</span><div class="eq4">
@@ -185,7 +189,7 @@ $\sigma^2 = \dfrac{1}{V_\ell}\displaystyle\int_{V_\ell} (c - \bar{c})^2\,\mathrm
 </div>
 
 <style>
-.g4 { position: absolute; inset: 26px 34px 20px 34px; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 14px 40px; }
+.g4 { position: absolute; inset: 70px 34px 20px 34px; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 14px 40px; }
 .cell { position: relative; display: flex; flex-direction: column; min-height: 0; }
 .head { display: flex; align-items: center; gap: 18px; height: 62px; }
 .head .name { font-size: 26px; }
@@ -220,8 +224,8 @@ Protocol: we settle the flow for 80 rocking cycles. Then we release the tracer i
 clicks: 3
 ---
 
+<div class="slide-title">two-phase Navier–Stokes, in the frame of the bag</div>
 <div class="mdl-left">
-<div class="name">two-phase Navier–Stokes, in the frame of the bag</div>
 
 $$
 \begin{aligned}
@@ -262,7 +266,7 @@ $${\color{#0072B2}h_8 = \tfrac{L}{2^{8}}} \quad {\color{#009E73}h_9 = \tfrac{L}{
 </div>
 
 <div class="mdl-right" v-click="1">
-<div class="name">multi-fidelity</div>
+<div class="col-label">multi-fidelity</div>
 
 $${\color{#CC79A7}f_H(x)} = \rho\,{\color{#0072B2}f_L(x)} + b + \delta(x), \qquad \delta \sim \mathcal{GP}(0,\, s^2 k_\ell) $$
 
@@ -281,8 +285,8 @@ $$\theta^\star = \arg\min_\theta\, \left[-\log p(\mathbf{y}_H \mid \theta)\right
 </div>
 
 <style>
-.mdl-left { position: absolute; left: 16px; top: 10px; width: 540px; }
-.mdl-right { position: absolute; right: 10px; top: 10px; width: 450px; }
+.mdl-left { position: absolute; left: 16px; top: 62px; width: 540px; }
+.mdl-right { position: absolute; right: 10px; top: 62px; width: 450px; }
 .mdl-left .katex-display, .mdl-right .katex-display { margin: 6px 0; }
 .mdl-left .katex-display .katex { font-size: 1.05em; }
 .mdl-left .katex-display { margin: 14px 0 !important; }
@@ -431,10 +435,11 @@ Kim's code, measured on Oscar (job 8363941, N=1024, 64 ranks, steady t=0.1–0.4
 transition: fade
 ---
 
+<div class="slide-title">2d campaign, baseline data</div>
 <img src="/s9_heatmaps.png" class="s9-img" />
 
 <style>
-.s9-img { position: absolute; left: 32px; top: 8px; width: 960px; }
+.s9-img { position: absolute; left: 62px; top: 46px; width: 900px; }
 </style>
 
 <!--
@@ -452,8 +457,8 @@ The energy dissipation rows use the time mean as a stand-in. The 95th percentile
 
 ---
 
-# Conclusions
+<div class="slide-title">Conclusions</div>
 
 ---
 
-# Questions?
+<div class="slide-title">Questions?</div>
