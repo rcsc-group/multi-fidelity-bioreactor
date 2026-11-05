@@ -234,7 +234,7 @@ $\tau = \mu\left(\dfrac{\partial u}{\partial y} + \dfrac{\partial v}{\partial x}
 </div></div>
 <div class="vid">
   <SwapVideo loop="/tau_loop.mp4" rel="/oxy_rel.mp4" :on="$clicks >= 1" />
-  <div class="cbar"><span class="bar"></span><span class="eq" v-if="$clicks < 1">shear stress <i>τ</i></span><span class="eq" v-else>oxygen <i>c</i></span></div>
+  <div class="cbar"><span class="bar bar-pink" v-if="$clicks < 1"></span><span class="bar bar-blue" v-else></span><span class="lab" v-if="$clicks < 1">shear stress <i>τ</i></span><span class="lab" v-else>oxygen <i>c</i></span></div>
 </div>
 </div>
 <div class="cell" v-click="1">
@@ -258,7 +258,7 @@ $\varepsilon = 2\mu\,\mathbf{S}\!:\!\mathbf{S}$
 </div></div>
 <div class="vid">
   <SwapVideo loop="/edr_loop.mp4" rel="/tracer_rel.mp4" :on="$clicks >= 3" />
-  <div class="cbar"><span class="bar"></span><span class="eq" v-if="$clicks < 3">dissipation <i>ε</i></span><span class="eq" v-else>tracer <i>c</i></span></div>
+  <div class="cbar"><span class="bar bar-orange" v-if="$clicks < 3"></span><span class="bar bar-blue" v-else></span><span class="lab" v-if="$clicks < 3">dissipation <i>ε</i></span><span class="lab" v-else>tracer <i>c</i></span></div>
 </div>
 </div>
 <div class="cell" v-click="3">
@@ -289,8 +289,13 @@ $\sigma^2 = \dfrac{1}{V_\ell}\displaystyle\int_{V_\ell} (c - \bar{c})^2\,\mathrm
 .note4 .katex { font-size: 0.95em; color: var(--mute); }
 .cbar { display: flex; align-items: center; gap: 8px; align-self: flex-end; margin-top: 8px; }
 .cbar.shown { opacity: 1; }
-.cbar .bar { width: 110px; height: 8px; border-radius: 4px; background: linear-gradient(90deg, #eef3f8, #b9dcee, #5fb7d6, #1f6fc0, #1d2a78); }
-.cbar .eq { font-size: 20px; color: var(--ink); }
+.cbar .bar { width: 110px; height: 8px; border-radius: 4px; }
+/* colours sampled from the video frames: light to dark, as in each video's colormap */
+.cbar .bar-pink { background: linear-gradient(90deg, #f0d6e7, #eba9cb, #e05a91, #441e6d); }
+.cbar .bar-orange { background: linear-gradient(90deg, #f7e9d7, #fac792, #f18843, #da6728, #68211e); }
+/* after the click the videos show the release colormap (blue), sampled from oxy_rel and tracer_rel late frames */
+.cbar .bar-blue { background: linear-gradient(90deg, #eef3f8, #b9dcee, #5fb7d6, #1f6fc0, #1d2a78); }
+.cbar .lab { font-family: "Helvetica Neue", "Inter", sans-serif; font-weight: 200; font-size: 20px; color: var(--ink); }
 </style>
 
 <!--
