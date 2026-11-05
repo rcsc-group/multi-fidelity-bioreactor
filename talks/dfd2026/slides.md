@@ -166,12 +166,6 @@ $$
 \end{aligned}
 $$
 
-<div class="key">
-
-$\mathbf{u}$ velocity · $p$ pressure · $\rho$ density · $\mu$ viscosity · $\mathbf{D}$ rate of strain · $\mathbf{g}(t)$ gravity in the bag frame · $\gamma$ surface tension · $\kappa$ curvature · $\mathbf{n}$ interface normal · $\delta_s$ interface delta · $\boldsymbol\Omega$ rocking rate · $\mathbf{x}$ position
-
-</div>
-
 <div class="mdl-row">
 <div>
 
@@ -187,33 +181,30 @@ $$c_g = H\,c_\ell$$
 </div>
 </div>
 
-<div class="key mdl-key2">
-
-$\alpha$ liquid fraction · $c_g$, $c_\ell$ gas and liquid oxygen · $H$ Henry constant
-
-</div>
-
 <div class="mdl-grid">
-<img src="/basilisk.png" style="height:40px; margin-bottom:0" />
+<img src="/basilisk.png" style="height:56px; margin-bottom:0" />
 <div>
 
 $${\color{#0072B2}h_8 = \tfrac{L}{2^{8}}} \quad {\color{#009E73}h_9 = \tfrac{L}{2^{9}}} \quad {\color{#CC79A7}h_{10} = \tfrac{L}{2^{10}}}$$
 
 <div class="cap">Basilisk, uniform grid, no refinement</div>
 
-<div class="key">
-
-$h_\ell$ cell size at level ℓ · $L$ tank length
-
+</div>
 </div>
 
 </div>
-</div>
+
+<div class="key slide-key">
+
+$\mathbf{u}$ velocity · $p$ pressure · $\rho$ density · $\mu$ viscosity · $\mathbf{D}$ rate of strain · $\mathbf{g}(t)$ gravity in the bag frame · $\gamma$ surface tension · $\kappa$ curvature · $\mathbf{n}$ interface normal · $\delta_s$ interface delta · $\boldsymbol\Omega$ rocking rate · $\mathbf{x}$ position · $\alpha$ liquid fraction · $c_g$, $c_\ell$ gas and liquid oxygen · $H$ Henry constant · $h_\ell$ cell size at level ℓ · $L$ tank length · $f_H$, $f_L$ high- and low-fidelity output · $\rho$ scale factor · $b$ offset · $\delta$ discrepancy · $s$, $k_\ell$ its amplitude and kernel · $\theta$ hyperparameters · $\sigma_n$ noise · $y_H$ high-fidelity data
 
 </div>
 
 <div class="mdl-right" v-click="1">
-<div class="col-label">multi-fidelity</div>
+<div class="col-label">multi-fidelity
+<div class="cap">Yi, Cheng & Bessa 2026, Comput. Mech.</div></div>
+
+
 
 $${\color{#CC79A7}f_H(x)} = \rho\,{\color{#0072B2}f_L(x)} + b + \delta(x), \qquad \delta \sim \mathcal{GP}(0,\, s^2 k_\ell) $$
 
@@ -224,24 +215,18 @@ $${\color{#CC79A7}f_H(x)} = \rho\,{\color{#0072B2}f_L(x)} + b + \delta(x), \qqua
   <img v-else src="/mf_stage4.png" />
 </div>
 
-<div class="key mdl-key3">
-
-$f_H$ high-fidelity output · $f_L$ low-fidelity output · $\rho$ scale factor · $b$ offset · $\delta$ discrepancy · $s$, $k_\ell$ its amplitude and kernel · $\theta$ hyperparameters · $\sigma_n$ noise · $y_H$ high-fidelity data
-
-</div>
-
-<div v-click="3">
+<div v-click="1">
 
 $$\theta^\star = \arg\min_\theta\, \left[-\log p(\mathbf{y}_H \mid \theta)\right], \qquad \theta = (\rho,\, b,\, \ell,\, s,\, \sigma_n)$$
 
-<div class="cap">Yi, Cheng & Bessa 2026, Comput. Mech.</div>
 
 </div>
 </div>
 
 <style>
-.mdl-left { position: absolute; left: 16px; top: 62px; width: 540px; }
+.mdl-left { position: absolute; left: 16px; top: 62px; width: 540px; height: 380px; display: flex; flex-direction: column; justify-content: space-evenly; }
 .mdl-right { position: absolute; right: 10px; top: 62px; width: 450px; }
+.slide-key { position: absolute; left: 32px; right: 32px; bottom: 14px; margin: 0; font-size: 12.5px; line-height: 1.3; }
 .mdl-left .katex-display, .mdl-right .katex-display { margin: 6px 0; }
 .mdl-left .katex-display .katex { font-size: 1.05em; }
 .mdl-left .katex-display { margin: 14px 0 !important; }
@@ -250,13 +235,10 @@ $$\theta^\star = \arg\min_\theta\, \left[-\log p(\mathbf{y}_H \mid \theta)\right
 .mdl-grid > div { text-align: center; }
 .mdl-grid img { height: 130px; }
 .mdl-cost { margin-top: 4px; font-size: 17px; white-space: nowrap; color: var(--ink); }
-.mdl-fig img, .mdl-fig video { width: 320px; display: block; }
+.mdl-fig img, .mdl-fig video { width: 450px; display: block; }
 .mdl-left .mdl-grid .katex-display { margin: 0 !important; }
 .mdl-right .katex-display .katex { font-size: 0.86em; }
 .mdl-right .katex-display { overflow: visible; }
-.mdl-left .key { margin-top: 2px; }
-.mdl-key2 { margin: 2px 0 0; }
-.mdl-right .mdl-key3 { margin: 0 0 4px; }
 </style>
 
 <!--
