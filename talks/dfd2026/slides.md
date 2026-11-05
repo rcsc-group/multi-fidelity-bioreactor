@@ -45,6 +45,12 @@ $$
 
 </div>
 
+<div class="key">
+
+$\tau$ shear stress · $\tau_{d}$ cell-damage threshold · $k_La$ oxygen transfer coefficient · $C$ dissolved oxygen · $C_{\text{sat}}$ saturation value · OUR oxygen uptake rate of the cells · $t_{\text{mix}}$ mixing time
+
+</div>
+
 <div v-click="1" class="mot-cfd">
 <div class="name">one resolved condition costs</div>
 <div class="row"><span class="big2">≈ 4,000</span> CPU-h</div>
@@ -171,6 +177,7 @@ $$c_g = H\,c_\ell$$
 $${\color{#0072B2}h_8 = \tfrac{L}{2^{8}}} \quad {\color{#009E73}h_9 = \tfrac{L}{2^{9}}} \quad {\color{#CC79A7}h_{10} = \tfrac{L}{2^{10}}}$$
 
 <div class="cap">Basilisk, uniform grid, no refinement</div>
+
 </div>
 </div>
 

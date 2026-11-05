@@ -16,3 +16,7 @@
 .slide-title { position: absolute; left: 32px; top: 14px; font-size: 26px; font-weight: 200; line-height: 1.5; color: var(--ink); margin: 0; }
 /* secondary column label on two-column slides */
 .col-label { font-size: 22px; font-weight: 200; line-height: 1.3; color: var(--ink); }
+
+/* symbol key under an equation group: same grey as .cap, same font as .slide-title */
+.key { font-family: "Helvetica Neue", "Inter", sans-serif; font-weight: 200; font-size: 15px; line-height: 1.3; color: var(--mute); }
+.key .katex { font-size: 1em; color: var(--mute); }
