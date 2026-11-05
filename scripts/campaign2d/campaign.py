@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import math
 import os
 import subprocess
@@ -44,7 +45,9 @@ FORBIDDEN_PARTITION = "mbessa-condo"              # hard rule: never planned or 
 KIM_CORE_H_PER_CASE = 120.0                       # Kim 2025 p.6. PENDING AUDIT (another agent). Do not cite as final.
 SEED = 20261104
 # Persistent binary (scratch copy of lean-f1c11e0 was purged; kmix params still point there). Pre-flight: see plan.
-BINARY_L8 = "/oscar/data/dharri15/eaguerov/bin/BioReactor-mpi-lean-2ef5b07"   # amended 2026-11-04: edr_95 build
+BINARY_L8 = "/oscar/data/dharri15/eaguerov/bin/BioReactor-mpi-lean-2ef5b07"
+# L9 warm restarts: the same source (2ef5b07) built with -DCROSS_LEVEL_WARMSTART=1 (lead 2026-11-05).
+BINARY_L9 = "/oscar/data/dharri15/eaguerov/bin/replay-gate/BioReactor-mpi-lean-2ef5b07-xlevel"   # amended 2026-11-04: edr_95 build
 # Partitions (sacctmgr 2026-11-04, user eaguerov): batch under account default, batch2 under account batch2.
 # Value = (account, cpu cap for this user's QOS). mbessa-condo is never listed here (hard rule).
 PARTITIONS = {"batch": ("default", 312), "batch2": ("batch2", 512)}
@@ -300,10 +303,10 @@ def _real_submit_warm(rid: str, rpm: float, th: float, source: str, partition: s
     (the job's log name is only known then), since the settled gate reads it."""
     from scripts import simulate
     check_mpi_partition(partition)
-    require_warm_sources([[rpm, th]], {(rpm, th): source}, BINARY_L8, runs_root=ROOT / "runs")
+    require_warm_sources([[rpm, th]], {(rpm, th): source}, BINARY_L9, runs_root=ROOT / "runs")
     sd = ROOT / "runs" / source
     p = l9_warm_params(json.loads((sd / "params.json").read_text()), source, source_checkpoint_time(source),
-                       rpm, th, BINARY_L8)
+                       rpm, th, BINARY_L9)
     if p["run_id"] != rid:
         raise SystemExit(f"run id mismatch {p['run_id']} != {rid}")
     jid = simulate.submit_slurm(p, project_root=ROOT, runs_root=ROOT / "runs",
@@ -508,6 +511,24 @@ def cmd_status(_args) -> None:
     gates = gate_all_runs(verbose=True)
     print(f"warm-started runs gated: {len(gates)}; FAILED-GATE (excluded from fit): "
           f"{sum(v == 'FAILED-GATE' for v in gates.values())}")
+
+
+def cmd_check_grid(_args) -> None:
+    """Hard guard (lead 2026-11-05): every L9/L10 job in jobs.jsonl whose first logstats line is not the uniform level
+    grid (total cells = 4**level, per-rank #Cells x ranks) is cancelled, and the cancellation is printed."""
+    jobs = [json.loads(x) for x in JOBS.read_text().splitlines()] if JOBS.exists() else []
+    scratch = Path("/oscar/scratch/eaguerov/mpi_runs")
+    for j in jobs:
+        if j["level"] not in ("L9", "L10"):
+            continue
+        ok, total = check_warm_grid(scratch / j["run"] / "logstats.dat", int(j["level"][1:]), j["ranks"])
+        if ok is None:
+            print(f"{j['job']} {j['run']}: no logstats yet")
+        elif ok:
+            print(f"{j['job']} {j['run']}: grid OK, total {total}")
+        else:
+            print(f"{j['job']} {j['run']}: GRID WRONG, total {total} (want {4 ** int(j['level'][1:])}): cancelling")
+            subprocess.run(["scancel", j["job"]], check=False)
 
 
 def cmd_ledger(_args) -> None:
@@ -872,25 +893,47 @@ def binary_sha256(path) -> str | None:
     return hashlib.sha256(p.read_bytes()).hexdigest()
 
 
-def same_binary_map(target_binary, runs_root=None) -> dict:
-    """l8_source_map restricted to sources whose binary has the target's sha256 (cross-binary sources dropped)."""
+ALLOWED_EXTRA_FLAGS = frozenset({"-DCROSS_LEVEL_WARMSTART=1"})   # the only flag a same-source binary may differ by
+
+
+def build_info(binary):
+    """Build sidecar <binary>.build.json: {commit, flags}. None if absent (the source is then unknown)."""
+    if not binary:
+        return None
+    p = Path(str(binary) + ".build.json")
+    return json.loads(p.read_text()) if p.exists() else None
+
+
+def same_source(a, b) -> bool:
+    """True if both binaries come from the same source commit and differ only by ALLOWED_EXTRA_FLAGS (lead, 2026-11-05).
+    A binary without a sidecar has an unknown source and is not the same source."""
+    ia, ib = build_info(a), build_info(b)
+    if ia is None or ib is None or ia.get("commit") != ib.get("commit"):
+        return False
+    fa = set(ia.get("flags", [])) - ALLOWED_EXTRA_FLAGS
+    fb = set(ib.get("flags", [])) - ALLOWED_EXTRA_FLAGS
+    return fa == fb and not ((set(ia.get("flags", [])) | set(ib.get("flags", []))) - ALLOWED_EXTRA_FLAGS - fa)
+
+
+def same_source_map(target_binary, runs_root=None) -> dict:
+    """l8_source_map restricted to sources whose binary is the same source as the target (see same_source)."""
     root = Path(runs_root) if runs_root else ROOT / "runs"
-    target = binary_sha256(target_binary)
     out = {}
     for key, name in l8_source_map(root).items():
         sb = json.loads((root / name / "params.json").read_text()).get("_binary")
-        if target is not None and binary_sha256(sb) == target:
+        if same_source(sb, target_binary):
             out[key] = name
     return out
 
 
+same_binary_map = same_source_map   # old name, kept for callers
+
+
 def require_warm_sources(points, smap: dict, target_binary, runs_root=None) -> list:
-    """Source run folder for each (rpm, theta) point. Raises if a point has no completed L8 source (cold refused),
-    or if a source's binary is not the target binary by sha256 (cross-binary refused, lead 2026-11-04). A source whose
-    binary is not on disk has an unknown hash and is refused."""
+    """Source run folder for each (rpm, theta) point. Raises if a point has no completed L8 source (cold refused), or if
+    a source is not the same source as the target binary (cross-source refused, lead 2026-11-05)."""
     root = Path(runs_root) if runs_root else ROOT / "runs"
-    target = binary_sha256(target_binary)
-    if target is None:
+    if not Path(target_binary).exists():
         raise ValueError(f"target binary {target_binary} is not on disk")
     missing = [p for p in points if (float(p[0]), float(p[1])) not in smap]
     if missing:
@@ -898,9 +941,33 @@ def require_warm_sources(points, smap: dict, target_binary, runs_root=None) -> l
     srcs = [smap[(float(p[0]), float(p[1]))] for p in points]
     for name in srcs:
         sb = json.loads((root / name / "params.json").read_text()).get("_binary")
-        if binary_sha256(sb) != target:
-            raise ValueError(f"source {name} binary {sb} is not the target binary (cross-binary refused)")
+        if not same_source(sb, target_binary):
+            raise ValueError(f"source {name} binary {sb} is not the same source as the target (source refused)")
     return srcs
+
+
+def grid_ok(total_cells: int, level: int) -> bool:
+    """A uniform level-L grid in 2D has 4**L leaves. Anything else is not the level-L grid (lead 2026-11-05)."""
+    return int(total_cells) == 4 ** int(level)
+
+
+def first_cells_per_rank(text: str):
+    """Per-rank #Cells of the first logstats line, or None."""
+    m = re.search(r"#Cells:\s*(\d+)", text)
+    return int(m.group(1)) if m else None
+
+
+def check_warm_grid(logstats_path, level: int, ranks: int) -> tuple:
+    """(ok, total) from the first logstats line: total = per-rank #Cells x ranks (per-rank count, lead 2026-11-05)."""
+    p = Path(logstats_path)
+    if not p.exists():
+        return None, None
+    first = next((ln for ln in p.read_text(errors="replace").splitlines() if "#Cells" in ln), None)
+    per = first_cells_per_rank(first or "")
+    if per is None:
+        return None, None
+    total = per * int(ranks)
+    return grid_ok(total, level), total
 
 
 def source_checkpoint_time(run: str) -> float:
@@ -929,7 +996,7 @@ def cmd_next(args) -> None:
     if "SLURM_JOB_ID" not in os.environ:
         raise SystemExit("next is heavy: run it inside a compute job (srun --overlap or sbatch), never on the login node")
     gates = gate_all_runs()
-    same = same_binary_map(BINARY_L8)   # warm sources must be the same binary (lead 2026-11-04)
+    same = same_source_map(BINARY_L9)   # warm sources must be the same binary (lead 2026-11-04)
     sites = [(r, t) for r, t in sorted(same) if RPM[0] <= r <= RPM[1] and THETA[0] <= t <= THETA[1]]
     if not sites:
         raise SystemExit("no completed L8 source with the target binary in the domain: no L9 candidates")
@@ -955,7 +1022,7 @@ def cmd_next(args) -> None:
     if args.dry_run:
         print("(dry run: state/next_L9.json not written)")
         return
-    smap = same_binary_map(BINARY_L8)
+    smap = same_source_map(BINARY_L9)
     pts = [[rpm, th] for rpm, th, _ in picks]
     srcs = require_warm_sources(pts, smap, BINARY_L8)
     out = dict(level="L9", cost_per_point=NEXT_COST_L9, cost_basis="measured warm median, corehc_all, n=54",
@@ -987,6 +1054,7 @@ def main() -> None:
     nx.add_argument("--dry-run", action="store_true", help="print the picks, do not write state/next_L9.json")
     nx.set_defaults(func=cmd_next)
     sub.add_parser("ledger").set_defaults(func=cmd_ledger)
+    sub.add_parser("check-grid").set_defaults(func=cmd_check_grid)
     args = ap.parse_args()
     args.func(args)
 

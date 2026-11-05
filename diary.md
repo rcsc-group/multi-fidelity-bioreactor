@@ -1191,3 +1191,41 @@ dtmix_0.50 except at 37.5 rpm. kLa_1T_50 is not reliable at L8 near 22.5-27.5 rp
   BioReactor-mpi-xlevel-chain. Health checks that passed: fs sanity line present (1 per job), nan 0, errors 0, the QoI window
   (cycles 267-270, 3 cycles before release) present. The fail is the grid, not the flow checks.
   The L9 proposal above is withdrawn until the grid is confirmed. No new L9 is submitted.
+- 2026-11-05 (L9 ROOT CAUSE, lead item 1). The cross-level warm start is gated by -DCROSS_LEVEL_WARMSTART=1:
+  src/BioReactor.c:1604 (comment: "Gated behind -DCROSS_LEVEL_WARMSTART=1, off by default") and :1635 (#if CROSS_LEVEL_WARMSTART block),
+  refine (level < params.fidelity) at :1714. Makefile:131 build-crosslevel adds the flag. Without it, restore() gives the checkpoint's own
+  tree (the L8 grid). The 2ef5b07 binary has no cross-level strings; xlevel-chain has them (strings check). Its source commit is NOT
+  recorded (binary dated 2026-09-15; diary line 198); not verifiable, so it is not used.
+- 2026-11-05 (lead item 2, SAME SOURCE RULE). Built 2ef5b07 WITH -DCROSS_LEVEL_WARMSTART=1 from clean src (git diff src vs 2ef5b07 empty):
+  /oscar/data/dharri15/eaguerov/bin/replay-gate/BioReactor-mpi-lean-2ef5b07-xlevel (flags -D_MPI=1 -DEXTRA_TRACERS=0 -DCROSS_LEVEL_WARMSTART=1).
+  Sidecars <binary>.build.json record commit and flags for both binaries. Rule: same_source() = same commit, flags equal except the allowed
+  -DCROSS_LEVEL_WARMSTART=1; sha equality removed. BINARY_L9 = the xlevel build; L8 sources (lean 2ef5b07) are the same source.
+  Test first: tests/test_campaign_source_rule.py, 8 tests, red transcript /oscar/scratch/eaguerov/tmp/red_source_rule.txt (8 failed),
+  green /oscar/scratch/eaguerov/tmp/green_source_rule.txt (8 passed).
+- 2026-11-05 (lead item 3, grid guard). Uniform level-L grid = 4**L total cells; total = per-rank #Cells x ranks (per-rank count).
+  grid_ok, first_cells_per_rank, check_warm_grid; `campaign.py check-grid` cancels any L9/L10 job whose first logstats line is wrong.
+  Run on the old L9 jobs: all four read total 65536 (the L8 grid) and were flagged (scancel no-op, already finished).
+- 2026-11-05 (lead item 4, SMOKE). smoke_l9_rpm23.13_th2.13, job 8389898, L9 warm from c2d_l8_rpm23.13_th2.13, 2 cycles, same
+  source. First logstats line: t 140.1, #Cells 8192 per rank x 32 ranks = 262144 = 4^9: PASS (L9 grid).
+- 2026-11-05 (lead item 5, L9 resubmitted, batch only, cross-level binary). Jobs 8389920 (16.35, 2.33), 8389921 (23.14, 2.13),
+  8389922 (34.38, 2.66), 8389923 (19.14, 2.89). Each sbatch line printed and asserted (batch, node2356 excluded, 32 ranks, 4G, no mbessa).
+  Outcome pending the grid check (`campaign.py check-grid`).
+- 2026-11-05 (SLOSHING, lead request, numbers from source). L = 2a = 0.5 m (geometry.a = 0.25, BioReactor.c:904 L_bio = geometry_a),
+  full height 2b = 0.0715 m (Ly = b/a, H_bio = 2*L_bio*Ly, lines 935 and 956), liquid depth h = fill_level x H = 0.03575 m (lines 2073-2077),
+  grav = 9.8 (line 257). Mode 1: k = pi/L = 6.283 1/m, omega1 = sqrt(g k tanh(k h)) = 3.688 rad/s, f1 = 0.587 Hz, resonant rpm 35.22.
+  Subharmonic (n = 3 parametric tongue, forcing = 2 f1 / 3): 23.48 rpm. theta dependence via cos(theta) on L: +0.7 % from 2 to 9 deg
+  (35.24 to 35.65 primary; 23.49 to 23.77 for 2/3). Alternative L = a gives 68.78 (primary), 45.85 (2/3). Frequency alone cannot
+  decide the 22.5 and 23.13 features; the 2/3 tongue at 23.5 is the candidate.
+- 2026-11-05 (STEP 2, tau_95 vs rpm). All-level table (diag_tau_vs_rpm.py, job 8389897): mixed levels and protocols, not usable as a
+  shape; L8 only (diag_tau_l8_local.py, job 8389927):
+  theta 7 (smooth, no feature): 22.0 0.01115, 22.5 0.01070, 23.0 0.01154, 23.75 0.01171, 25.0 0.01191, 27.5 0.01238. The fig13a_rampmatch
+  and fig13a_redo runs (about 0.0027) are a different protocol and are excluded.
+  theta 4 (wiggle): 22.0 0.00734, 22.25 0.00734, 22.5 0.00723, 22.75 0.00673, 23.0 0.00692, 23.125 0.00712, 23.25 0.00726, 23.75 0.00746.
+  theta 2: 22.5 (t6) 0.00502, 23.13 (c2d) 0.00518, 25 (t6) 0.00515: the 23.13 point is consistent with its neighbours.
+- 2026-11-05 (STEP 4, GP). diag_gp_resonance.py: 1-D stationary GP in rpm along theta 4, noise 0.017 ln, fixed scales (no fit).
+  LOO rms near 22-24 / far: ell 0.5: 0.023 / 0.036 (near tighter); ell 1.0: 0.033 / 0.021; ell 2.0: 0.036 / 0.020; ell 4.0: 0.036 / 0.020.
+  Largest miss at 22.75 (about -0.05 to -0.07 ln). A single stationary length scale is not adequate for both regimes. Options (not
+  implemented): nonstationary (rpm warping), local length scale, a sum of two kernels, or accept and inflate the variance near 22-24.
+- REPLICATE TEST PENDING (lead item 3): rep_l8_rpm23.13_th2.13 (job 8389924), c2d_l8_rpm22.00_th2.13 (8389925), c2d_l8_rpm24.30_th2.13 (8389926),
+  batch, 16 ranks, same params as the original point. Acceptance: replicate within the tau floor 0.017 ln of 0.00518; neighbours bracket the
+  peak. Not decided until they finish. The 23.13 point is NOT accepted or rejected yet.
