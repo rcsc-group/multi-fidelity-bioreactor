@@ -2,20 +2,20 @@
  "tau_95_t": {
   "10%": {
    "chain envelope": {
-    "x": 4.54,
+    "x": 3027.99,
     "core_h": 3028,
     "n": 3,
     "variant": "warm9_L8_10"
    },
    "chain, full set": {
-    "x": 7.75,
+    "x": 5169.72,
     "core_h": 5170,
     "n": null,
     "variant": null
    },
    "L10 GP, ours": null,
    "H1 (L8 to L10)": {
-    "x": 15.72,
+    "x": 10483.77,
     "core_h": 10484,
     "n": null,
     "variant": null
@@ -23,25 +23,25 @@
   },
   "20%": {
    "chain envelope": {
-    "x": 4.54,
+    "x": 3027.99,
     "core_h": 3028,
     "n": 3,
     "variant": "warm9_L8_10"
    },
    "chain, full set": {
-    "x": 7.75,
+    "x": 5169.72,
     "core_h": 5170,
     "n": null,
     "variant": null
    },
    "L10 GP, ours": {
-    "x": 10.89,
+    "x": 7261.85,
     "core_h": 7262,
     "n": null,
     "variant": null
    },
    "H1 (L8 to L10)": {
-    "x": 6.23,
+    "x": 4152.89,
     "core_h": 4153,
     "n": null,
     "variant": null
@@ -51,13 +51,13 @@
  "edr_max_t": {
   "10%": {
    "chain envelope": {
-    "x": 7.75,
+    "x": 5169.72,
     "core_h": 5170,
     "n": 3,
     "variant": "full"
    },
    "chain, full set": {
-    "x": 7.75,
+    "x": 5169.72,
     "core_h": 5170,
     "n": null,
     "variant": null
@@ -67,13 +67,13 @@
   },
   "20%": {
    "chain envelope": {
-    "x": 7.75,
+    "x": 5169.72,
     "core_h": 5170,
     "n": 3,
     "variant": "full"
    },
    "chain, full set": {
-    "x": 7.75,
+    "x": 5169.72,
     "core_h": 5170,
     "n": null,
     "variant": null

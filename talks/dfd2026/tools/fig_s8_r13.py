@@ -30,10 +30,8 @@ VARIANTS = {"full": "chain_full", "warm9": "chain_warm9", "warm9_L8_20": "chain_
 
 
 def xval(m, n):
-    """Training cost in L10-run equivalents."""
-    if m == "Kim_code":
-        return n * CR[m]["inc"] / 120.0
-    return (CR[m]["base"] + n * CR[m]["inc"]) / UNIT
+    """Training cost in core-h (round 10 one-rule costs: chain base 3,170 + 667/run; H1 2,043 + 703/run; L10 GP 726/run)."""
+    return CR[m]["base"] + n * CR[m]["inc"]
 
 
 def core_h(m, n):
@@ -79,16 +77,16 @@ for ax, q, qn in zip(axes, QS, [r"$\tau_{95}$", r"$\varepsilon_{\max}$ (EDR)"]):
     ax.plot([x for x, _, _ in h1], [100 * e for _, _, e in h1], color=BLUE, ls=":", lw=1.4, marker="o", ms=6, mfc="white", mec=BLUE)
     ax.set_xscale("log")
     ax.set_yscale("log")
-    ax.set_xlim(2, 20)
-    ax.set_xticks([2, 5, 10, 20])
-    ax.set_xticklabels(["2", "5", "10", "20"])
+    ax.set_xlim(1800, 12000)
+    ax.set_xticks([2000, 5000, 10000])
+    ax.set_xticklabels(["2k", "5k", "10k"])
     ax.xaxis.set_minor_formatter(NullFormatter())
     ax.set_ylim(1.5, 400)
     ax.yaxis.set_major_locator(FixedLocator([2, 3, 5, 10, 20, 50, 100, 200, 400]))
     ax.yaxis.set_major_formatter(FuncFormatter(lambda v, _: f"{v:g}"))
     ax.yaxis.set_minor_formatter(NullFormatter())
     ax.set_title(qn, fontsize=14, pad=3)
-    ax.set_xlabel("training cost (L10-run equivalents)", fontsize=14)
+    ax.set_xlabel("training cost (core-h)", fontsize=14)
     ax.grid(which="major", ls=":", alpha=0.4)
     ax.tick_params(labelsize=13)
     res[q] = {}

@@ -398,26 +398,17 @@ transition: fade
 </style>
 
 <!--
-x axis: training cost in L10-run equivalents. One unit is the measured cost of one L10 run of our code, 666.7 core-h. Each curve is core-h divided by that unit. The Kim code is divided by its assumed 120 core-h per run.
-
-Warm-start accounting (round 10). Every chain level is warm-started from the level below. The cost of the 10 cold fig9 theta-7 L9 runs is replaced by a warm estimate: 5.76 core-h per simulated cycle (the six measured x8_l9 runs) times 11.8 simulated cycles, which is 68.2 core-h per run, 682 core-h in total. The QoI window for L9 is cycles 8 to 11 after restart, inside the 11.8 cycles simulated.
-
-Per-run rule (same for every curve): each run is charged its own cost plus its warm-start source when the source is not already in the method's set.
-- Approved chain: base 3,170 core-h (40 L8 runs at 2,043; 16 L9 runs at 682 estimated plus 445 measured), then 667 core-h per L10 run.
+x axis: training cost in core-hours, log scale. Costs use one rule: each run is charged its own cost plus its warm-start source when the source is not already in the method's set.
+- Approved chain: base 3,170 core-h, then 667 core-h per L10 run. The 10 estimated warm L9 runs are included (5.76 core-h per cycle times 11.8 cycles, 68 core-h per run).
 - Cheap chain variants (10 or 20 L8 runs, 6 warm L9 runs): base 918 to 2,488 core-h, then 703 core-h per L10 run.
 - H1: 2,043 core-h for the 40 L8 runs, then 703 core-h per L10 run.
-- L10 GP, ours: 726 core-h per L10 run, including sources.
-- Kim code: 120 core-h per run, no sources (assumed).
+- L10 GP only: 726 core-h per L10 run, including sources.
 
-Crossings at 10 % held-out error (relative RMS), in L10-run equivalents, with core-h in brackets:
-- tau 95: the chain envelope reaches 10 % at 4.5 (3,028 core-h; cheap variant warm9_L8_10, 3 L10 runs). The approved chain reaches it at 7.8 (5,170). H1 reaches it at 15.7 (10,484). The L10 GP does not reach it by 12 runs. The Kim code does not reach it.
-- EDR: only the approved chain reaches 10 %, at 7.8 (5,170 core-h).
+Crossings at 10 % tau_95 (relative RMS): the chain envelope reaches 10 % at 3,028 core-h (cheap variant, 3 L10 runs). The approved chain reaches it at 5,170 core-h. H1 reaches it at 10,484 core-h (12 runs). L10 GP only does not reach it by 12 runs.
+Crossings at 20 % tau_95: the chain envelope at 3,028 core-h. H1 at 4,153 core-h. L10 GP only at 7,262 core-h.
+EDR: only the approved chain reaches 10 % and 20 %, at 5,170 core-h. The cheap variants fail on EDR (errors 24 to 1,080 %), so they are kept for tau_95 only.
 
-Crossings at 20 % held-out error:
-- tau 95: the chain envelope at 4.5 (3,028 core-h). H1 at 6.2 (4,153). The L10 GP at 10.9 (7,262). The Kim code at 10.0 (1,200 core-h, 10 runs). The chain envelope is now cheaper than the Kim code at this level, because the warm L9 cost is lower. The Kim cost is assumed, not measured.
-- EDR: only the approved chain reaches 20 %, at 7.8 (5,170 core-h).
-
-Cheap variants: they are cheaper on tau_95 but fail on EDR (errors 24 to 1,080 %). The envelope keeps them for tau_95 only.
+Kim's code, measured on Oscar (job 8363941, N=1024, 64 ranks, steady t=0.1–0.4): ≈102 core-h per rocking cycle, against 26.3 for ours (v_l10_rpm32.5_th7); at N=256, 0.98 against 0.22.
 -->
 
 ---
