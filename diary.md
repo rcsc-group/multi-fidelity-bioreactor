@@ -1238,3 +1238,11 @@ dtmix_0.50 except at 37.5 rpm. kLa_1T_50 is not reliable at L8 near 22.5-27.5 rp
 - REPLICATE TEST PENDING (lead item 3): rep_l8_rpm23.13_th2.13 (job 8389924), c2d_l8_rpm22.00_th2.13 (8389925), c2d_l8_rpm24.30_th2.13 (8389926),
   batch, 16 ranks, same params as the original point. Acceptance: replicate within the tau floor 0.017 ln of 0.00518; neighbours bracket the
   peak. Not decided until they finish. The 23.13 point is NOT accepted or rejected yet.
+
+## 2026-11-06 (late): why kLa max 2σ/mean rose 0.85 -> 1.16 after the first campaign L9 rows
+- Leave-one-out (diag_kla_l9_loo.py): dropping both passed new L9 rows gives 0.854; dropping either alone gives ~1.16. No single outlier.
+- Variance split at 35 rpm / 4.8 deg (diag_kla_l9_split.py): the fitted residual scale sigma2 doubles (0.078 -> 0.160); GP and trend factors do not grow. Length scale grows (E[l] 0.21 -> 0.40), so the "rough trend shortens l" hypothesis is falsified.
+- Cause: before, all 10 HF rows sat on theta = 7. The first off-line rows (theta ~2) show an L8->L9 correction that differs from the theta = 7 line, so the model's residual scale rises. The 0.85 band was overconfident: it had no HF information about theta.
+- Power: 2 rows, so the size of sigma2 is uncertain; the direction is what the test shows.
+- Gate: 19.14/2.89 (drift 2.2%, height 3.9%) and 34.38/2.66 (height 5.9%) FAILED-GATE, not in the fit. Height check vs L8 may be the wrong check near the 35.2 rpm sloshing mode: open.
+- Action: next 4 L9 points (acquisition, theta 4.3-5.4, the max-band region) submitted: jobs 8461017-8461020 on batch; refit chained afterany: 8461023.
