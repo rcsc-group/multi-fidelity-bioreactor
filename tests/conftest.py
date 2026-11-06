@@ -157,3 +157,42 @@ def load_normf(run_dir: pathlib.Path) -> np.ndarray:
     lines = [l for l in path.read_text().splitlines()
              if l.strip() and not l.strip().startswith("i")]
     return np.array([[float(x) for x in l.split()] for l in lines])
+
+
+# Guard (2026-11-06): no test may reach the real SLURM scheduler unless it is
+# marked hpc. A pytest run that collected old sbatch scripts submitted ~90 failing
+# jobs; a burst of failing submissions can get the account flagged by CCV.
+# Tests that mock subprocess.run themselves still work: their patch replaces this one.
+_SLURM = {"sbatch", "srun", "salloc", "scancel"}
+
+
+@pytest.fixture(autouse=True)
+def _block_real_slurm(request, monkeypatch):
+    if request.node.get_closest_marker("hpc"):
+        yield
+        return
+    real_run, real_popen = subprocess.run, subprocess.Popen
+
+    def _argv0(args):
+        a = args[0] if args else kwargs_none
+        a = a.split()[0] if isinstance(a, str) else (a[0] if a else "")
+        return os.path.basename(str(a))
+
+    kwargs_none = ""
+
+    def _check(args):
+        if _argv0(args) in _SLURM:
+            raise RuntimeError(f"test tried to call real SLURM ({_argv0(args)}); mark it @pytest.mark.hpc")
+
+    def run(*args, **kw):
+        _check(args)
+        return real_run(*args, **kw)
+
+    class Popen(real_popen):
+        def __init__(self, *args, **kw):
+            _check(args)
+            super().__init__(*args, **kw)
+
+    monkeypatch.setattr(subprocess, "run", run)
+    monkeypatch.setattr(subprocess, "Popen", Popen)
+    yield

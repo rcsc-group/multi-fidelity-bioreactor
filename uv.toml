@@ -1,0 +1,4 @@
+# Shared uv cache on /oscar/data, so venvs hard-link packages (one inode per file across all venvs).
+# The data+dharri15 inode quota was at 95% on 2026-11-06.
+cache-dir = "/oscar/data/dharri15/eaguerov/.uv-cache"
+link-mode = "hardlink"

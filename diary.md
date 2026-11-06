@@ -5,6 +5,15 @@ Entries before 2026-10-08 are kept verbatim in diary_archive_to_2026-10-07.md (s
 pre-split file at /oscar/scratch/eaguerov/tmp/diary_backup_20261010.md). The archive is NOT re-audited line by line:
 where it conflicts with CURRENT STATE, CURRENT STATE wins, and the known conflicts are listed under CORRECTIONS.
 
+## 2026-11-06 — Stray SLURM submissions from pytest; test guard; shared uv cache
+
+- What happened: `uv run pytest -m "not medium"` overrode addopts (which also excludes hpc) and collected old sbatch-calling scripts in `.claude/worktrees/*/scripts/test_*.py`. About 90 bioreactor-mpi jobs were submitted 09:42-10:02; each failed in ~7 s (missing binaries BioReactor-mpi-fixed-ramp/-slowramp). No campaign data lost.
+- Fix: `testpaths = ["tests"]`, `norecursedirs` incl. `.claude` (collect-only: 0 items outside tests/). Autouse fixture in tests/conftest.py raises on real sbatch/srun/salloc/scancel unless `@pytest.mark.hpc`. Probe: sbatch blocked, echo allowed, mocked sbatch tests pass (15 passed).
+- Lesson: never pass `-m` on the command line here; it replaces the addopts marker filter.
+- uv cache: `uv.toml` pins cache-dir on /oscar/data with hardlink, but `~/.bashrc` UV_CACHE_DIR overrides it (measured: 0 hard links, 31,631 entries). Test with the env var set: 26,104 of the venv files hard-linked. bashrc change approved by Elvis, not yet applied.
+- Open: tests/test_campaign_binary_rule.py fails with the old venv too (pre-existing since 1264345).
+
+
 ## CURRENT STATE (updated 2026-10-12)
 
 Goal and constraints
