@@ -149,7 +149,7 @@ Our goal: predict the flow over all operating conditions from cheap simulations,
 ---
 clicks: 7
 dragPos:
-  basilisk: 0,-156,0,0
+  basilisk: 50,315,66,56
 ---
 
 <div class="slide-title">two-phase Navier–Stokes, in the frame of the bag</div>
