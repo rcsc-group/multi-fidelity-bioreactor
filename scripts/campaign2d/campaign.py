@@ -369,6 +369,7 @@ def _hours(s: str) -> float:
 # (excluded from the fit) or PENDING (data not yet sufficient). The gate is evaluated by `status`.
 WARM_CYCLES = 12                       # warm-up cycles after the source checkpoint (plan 1.4)
 GATE_DRIFT_TOL = 0.02                  # max relative change per cycle, tau_95 and EDR, last 3 complete cycles
+GATE_BLOCK_CYCLES = 3                  # drift/height use 3-cycle block means (2026-11-07: L9 3T limit cycles)
 GATE_HEIGHT_TOL = 0.01                 # free-surface height range at release vs the source run
 GATE_FS_LINE = "fs sanity [post-solid]: OK"   # must be in the run's .err (BioReactor3D CLAUDE.md, restart rule)
 GATES_JSON = STATE / "gates.json"
@@ -381,9 +382,9 @@ def _rel(a: float, b: float) -> float:
 def settled_gate(t, tau95, edr, period, warm_end, release_t, height_range, src_height_range, err_text):
     """Settled-state gate for one warm-started run. Returns (status, detail).
 
-    Drift: cycle means of tau_95 and EDR over the last 3 complete cycles after warm_end. The two cycle-to-cycle
+    Drift: means of tau_95 and EDR over the last 3 blocks of GATE_BLOCK_CYCLES complete cycles after warm_end. The two block-to-block
     relative changes must each be below GATE_DRIFT_TOL. Height: free-surface range at release vs the source run,
-    relative change below GATE_HEIGHT_TOL. fs sanity: GATE_FS_LINE must be in err_text.
+    relative change below GATE_HEIGHT_TOL (src_height_range = the run's own last cycle since 2026-11-07). fs sanity: GATE_FS_LINE must be in err_text.
     None for a check means its data are not there yet (PENDING). Any False gives FAILED-GATE.
     """
     t = np.asarray(t, float)
@@ -395,11 +396,12 @@ def settled_gate(t, tau95, edr, period, warm_end, release_t, height_range, src_h
         n_done = int(math.floor((t[post].max() - warm_end) / period + 1e-9))   # complete cycles after warm-up
     else:
         n_done = 0
-    if n_done >= 3:
-        ks = range(n_done - 3, n_done)
+    B = GATE_BLOCK_CYCLES
+    if n_done >= 3 * B:
+        ks = range(n_done - 3 * B, n_done, B)
         means = {"tau95": [], "edr": []}
         for k in ks:
-            m = post & (t >= warm_end + k * period) & (t < warm_end + (k + 1) * period)
+            m = post & (t >= warm_end + k * period) & (t < warm_end + (k + B) * period)
             means["tau95"].append(float(tau95[m].mean()))
             means["edr"].append(float(edr[m].mean()))
         drifts = {}
@@ -422,6 +424,13 @@ def settled_gate(t, tau95, edr, period, warm_end, release_t, height_range, src_h
     return status, det
 
 
+def last_cycle_height(v, period: float, n: int = 1) -> float:
+    """Mean free-surface range (posY_max - posY_min) over the last n complete cycles of a vol_frac_interf array."""
+    tend = float(v[:, 1].max())
+    m = v[:, 1] >= tend - n * period
+    return float((v[m, 4] - v[m, 5]).mean())
+
+
 def warm_run_gate(run_dir: Path) -> tuple[str, dict]:
     """Read one warm-started run and its source run (params _source_run, a runs/ dir name) and gate it."""
     from scripts.postprocess import _load_dat, _t_scales   # reuse the repo's readers and nondim scales
@@ -438,16 +447,14 @@ def warm_run_gate(run_dir: Path) -> tuple[str, dict]:
     if vol.exists():
         v = _load_dat(vol)
         h = v[:, 4] - v[:, 5]                              # posY_max - posY_min
-        m = (v[:, 1] >= release_t) & (v[:, 1] < release_t + period)
+        m = (v[:, 1] >= release_t) & (v[:, 1] < release_t + GATE_BLOCK_CYCLES * period)
         if m.any():
             height_range = float(h[m].mean())
-    src_name = params.get("_source_run")
-    if src_name:
-        src = ROOT / "runs" / src_name
-        sv = _load_dat(src / "vol_frac_interf.dat")
-        tend = float(sv[:, 1].max())
-        ms = sv[:, 1] >= tend - period
-        src_height = float((sv[ms, 4] - sv[ms, 5]).mean())
+        # Reference = the run's OWN wave height in its last complete cycle (2026-11-07). The old reference was the
+        # source run's wave; a cross-level source (L8 -> L9) gives a different wave near the 35.2 rpm mode by
+        # grid effect alone, so steady runs failed. The check now asks: is the wave the same at release and at end?
+        if float(v[:, 1].max()) >= release_t + 2 * GATE_BLOCK_CYCLES * period:
+            src_height = last_cycle_height(v, period, GATE_BLOCK_CYCLES)
     err_text = None
     if params.get("_err_file") and Path(params["_err_file"]).exists():
         err_text = Path(params["_err_file"]).read_text(errors="replace")

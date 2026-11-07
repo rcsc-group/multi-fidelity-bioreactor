@@ -1246,3 +1246,11 @@ dtmix_0.50 except at 37.5 rpm. kLa_1T_50 is not reliable at L8 near 22.5-27.5 rp
 - Power: 2 rows, so the size of sigma2 is uncertain; the direction is what the test shows.
 - Gate: 19.14/2.89 (drift 2.2%, height 3.9%) and 34.38/2.66 (height 5.9%) FAILED-GATE, not in the fit. Height check vs L8 may be the wrong check near the 35.2 rpm sloshing mode: open.
 - Action: next 4 L9 points (acquisition, theta 4.3-5.4, the max-band region) submitted: jobs 8461017-8461020 on batch; refit chained afterany: 8461023.
+
+## 2026-11-07: settled gate, revised (block means, self-referenced height)
+- Hypothesis (mine, 2026-11-06): high-rpm L9 runs fail the height check only because L9 and L8 give different waves (grid effect); the runs are steady. **Falsified.** With the height referenced to the run's own last cycles (diag_wave_settle.py), the L9 wave is still decaying at release: 33.70/5.35 goes 0.093 -> 0.075 (20 %) and settles only after ~27 cycles; release is at 12 warm cycles. So kLa_1T_10 of these runs is measured while the interface is still shrinking. The old gate's verdict was right, its reason (cross-grid comparison) was not.
+- 19.14/2.89, 32.19/4.51, 34.81/4.26 have a steady 3T limit cycle (cycle means ~1, 1, 0.96); the per-cycle drift check read it as drift.
+- Change: drift and height now use 3-cycle block means (GATE_BLOCK_CYCLES); height = run's release block vs its last block (not the source run). Tests: tests/test_campaign_gates.py (3T cycle passes, 1 %/cycle drift fails), tests/test_campaign_height_self.py. 3 failures in test_campaign_binary_rule/warm_rule exist before this change.
+- Result: PASS/PENDING 16.35/2.33, 19.14/2.89, 23.14/2.13, 36.35/5.24; FAILED (wave unsettled at release, 4-7 %) 32.19/4.51, 33.70/5.35, 34.38/2.66, 34.81/4.26.
+- Protocol consequence: cross-level warm starts near resonance need ~30 cycles before release, not 12.
+- Decision (Elvis, 2026-11-07): switch the DFD demonstration to Bayesian optimisation: max kLa_1T_10 s.t. tau_95 cap; L9-only BO vs L7-L8-L9 chained BO; regret vs core-h. Warm starts across level and condition allowed if the physics is kept.
