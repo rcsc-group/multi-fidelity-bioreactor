@@ -152,14 +152,27 @@ def rho_of(m):
     return float(m.w @ m._rho[:, 1]) if m._rho.shape[1] > 1 else 0.0
 
 
+class _ThetaBasis(FullBayesKRRLRGP):
+    """Basis [1, f_lower, theta_n]: lets the L8->L9 discrepancy carry a linear theta trend (flat prior, integrated).
+    Why (2026-11-07): the L8 kLa error grows as theta falls (real data ~4x at low theta); with basis [1, f8] the
+    chain inherited L8's preference for theta ~ 2 on the dev synthetic set."""
+    def _basis(self, X):
+        F = super()._basis(X)
+        return np.hstack([F, self.normalize_input(X)[:, 1:2]])
+
+
+CHAIN_THETA = False   # set by callers; True = _ThetaBasis for the L8 and L9 layers
+
+
 def fit_chain3(d7, d8, d9, qoi):
     """L7 FullBayes (constant basis) -> L8 (basis [1, mean f7]) -> L9 (basis [1, mean f8]). Returns (m7, m8, m9)."""
     floor = C.noise_floor(qoi)
     m7 = fit_single(d7, qoi)
     X8, y8 = _xy(d8)
-    m8 = FullBayesKRRLRGP(C.DOMAIN, lf_model=_Mean(m7), grid=C.hf_grid(floor, float(np.std(y8)))).train(X8, y8)
+    K = _ThetaBasis if CHAIN_THETA else FullBayesKRRLRGP
+    m8 = K(C.DOMAIN, lf_model=_Mean(m7), grid=C.hf_grid(floor, float(np.std(y8)))).train(X8, y8)
     X9, y9 = _xy(d9)
-    m9 = FullBayesKRRLRGP(C.DOMAIN, lf_model=_Mean(m8), grid=C.hf_grid(floor, float(np.std(y9)))).train(X9, y9)
+    m9 = K(C.DOMAIN, lf_model=_Mean(m8), grid=C.hf_grid(floor, float(np.std(y9)))).train(X9, y9)
     return m7, m8, m9
 
 

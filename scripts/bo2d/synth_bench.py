@@ -40,6 +40,7 @@ def t7(X): return t8(X) - 0.2
 F = {7: (k7, t7), 8: (k8, t8), 9: (k9, t9)}
 CAP_CH = 3880.0
 METHOD = os.environ.get("BO_METHOD", "aei")   # "mf": MF-GP-UCB level rule for the chain (bo.mf_pick)
+bo.CHAIN_THETA = os.environ.get("BO_THETA", "0") == "1"   # basis [1, f_lower, theta] for L8/L9 layers
 TARGET = 0.05
 
 

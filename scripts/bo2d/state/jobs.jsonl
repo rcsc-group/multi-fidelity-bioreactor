@@ -39,3 +39,7 @@
 {"job": "8561404", "level": 8, "run": "bo1_l8_rpm17.02_th4.80", "rpm": 17.025, "theta": 4.8, "ranks": 16, "arm": "l9only", "start": "spin", "submitted": "2026-11-07T19:42:35.114601+00:00"}
 {"job": "8561405", "level": 8, "run": "bo1_l8_rpm20.18_th4.40", "rpm": 20.175, "theta": 4.4, "ranks": 16, "arm": "l9only", "start": "spin", "submitted": "2026-11-07T19:42:35.174868+00:00"}
 {"job": "8561406", "level": 8, "run": "bo1_l8_rpm15.45_th5.00", "rpm": 15.45, "theta": 5.0, "ranks": 16, "arm": "l9only", "start": "spin", "submitted": "2026-11-07T19:42:35.235472+00:00"}
+{"job": "8563205", "level": 9, "run": "bo1_l9_rpm18.60_th4.60", "rpm": 18.6, "theta": 4.6, "ranks": 32, "arm": "l9only", "start": "warm", "source": "bo1_l8_rpm18.60_th4.60", "submitted": "2026-11-07T20:58:32.651898+00:00"}
+{"job": "8564199", "level": 9, "run": "bo1_l9_rpm17.02_th4.80", "rpm": 17.025, "theta": 4.8, "ranks": 32, "arm": "l9only", "start": "warm", "source": "bo1_l8_rpm17.02_th4.80", "submitted": "2026-11-07T21:13:37.135885+00:00"}
+{"job": "8564200", "level": 9, "run": "bo1_l9_rpm20.18_th4.40", "rpm": 20.175, "theta": 4.4, "ranks": 32, "arm": "l9only", "start": "warm", "source": "bo1_l8_rpm20.18_th4.40", "submitted": "2026-11-07T21:13:37.350927+00:00"}
+{"job": "8564742", "level": 9, "run": "bo1_l9_rpm15.45_th5.00", "rpm": 15.45, "theta": 5.0, "ranks": 32, "arm": "l9only", "start": "warm", "source": "bo1_l8_rpm15.45_th5.00", "submitted": "2026-11-07T21:28:41.908314+00:00"}
