@@ -1,0 +1,3 @@
+{"cap": 0.014, "cap_units": "tau_95 nondim (database units); 0.014 = 0.069 Pa at 27.5 rpm theta 7",
+ "cap_reason": "proxy (Elvis 2026-11-07: a number that puts the optimum in a desirable place): L9 tau_95 at 27.5 rpm / theta 7, so the constrained optimum is mid-range in rpm and far from the 4 seed points",
+ "q": 4, "frozen": "2026-11-07"}

@@ -7,6 +7,7 @@ item starts, give it a diary entry; when it lands, delete it here.
 
 - Campaign 2D (deadline Wed 2026-11-11): L9 round 2 running (8461017-20, refit 8461023 afterany). Open: height gate vs L8 near the 35.2 rpm sloshing mode (34.38/2.66 failed only on height); FAILED-GATE 19.14/2.89 rerun or extend; kLa band rise = theta-dependent L8->L9 correction (diary 2026-11-06 late).
 - Scratch replay_records + mpi_runs archived and verified (2026-11-06, all MATCH); deleting the scratch copies needs Elvis approval (auto-mode blocked rm).
+- HAZARD (2026-11-07): a restart that changes theta_max is not physical. BioReactor.c l.186-189: w_bio_st = w_bio*T_bio depends on theta_max (V_bio), so sin(w_bio_st t) jumps in phase at t_checkpoint; the u rescale (l.360) uses omega_b_prev/omega_b only. scripts/chain.py sweeps theta_max_0 (config/chain_config.yaml). 171 runs in runs/ did this; none is in the kLa or hydro database (scripts/bo2d/audit_cross_theta.py). Fix in C, or forbid theta sweeps in chain.py.
 - H3 variance propagation (owed, zero compute): model 2 uses only the mean of model 1, so the L10 band between design points is too narrow; add rho1^2 var9 (recursive co-kriging; read the reference before citing).
 - kla_mix_dataset.csv needs a binary/protocol column (L9 theta-7 fig9 runs = prod-4b3a435, cold; e9 = lean-f1c11e0, T5 protocol; L10 T10 = lean-eec1f15 warm restart).
 - Tell CCV about node2356 (killed 15 jobs 1 s after start, bursts 2026-10-16 18:48 and 2026-10-17 00:30; Slurm lists it MIXED, not drained).
