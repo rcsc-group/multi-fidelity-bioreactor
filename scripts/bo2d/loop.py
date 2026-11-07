@@ -31,6 +31,7 @@ CFG = S.STATE / "config.json"          # frozen: cap, q
 TAGS = {"l9only": "bo1", "chain": "bo3"}
 SEED9 = ["c2d_l9_rpm16.35_th2.33", "c2d_l9_rpm19.14_th2.89", "c2d_l9_rpm23.14_th2.13", "c2d_l9_rpm36.35_th5.24"]
 QK, QT = "kLa_1T_10", "tau_95"
+Q_LF = 8      # chain: extra L7+L8 points per round at the next-best candidates (synthetic test 2026-11-07)
 
 
 def load_tasks():
@@ -89,14 +90,14 @@ def propose(arm, go):
     best, _ = bo.best_feasible(K[9], T[9], cfg["cap"])
     G = bo.grid()
     a = bo.cei(*bo.gauss(mk, G), *bo.gauss(mt, G), best, lncap)
-    B = bo.pick_batch(a, G, q)
+    B = bo.pick_batch(a, G, q + (Q_LF if arm == "chain" else 0))
     tasks = load_tasks()
     busy = [t for t in tasks if t["arm"] == arm and t["state"] == "running"]
     if busy:
         print(f"{arm}: {len(busy)} task(s) still running; no new proposal"); return
     rec = bo.recommend(mk, mt, K[9], lncap)
     print(f"{arm}: n9={len(K[9])} best feasible obs={best} recommend={rec}")
-    for x in B:
+    for j, x in enumerate(B):
         x = [round(float(x[0]), 3), round(float(x[1]), 3)]
         if arm == "l9only":
             steps = ["spin8", "l9"]
@@ -104,9 +105,12 @@ def propose(arm, go):
             lev = bo.next_level(np.array([x]), K) or 9
             if lev > 7:   # snap to the existing lower-level row near x, so the warm source has the same forcing
                 d = K[lev - 1]; P = d[["rpm", "theta"]].to_numpy(float)
-                j = int(np.argmin(np.linalg.norm(bo.scaled(P) - bo.scaled(np.array([x])), axis=1)))
-                x = [round(float(P[j, 0]), 3), round(float(P[j, 1]), 3)]
-            steps = {7: ["l7", "l8"], 8: ["l8"], 9: ["l9"]}[lev]     # one cascade step; L7 and L8 together (cheap)
+                i = int(np.argmin(np.linalg.norm(bo.scaled(P) - bo.scaled(np.array([x])), axis=1)))
+                x = [round(float(P[i, 0]), 3), round(float(P[i, 1]), 3)]
+            full = ["l7", "l8", "l9"][lev - 7:]
+            steps = full if j < q else [s_ for s_ in full if s_ != "l9"]
+            if not steps:
+                continue
         t = dict(arm=arm, x=x, steps=steps, i=0, jobs=[], runs=[], state="new")
         print(f"  propose {x} steps {t['steps']}")
         tasks.append(t)

@@ -32,3 +32,20 @@ def test_best_feasible_uses_same_run_tau():
     dt = pd.DataFrame(dict(run=["a", "b"], y=[0.2, 0.05]))
     v, r = bo.best_feasible(dk, dt, cap=0.1)
     assert r == "b" and abs(v - np.log(20.0)) < 1e-12
+
+
+def test_aei_prefers_cheap_level_when_correlated_and_l9_when_not():
+    one = np.ones(3)
+    mom = {7: (one, one, 0.01 * one), 9: (one, one, 0.01 * one)}
+    mt = {9: (-5 * one, 0.01 * one, 0.0 * one)}
+    cost = {7: 5.0, 9: 100.0}
+    hi = bo.aei(mom, {7: 0.95 * one, 9: one}, mt, 0.5, 0.0, cost)
+    lo = bo.aei(mom, {7: 0.01 * one, 9: one}, mt, 0.5, 0.0, cost)
+    assert (hi[7] > hi[9]).all() and (lo[7] < lo[9]).all()
+
+
+def test_pick_budget_stays_within_budget():
+    G = bo.grid(); s = {9: np.ones(len(G)), 7: 0.5 * np.ones(len(G))}
+    picks = bo.pick_budget(s, G, budget=230.0, cost={9: 100.0, 7: 5.0})
+    spent = sum({9: 100.0, 7: 5.0}[l] for _, l in picks)
+    assert spent <= 230.0 and sum(l == 9 for _, l in picks) == 2

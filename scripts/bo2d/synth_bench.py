@@ -1,11 +1,16 @@
-"""Offline check of the BO driver on synthetic multi-fidelity functions shaped like our data (2026-11-07).
+"""Offline check of the BO driver: augmented EI (Huang et al. 2006) on synthetic multi-fidelity functions (2026-11-07).
 
-Truth (ln units): kLa9 rises with rpm and theta plus a resonance bump near 37 rpm; tau9 rises with rpm and theta.
-L8 = L9 + a theta-dependent offset (L8 over-predicts kLa at low theta, as the data show, diary 2026-11-06);
-L7 = L8 + a further offset and a wiggle. Noise sd 0.08 on every evaluation (~8 %, the warm/cold L9 kLa spread).
-Seeds: the 4 gated campaign L9 sites (SEED9) for both arms; the chain also gets L8 and L7 at the 36 real L8 sites.
-Pass criteria (stated before running): (1) both arms end within 5 % in kLa of the true constrained optimum;
-(2) report core-h of each arm at first reaching 5 % regret. Costs per evaluation: L7 3, L8 17, L9 100 core-h.
+Truth (ln units) shaped like our data: kLa9 rises with rpm and theta plus a resonance bump; tau9 rises with both.
+L8 = L9 + a theta-dependent offset (L8 over-predicts kLa at low theta, as the data show); L7 = L8 + offset + wiggle.
+Noise sd 0.08 per evaluation. Both arms: same 4 L9 seed sites (SEED9), the same core-h budget per round
+(4 L9-equivalents), the same aEI code. l9only: levels {9}, cost 97 (L8 spin-up 20 + L9 warm 77).
+chain: levels {7, 8, 9}; costs with prerequisites: L7 5, L8 22 (L7 + L8 warm), L9 99 (L7 + L8 + L9);
+the prerequisite runs' data are added. Chain seed also has L7 and L8 at the 36 real L8 sites.
+Criterion (stated before running): chain reaches <= 5 % regret with fewer core-h than l9only in >= 2 of 3 seeds.
+Stop rule (2026-11-07 fix): each arm runs until it first reaches <= 5 % regret or spends CAP_CH core-h,
+not a fixed number of rounds (the 10-round rule gave the chain ~800 core-h vs 3880 for l9only).
+Mode "held": a second truth (different bump, slopes and L8/L7 discrepancy) and new seeds 11-13,
+written before the dev run with the cost cap was seen; it is the test of the locked method.
 """
 import sys
 from pathlib import Path
@@ -14,8 +19,11 @@ import pandas as pd
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from scripts.bo2d import bo  # noqa: E402
 C = bo.C
-COST = {7: 3.0, 8: 17.0, 9: 100.0}
 SD = 0.08
+SEED9 = [(16.35, 2.33), (19.14, 2.89), (23.14, 2.13), (36.35, 5.24)]
+COST = {"l9only": {9: 97.0}, "chain": {7: 5.0, 8: 22.0, 9: 99.0}}
+STEP = {7: 5.0, 8: 17.0, 9: 77.0}
+BUDGET = 4 * 97.0
 
 
 def k9(X):
@@ -29,62 +37,97 @@ def t8(X): return t9(X) - 0.2
 def k7(X): return k8(X) + 0.2 + 0.1 * np.sin(X[:, 0] / 3)
 def t7(X): return t8(X) - 0.2
 F = {7: (k7, t7), 8: (k8, t8), 9: (k9, t9)}
-# Common L9 seed of both arms: the 4 campaign L9 sites that pass the settled gate (2026-11-07). The theta-7 line
-# rows are left out: they hold the constrained optimum, so with them both arms start solved.
-SEED9 = [(16.35, 2.33), (19.14, 2.89), (23.14, 2.13), (36.35, 5.24)]
+CAP_CH = 3880.0
+TARGET = 0.05
 
 
-def evaluate(level, X, rng, tag):
-    fk, ft = F[level]
-    n = len(X)
-    runs = [f"{tag}{level}_{rng.integers(1e9)}" for _ in range(n)]
+def setup(mode):
+    """mode 'held': unseen truth for the test of the locked method."""
+    global k9, t9, k8, t8, k7, t7, F
+    if mode != "held":
+        return (1, 2, 3)
+    def k9(X):
+        r, t = X[:, 0], X[:, 1]
+        return np.log(12) + 0.028 * (r - 15) + 0.09 * (t - 2) + 0.6 * np.exp(-((r - 29) / 3.5) ** 2 - ((t - 4) / 2) ** 2)
+    def t9(X):
+        r, t = X[:, 0], X[:, 1]
+        return np.log(0.005) + 0.10 * (r - 15) + 0.22 * (t - 2)
+    def k8(X): return k9(X) + 0.5 + 0.6 * (7 - X[:, 1]) / 5 - 0.01 * (X[:, 0] - 25)
+    def t8(X): return t9(X) - 0.1
+    def k7(X): return k8(X) + 0.4 + 0.15 * np.cos(X[:, 1])
+    def t7(X): return t8(X) - 0.15
+    F = {7: (k7, t7), 8: (k8, t8), 9: (k9, t9)}
+    return (11, 12, 13)
+
+
+def evaluate(level, X, rng):
+    fk, ft = F[level]; n = len(X)
+    runs = [f"r{level}_{rng.integers(1e12)}" for _ in range(n)]
     dk = pd.DataFrame(dict(level=level, rpm=X[:, 0], theta=X[:, 1], run=runs, y=np.exp(fk(X) + SD * rng.standard_normal(n))))
     dt = dk.copy(); dt["y"] = np.exp(ft(X) + SD * rng.standard_normal(n))
     return dk, dt
 
 
-def run_arm(arm, cap, rounds, q, seed):
+def add(K, T, lev, X, rng):
+    dk, dt = evaluate(lev, X, rng)
+    K[lev] = pd.concat([K.get(lev), dk], ignore_index=True); T[lev] = pd.concat([T.get(lev), dt], ignore_index=True)
+
+
+def models(arm, K, T):
+    if arm == "l9only":
+        mk, mt = bo.fit_single(K[9], "kLa_1T_10"), bo.fit_single(T[9], "tau_95")
+        return (lambda X: bo.single_moments(mk, X)), (lambda X: bo.single_moments(mt, X))
+    mk = bo.fit_chain3(K[7], K[8], K[9], "kLa_1T_10"); mt = bo.fit_chain3(T[7], T[8], T[9], "tau_95")
+    return (lambda X: bo.chain_moments(mk, X)), (lambda X: bo.chain_moments(mt, X))
+
+
+def run_arm(arm, cap, seed, max_rounds=80):
     rng = np.random.default_rng(seed)
-    real_k = C.load_db("kLa_1T_10")
-    s9 = np.array(SEED9)
-    s8 = real_k[real_k.level == 8][["rpm", "theta"]].drop_duplicates().to_numpy(float)[:36]
+    real = C.load_db("kLa_1T_10"); s8 = real[real.level == 8][["rpm", "theta"]].drop_duplicates().to_numpy(float)[:36]
     K, T = {}, {}
-    K[9], T[9] = evaluate(9, s9, rng, "s")
+    add(K, T, 9, np.array(SEED9), rng)
     if arm == "chain":
-        for lev in (7, 8):
-            K[lev], T[lev] = evaluate(lev, s8, rng, "s")
-    G = bo.grid(); lncap = np.log(cap); spent = 0.0; hist = []
+        add(K, T, 7, s8, rng); add(K, T, 8, s8, rng)
+    G = bo.grid(); lncap = np.log(cap); spent = 0.0
     true_opt = k9(G)[t9(G) <= lncap].max()
-    for rd in range(rounds):
-        best, run = bo.best_feasible(K[9], T[9], cap)
-        if arm == "l9only":
-            mk, mt = bo.fit_single(K[9], "kLa_1T_10"), bo.fit_single(T[9], "tau_95")
-        else:
-            mk = bo.fit_chain(K[7], K[8], K[9], "kLa_1T_10")[0]; mt = bo.fit_chain(T[7], T[8], T[9], "tau_95")[0]
-        a = bo.cei(*bo.gauss(mk, G), *bo.gauss(mt, G), best, lncap)
-        B = bo.pick_batch(a, G, q)
-        for x in B:
-            lev = 9 if arm == "l9only" else bo.next_level(x[None], K)
-            if lev is None:
-                lev = 9
-            dk, dt = evaluate(lev, x[None], rng, "b")
-            K[lev] = pd.concat([K.get(lev), dk], ignore_index=True); T[lev] = pd.concat([T.get(lev), dt], ignore_index=True)
-            spent += COST[lev]
-        if arm == "l9only":
-            mk, mt = bo.fit_single(K[9], "kLa_1T_10"), bo.fit_single(T[9], "tau_95")
-        else:
-            mk = bo.fit_chain(K[7], K[8], K[9], "kLa_1T_10")[0]; mt = bo.fit_chain(T[7], T[8], T[9], "tau_95")[0]
-        xb, _ = bo.recommend(mk, mt, K[9], lncap)
-        feas = bool(t9(xb[None])[0] <= lncap)
-        regret = 1 - np.exp(k9(xb[None])[0] - true_opt)
-        hist.append((rd, spent, regret, feas))
-        print(f"{arm:6s} seed {seed} round {rd} core-h {spent:6.0f} regret {100 * regret:5.1f}% feasible {feas} at {xb.round(2)}", flush=True)
-    return hist
+    for rd in range(max_rounds):
+        if spent >= CAP_CH:
+            break
+        Mk, Mt = models(arm, K, T)
+        Xe = pd.concat([K[l][["rpm", "theta"]] for l in K]).drop_duplicates().to_numpy(float)
+        mk_e, _ = Mk(Xe); mt_e, _ = Mt(Xe)
+        best = bo.effective_best(mk_e, mt_e, lncap)
+        if best is None:
+            best = float(np.log(K[9].y).min())
+        mk, ck = Mk(G); mt, _ = Mt(G)
+        picks = bo.pick_budget(bo.aei(mk, ck, mt, best, lncap, COST[arm]), G, BUDGET, COST[arm])
+        nl = {7: 0, 8: 0, 9: 0}
+        for x, l in picks:
+            for lev in ([l] if arm == "l9only" else range(7, l + 1)):
+                add(K, T, lev, x[None], rng)
+            spent += COST[arm][l]; nl[l] += 1
+        Mk, Mt = models(arm, K, T)
+        xb, _ = bo.recommend_m(Mk, Mt, K[9], lncap)
+        if xb is None:
+            print(f"{arm:6s} seed {seed} round {rd} core-h {spent:6.0f} no feasible recommendation", flush=True); continue
+        feas = bool(t9(xb[None])[0] <= lncap); regret = 1 - np.exp(k9(xb[None])[0] - true_opt)
+        print(f"{arm:6s} seed {seed} round {rd} core-h {spent:6.0f} regret {100 * regret:5.1f}% feasible {feas} "
+              f"at {xb.round(2)} picks L7/L8/L9 {nl[7]}/{nl[8]}/{nl[9]}", flush=True)
+        if feas and regret <= TARGET:
+            print(f"HIT {arm} seed {seed} core-h {spent:.0f}", flush=True); return spent
+    print(f"MISS {arm} seed {seed} core-h {spent:.0f}", flush=True); return None
 
 
 if __name__ == "__main__":
+    cap = float(sys.argv[1]) if len(sys.argv) > 1 else 0.03
+    mode = sys.argv[2] if len(sys.argv) > 2 else "dev"
+    seeds = setup(mode)
     G = bo.grid()
-    cap = float(sys.argv[1]) if len(sys.argv) > 1 else 0.1
     print("true constrained optimum:", G[np.argmax(np.where(t9(G) <= np.log(cap), k9(G), -np.inf))], flush=True)
-    for arm in ("l9only", "chain"):
-        run_arm(arm, cap, rounds=int(sys.argv[2]) if len(sys.argv) > 2 else 6, q=4, seed=1)
+    win = 0
+    for seed in seeds:
+        h = {arm: run_arm(arm, cap, seed) for arm in ("chain", "l9only")}
+        ok = h["chain"] is not None and (h["l9only"] is None or h["chain"] < h["l9only"])
+        win += ok
+        print(f"SEED {seed} chain {h['chain']} l9only {h['l9only']} chain_wins {ok}", flush=True)
+    print(f"VERDICT mode {mode}: chain wins {win}/3 -> {'PASS' if win >= 2 else 'FAIL'}", flush=True)

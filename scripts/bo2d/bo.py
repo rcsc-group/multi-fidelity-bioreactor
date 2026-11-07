@@ -126,3 +126,105 @@ def next_level(x, rows_by_level):
         if d is None or len(d) == 0 or np.min(np.linalg.norm(scaled(d[["rpm", "theta"]].to_numpy(float)) - xs, axis=1)) > SAME_X:
             return lev
     return None
+
+
+# ---------------------------------------------------------------- augmented EI (2026-11-07, Elvis chose it)
+# Huang, Allen, Notz, Miller (2006) MFSKO, read in full in its restatement Schenk et al., WSC 2005, eqs. (7)-(9):
+#   EI(x, l) = E[max(f_m(x) - f_m(x*), 0)] * a1 * a2 * a3        (written here for maximisation)
+#   a1 = corr[f_l^p(x), f_m^p(x)]   posterior correlation of level l with the top level at x
+#   a2 = 1 - s_eps,l / sqrt(s_l^2(x) + s_eps,l^2)                  noise discount at level l
+#   a3 = C_m / C_l                                                cost ratio (C_l includes the warm-start prerequisites)
+#   x* = argmax over evaluated points (any level) of u(x) = f_m(x) - c s_m(x), c = 1.
+# Their model is additive (rho = 1). Ours is Kennedy-O'Hagan with a fitted rho per level (basis [1, f_{l-1}]); the
+# variance is propagated up the chain assuming the level posteriors independent:
+#   V8 = rho8^2 V7 + Vd8,  V9 = rho9^2 V8 + Vd9,  cov(f8, f9) = rho9 V8,  cov(f7, f9) = rho9 rho8 V7.
+# Constraint: the score is multiplied by P(tau_95 <= cap) from the tau chain at L9.
+
+def latent(m, X):
+    """(mean, latent variance, noise variance) in ln units for one FullBayes model; noise = eta^2 term."""
+    X = np.atleast_2d(X)
+    mu, sd = gauss(m, X)
+    noise = float(m.w @ (m.b_n / m.a_n * m.eta ** 2)) * m.yh_std ** 2
+    return mu, np.maximum(sd ** 2 - noise, 1e-12), noise
+
+
+def rho_of(m):
+    return float(m.w @ m._rho[:, 1]) if m._rho.shape[1] > 1 else 0.0
+
+
+def fit_chain3(d7, d8, d9, qoi):
+    """L7 FullBayes (constant basis) -> L8 (basis [1, mean f7]) -> L9 (basis [1, mean f8]). Returns (m7, m8, m9)."""
+    floor = C.noise_floor(qoi)
+    m7 = fit_single(d7, qoi)
+    X8, y8 = _xy(d8)
+    m8 = FullBayesKRRLRGP(C.DOMAIN, lf_model=_Mean(m7), grid=C.hf_grid(floor, float(np.std(y8)))).train(X8, y8)
+    X9, y9 = _xy(d9)
+    m9 = FullBayesKRRLRGP(C.DOMAIN, lf_model=_Mean(m8), grid=C.hf_grid(floor, float(np.std(y9)))).train(X9, y9)
+    return m7, m8, m9
+
+
+def chain_moments(ms, X):
+    """Per level l: mean, propagated latent variance V_l, noise var, and corr(f_l, f_9). ms = (m7, m8, m9)."""
+    m7, m8, m9 = ms
+    mu7, V7, n7 = latent(m7, X)
+    mu8, Vd8, n8 = latent(m8, X)
+    mu9, Vd9, n9 = latent(m9, X)
+    r8, r9 = rho_of(m8), rho_of(m9)
+    V8 = r8 ** 2 * V7 + Vd8
+    V9 = r9 ** 2 * V8 + Vd9
+    corr = {7: r9 * r8 * V7 / np.sqrt(V7 * V9), 8: r9 * V8 / np.sqrt(V8 * V9), 9: np.ones_like(V9)}
+    return {7: (mu7, V7, n7), 8: (mu8, V8, n8), 9: (mu9, V9, n9)}, corr
+
+
+def single_moments(m9, X):
+    mu, V, n = latent(m9, X)
+    return {9: (mu, V, n)}, {9: np.ones_like(V)}
+
+
+def aei(mom_k, corr_k, mom_t, best, lncap, cost):
+    """Score per level l: EI of ln kLa at L9 (latent) * a1 * a2 * a3 * P(feasible). cost[l] = core-h incl. prerequisites."""
+    mu9, V9, _ = mom_k[9]
+    s9 = np.sqrt(V9)
+    z = (mu9 - best) / s9
+    ei = (mu9 - best) * stats.norm.cdf(z) + s9 * stats.norm.pdf(z)
+    mt, Vt, nt = mom_t[9]
+    pof = stats.norm.cdf((lncap - mt) / np.sqrt(Vt + nt))
+    out = {}
+    for l, (mu, V, n) in mom_k.items():
+        a2 = 1.0 - np.sqrt(n) / np.sqrt(V + n)
+        out[l] = ei * np.abs(corr_k[l]) * a2 * (cost[9] / cost[l]) * pof
+    return out
+
+
+def effective_best(mom_k_at, mom_t_at, lncap):
+    """x* rule: max over evaluated points of mu9 - s9 among points with P(feasible) >= 0.8. Returns ln value or None."""
+    mu9, V9, _ = mom_k_at[9]
+    mt, Vt, nt = mom_t_at[9]
+    ok = mt + Z_REC * np.sqrt(Vt + nt) <= lncap
+    u = mu9 - np.sqrt(V9)
+    return float(u[ok].max()) if ok.any() else None
+
+
+def pick_budget(scores, G, budget, cost, max_picks: int = 4):
+    """Greedy (x, level) picks by score: at most max_picks, and within the core-h budget; each pick removes a disc
+    around x. max_picks: aEI is a one-at-a-time rule; filling a budget with it floods the cheap level (77 L7 picks in
+    one round of the synthetic test, 2026-11-07)."""
+    Gs = scaled(G); S = {l: s.copy() for l, s in scores.items()}; out = []; spent = 0.0
+    while True:
+        l, i = max(((l, int(np.argmax(s))) for l, s in S.items()), key=lambda li: S[li[0]][li[1]])
+        if len(out) >= max_picks or not np.isfinite(S[l][i]) or S[l][i] <= 0 or spent + cost[l] > budget:
+            break
+        out.append((G[i], l)); spent += cost[l]
+        mask = np.linalg.norm(Gs - Gs[i], axis=1) < R_EXCL
+        for s in S.values():
+            s[mask] = -np.inf
+    return out
+
+
+def recommend_m(Mk, Mt, d9, lncap):
+    """recommend() for moment functions: the evaluated L9 site with the highest mu9 among sites with P(feasible)>=0.8."""
+    X = d9[["rpm", "theta"]].drop_duplicates().to_numpy(float)
+    k, _ = Mk(X); t, _ = Mt(X)
+    mu, (mt, Vt, nt) = k[9][0], t[9]
+    ok = mt + Z_REC * np.sqrt(Vt + nt) <= lncap
+    return (X[ok][np.argmax(mu[ok])], float(mu[ok].max())) if ok.any() else (None, None)

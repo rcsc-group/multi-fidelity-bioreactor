@@ -1254,3 +1254,9 @@ dtmix_0.50 except at 37.5 rpm. kLa_1T_50 is not reliable at L8 near 22.5-27.5 rp
 - Result: PASS/PENDING 16.35/2.33, 19.14/2.89, 23.14/2.13, 36.35/5.24; FAILED (wave unsettled at release, 4-7 %) 32.19/4.51, 33.70/5.35, 34.38/2.66, 34.81/4.26.
 - Protocol consequence: cross-level warm starts near resonance need ~30 cycles before release, not 12.
 - Decision (Elvis, 2026-11-07): switch the DFD demonstration to Bayesian optimisation: max kLa_1T_10 s.t. tau_95 cap; L9-only BO vs L7-L8-L9 chained BO; regret vs core-h. Warm starts across level and condition allowed if the physics is kept.
+
+## 2026-11-07 evening — BO synthetic test: post hoc tuning admitted, test redesigned
+- User asked whether the acquisition was tuned after seeing data. Yes: cascade -> augmented EI -> max 4 picks/round were all chosen after seeing synthetic results (dev set). Not tuned on real data (none exists yet).
+- Dev run 8555253 (aEI, 10 rounds, 3 seeds, cap 0.03): chain FAILS the pre-stated criterion in 3/3 seeds (best regret 9.5 / 9.7 / 13.0 %); l9only hits <=5 % at 1940 / 2328 / 388 core-h. Confound: the 10-round stop gave the chain ~800 core-h vs 3880 for l9only.
+- Fix to the TEST only (user approved): each arm runs until <=5 % regret or 3880 core-h. Held-out truth (new bump, slopes, discrepancy; seeds 11-13) committed in this commit, BEFORE the dev re-run (job 8557855) is seen.
+- Protocol: dev re-run -> lock the method (commit hash) -> held-out run. The held-out verdict is the evidence, pass or fail.
