@@ -1,0 +1,78 @@
+[
+ {
+  "arm": "l9only",
+  "x": [
+   18.6,
+   4.6
+  ],
+  "steps": [
+   "spin8",
+   "l9"
+  ],
+  "i": 0,
+  "jobs": [
+   "8561403"
+  ],
+  "runs": [
+   "bo1_l8_rpm18.60_th4.60"
+  ],
+  "state": "running"
+ },
+ {
+  "arm": "l9only",
+  "x": [
+   17.025,
+   4.8
+  ],
+  "steps": [
+   "spin8",
+   "l9"
+  ],
+  "i": 0,
+  "jobs": [
+   "8561404"
+  ],
+  "runs": [
+   "bo1_l8_rpm17.02_th4.80"
+  ],
+  "state": "running"
+ },
+ {
+  "arm": "l9only",
+  "x": [
+   20.175,
+   4.4
+  ],
+  "steps": [
+   "spin8",
+   "l9"
+  ],
+  "i": 0,
+  "jobs": [
+   "8561405"
+  ],
+  "runs": [
+   "bo1_l8_rpm20.18_th4.40"
+  ],
+  "state": "running"
+ },
+ {
+  "arm": "l9only",
+  "x": [
+   15.45,
+   5.0
+  ],
+  "steps": [
+   "spin8",
+   "l9"
+  ],
+  "i": 0,
+  "jobs": [
+   "8561406"
+  ],
+  "runs": [
+   "bo1_l8_rpm15.45_th5.00"
+  ],
+  "state": "running"
+ }
+]

@@ -228,3 +228,30 @@ def recommend_m(Mk, Mt, d9, lncap):
     mu, (mt, Vt, nt) = k[9][0], t[9]
     ok = mt + Z_REC * np.sqrt(Vt + nt) <= lncap
     return (X[ok][np.argmax(mu[ok])], float(mu[ok].max())) if ok.any() else (None, None)
+
+
+# --- MF-GP-UCB level rule (Kandasamy, Dasarathy, Oliva, Schneider, Poczos, NeurIPS 2016), with constrained EI ----
+# Step 1: x from the top-level acquisition only (constrained EI of ln kLa at L9).
+# Step 2: at x, run the lowest level l < 9 whose latent sd exceeds its threshold gamma_l; else run L9.
+# gamma_l = noise sd of level l (the level is "learned" at x once its latent sd falls under its own noise).
+# Why (2026-11-07): aEI's cost factor C9/C7 ~ 20 made L7 win nearly every round and pulled x to theta ~ 2, where
+# L8 over-predicts kLa ~4x; the chain stalled at 9.5 % regret on the dev synthetic set.
+def mf_pick(mom_k, mom_t, best, lncap, G, q: int = 4):
+    mu9, V9, _ = mom_k[9]
+    s9 = np.sqrt(V9)
+    z = (mu9 - best) / s9
+    ei = (mu9 - best) * stats.norm.cdf(z) + s9 * stats.norm.pdf(z)
+    mt, Vt, nt = mom_t[9]
+    score = ei * stats.norm.cdf((lncap - mt) / np.sqrt(Vt + nt))
+    B = pick_batch(score, G, q)
+    out = []
+    for x in B:
+        i = int(np.argmin(np.linalg.norm(G - x, axis=1)))
+        lev = 9
+        for l in sorted(k for k in mom_k if k < 9):
+            _, V, n = mom_k[l]
+            if np.sqrt(V[i]) > np.sqrt(np.broadcast_to(n, V.shape)[i]):
+                lev = l
+                break
+        out.append((x, lev))
+    return out

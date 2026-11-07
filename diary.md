@@ -1260,3 +1260,7 @@ dtmix_0.50 except at 37.5 rpm. kLa_1T_50 is not reliable at L8 near 22.5-27.5 rp
 - Dev run 8555253 (aEI, 10 rounds, 3 seeds, cap 0.03): chain FAILS the pre-stated criterion in 3/3 seeds (best regret 9.5 / 9.7 / 13.0 %); l9only hits <=5 % at 1940 / 2328 / 388 core-h. Confound: the 10-round stop gave the chain ~800 core-h vs 3880 for l9only.
 - Fix to the TEST only (user approved): each arm runs until <=5 % regret or 3880 core-h. Held-out truth (new bump, slopes, discrepancy; seeds 11-13) committed in this commit, BEFORE the dev re-run (job 8557855) is seen.
 - Protocol: dev re-run -> lock the method (commit hash) -> held-out run. The held-out verdict is the evidence, pass or fail.
+- 2026-11-07 late: dev re-run 8557855 (aEI, core-h stop): chain seed 1 stuck at 9.5 % regret at theta=2 after 1894 core-h (l9only hit 5 % at 1940). Diagnosis: aEI cost factor C9/C7 ~ 20 makes L7 win nearly every round and drags x toward theta~2 where L8 over-predicts kLa ~4x.
+- Dev iteration 2 (declared development, not test): MF-GP-UCB level rule (Kandasamy et al. 2016): x from constrained EI at L9 only; run the lowest level whose latent sd > its noise sd, else L9. bo.mf_pick, test added (7 pass). Dev jobs 8562960-62 (one per seed, chain only; l9only curves reused from 8555253/8557855).
+- Real L9-only arm round 1 started: spin-ups 8561403-06 at (18.6,4.6) (17.03,4.8) (20.18,4.4) (15.45,5.0); auto-advance loop on node1804 every 15 min.
+- User rule: a negative result is not an option. Held-out truth (commit 0062706) stays untouched until the method is locked.

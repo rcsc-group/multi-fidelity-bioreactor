@@ -12,6 +12,7 @@ not a fixed number of rounds (the 10-round rule gave the chain ~800 core-h vs 38
 Mode "held": a second truth (different bump, slopes and L8/L7 discrepancy) and new seeds 11-13,
 written before the dev run with the cost cap was seen; it is the test of the locked method.
 """
+import os
 import sys
 from pathlib import Path
 import numpy as np
@@ -38,6 +39,7 @@ def k7(X): return k8(X) + 0.2 + 0.1 * np.sin(X[:, 0] / 3)
 def t7(X): return t8(X) - 0.2
 F = {7: (k7, t7), 8: (k8, t8), 9: (k9, t9)}
 CAP_CH = 3880.0
+METHOD = os.environ.get("BO_METHOD", "aei")   # "mf": MF-GP-UCB level rule for the chain (bo.mf_pick)
 TARGET = 0.05
 
 
@@ -100,7 +102,10 @@ def run_arm(arm, cap, seed, max_rounds=80):
         if best is None:
             best = float(np.log(K[9].y).min())
         mk, ck = Mk(G); mt, _ = Mt(G)
-        picks = bo.pick_budget(bo.aei(mk, ck, mt, best, lncap, COST[arm]), G, BUDGET, COST[arm])
+        if arm == "chain" and METHOD == "mf":
+            picks = bo.mf_pick(mk, mt, best, lncap, G)
+        else:
+            picks = bo.pick_budget(bo.aei(mk, ck, mt, best, lncap, COST[arm]), G, BUDGET, COST[arm])
         nl = {7: 0, 8: 0, 9: 0}
         for x, l in picks:
             for lev in ([l] if arm == "l9only" else range(7, l + 1)):
@@ -122,11 +127,16 @@ if __name__ == "__main__":
     cap = float(sys.argv[1]) if len(sys.argv) > 1 else 0.03
     mode = sys.argv[2] if len(sys.argv) > 2 else "dev"
     seeds = setup(mode)
+    if len(sys.argv) > 3:
+        seeds = tuple(int(a) for a in sys.argv[3].split(","))
+    arms = sys.argv[4].split(",") if len(sys.argv) > 4 else ["chain", "l9only"]
     G = bo.grid()
     print("true constrained optimum:", G[np.argmax(np.where(t9(G) <= np.log(cap), k9(G), -np.inf))], flush=True)
     win = 0
     for seed in seeds:
-        h = {arm: run_arm(arm, cap, seed) for arm in ("chain", "l9only")}
+        h = {arm: run_arm(arm, cap, seed) for arm in arms}
+        if len(arms) < 2:
+            continue
         ok = h["chain"] is not None and (h["l9only"] is None or h["chain"] < h["l9only"])
         win += ok
         print(f"SEED {seed} chain {h['chain']} l9only {h['l9only']} chain_wins {ok}", flush=True)
