@@ -86,12 +86,19 @@ def models(arm, K, T):
 
 def run_arm(arm, cap, seed, max_rounds=80):
     rng = np.random.default_rng(seed)
+    spent0 = [0.0]
     real = C.load_db("kLa_1T_10"); s8 = real[real.level == 8][["rpm", "theta"]].drop_duplicates().to_numpy(float)[:36]
     K, T = {}, {}
     add(K, T, 9, np.array(SEED9), rng)
     if arm == "chain":
-        add(K, T, 7, s8, rng); add(K, T, 8, s8, rng)
-    G = bo.grid(); lncap = np.log(cap); spent = 0.0
+        if os.environ.get("BO_FAIRSEED", "0") == "1":   # 2026-11-08 fair seed: = real chain arm (loop.arm_data)
+            from scripts.bo2d import loop as LP
+            s7 = LP.arm_data("chain", "tau_95")[7][["rpm", "theta"]].drop_duplicates().to_numpy(float)
+            add(K, T, 7, s7, rng); add(K, T, 8, np.array(SEED9), rng)
+            spent0[0] = 5.0 * (len(s7) - len(SEED9)) + 26.0 * len(SEED9)   # reused L7 + L7/L8 at the seed sites
+        else:
+            add(K, T, 7, s8, rng); add(K, T, 8, s8, rng)
+    G = bo.grid(); lncap = np.log(cap); spent = spent0[0]
     true_opt = k9(G)[t9(G) <= lncap].max()
     for rd in range(max_rounds):
         if spent >= CAP_CH:

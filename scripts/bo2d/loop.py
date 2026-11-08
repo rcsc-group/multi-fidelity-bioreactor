@@ -28,7 +28,7 @@ C = bo.C
 
 TASKS = S.STATE / "tasks.json"
 CFG = S.STATE / "config.json"          # frozen: cap, q
-TAGS = {"l9only": "bo1", "chain": "bo3"}
+TAGS = {"l9only": "bo1", "chain": "bo4"}   # bo3 = chain with unfair archive seed (abandoned 2026-11-08)
 SEED9 = ["c2d_l9_rpm16.35_th2.33", "c2d_l9_rpm19.14_th2.89", "c2d_l9_rpm23.14_th2.13", "c2d_l9_rpm36.35_th5.24"]
 QK, QT = "kLa_1T_10", "tau_95"
 Q_LF = 8      # chain: extra L7+L8 points per round at the next-best candidates (synthetic test 2026-11-07)
@@ -69,10 +69,36 @@ def arm_data(arm, qoi):
     d9 = pd.concat([seed, own], ignore_index=True)
     if arm == "l9only":
         return {9: d9}
-    real8 = C.load_db(qoi); real8 = real8[real8.level == 8]
+    # fair seed (user, 2026-11-08): the chain sees L7/L8 only at the 4 shared SEED9 sites, plus its own picks
+    real8 = C.load_db(qoi); real8 = _at_seed(real8[real8.level == 8], seed)
     d8 = pd.concat([real8, rows(qoi, [TAGS[arm] + "_l8_"], {8})], ignore_index=True)
-    d7 = rows(qoi, ["bo_l7_", TAGS[arm] + "_l7_"], {7})
+    # plus the L7 seed runs off the regular grid lines (theta 4 / 5.5 / 7 rows look hand-placed); charged L7_SEED_COST
+    s7 = rows(qoi, ["bo_l7_"], {7})
+    d7 = pd.concat([_at_seed(s7, seed), _off_grid(s7), rows(qoi, [TAGS[arm] + "_l7_"], {7})],
+                   ignore_index=True).drop_duplicates(subset=["rpm", "theta", "run"])
     return {7: d7, 8: d8, 9: d9}
+
+
+GRID_THETA = (4.0, 5.5, 7.0)
+
+
+def _off_grid(d, tol=0.02):
+    on = np.zeros(len(d), bool)
+    for t_ in GRID_THETA:
+        on |= ((d.theta - t_).abs() < tol).to_numpy()
+    return d[~on].reset_index(drop=True)
+
+
+def l7_seed_cost():
+    """core-h charged to the chain for the reused off-grid L7 seed runs (from sacct, 5 core-h median)."""
+    return 5.0 * len(_off_grid(rows(QT, ["bo_l7_"], {7})))
+
+
+def _at_seed(d, seed, tol=0.01):
+    keep = np.zeros(len(d), bool)
+    for r_, t_ in zip(seed.rpm, seed.theta):
+        keep |= ((d.rpm - r_).abs() < tol).to_numpy() & ((d.theta - t_).abs() < tol).to_numpy()
+    return d[keep].drop_duplicates(subset=["rpm", "theta"]).reset_index(drop=True)
 
 
 # measured 2026-11-08 (measure_costs.py): L7 5, L8 spin 21, L9 warm 350 core-h; L8 warm taken = L8 spin (70 vs 80 cycles)
@@ -155,7 +181,7 @@ def _source_for(t, step):
 
 def _nearest(level, x):
     """A finished run at the same (rpm, theta) (within 0.01) and this level, any name, with a checkpoint, else None."""
-    d = pd.concat([C.load_db(QT), rows(QT, ["bo_", "bo3_"], {7, 8})], ignore_index=True)
+    d = pd.concat([C.load_db(QT), rows(QT, ["bo_", "bo4_"], {7, 8})], ignore_index=True)
     d = d[(d.level == level) & ((d.rpm - x[0]).abs() < 0.01) & ((d.theta - x[1]).abs() < 0.01)]
     for r in d.run:
         if (C.ROOT / "runs" / r / "checkpoint.dump").exists():

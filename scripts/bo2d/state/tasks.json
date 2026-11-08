@@ -93,7 +93,7 @@
    "spin8",
    "l9"
   ],
-  "i": 1,
+  "i": 2,
   "jobs": [
    "8583253",
    "8584557"
@@ -102,7 +102,7 @@
    "bo1_l8_rpm36.38_th2.00",
    "bo1_l9_rpm36.38_th2.00"
   ],
-  "state": "running"
+  "state": "done"
  },
  {
   "arm": "l9only",
@@ -114,7 +114,7 @@
    "spin8",
    "l9"
   ],
-  "i": 1,
+  "i": 2,
   "jobs": [
    "8583254",
    "8585069"
@@ -123,7 +123,7 @@
    "bo1_l8_rpm35.48_th2.35",
    "bo1_l9_rpm35.48_th2.35"
   ],
-  "state": "running"
+  "state": "done"
  },
  {
   "arm": "l9only",
@@ -135,7 +135,7 @@
    "spin8",
    "l9"
   ],
-  "i": 1,
+  "i": 2,
   "jobs": [
    "8583255",
    "8585071"
@@ -144,7 +144,7 @@
    "bo1_l8_rpm34.35_th2.70",
    "bo1_l9_rpm34.35_th2.70"
   ],
-  "state": "running"
+  "state": "done"
  },
  {
   "arm": "l9only",
@@ -156,7 +156,7 @@
    "spin8",
    "l9"
   ],
-  "i": 1,
+  "i": 2,
   "jobs": [
    "8583256",
    "8584558"
@@ -165,10 +165,10 @@
    "bo1_l8_rpm33.45_th3.05",
    "bo1_l9_rpm33.45_th3.05"
   ],
-  "state": "running"
+  "state": "done"
  },
  {
-  "arm": "chain",
+  "arm": "chain_bo3_abandoned",
   "x": [
    16.8,
    7.0
@@ -177,7 +177,7 @@
    "l7",
    "l8"
   ],
-  "i": 1,
+  "i": 2,
   "jobs": [
    "8583733",
    "8585072"
@@ -186,10 +186,10 @@
    "bo3_l7_rpm16.80_th7.00",
    "bo3_l8_rpm16.80_th7.00"
   ],
-  "state": "running"
+  "state": "done"
  },
  {
-  "arm": "chain",
+  "arm": "chain_bo3_abandoned",
   "x": [
    15.225,
    6.6
@@ -198,7 +198,7 @@
    "l7",
    "l8"
   ],
-  "i": 1,
+  "i": 2,
   "jobs": [
    "8583734",
    "8585073"
@@ -207,10 +207,10 @@
    "bo3_l7_rpm15.22_th6.60",
    "bo3_l8_rpm15.22_th6.60"
   ],
-  "state": "running"
+  "state": "done"
  },
  {
-  "arm": "chain",
+  "arm": "chain_bo3_abandoned",
   "x": [
    18.6,
    7.0
@@ -219,7 +219,7 @@
    "l7",
    "l8"
   ],
-  "i": 1,
+  "i": 2,
   "jobs": [
    "8583735",
    "8585074"
@@ -227,6 +227,219 @@
   "runs": [
    "bo3_l7_rpm18.60_th7.00",
    "bo3_l8_rpm18.60_th7.00"
+  ],
+  "state": "done"
+ },
+ {
+  "arm": "chain_bo3_abandoned",
+  "x": [
+   16.8,
+   7.0
+  ],
+  "steps": [
+   "l9"
+  ],
+  "i": 0,
+  "jobs": [
+   "8589033"
+  ],
+  "runs": [
+   "bo3_l9_rpm16.80_th7.00"
+  ],
+  "state": "failed"
+ },
+ {
+  "arm": "chain_bo3_abandoned",
+  "x": [
+   15.0,
+   6.55
+  ],
+  "steps": [
+   "l7",
+   "l8"
+  ],
+  "i": 2,
+  "jobs": [
+   "8589034",
+   "8590994"
+  ],
+  "runs": [
+   "bo3_l7_rpm15.00_th6.55",
+   "bo3_l8_rpm15.00_th6.55"
+  ],
+  "state": "done"
+ },
+ {
+  "arm": "chain_bo3_abandoned",
+  "x": [
+   18.6,
+   7.0
+  ],
+  "steps": [
+   "l9"
+  ],
+  "i": 0,
+  "jobs": [
+   "8589035"
+  ],
+  "runs": [
+   "bo3_l9_rpm18.60_th7.00"
+  ],
+  "state": "failed"
+ },
+ {
+  "arm": "l9only",
+  "x": [
+   19.725,
+   3.1
+  ],
+  "steps": [
+   "spin8",
+   "l9"
+  ],
+  "i": 1,
+  "jobs": [
+   "8615031",
+   "8622946"
+  ],
+  "runs": [
+   "bo1_l8_rpm19.73_th3.10",
+   "bo1_l9_rpm19.73_th3.10"
+  ],
+  "state": "running"
+ },
+ {
+  "arm": "l9only",
+  "x": [
+   21.525,
+   3.15
+  ],
+  "steps": [
+   "spin8",
+   "l9"
+  ],
+  "i": 1,
+  "jobs": [
+   "8615032",
+   "8623928"
+  ],
+  "runs": [
+   "bo1_l8_rpm21.52_th3.15",
+   "bo1_l9_rpm21.52_th3.15"
+  ],
+  "state": "running"
+ },
+ {
+  "arm": "l9only",
+  "x": [
+   17.925,
+   3.15
+  ],
+  "steps": [
+   "spin8",
+   "l9"
+  ],
+  "i": 1,
+  "jobs": [
+   "8615033",
+   "8623929"
+  ],
+  "runs": [
+   "bo1_l8_rpm17.93_th3.15",
+   "bo1_l9_rpm17.93_th3.15"
+  ],
+  "state": "running"
+ },
+ {
+  "arm": "l9only",
+  "x": [
+   33.225,
+   4.5
+  ],
+  "steps": [
+   "spin8",
+   "l9"
+  ],
+  "i": 1,
+  "jobs": [
+   "8615034",
+   "8622947"
+  ],
+  "runs": [
+   "bo1_l8_rpm33.23_th4.50",
+   "bo1_l9_rpm33.23_th4.50"
+  ],
+  "state": "running"
+ },
+ {
+  "arm": "chain",
+  "x": [
+   18.375,
+   3.95
+  ],
+  "steps": [
+   "l7"
+  ],
+  "i": 0,
+  "jobs": [
+   "8623930"
+  ],
+  "runs": [
+   "bo4_l7_rpm18.38_th3.95"
+  ],
+  "state": "running"
+ },
+ {
+  "arm": "chain",
+  "x": [
+   16.575,
+   3.95
+  ],
+  "steps": [
+   "l7"
+  ],
+  "i": 0,
+  "jobs": [
+   "8623931"
+  ],
+  "runs": [
+   "bo4_l7_rpm16.57_th3.95"
+  ],
+  "state": "running"
+ },
+ {
+  "arm": "chain",
+  "x": [
+   20.175,
+   3.9
+  ],
+  "steps": [
+   "l7"
+  ],
+  "i": 0,
+  "jobs": [
+   "8623932"
+  ],
+  "runs": [
+   "bo4_l7_rpm20.18_th3.90"
+  ],
+  "state": "running"
+ },
+ {
+  "arm": "chain",
+  "x": [
+   15.0,
+   3.75
+  ],
+  "steps": [
+   "l7"
+  ],
+  "i": 0,
+  "jobs": [
+   "8623933"
+  ],
+  "runs": [
+   "bo4_l7_rpm15.00_th3.75"
   ],
   "state": "running"
  }
