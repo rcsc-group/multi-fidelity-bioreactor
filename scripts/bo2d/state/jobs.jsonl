@@ -50,3 +50,10 @@
 {"job": "8583733", "level": 7, "run": "bo3_l7_rpm16.80_th7.00", "rpm": 16.8, "theta": 7.0, "ranks": 8, "arm": "chain", "start": "cold", "submitted": "2026-11-08T12:23:59.113712+00:00"}
 {"job": "8583734", "level": 7, "run": "bo3_l7_rpm15.22_th6.60", "rpm": 15.225, "theta": 6.6, "ranks": 8, "arm": "chain", "start": "cold", "submitted": "2026-11-08T12:23:59.171790+00:00"}
 {"job": "8583735", "level": 7, "run": "bo3_l7_rpm18.60_th7.00", "rpm": 18.6, "theta": 7.0, "ranks": 8, "arm": "chain", "start": "cold", "submitted": "2026-11-08T12:23:59.235481+00:00"}
+{"job": "8584557", "level": 9, "run": "bo1_l9_rpm36.38_th2.00", "rpm": 36.375, "theta": 2.0, "ranks": 32, "arm": "l9only", "start": "warm", "source": "bo1_l8_rpm36.38_th2.00", "submitted": "2026-11-08T12:54:12.569001+00:00"}
+{"job": "8584558", "level": 9, "run": "bo1_l9_rpm33.45_th3.05", "rpm": 33.45, "theta": 3.05, "ranks": 32, "arm": "l9only", "start": "warm", "source": "bo1_l8_rpm33.45_th3.05", "submitted": "2026-11-08T12:54:12.780865+00:00"}
+{"job": "8585069", "level": 9, "run": "bo1_l9_rpm35.48_th2.35", "rpm": 35.475, "theta": 2.35, "ranks": 32, "arm": "l9only", "start": "warm", "source": "bo1_l8_rpm35.48_th2.35", "submitted": "2026-11-08T13:24:19.972856+00:00"}
+{"job": "8585071", "level": 9, "run": "bo1_l9_rpm34.35_th2.70", "rpm": 34.35, "theta": 2.7, "ranks": 32, "arm": "l9only", "start": "warm", "source": "bo1_l8_rpm34.35_th2.70", "submitted": "2026-11-08T13:24:20.194616+00:00"}
+{"job": "8585072", "level": 8, "run": "bo3_l8_rpm16.80_th7.00", "rpm": 16.8, "theta": 7.0, "ranks": 16, "arm": "chain", "start": "warm", "source": "bo3_l7_rpm16.80_th7.00", "submitted": "2026-11-08T13:24:20.339021+00:00"}
+{"job": "8585073", "level": 8, "run": "bo3_l8_rpm15.22_th6.60", "rpm": 15.225, "theta": 6.6, "ranks": 16, "arm": "chain", "start": "warm", "source": "bo3_l7_rpm15.22_th6.60", "submitted": "2026-11-08T13:24:20.448992+00:00"}
+{"job": "8585074", "level": 8, "run": "bo3_l8_rpm18.60_th7.00", "rpm": 18.6, "theta": 7.0, "ranks": 16, "arm": "chain", "start": "warm", "source": "bo3_l7_rpm18.60_th7.00", "submitted": "2026-11-08T13:24:20.566544+00:00"}
