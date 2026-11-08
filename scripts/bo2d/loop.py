@@ -56,7 +56,11 @@ def rows(qoi, prefixes, levels):
             if float(pp.get("t_checkpoint", 0) or 0) > 0 and C.warm_run_gate(p)[0] == "FAILED-GATE":
                 continue
             out.append(r)
-    return pd.DataFrame(out, columns=["level", "rpm", "theta", "run", "y"])
+    d = pd.DataFrame(out, columns=["level", "rpm", "theta", "run", "y"])
+    bad = ~np.isfinite(d.y.astype(float)) | (d.y.astype(float) <= 0)
+    if bad.any():   # 9/36 bo_l7 seeds have non-finite kLa (2026-11-08); a NaN row makes the whole chain fit NaN
+        print(f"  dropping {int(bad.sum())} non-finite rows: {list(d.run[bad])}", file=sys.stderr)
+    return d[~bad].reset_index(drop=True)
 
 
 def arm_data(arm, qoi):
@@ -71,11 +75,23 @@ def arm_data(arm, qoi):
     return {7: d7, 8: d8, 9: d9}
 
 
+# measured 2026-11-08 (measure_costs.py): L7 5, L8 spin 21, L9 warm 350 core-h; L8 warm taken = L8 spin (70 vs 80 cycles)
+COST = {"l9only": {9: 371.0}, "chain": {7: 5.0, 8: 26.0, 9: 376.0}}
+
+
 def fit_arm(arm):
+    """Locked method (tag bo-lock-267421f): l9only = single-level aEI path; chain = theta-basis KOH + MF level rule."""
     K, T = arm_data(arm, QK), arm_data(arm, QT)
     if arm == "l9only":
-        return bo.fit_single(K[9], QK), bo.fit_single(T[9], QT), K, T
-    return bo.fit_chain(K[7], K[8], K[9], QK)[0], bo.fit_chain(T[7], T[8], T[9], QT)[0], K, T
+        mk, mt = bo.fit_single(K[9], QK), bo.fit_single(T[9], QT)
+        return (lambda X: bo.single_moments(mk, X)), (lambda X: bo.single_moments(mt, X)), K, T
+    bo.CHAIN_THETA = True
+    mk, mt = bo.fit_chain3(K[7], K[8], K[9], QK), bo.fit_chain3(T[7], T[8], T[9], QT)
+    return (lambda X: bo.chain_moments(mk, X)), (lambda X: bo.chain_moments(mt, X)), K, T
+
+
+def _has(d, x, tol=0.01):
+    return bool(((d.rpm - x[0]).abs() < tol).mul((d.theta - x[1]).abs() < tol).any()) if len(d) else False
 
 
 def job_state(j):
@@ -86,33 +102,37 @@ def job_state(j):
 def propose(arm, go):
     cfg = json.loads(CFG.read_text())
     lncap, q = np.log(cfg["cap"]), int(cfg["q"])
-    mk, mt, K, T = fit_arm(arm)
-    best, _ = bo.best_feasible(K[9], T[9], cfg["cap"])
-    G = bo.grid()
-    a = bo.cei(*bo.gauss(mk, G), *bo.gauss(mt, G), best, lncap)
-    B = bo.pick_batch(a, G, q + (Q_LF if arm == "chain" else 0))
     tasks = load_tasks()
-    busy = [t for t in tasks if t["arm"] == arm and t["state"] == "running"]
+    busy = [t for t in tasks if t["arm"] == arm and t["state"] in ("running", "new")]
     if busy:
         print(f"{arm}: {len(busy)} task(s) still running; no new proposal"); return
-    rec = bo.recommend(mk, mt, K[9], lncap)
-    print(f"{arm}: n9={len(K[9])} best feasible obs={best} recommend={rec}")
-    for j, x in enumerate(B):
+    Mk, Mt, K, T = fit_arm(arm)
+    G = bo.grid()
+    Xe = pd.concat([K[l][["rpm", "theta"]] for l in K]).drop_duplicates().to_numpy(float)
+    best = bo.effective_best(Mk(Xe)[0], Mt(Xe)[0], lncap)
+    if best is None:
+        best = float(np.log(K[9].y).min())
+    mk, ck = Mk(G); mt, _ = Mt(G)
+    if arm == "chain":
+        picks = bo.mf_pick(mk, mt, best, lncap, G, q)
+    else:
+        picks = bo.pick_budget(bo.aei(mk, ck, mt, best, lncap, COST[arm]), G, q * COST[arm][9], COST[arm], q)
+    rec = bo.recommend_m(Mk, Mt, K[9], lncap)
+    print(f"{arm}: n9={len(K[9])} best={best:.3f} recommend={rec}")
+    for x, lev in picks:
         x = [round(float(x[0]), 3), round(float(x[1]), 3)]
         if arm == "l9only":
             steps = ["spin8", "l9"]
-        else:
-            lev = bo.next_level(np.array([x]), K) or 9
-            if lev > 7:   # snap to the existing lower-level row near x, so the warm source has the same forcing
-                d = K[lev - 1]; P = d[["rpm", "theta"]].to_numpy(float)
-                i = int(np.argmin(np.linalg.norm(bo.scaled(P) - bo.scaled(np.array([x])), axis=1)))
-                x = [round(float(P[i, 0]), 3), round(float(P[i, 1]), 3)]
-            full = ["l7", "l8", "l9"][lev - 7:]
-            steps = full if j < q else [s_ for s_ in full if s_ != "l9"]
+        else:   # cascade: every level below lev must exist at x (warm source, same forcing); skip those present
+            # a run that exists but has no finite kLa (L7 at rpm <= ~21: 10 % crossing within half a period of
+            # release, 2026-11-08) is still a valid warm source and cannot give data at that level: step up.
+            while lev < 9 and _nearest(lev, x) is not None:
+                lev += 1
+            steps = [f"l{l}" for l in range(7, lev + 1) if _nearest(l, x) is None and not _has(K[l], x)]
             if not steps:
                 continue
         t = dict(arm=arm, x=x, steps=steps, i=0, jobs=[], runs=[], state="new")
-        print(f"  propose {x} steps {t['steps']}")
+        print(f"  propose {x} level {lev} steps {steps}")
         tasks.append(t)
     if go:
         save_tasks(tasks)

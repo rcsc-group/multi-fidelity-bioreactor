@@ -9,7 +9,7 @@
    "spin8",
    "l9"
   ],
-  "i": 1,
+  "i": 2,
   "jobs": [
    "8561403",
    "8563205"
@@ -18,7 +18,7 @@
    "bo1_l8_rpm18.60_th4.60",
    "bo1_l9_rpm18.60_th4.60"
   ],
-  "state": "running"
+  "state": "done"
  },
  {
   "arm": "l9only",
@@ -30,7 +30,7 @@
    "spin8",
    "l9"
   ],
-  "i": 1,
+  "i": 2,
   "jobs": [
    "8561404",
    "8564199"
@@ -39,7 +39,7 @@
    "bo1_l8_rpm17.02_th4.80",
    "bo1_l9_rpm17.02_th4.80"
   ],
-  "state": "running"
+  "state": "done"
  },
  {
   "arm": "l9only",
@@ -51,7 +51,7 @@
    "spin8",
    "l9"
   ],
-  "i": 1,
+  "i": 2,
   "jobs": [
    "8561405",
    "8564200"
@@ -60,7 +60,7 @@
    "bo1_l8_rpm20.18_th4.40",
    "bo1_l9_rpm20.18_th4.40"
   ],
-  "state": "running"
+  "state": "done"
  },
  {
   "arm": "l9only",
@@ -72,7 +72,7 @@
    "spin8",
    "l9"
   ],
-  "i": 1,
+  "i": 2,
   "jobs": [
    "8561406",
    "8564742"
@@ -80,6 +80,139 @@
   "runs": [
    "bo1_l8_rpm15.45_th5.00",
    "bo1_l9_rpm15.45_th5.00"
+  ],
+  "state": "done"
+ },
+ {
+  "arm": "l9only",
+  "x": [
+   36.375,
+   2.0
+  ],
+  "steps": [
+   "spin8",
+   "l9"
+  ],
+  "i": 0,
+  "jobs": [
+   "8583253"
+  ],
+  "runs": [
+   "bo1_l8_rpm36.38_th2.00"
+  ],
+  "state": "running"
+ },
+ {
+  "arm": "l9only",
+  "x": [
+   35.475,
+   2.35
+  ],
+  "steps": [
+   "spin8",
+   "l9"
+  ],
+  "i": 0,
+  "jobs": [
+   "8583254"
+  ],
+  "runs": [
+   "bo1_l8_rpm35.48_th2.35"
+  ],
+  "state": "running"
+ },
+ {
+  "arm": "l9only",
+  "x": [
+   34.35,
+   2.7
+  ],
+  "steps": [
+   "spin8",
+   "l9"
+  ],
+  "i": 0,
+  "jobs": [
+   "8583255"
+  ],
+  "runs": [
+   "bo1_l8_rpm34.35_th2.70"
+  ],
+  "state": "running"
+ },
+ {
+  "arm": "l9only",
+  "x": [
+   33.45,
+   3.05
+  ],
+  "steps": [
+   "spin8",
+   "l9"
+  ],
+  "i": 0,
+  "jobs": [
+   "8583256"
+  ],
+  "runs": [
+   "bo1_l8_rpm33.45_th3.05"
+  ],
+  "state": "running"
+ },
+ {
+  "arm": "chain",
+  "x": [
+   16.8,
+   7.0
+  ],
+  "steps": [
+   "l7",
+   "l8"
+  ],
+  "i": 0,
+  "jobs": [
+   "8583733"
+  ],
+  "runs": [
+   "bo3_l7_rpm16.80_th7.00"
+  ],
+  "state": "running"
+ },
+ {
+  "arm": "chain",
+  "x": [
+   15.225,
+   6.6
+  ],
+  "steps": [
+   "l7",
+   "l8"
+  ],
+  "i": 0,
+  "jobs": [
+   "8583734"
+  ],
+  "runs": [
+   "bo3_l7_rpm15.22_th6.60"
+  ],
+  "state": "running"
+ },
+ {
+  "arm": "chain",
+  "x": [
+   18.6,
+   7.0
+  ],
+  "steps": [
+   "l7",
+   "l8"
+  ],
+  "i": 0,
+  "jobs": [
+   "8583735"
+  ],
+  "runs": [
+   "bo3_l7_rpm18.60_th7.00"
   ],
   "state": "running"
  }
