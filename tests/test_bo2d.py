@@ -64,3 +64,17 @@ def test_mf_pick_runs_lowest_uncertain_level():
     picks = bo.mf_pick(mom_k, mom_t, best=0.0, lncap=0.0, G=G, q=1)
     assert len(picks) == 1
     assert np.allclose(picks[0][0], G[n // 2]) and picks[0][1] == 8
+
+
+def test_objective_slots_fill_the_objective_with_fewer_tasks_in_flight():
+    from scripts.bo2d import loop
+    busy = [{"obj": "kla"}, {"obj": "kla"}, {"obj": "mix"}, {}]   # a task without 'obj' predates 2026-11-09: kla
+    assert loop.next_objs(busy, free=1) == ["mix"]
+    assert loop.next_objs([], free=4) == ["kla", "mix", "kla", "mix"]
+
+
+def test_mixing_objective_is_the_rate():
+    from scripts.bo2d import loop
+    d = pd.DataFrame(dict(level=[9], rpm=[20.0], theta=[4.0], run=["r"], y=[50.0]))
+    assert loop.as_objective(d, "dtmix_0.25").y.iloc[0] == 1 / 50.0
+    assert loop.as_objective(d, "kLa_1T_10").y.iloc[0] == 50.0

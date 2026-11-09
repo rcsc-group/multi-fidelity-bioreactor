@@ -707,7 +707,8 @@ def load_db(qoi: str):
 # Lead decision: (a) restart selection by marginal likelihood among restarts with noise_std >= the run-to-run floor;
 # (b) the optimiser's noise lower bound is that floor. Old baseline (seed 42, one start, unfloored, LOO) is superseded:
 # the LOO objective has several local optima and the fit's seed chose between them (diary 2026-11-04).
-NOISE_FLOOR_LN = {"kLa_1T_10": 0.095, "kLa_1T_25": 0.189, "dtmix_0.50": 0.104, "tau_95": 0.017}   # diary 2026-10-15 E0
+NOISE_FLOOR_LN = {"kLa_1T_10": 0.095, "kLa_1T_25": 0.189, "dtmix_0.50": 0.104, "tau_95": 0.017,   # diary 2026-10-15 E0
+                  "dtmix_0.25": 0.104}   # 2026-11-09: not measured for chi 0.25; the dtmix_0.50 value is used
 LF_SEEDS = tuple(range(1, 11))
 
 

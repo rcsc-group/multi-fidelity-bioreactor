@@ -31,6 +31,27 @@ CFG = S.STATE / "config.json"          # frozen: cap, q
 TAGS = {"l9only": "bo1", "chain": "bo4"}   # bo3 = chain with unfair archive seed (abandoned 2026-11-08)
 SEED9 = ["c2d_l9_rpm16.35_th2.33", "c2d_l9_rpm19.14_th2.89", "c2d_l9_rpm23.14_th2.13", "c2d_l9_rpm36.35_th5.24"]
 QK, QT = "kLa_1T_10", "tau_95"
+# two objectives on shared runs (user, 2026-11-09): max kLa_1T_10 s.t. tau cap, and min dtmix_0.25 s.t. tau cap.
+# The mixing objective is fitted as the rate 1/dtmix_0.25 (1/s), so 'maximise ln y' applies to both.
+OBJ = {"kla": "kLa_1T_10", "mix": "dtmix_0.25"}
+RATE = {"dtmix_0.25"}
+
+
+def as_objective(d, qoi):
+    """Rows as the maximised objective: the rate 1/y for a mixing time, y otherwise."""
+    if qoi in RATE and len(d):
+        d = d.copy(); d["y"] = 1.0 / d.y.astype(float)
+    return d
+
+
+def next_objs(busy, free):
+    """Objectives for the free slots: each goes to the objective with fewer tasks in flight (kla first on ties)."""
+    n = {k: sum(1 for t in busy if t.get("obj", "kla") == k) for k in OBJ}
+    out = []
+    for _ in range(free):
+        k = min(OBJ, key=lambda o: (n[o], list(OBJ).index(o)))
+        out.append(k); n[k] += 1
+    return out
 Q_LF = 8      # chain: extra L7+L8 points per round at the next-best candidates (synthetic test 2026-11-07)
 
 
@@ -64,6 +85,10 @@ def rows(qoi, prefixes, levels):
 
 
 def arm_data(arm, qoi):
+    return {k: as_objective(v, qoi) for k, v in _arm_data(arm, qoi).items()}
+
+
+def _arm_data(arm, qoi):
     seed = rows(qoi, SEED9, {9})
     own = rows(qoi, [TAGS[arm] + "_"], {9})
     d9 = pd.concat([seed, own], ignore_index=True)
@@ -105,14 +130,15 @@ def _at_seed(d, seed, tol=0.01):
 COST = {"l9only": {9: 371.0}, "chain": {7: 5.0, 8: 26.0, 9: 376.0}}
 
 
-def fit_arm(arm):
-    """Locked method (tag bo-lock-267421f): l9only = single-level aEI path; chain = theta-basis KOH + MF level rule."""
-    K, T = arm_data(arm, QK), arm_data(arm, QT)
+def fit_arm(arm, qk=QK):
+    """Locked method (tag bo-lock-267421f): l9only = single-level aEI path; chain = theta-basis KOH + MF level rule.
+    qk: objective QoI (kLa_1T_10 or dtmix_0.25, the latter as a rate)."""
+    K, T = arm_data(arm, qk), arm_data(arm, QT)
     if arm == "l9only":
-        mk, mt = bo.fit_single(K[9], QK), bo.fit_single(T[9], QT)
+        mk, mt = bo.fit_single(K[9], qk), bo.fit_single(T[9], QT)
         return (lambda X: bo.single_moments(mk, X)), (lambda X: bo.single_moments(mt, X)), K, T
     bo.CHAIN_THETA = True
-    mk, mt = bo.fit_chain3(K[7], K[8], K[9], QK), bo.fit_chain3(T[7], T[8], T[9], QT)
+    mk, mt = bo.fit_chain3(K[7], K[8], K[9], qk), bo.fit_chain3(T[7], T[8], T[9], QT)
     return (lambda X: bo.chain_moments(mk, X)), (lambda X: bo.chain_moments(mt, X)), K, T
 
 
@@ -136,7 +162,18 @@ def propose(arm, go):
     if free <= 0:
         print(f"{arm}: {len(busy)} task(s) in flight; no free slot"); return
     pend = np.array([t["x"] for t in busy], float).reshape(-1, 2)
-    Mk, Mt, K, T = fit_arm(arm)
+    objs = next_objs(busy, free)
+    for obj in dict.fromkeys(objs):
+        _propose_obj(arm, obj, objs.count(obj), pend, q, lncap, tasks)
+        pend = np.array([t["x"] for t in tasks if t["arm"] == arm and t["state"] in ("running", "new")],
+                        float).reshape(-1, 2)
+    if go:
+        save_tasks(tasks)
+        advance(go)
+
+
+def _propose_obj(arm, obj, free, pend, q, lncap, tasks):
+    Mk, Mt, K, T = fit_arm(arm, OBJ[obj])
     G = bo.grid()
     Xe = pd.concat([K[l][["rpm", "theta"]] for l in K]).drop_duplicates().to_numpy(float)
     best = bo.effective_best(Mk(Xe)[0], Mt(Xe)[0], lncap)
@@ -153,7 +190,7 @@ def propose(arm, go):
         picks = [(x, l) for x, l in picks if far(x)]
     picks = picks[:free]
     rec = bo.recommend_m(Mk, Mt, K[9], lncap)
-    print(f"{arm}: n9={len(K[9])} best={best:.3f} recommend={rec}")
+    print(f"{arm} [{obj}]: n9={len(K[9])} best={best:.3f} recommend={rec}")
     for x, lev in picks:
         x = [round(float(x[0]), 3), round(float(x[1]), 3)]
         if arm == "l9only":
@@ -166,12 +203,9 @@ def propose(arm, go):
             steps = [f"l{l}" for l in range(7, lev + 1) if _nearest(l, x) is None and not _has(K[l], x)]
             if not steps:
                 continue
-        t = dict(arm=arm, x=x, steps=steps, i=0, jobs=[], runs=[], state="new")
-        print(f"  propose {x} level {lev} steps {steps}")
+        t = dict(arm=arm, obj=obj, x=x, steps=steps, i=0, jobs=[], runs=[], state="new")
+        print(f"  propose [{obj}] {x} level {lev} steps {steps}")
         tasks.append(t)
-    if go:
-        save_tasks(tasks)
-        advance(go)
 
 
 def _source_for(t, step):
