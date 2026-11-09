@@ -50,7 +50,14 @@ def _real_truth(q, lev):
     """Truth from the REAL data (2026-11-09): FullBayes GP posterior mean (ln) fitted to every run of level lev for
     QoI q, independent per level (the chain's MF structure is NOT imposed on the truth). Mixing as the rate 1/t."""
     from scripts.bo2d import loop as LP
-    d = pd.concat([C.load_db(q), LP.rows(q, ["bo1_", "bo4_", "bo_l7_"], {7, 8, 9})]).drop_duplicates("run")
+    # FROZEN truth (2026-11-09 fix): the live campaign keeps adding runs, so a truth rebuilt per job drifted between
+    # jobs (L9 n 29 -> 30, optimum moved). Every job now reads one snapshot per QoI; it is written once, never updated.
+    snap = Path(__file__).parent / "state" / f"truth_snapshot_{q}.csv"
+    if snap.exists():
+        d = pd.read_csv(snap)
+    else:
+        d = pd.concat([C.load_db(q), LP.rows(q, ["bo1_", "bo4_", "bo_l7_"], {7, 8, 9})]).drop_duplicates("run")
+        d[["level", "rpm", "theta", "run", "y"]].to_csv(snap, index=False)
     d = d[(d.level == lev) & np.isfinite(d.y.astype(float)) & (d.y.astype(float) > 0)]
     d = LP.as_objective(d, q)
     X, y = d[["rpm", "theta"]].to_numpy(float), np.log(d.y.to_numpy(float))

@@ -1342,3 +1342,15 @@ start a fresh autopilot ending Wed 00:00 (do not edit the running autopilot.sh).
 l9only missed 5 % regret on t_mix in all 3 seeds at the 40-run cap, so the core-h ratio is censored (>= 3.6x seed 22, >= 1.2x seed 23).
 Rerun with BO_CAPN=120 (env, default 40) for l9only seeds 21-23 (jobs 8724164-66) and chain seed 21 (also missed). Same cap for both
 arms; chain hits at seeds 22/23 are unaffected (each arm stops at its first hit). Goal: the real ratio, aim ~10x.
+
+### 2026-11-09 15:50 — check-in: benchmark truth drifted; frozen and rerun
+Finding: synth_bench mode 'real' rebuilt the truth from the LIVE database in every job. The campaign added runs between
+jobs (L9 n 29 -> 30), the true optimum moved ((36.375, 4.5) -> (36.825, 4.4) for t_mix), so the capped (8715639-66) and
+uncapped (8724164-83) results were scored on different truths and cannot be compared. Example: l9only t_mix seed 21 MISS at
+cap 14840 on the old truth, HIT at 8904 on the new one. Both result sets are void.
+Fix: truth now read from frozen snapshots scripts/bo2d/state/truth_snapshot_<qoi>.csv (written once by freeze_truth.py,
+2026-11-09 15:45; L9 n = 30). All 12 arms rerun with the same cap for both arms (BO_CAPN=120): jobs in
+scripts/bo2d/state/bo_real_frozen_jobs.txt (8736824-35). Pass rule unchanged. Stale job 8715643 cancelled.
+Live campaign: both arms keep 4 tasks in flight; proposals tagged [kla]/[mix]. The chain arm has run no new L9 point yet
+(only L7/L8), so the stop rule (>= 3 L9 per objective per arm) is not met; this also means the real-campaign regret for the
+chain rests on its 4 seed L9 points -> the "confirm at L9" policy is needed for the talk.
