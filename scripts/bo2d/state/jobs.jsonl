@@ -73,3 +73,11 @@
 {"job": "8623931", "level": 7, "run": "bo4_l7_rpm16.57_th3.95", "rpm": 16.575, "theta": 3.95, "ranks": 8, "arm": "chain", "start": "cold", "submitted": "2026-11-08T20:47:13.186767+00:00"}
 {"job": "8623932", "level": 7, "run": "bo4_l7_rpm20.18_th3.90", "rpm": 20.175, "theta": 3.9, "ranks": 8, "arm": "chain", "start": "cold", "submitted": "2026-11-08T20:47:13.223160+00:00"}
 {"job": "8623933", "level": 7, "run": "bo4_l7_rpm15.00_th3.75", "rpm": 15.0, "theta": 3.75, "ranks": 8, "arm": "chain", "start": "cold", "submitted": "2026-11-08T20:47:13.263058+00:00"}
+{"job": "8705372", "level": 8, "run": "bo1_l8_rpm19.50_th2.80", "rpm": 19.5, "theta": 2.8, "ranks": 16, "arm": "l9only", "start": "spin", "submitted": "2026-11-09T13:18:10.195970+00:00"}
+{"job": "8705373", "level": 8, "run": "bo1_l8_rpm30.75_th5.50", "rpm": 30.75, "theta": 5.5, "ranks": 16, "arm": "l9only", "start": "spin", "submitted": "2026-11-09T13:18:10.246674+00:00"}
+{"job": "8705374", "level": 8, "run": "bo1_l8_rpm29.40_th5.80", "rpm": 29.4, "theta": 5.8, "ranks": 16, "arm": "l9only", "start": "spin", "submitted": "2026-11-09T13:18:10.279378+00:00"}
+{"job": "8705375", "level": 8, "run": "bo1_l8_rpm32.33_th5.25", "rpm": 32.325, "theta": 5.25, "ranks": 16, "arm": "l9only", "start": "spin", "submitted": "2026-11-09T13:18:10.312461+00:00"}
+{"job": "8705643", "level": 7, "run": "bo4_l7_rpm21.52_th4.40", "rpm": 21.525, "theta": 4.4, "ranks": 8, "arm": "chain", "start": "cold", "submitted": "2026-11-09T13:24:11.077390+00:00"}
+{"job": "8705644", "level": 7, "run": "bo4_l7_rpm23.32_th4.35", "rpm": 23.325, "theta": 4.35, "ranks": 8, "arm": "chain", "start": "cold", "submitted": "2026-11-09T13:24:11.123350+00:00"}
+{"job": "8705645", "level": 7, "run": "bo4_l7_rpm19.73_th4.35", "rpm": 19.725, "theta": 4.35, "ranks": 8, "arm": "chain", "start": "cold", "submitted": "2026-11-09T13:24:11.156168+00:00"}
+{"job": "8705646", "level": 7, "run": "bo4_l7_rpm20.62_th4.75", "rpm": 20.625, "theta": 4.75, "ranks": 8, "arm": "chain", "start": "cold", "submitted": "2026-11-09T13:24:11.190760+00:00"}

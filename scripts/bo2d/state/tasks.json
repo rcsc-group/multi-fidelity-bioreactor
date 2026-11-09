@@ -297,7 +297,7 @@
    "spin8",
    "l9"
   ],
-  "i": 1,
+  "i": 2,
   "jobs": [
    "8615031",
    "8622946"
@@ -306,7 +306,7 @@
    "bo1_l8_rpm19.73_th3.10",
    "bo1_l9_rpm19.73_th3.10"
   ],
-  "state": "running"
+  "state": "done"
  },
  {
   "arm": "l9only",
@@ -318,7 +318,7 @@
    "spin8",
    "l9"
   ],
-  "i": 1,
+  "i": 2,
   "jobs": [
    "8615032",
    "8623928"
@@ -327,7 +327,7 @@
    "bo1_l8_rpm21.52_th3.15",
    "bo1_l9_rpm21.52_th3.15"
   ],
-  "state": "running"
+  "state": "done"
  },
  {
   "arm": "l9only",
@@ -339,7 +339,7 @@
    "spin8",
    "l9"
   ],
-  "i": 1,
+  "i": 2,
   "jobs": [
    "8615033",
    "8623929"
@@ -348,7 +348,7 @@
    "bo1_l8_rpm17.93_th3.15",
    "bo1_l9_rpm17.93_th3.15"
   ],
-  "state": "running"
+  "state": "done"
  },
  {
   "arm": "l9only",
@@ -360,7 +360,7 @@
    "spin8",
    "l9"
   ],
-  "i": 1,
+  "i": 2,
   "jobs": [
    "8615034",
    "8622947"
@@ -369,7 +369,7 @@
    "bo1_l8_rpm33.23_th4.50",
    "bo1_l9_rpm33.23_th4.50"
   ],
-  "state": "running"
+  "state": "done"
  },
  {
   "arm": "chain",
@@ -380,14 +380,14 @@
   "steps": [
    "l7"
   ],
-  "i": 0,
+  "i": 1,
   "jobs": [
    "8623930"
   ],
   "runs": [
    "bo4_l7_rpm18.38_th3.95"
   ],
-  "state": "running"
+  "state": "done"
  },
  {
   "arm": "chain",
@@ -398,14 +398,14 @@
   "steps": [
    "l7"
   ],
-  "i": 0,
+  "i": 1,
   "jobs": [
    "8623931"
   ],
   "runs": [
    "bo4_l7_rpm16.57_th3.95"
   ],
-  "state": "running"
+  "state": "done"
  },
  {
   "arm": "chain",
@@ -416,14 +416,14 @@
   "steps": [
    "l7"
   ],
-  "i": 0,
+  "i": 1,
   "jobs": [
    "8623932"
   ],
   "runs": [
    "bo4_l7_rpm20.18_th3.90"
   ],
-  "state": "running"
+  "state": "done"
  },
  {
   "arm": "chain",
@@ -434,12 +434,164 @@
   "steps": [
    "l7"
   ],
-  "i": 0,
+  "i": 1,
   "jobs": [
    "8623933"
   ],
   "runs": [
    "bo4_l7_rpm15.00_th3.75"
+  ],
+  "state": "done"
+ },
+ {
+  "arm": "l9only",
+  "x": [
+   19.5,
+   2.8
+  ],
+  "steps": [
+   "spin8",
+   "l9"
+  ],
+  "i": 0,
+  "jobs": [
+   "8705372"
+  ],
+  "runs": [
+   "bo1_l8_rpm19.50_th2.80"
+  ],
+  "state": "running"
+ },
+ {
+  "arm": "l9only",
+  "x": [
+   30.75,
+   5.5
+  ],
+  "steps": [
+   "spin8",
+   "l9"
+  ],
+  "i": 0,
+  "jobs": [
+   "8705373"
+  ],
+  "runs": [
+   "bo1_l8_rpm30.75_th5.50"
+  ],
+  "state": "running"
+ },
+ {
+  "arm": "l9only",
+  "x": [
+   29.4,
+   5.8
+  ],
+  "steps": [
+   "spin8",
+   "l9"
+  ],
+  "i": 0,
+  "jobs": [
+   "8705374"
+  ],
+  "runs": [
+   "bo1_l8_rpm29.40_th5.80"
+  ],
+  "state": "running"
+ },
+ {
+  "arm": "l9only",
+  "x": [
+   32.325,
+   5.25
+  ],
+  "steps": [
+   "spin8",
+   "l9"
+  ],
+  "i": 0,
+  "jobs": [
+   "8705375"
+  ],
+  "runs": [
+   "bo1_l8_rpm32.33_th5.25"
+  ],
+  "state": "failed"
+ },
+ {
+  "arm": "chain",
+  "x": [
+   21.525,
+   4.4
+  ],
+  "steps": [
+   "l7",
+   "l8"
+  ],
+  "i": 0,
+  "jobs": [
+   "8705643"
+  ],
+  "runs": [
+   "bo4_l7_rpm21.52_th4.40"
+  ],
+  "state": "running"
+ },
+ {
+  "arm": "chain",
+  "x": [
+   23.325,
+   4.35
+  ],
+  "steps": [
+   "l7",
+   "l8"
+  ],
+  "i": 0,
+  "jobs": [
+   "8705644"
+  ],
+  "runs": [
+   "bo4_l7_rpm23.32_th4.35"
+  ],
+  "state": "running"
+ },
+ {
+  "arm": "chain",
+  "x": [
+   19.725,
+   4.35
+  ],
+  "steps": [
+   "l7",
+   "l8"
+  ],
+  "i": 0,
+  "jobs": [
+   "8705645"
+  ],
+  "runs": [
+   "bo4_l7_rpm19.73_th4.35"
+  ],
+  "state": "running"
+ },
+ {
+  "arm": "chain",
+  "x": [
+   20.625,
+   4.75
+  ],
+  "steps": [
+   "l7",
+   "l8"
+  ],
+  "i": 0,
+  "jobs": [
+   "8705646"
+  ],
+  "runs": [
+   "bo4_l7_rpm20.62_th4.75"
   ],
   "state": "running"
  }

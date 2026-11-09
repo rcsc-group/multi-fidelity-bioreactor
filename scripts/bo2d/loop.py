@@ -126,12 +126,16 @@ def job_state(j):
 
 
 def propose(arm, go):
+    """Asynchronous (2026-11-09, user): keep q tasks in flight per arm; fill the free slots as soon as tasks end.
+    Same acquisition; picks within R_EXCL of an in-flight point are skipped (standard async exclusion)."""
     cfg = json.loads(CFG.read_text())
     lncap, q = np.log(cfg["cap"]), int(cfg["q"])
     tasks = load_tasks()
     busy = [t for t in tasks if t["arm"] == arm and t["state"] in ("running", "new")]
-    if busy:
-        print(f"{arm}: {len(busy)} task(s) still running; no new proposal"); return
+    free = q - len(busy)
+    if free <= 0:
+        print(f"{arm}: {len(busy)} task(s) in flight; no free slot"); return
+    pend = np.array([t["x"] for t in busy], float).reshape(-1, 2)
     Mk, Mt, K, T = fit_arm(arm)
     G = bo.grid()
     Xe = pd.concat([K[l][["rpm", "theta"]] for l in K]).drop_duplicates().to_numpy(float)
@@ -139,10 +143,15 @@ def propose(arm, go):
     if best is None:
         best = float(np.log(K[9].y).min())
     mk, ck = Mk(G); mt, _ = Mt(G)
+    qq = q + len(pend)
     if arm == "chain":
-        picks = bo.mf_pick(mk, mt, best, lncap, G, q)
+        picks = bo.mf_pick(mk, mt, best, lncap, G, qq)
     else:
-        picks = bo.pick_budget(bo.aei(mk, ck, mt, best, lncap, COST[arm]), G, q * COST[arm][9], COST[arm], q)
+        picks = bo.pick_budget(bo.aei(mk, ck, mt, best, lncap, COST[arm]), G, qq * COST[arm][9], COST[arm], qq)
+    if len(pend):
+        far = lambda x: np.min(np.linalg.norm(bo.scaled(pend) - bo.scaled(np.array([x])), axis=1)) >= bo.R_EXCL
+        picks = [(x, l) for x, l in picks if far(x)]
+    picks = picks[:free]
     rec = bo.recommend_m(Mk, Mt, K[9], lncap)
     print(f"{arm}: n9={len(K[9])} best={best:.3f} recommend={rec}")
     for x, lev in picks:
