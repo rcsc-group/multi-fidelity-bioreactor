@@ -1318,3 +1318,16 @@ dtmix_0.50 except at 37.5 rpm. kLa_1T_50 is not reliable at L8 near 22.5-27.5 rp
 - Dry run (scripts/bo2d/dry_propose.py): l9only [mix] -> (31.4, 6.45), (31.65, 6.85) L9; chain [mix] -> L7+L8 at (35.5, 4.45), (37.05, 4.25).
 - PRE-REGISTERED (before any result): real-truth synthetic test (synth_bench mode 'real', jobs 8715639-50; truth = independent per-level FullBayes GP mean of ALL real runs, ln; noise = measured floors; measured costs; locked chain (mf rule, theta basis, fair seed); cap 0.014; seeds 21-23; stop at <= 5 % regret or 40 L9-equivalents). Criterion per objective (kla, mix): chain reaches <= 5 % regret with fewer core-h than l9only in >= 2 of 3 seeds. Also reported: core-h ratio per seed. No method change after seeing these results unless declared here as development.
   Known limits: per-level GP truths are smoother than the real response (they interpolate 29-77 points); this favours neither arm by construction but understates roughness.
+
+### 2026-11-09 — real-truth benchmark, first results (10/12 jobs)
+Truth = per-level GP of all real runs. Pass rule (pre-registered above): chain reaches <=5 % regret with fewer core-h than l9only in >=2 of 3 seeds.
+Note: the per-job "VERDICT ... 0/3 FAIL" line is wrong by design (each job runs one arm only); score across jobs.
+| objective | seed | chain core-h to 5 % | l9only core-h to 5 % | winner |
+|---|---|---|---|---|
+| min t_mix,25 | 21 | miss (15271) | miss (cap 14840) | tie |
+| min t_mix,25 | 22 | 4152 | miss | chain |
+| min t_mix,25 | 23 | 12230 | miss | chain |
+| max kLa | 21 | running (6800, 27.5 %) | 14840 | open |
+| max kLa | 22 | 15233 | 10388 | l9only |
+| max kLa | 23 | running (1806, 23.6 %) | 13356 | open |
+t_mix,25: chain wins 2/3 -> PASS. l9only never reaches 5 % in the cap. kLa: open; needs both running seeds to win.
