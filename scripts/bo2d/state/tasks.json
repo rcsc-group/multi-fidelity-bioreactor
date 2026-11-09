@@ -594,5 +594,20 @@
    "bo4_l7_rpm20.62_th4.75"
   ],
   "state": "running"
+ },
+ {
+  "arm": "l9only",
+  "x": [
+   32.325,
+   5.25
+  ],
+  "steps": [
+   "spin8",
+   "l9"
+  ],
+  "i": 0,
+  "jobs": [],
+  "runs": [],
+  "state": "new"
  }
 ]

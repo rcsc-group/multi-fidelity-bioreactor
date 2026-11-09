@@ -208,7 +208,11 @@ def advance(go):
             if st in ("PENDING", "RUNNING", "?"):
                 continue
             if st != "COMPLETED":
-                t["state"] = "failed"; print(f"FAILED {t['runs'][-1]} ({st})"); continue
+                t["state"] = "failed"; print(f"FAILED {t['runs'][-1]} ({st})")
+                d = C.ROOT / "runs" / t["runs"][-1]       # move aside so a retry at the same x can submit
+                if d.exists():
+                    d.rename(d.with_name(f"{d.name}.failed-{t['jobs'][-1]}"))
+                continue
             t["i"] += 1
             if t["i"] >= len(t["steps"]):
                 t["state"] = "done"; print(f"done {t['arm']} {t['x']}"); continue
