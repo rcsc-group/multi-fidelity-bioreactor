@@ -21,6 +21,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from scripts.bo2d import bo  # noqa: E402
 C = bo.C
 SD = 0.08
+QK = "kLa_1T_10"
+SD_K = SD_T = SD   # mode 'real' sets the measured floors per QoI
 SEED9 = [(16.35, 2.33), (19.14, 2.89), (23.14, 2.13), (36.35, 5.24)]
 COST = {"l9only": {9: 97.0}, "chain": {7: 5.0, 8: 22.0, 9: 99.0}}
 STEP = {7: 5.0, 8: 17.0, 9: 77.0}
@@ -44,9 +46,32 @@ bo.CHAIN_THETA = os.environ.get("BO_THETA", "0") == "1"   # basis [1, f_lower, t
 TARGET = 0.05
 
 
+def _real_truth(q, lev):
+    """Truth from the REAL data (2026-11-09): FullBayes GP posterior mean (ln) fitted to every run of level lev for
+    QoI q, independent per level (the chain's MF structure is NOT imposed on the truth). Mixing as the rate 1/t."""
+    from scripts.bo2d import loop as LP
+    d = pd.concat([C.load_db(q), LP.rows(q, ["bo1_", "bo4_", "bo_l7_"], {7, 8, 9})]).drop_duplicates("run")
+    d = d[(d.level == lev) & np.isfinite(d.y.astype(float)) & (d.y.astype(float) > 0)]
+    d = LP.as_objective(d, q)
+    X, y = d[["rpm", "theta"]].to_numpy(float), np.log(d.y.to_numpy(float))
+    m = bo.FullBayesKRRLRGP(C.DOMAIN, basis="ordinary", grid=C.hf_grid(C.noise_floor(q), float(np.std(y)))).train(X, y)
+    print(f"truth {q} L{lev}: n={len(y)} sd={np.std(y):.3f}", flush=True)
+    return lambda Z: m.predict_mean(np.atleast_2d(Z))
+
+
 def setup(mode):
-    """mode 'held': unseen truth for the test of the locked method."""
-    global k9, t9, k8, t8, k7, t7, F
+    """mode 'held': unseen truth for the test of the locked method. mode 'real': truth from the real data,
+    objective from env BO_OBJ (kla | mix), measured costs."""
+    global k9, t9, k8, t8, k7, t7, F, SD_K, SD_T, COST, BUDGET, CAP_CH, QK
+    if mode == "real":
+        qk = QK = {"kla": "kLa_1T_10", "mix": "dtmix_0.25"}[os.environ.get("BO_OBJ", "kla")]
+        k9, k8, k7 = (_real_truth(qk, l) for l in (9, 8, 7))
+        t9, t8, t7 = (_real_truth("tau_95", l) for l in (9, 8, 7))
+        F = {7: (k7, t7), 8: (k8, t8), 9: (k9, t9)}
+        SD_K, SD_T = C.noise_floor(qk), C.noise_floor("tau_95")
+        COST = {"l9only": {9: 371.0}, "chain": {7: 5.0, 8: 26.0, 9: 376.0}}   # measured (sacct, 2026-11-08)
+        BUDGET = 4 * 371.0; CAP_CH = 40 * 371.0
+        return (21, 22, 23)
     if mode != "held":
         return (1, 2, 3)
     def k9(X):
@@ -66,8 +91,8 @@ def setup(mode):
 def evaluate(level, X, rng):
     fk, ft = F[level]; n = len(X)
     runs = [f"r{level}_{rng.integers(1e12)}" for _ in range(n)]
-    dk = pd.DataFrame(dict(level=level, rpm=X[:, 0], theta=X[:, 1], run=runs, y=np.exp(fk(X) + SD * rng.standard_normal(n))))
-    dt = dk.copy(); dt["y"] = np.exp(ft(X) + SD * rng.standard_normal(n))
+    dk = pd.DataFrame(dict(level=level, rpm=X[:, 0], theta=X[:, 1], run=runs, y=np.exp(fk(X) + SD_K * rng.standard_normal(n))))
+    dt = dk.copy(); dt["y"] = np.exp(ft(X) + SD_T * rng.standard_normal(n))
     return dk, dt
 
 
@@ -78,9 +103,9 @@ def add(K, T, lev, X, rng):
 
 def models(arm, K, T):
     if arm == "l9only":
-        mk, mt = bo.fit_single(K[9], "kLa_1T_10"), bo.fit_single(T[9], "tau_95")
+        mk, mt = bo.fit_single(K[9], QK), bo.fit_single(T[9], "tau_95")
         return (lambda X: bo.single_moments(mk, X)), (lambda X: bo.single_moments(mt, X))
-    mk = bo.fit_chain3(K[7], K[8], K[9], "kLa_1T_10"); mt = bo.fit_chain3(T[7], T[8], T[9], "tau_95")
+    mk = bo.fit_chain3(K[7], K[8], K[9], QK); mt = bo.fit_chain3(T[7], T[8], T[9], "tau_95")
     return (lambda X: bo.chain_moments(mk, X)), (lambda X: bo.chain_moments(mt, X))
 
 
