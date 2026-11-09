@@ -465,6 +465,9 @@ def _kla_inst_at_threshold(t: np.ndarray, c_star: np.ndarray,
 _COL_B0, _COL_B1, _COL_B2 = 12, 13, 14   # tr_oxy.dat bulk-liquid sums (runs from 2026-10-29 on)
 
 
+MIX_THRESHOLDS = (0.25, 0.50, 0.75, 0.95)   # 0.25 added 2026-11-09 (BO objective t_mix,25)
+
+
 def _compute_mixing_bulk(run_dir: Path, params: dict) -> dict | None:
     """dtmix from the bulk-liquid sums, or None for a run that predates them.
 
@@ -484,7 +487,7 @@ def _compute_mixing_bulk(run_dir: Path, params: dict) -> dict | None:
         return None
     r = np.atleast_2d(np.loadtxt(rel, skiprows=1))[0]
     t_inject_nd, r0, r1, r2 = float(r[1]), float(r[2]), float(r[3]), float(r[4])
-    nan_result = {"dtmix_0.50": math.nan, "dtmix_0.75": math.nan, "dtmix_0.95": math.nan}
+    nan_result = {f"dtmix_{c:.2f}": math.nan for c in MIX_THRESHOLDS}
     if r0 <= 0:
         return {**nan_result, "sigma2_max": math.nan}
     sigma2_max = r2 / r0 - (r1 / r0) ** 2
@@ -499,7 +502,7 @@ def _compute_mixing_bulk(run_dir: Path, params: dict) -> dict | None:
     chi = np.clip(1.0 - sigma2 / sigma2_max, 0.0, 1.0)
     T_bio, _ = _t_scales(params)
     result = {"sigma2_max": sigma2_max}
-    for threshold in (0.50, 0.75, 0.95):
+    for threshold in MIX_THRESHOLDS:
         idx = int(np.argmax(chi >= threshold))
         result[f"dtmix_{threshold:.2f}"] = ((float(t[idx]) - t_inject_nd) * T_bio
                                             if chi[idx] >= threshold else math.nan)
@@ -545,8 +548,7 @@ def _compute_mixing_metrics(run_dir: Path, params: dict, use_bulk: bool = True) 
     NaN is returned for a threshold when it is never reached within the
     simulation duration.
     """
-    nan_result = {"dtmix_0.50": math.nan, "dtmix_0.75": math.nan,
-                  "dtmix_0.95": math.nan, "sigma2_max": math.nan}
+    nan_result = {**{f"dtmix_{c:.2f}": math.nan for c in MIX_THRESHOLDS}, "sigma2_max": math.nan}
     tr_path = run_dir / "tr_oxy.dat"
     vf_path = run_dir / "vol_frac_interf.dat"
     if not tr_path.exists() or not vf_path.exists():
@@ -608,7 +610,7 @@ def _compute_mixing_metrics(run_dir: Path, params: dict, use_bulk: bool = True) 
     t_inject_nd = float(t[t0_idx])
 
     result = {"sigma2_max": sigma2_max}
-    for threshold in (0.50, 0.75, 0.95):
+    for threshold in MIX_THRESHOLDS:
         sub = chi[t0_idx:]
         idx = int(np.argmax(sub >= threshold))
         if sub[idx] < threshold:

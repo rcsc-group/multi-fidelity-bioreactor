@@ -22,7 +22,7 @@ import figstyle as fs  # noqa: E402
 C = L.C
 OUT = Path(__file__).resolve().parents[2] / "talks" / "dfd2026" / "public"
 QN = {"kLa_1T_10": r"$k_La$ (1/h)", "tau_95": r"$\tau_{95}$ (-)", "edr_95": r"EDR$_{95}$ (-)",
-      "dtmix_0.50": r"$t_{mix,50}$ (s)"}
+      "dtmix_0.50": r"$t_{mix,50}$ (s)", "dtmix_0.25": r"$t_{mix,25}$ (s)"}
 MS = {7: 4, 8: 7, 9: 11}
 
 
@@ -104,7 +104,7 @@ def lcurve(q, ns=(4, 6, 8, 12, 16), draws=30):
 
 def fig_lcurve():
     plt.rcParams.update(fs.rcparams())
-    qs = ["kLa_1T_10", "dtmix_0.50", "tau_95", "edr_95"]
+    qs = ["kLa_1T_10", "dtmix_0.25", "tau_95", "edr_95"]
     f, ax = plt.subplots(1, 4, figsize=(12, 3.2), constrained_layout=True)
     for a, q in zip(ax, qs):
         ns, out, sd = lcurve(q)

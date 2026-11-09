@@ -577,7 +577,32 @@ QOI_SOURCE = {
     "kLa_1T_25": ("kla", "kLa_1T_25"),
     "kLa_1T_50": ("kla", "kLa_1T_50"),
     "dtmix_0.50": ("kla", "dtmix_0.50"),
+    "dtmix_0.25": ("mix", "dtmix_0.25"),   # 2026-11-09: BO objective; computed from tr_oxy.dat (mix_value), cached
 }
+MIX_CACHE = ROOT / "experiments/multifidelity/dtmix_cache.json"
+
+
+def mix_value(run_dir, col):
+    """dtmix at one threshold from the run's tracer file via postprocess._compute_mixing_metrics (bulk columns when
+    present, else the old method), cached by run name and tr_oxy.dat mtime. None if no tracer file."""
+    run_dir = Path(run_dir)
+    tr = run_dir / "tr_oxy.dat"
+    if not (tr.exists() and (run_dir / "params.json").exists()):
+        return None
+    cache = json.loads(MIX_CACHE.read_text()) if MIX_CACHE.exists() else {}
+    key, mt = run_dir.name, tr.stat().st_mtime
+    if key not in cache or cache[key].get("mtime") != mt:
+        from scripts.postprocess import _compute_mixing_metrics
+        params = json.loads((run_dir / "params.json").read_text())
+        try:
+            r = _compute_mixing_metrics(run_dir, params)
+        except Exception:  # noqa: BLE001  (a broken old run gives no value, never a crash of the loop)
+            r = {}
+        cache[key] = {"mtime": mt, **{k: (None if v is None or not math.isfinite(v) else float(v))
+                                      for k, v in r.items() if k.startswith("dtmix")}}
+        MIX_CACHE.write_text(json.dumps(cache, indent=0))
+    v = cache[key].get(col)
+    return None if v is None else float(v)
 CRIT_QOIS = ["tau_95", "edr_95", "kLa_1T_10"]        # gated (<= 0.30); the others are reported, not gated
 MAP_N = 101
 
@@ -599,6 +624,10 @@ def campaign_row(run_dir: Path, col: str, src: str):
     p = json.loads(pf.read_text())
     if src == "kla":
         y = json.loads(rf.read_text()).get(col)
+        if y is None:
+            return None
+    elif src == "mix":
+        y = mix_value(run_dir, col)
         if y is None:
             return None
     else:
@@ -656,6 +685,10 @@ def load_db(qoi: str):
     src, col = QOI_SOURCE[qoi]
     if src == "kla":
         d = kla[["level", "rpm", "theta", "run", col]].rename(columns={col: "y"})
+    elif src == "mix":
+        d = kla[["level", "rpm", "theta", "run"]].copy()
+        d["y"] = [mix_value(ROOT / "runs" / r, col) for r in d.run]
+        d["y"] = d.y.astype(float)
     else:
         h = pd.DataFrame(json.loads(DB_HYDRO.read_text()))
         d = h[["run", "level", "rpm", col]].merge(kla[["run", "theta"]], on="run")

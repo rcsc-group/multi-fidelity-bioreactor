@@ -252,3 +252,16 @@ def test_bulk_columns_drive_dtmix_when_present(tmp_path):
         assert got[f"dtmix_{thr:.2f}"] == pytest.approx(expected, rel=5e-3), (
             f"dtmix_{thr:.2f}: got {got[f'dtmix_{thr:.2f}']:.4f} s, bulk analytic {expected:.4f} s")
     assert got["sigma2_max"] == pytest.approx(0.25)
+
+
+def test_bulk_dtmix_reports_chi_025(tmp_path):
+    """dtmix_0.25 (BO objective, 2026-11-09: reached within the 40-cycle window at every condition) from the bulk columns."""
+    t_inject = 10.0
+    t = np.concatenate([np.linspace(0, t_inject, 50, endpoint=False),
+                        t_inject + 0.02 + np.linspace(0, 60.0, 4000)])
+    chi_bulk = np.where(t < t_inject, -1.0, 1.0 - np.exp(-(t - t_inject) / TAU_ND))
+    chi_old = np.where(t < t_inject, -1.0, 1.0 - np.exp(-(t - t_inject) / (2 * TAU_ND)))
+    got = _compute_mixing_metrics(_write_bulk_run(tmp_path, t, chi_bulk, chi_old, t_inject), PARAMS)
+    expected = TAU_ND * math.log(1.0 / 0.75) * _t_bio()
+    assert "dtmix_0.25" in got, sorted(got)
+    assert got["dtmix_0.25"] == pytest.approx(expected, abs=0.035 * _t_bio())   # first sample 0.02 late + 0.015 spacing
