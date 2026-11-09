@@ -70,7 +70,7 @@ def setup(mode):
         F = {7: (k7, t7), 8: (k8, t8), 9: (k9, t9)}
         SD_K, SD_T = C.noise_floor(qk), C.noise_floor("tau_95")
         COST = {"l9only": {9: 371.0}, "chain": {7: 5.0, 8: 26.0, 9: 376.0}}   # measured (sacct, 2026-11-08)
-        BUDGET = 4 * 371.0; CAP_CH = 40 * 371.0
+        BUDGET = 4 * 371.0; CAP_CH = float(os.environ.get("BO_CAPN", "40")) * 371.0   # BO_CAPN: cap in L9-run equivalents
         return (21, 22, 23)
     if mode != "held":
         return (1, 2, 3)

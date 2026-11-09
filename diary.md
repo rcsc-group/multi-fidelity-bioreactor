@@ -1337,3 +1337,8 @@ Stop submitting (touch scripts/bo2d/state/STOP) when, for BOTH objectives (kLa, 
 objective AND neither arm's best feasible value moved by more than the noise floor over its last 2 L9 results.
 Backstop: no new L9 run after Wed 2026-11-11 00:00 (last data by ~11:00). Built-in end is Tue 18:00; if the rule is not met then,
 start a fresh autopilot ending Wed 00:00 (do not edit the running autopilot.sh). The deck is built in parallel, not after.
+
+### 2026-11-09 — uncensor the t_mix benchmark (cap 40 -> 120 L9 equivalents)
+l9only missed 5 % regret on t_mix in all 3 seeds at the 40-run cap, so the core-h ratio is censored (>= 3.6x seed 22, >= 1.2x seed 23).
+Rerun with BO_CAPN=120 (env, default 40) for l9only seeds 21-23 (jobs 8724164-66) and chain seed 21 (also missed). Same cap for both
+arms; chain hits at seeds 22/23 are unaffected (each arm stops at its first hit). Goal: the real ratio, aim ~10x.
