@@ -1288,3 +1288,15 @@ dtmix_0.50 except at 37.5 rpm. kLa_1T_50 is not reliable at L8 near 22.5-27.5 rp
 - User decision: ASYNCHRONOUS loop (same acquisition; keep q=4 tasks in flight per arm, fill free slots at once; picks within R_EXCL of an in-flight x skipped). Autopilot cycle 15 min. Job 8705897.
 - 08:46 check: same state as 08:34 (chain L7 x4 running, l9only spin8 x3 + retry pending). 80 cores used (q=4 per arm cap, locked).
 - Slide figure bo_regret_synth.png re-rendered with the FAIR-seed chain logs (8623967-69) + 214 core-h charge (CHAIN_OFFSET). Median: chain ~11 % at ~2000 core-h vs l9only ~14 % at ~6000 (~3x); chain ends ~4 % vs l9only ~5.5 % at ~14000. POST HOC metric; say so in notes.
+
+## 2026-11-09 morning: flat L9 GP, Kim Fig. 11, and do the cheap levels inform L9? (user challenge)
+- User: a flat L9-only GP contradicts Kim Fig. 11 (kLa rises with rpm and theta); where is the mixing-time QoI?
+- Data (scripts/bo2d/dump_l9.py, 29 L9 rows): NOT flat. theta 7 (fig9): kLa_1T_10 12.6 -> 74 1/h over 15-37.5 rpm, Spearman +0.96 (= Kim Fig. 11). Near 33-35 rpm kLa rises with theta 11.3 -> 16.2 -> 21.4 -> 28.9 (= Kim Fig. 12). At 17-21 rpm the theta trend reverses (21.9 at theta 2.89 vs 13.9-16.7 at 4.4-7); Kim has no data there.
+- Best known feasible L9 point: 24.5 at (25 rpm, 7), tau_95 0.0131 vs cap 0.014 (on the cap boundary). The L9-only arm never sampled theta > 5.35; its best is the seed 21.9.
+- LOO (scripts/bo2d/diag_l9_loo.py; V0 locked, V1 floor 0.04, V2/V3 linear trend): on the arm's 15 points no variant beats the constant mean (RMSE 0.219-0.281 vs ystd 0.236). With all 29 rows the trend model helps (0.20 vs ystd 0.41). Reading: the flat map is what 15 points in the rough theta 2-5 region support; the rise lives at theta 7, which the arm never visited. The noise floor 0.095 is the L8 roughness along rpm (E0), not replicate noise (L9 replicates ~0.04).
+- Cross-level information, REAL data (scripts/bo2d/diag_level_pairs.py; pairs at identical (rpm, theta)); Spearman L8-L9 / L7-L9:
+  tau_95 +0.96 / +0.99; edr_95 +0.91 / +0.95; dtmix_0.50 +0.50 / -0.24; kLa_1T_10 +0.02 (n 18) / +0.23 (n 13); kLa_1T_25 -0.36 / -0.58; kLa_1T_50 +0.22 / +0.05.
+  L8 kLa_1T_10 is 3-4x L9 at low theta and ~1.5x at theta 7, with the opposite theta trend; L7 is 5-10x L9.
+  => hydrodynamic QoIs transfer across grids; scalar-transport QoIs do not (high Schmidt: concentration layer under-resolved at L7/L8).
+- CONSEQUENCE: the locked chain models the OBJECTIVE kLa through L7/L8 that carry no rank information about L9. The held-out synthetic truth (synth_bench.setup('held')) is a smooth hand-written surface with smooth level offsets; it does not represent this. The synthetic 3x is not evidence for the real problem.
+- Mixing time: not in the BO problem (constraint tau_95 = 95th percentile WALL SHEAR STRESS). In BO L9 runs dtmix_0.50 is NaN in 12/15: the 40 post-release cycles (N_POST) are shorter than mixing at low theta; L9 mixing time also has a 0.33 ln run-to-run floor (2026-10-23) and failed warm-start validation W9.
