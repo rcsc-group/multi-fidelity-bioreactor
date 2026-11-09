@@ -26,6 +26,18 @@ QN = {"kLa_1T_10": r"$k_La$ (1/h)", "tau_95": r"$\tau_{95}$ (-)", "edr_95": r"ED
 MS = {7: 4, 8: 7, 9: 11}
 
 
+class NAR(bo.FullBayesKRRLRGP):
+    """Nonlinear autoregressive MF (NARGP form, Perdikaris et al. 2017): basis [1, f8] and a GP over (rpm, theta, f8),
+    so the L8 -> L9 map may bend and change with (rpm, theta)."""
+    f_lo, f_hi = 0.0, 1.0
+
+    def normalize_input(self, X):
+        X = np.atleast_2d(X)
+        xn = (X - self.bounds[:, 0]) / (self.bounds[:, 1] - self.bounds[:, 0])
+        f = np.asarray(self.lf_model.predict(X), float).reshape(-1, 1)
+        return np.hstack([xn, (f - self.f_lo) / (self.f_hi - self.f_lo)])
+
+
 def data(q):
     db = C.load_db(q)[["level", "rpm", "theta", "run", "y"]]
     extra = L.rows(q, ["bo1_", "bo4_", "bo_l7_"], {7, 8, 9})[["level", "rpm", "theta", "run", "y"]]
@@ -71,15 +83,17 @@ def lcurve(q, ns=(4, 6, 8, 12, 16), draws=30):
     X9, y9 = d9[["rpm", "theta"]].to_numpy(float), np.log(d9.y.to_numpy(float))
     m8 = bo.FullBayesKRRLRGP(C.DOMAIN, basis="ordinary", grid=C.hf_grid(floor, float(np.std(y8)))).train(X8, y8)
     lf = bo._Mean(m8)
+    NAR.f_lo, NAR.f_hi = float(y8.min()), float(y8.max())
     rng = np.random.default_rng(0)
-    out = {"L9-only": [], "MF": []}
+    out = {"L9-only": [], "MF": [], "NAR": []}
     for n in ns:
         e = {k: [] for k in out}
         for _ in range(draws):
             tr = rng.choice(len(y9), n, replace=False); te = np.setdiff1d(np.arange(len(y9)), tr)
             g = C.hf_grid(floor, max(float(np.std(y9[tr])), 1e-3))
             for k, m in (("L9-only", bo.FullBayesKRRLRGP(C.DOMAIN, basis="ordinary", grid=g)),
-                         ("MF", bo.FullBayesKRRLRGP(C.DOMAIN, lf_model=lf, grid=g))):
+                         ("MF", bo.FullBayesKRRLRGP(C.DOMAIN, lf_model=lf, grid=g)),
+                         ("NAR", NAR(C.DOMAIN, lf_model=lf, grid=g))):
                 m.train(X9[tr], y9[tr])
                 e[k].append(np.sqrt(np.mean((m.predict_mean(X9[te]) - y9[te]) ** 2)))
         for k in out:
@@ -89,12 +103,14 @@ def lcurve(q, ns=(4, 6, 8, 12, 16), draws=30):
 
 
 def fig_lcurve():
+    plt.rcParams.update(fs.rcparams())
     qs = ["kLa_1T_10", "dtmix_0.50", "tau_95", "edr_95"]
     f, ax = plt.subplots(1, 4, figsize=(12, 3.2), constrained_layout=True)
     for a, q in zip(ax, qs):
         ns, out, sd = lcurve(q)
-        for k, ls in (("L9-only", "-"), ("MF", ":")):
-            a.plot(ns, out[k][:, 1], ls, color=fs.level_colour(9), lw=2, label=k if k == "L9-only" else "L8 + L9")
+        lab = {"L9-only": "L9 only", "MF": "L8 + L9, linear map", "NAR": "L8 + L9, nonlinear map"}
+        for k, ls in (("L9-only", "-"), ("MF", ":"), ("NAR", "-.")):
+            a.plot(ns, out[k][:, 1], ls, color=fs.level_colour(9), lw=2, label=lab[k])
             a.fill_between(ns, out[k][:, 0], out[k][:, 2], color=fs.level_colour(9), alpha=0.12)
         a.axhline(sd, color=fs.NEUTRAL, lw=1, ls="--", label="guess the mean")
         a.set_title(QN[q].split(" (")[0]); a.set_xlabel("L9 runs used"); a.set_ylim(0, None); a.set_xticks([4, 8, 12, 16])
@@ -103,5 +119,6 @@ def fig_lcurve():
 
 
 if __name__ == "__main__":
-    fig_raw()
+    if "--lcurve-only" not in sys.argv:
+        fig_raw()
     fig_lcurve()
