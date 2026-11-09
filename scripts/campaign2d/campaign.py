@@ -589,7 +589,10 @@ def mix_value(run_dir, col):
     tr = run_dir / "tr_oxy.dat"
     if not (tr.exists() and (run_dir / "params.json").exists()):
         return None
-    cache = json.loads(MIX_CACHE.read_text()) if MIX_CACHE.exists() else {}
+    try:   # concurrent readers/writers (12 benchmark jobs + autopilot, 2026-11-09): a torn read means 'no cache'
+        cache = json.loads(MIX_CACHE.read_text()) if MIX_CACHE.exists() else {}
+    except (json.JSONDecodeError, OSError):
+        cache = {}
     key, mt = run_dir.name, tr.stat().st_mtime
     if key not in cache or cache[key].get("mtime") != mt:
         from scripts.postprocess import _compute_mixing_metrics
@@ -600,7 +603,8 @@ def mix_value(run_dir, col):
             r = {}
         cache[key] = {"mtime": mt, **{k: (None if v is None or not math.isfinite(v) else float(v))
                                       for k, v in r.items() if k.startswith("dtmix")}}
-        MIX_CACHE.write_text(json.dumps(cache, indent=0))
+        tmp = MIX_CACHE.with_name(f"{MIX_CACHE.name}.{os.getpid()}.tmp")
+        tmp.write_text(json.dumps(cache, indent=0)); os.replace(tmp, MIX_CACHE)   # atomic on one filesystem
     v = cache[key].get(col)
     return None if v is None else float(v)
 CRIT_QOIS = ["tau_95", "edr_95", "kLa_1T_10"]        # gated (<= 0.30); the others are reported, not gated
