@@ -1286,3 +1286,5 @@ dtmix_0.50 except at 37.5 rpm. kLa_1T_50 is not reliable at L8 near 22.5-27.5 rp
 - Fair-seed synthetic (8623967-72, chain bo4 seed, charge 214 core-h): chain reaches <=5 % in 6/6 seeds. Original pre-stated rule (5 %, fewer core-h, old costs): held-out 2/3 PASS (11: 2347 vs 2328 l9only; 12, 13: l9only never). Measured-cost ratios where both arms hit: 1.2-5x.
 - Status 08:17: l9only 15 L9, best still seed point (19.14, 2.89); chain bo4 4 L9 (seeds), round 2 = L7+L8 at ~20-23 rpm, theta ~4.4.
 - User decision: ASYNCHRONOUS loop (same acquisition; keep q=4 tasks in flight per arm, fill free slots at once; picks within R_EXCL of an in-flight x skipped). Autopilot cycle 15 min. Job 8705897.
+- 08:46 check: same state as 08:34 (chain L7 x4 running, l9only spin8 x3 + retry pending). 80 cores used (q=4 per arm cap, locked).
+- Slide figure bo_regret_synth.png re-rendered with the FAIR-seed chain logs (8623967-69) + 214 core-h charge (CHAIN_OFFSET). Median: chain ~11 % at ~2000 core-h vs l9only ~14 % at ~6000 (~3x); chain ends ~4 % vs l9only ~5.5 % at ~14000. POST HOC metric; say so in notes.

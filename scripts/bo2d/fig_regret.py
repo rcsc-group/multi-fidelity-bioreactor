@@ -15,6 +15,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from scripts import figstyle as fs  # noqa: E402
 
 CC = {7: 5.0, 8: 26.0, 9: 376.0}; CL = 371.0
+import os
+OFF = float(os.environ.get("CHAIN_OFFSET", "0"))   # fair-seed charge for the chain (214 core-h, 2026-11-08)
 rx = re.compile(r"^(chain|l9only)\s+seed (\d+) round \d+ core-h\s+\d+ regret\s+([-\d.]+)% feasible (\w+) .*picks L7/L8/L9 (\d+)/(\d+)/(\d+)")
 cur = defaultdict(list); spent = defaultdict(float)
 for f in sys.argv[2:]:
@@ -24,6 +26,8 @@ for f in sys.argv[2:]:
             continue
         arm, seed, reg, feas = m.group(1), int(m.group(2)), float(m.group(3)), m.group(4) == "True"
         n7, n8, n9 = (int(m.group(i)) for i in (5, 6, 7))
+        if (arm, seed) not in spent and arm == "chain":
+            spent[(arm, seed)] = OFF
         spent[(arm, seed)] += n7 * CC[7] + n8 * CC[8] + n9 * CC[9] if arm == "chain" else n9 * CL
         cur[(arm, seed)].append((spent[(arm, seed)], max(reg, 0.0) if feas else np.nan))
 plt.rcParams.update(fs.rcparams())
