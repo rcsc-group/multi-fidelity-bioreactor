@@ -1331,3 +1331,9 @@ Note: the per-job "VERDICT ... 0/3 FAIL" line is wrong by design (each job runs 
 | max kLa | 22 | 15233 | 10388 | l9only |
 | max kLa | 23 | running (1806, 23.6 %) | 13356 | open |
 t_mix,25: chain wins 2/3 -> PASS. l9only never reaches 5 % in the cap. kLa: open; needs both running seeds to win.
+
+### 2026-11-09 — campaign stop rule (pre-registered)
+Stop submitting (touch scripts/bo2d/state/STOP) when, for BOTH objectives (kLa, t_mix,25), each arm has >= 3 L9 results for that
+objective AND neither arm's best feasible value moved by more than the noise floor over its last 2 L9 results.
+Backstop: no new L9 run after Wed 2026-11-11 00:00 (last data by ~11:00). Built-in end is Tue 18:00; if the rule is not met then,
+start a fresh autopilot ending Wed 00:00 (do not edit the running autopilot.sh). The deck is built in parallel, not after.
