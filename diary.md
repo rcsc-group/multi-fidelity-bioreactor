@@ -1300,3 +1300,12 @@ dtmix_0.50 except at 37.5 rpm. kLa_1T_50 is not reliable at L8 near 22.5-27.5 rp
   => hydrodynamic QoIs transfer across grids; scalar-transport QoIs do not (high Schmidt: concentration layer under-resolved at L7/L8).
 - CONSEQUENCE: the locked chain models the OBJECTIVE kLa through L7/L8 that carry no rank information about L9. The held-out synthetic truth (synth_bench.setup('held')) is a smooth hand-written surface with smooth level offsets; it does not represent this. The synthetic 3x is not evidence for the real problem.
 - Mixing time: not in the BO problem (constraint tau_95 = 95th percentile WALL SHEAR STRESS). In BO L9 runs dtmix_0.50 is NaN in 12/15: the 40 post-release cycles (N_POST) are shorter than mixing at low theta; L9 mixing time also has a 0.33 ln run-to-run floor (2026-10-23) and failed warm-start validation W9.
+- CORRECTION (user, same morning): the Spearman test above was the wrong test. It asks whether L8 and L9 order points the same way over the whole domain; the MF model HF = rho*LF + beta + GP discrepancy does not need that. "L8 carries no information" is withdrawn as stated.
+- Predictive test instead (scripts/bo2d/diag_mf_loo.py, LOO on 29 L9; scripts/bo2d/fig_level_info.py learning curve, train on n9 random L9 + all L8, 30 draws, median held-out RMSE ln). n9 = 4 / 8 / 16:
+  kLa_1T_10 L9-only 0.435 / 0.352 / 0.233, L8+L9 0.518 / 0.353 / 0.256 (no gain; worse at 4);
+  dtmix_0.50 0.636 / 0.544 / 0.268 vs 0.667 / 0.462 / 0.356 (mixed);
+  tau_95 0.466 / 0.199 / 0.116 vs 0.152 / 0.104 / 0.091 (L8+L9 with 4 L9 ~ L9-only with 12);
+  edr_95 1.099 / 0.541 / 0.370 vs 0.552 / 0.367 / 0.276 (4 ~ 8; 6 ~ 12-16).
+  Figures: talks/dfd2026/public/bo_level_raw.png, bo_level_lcurve.png. Caveat: MF uses all 52-75 archive L8 rows (cost ~1100-1600 core-h, ~3-4 L9 runs); L8 kLa bias is theta-dependent (3-4x at theta 2-3, ~1.5x at theta 7).
+- Mixing NaN, root cause (scripts/bo2d/diag_chi_bo.py): runs did simulate 40 cycles after release (my first count used the wrong period). chi 0.10 reached in 2-7 cycles, 0.25 in 14-36, 0.50 missed in 7/12 BO runs: N_POST = 40 is too short at low theta. My setting, not a solver bug.
+- User: the intended problem is mixing time optimised subject to the shear cap.
