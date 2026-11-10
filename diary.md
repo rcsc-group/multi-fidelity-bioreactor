@@ -1543,3 +1543,13 @@ vs noisy held-out data); FB 0.82-0.95. Figure: figures/bo2d/mf_ablation.png. Win
 - Slide 6 inserted (clicks: 1, notes in user's voice); old 3-level slide now 7, left as is (user). Slidev servers 3031/4031
   restarted (watcher missed new public/ files).
 - Ceiling test (BO, perfect tau): kla oracle hits 5 % at 4.5-5.9k core-h vs l9only 10-21k (~2.3-3.5x). mix rerun 8803957.
+
+### 2026-11-10 18:50 check-in
+- Jobs healthy, no failures in last 3 h. Wed autopilot 8799733 started 18:15 (node1815), ends Wed 00:00. In flight:
+  chain kla 2 + mix 2, l9only kla 2 + mix 2. Stop rule NOT met (chain kla still moving). Pair driver 8801813: 2 of 12 L8 done.
+  L7 screen 8788953 running.
+- Ceiling RESULT, t_mix (synth_ceiling.py, job 8803957): l9only with the TRUE tau hits 5 % regret at 1484 / 1484 / 4452
+  core-h vs l9only 8904 / 13356 / 7420 -> 6x / 9x / 1.7x. kLa ceiling (earlier): 2.3-3.5x.
+  Reading: a perfect constraint (tau) model saves up to ~9x on t_mix, ~3x on kLa. The 10x target is reachable only on
+  t_mix and only if the cheap levels make the tau model near-perfect (fair ablation: MF tau error 0.26-0.77 of L9-only).
+- Deck unchanged since 17:30: missing Results 2 (cost), Results 3 (2D), Conclusions.
