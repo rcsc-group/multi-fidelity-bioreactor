@@ -1452,3 +1452,17 @@ ABLATION (mf_ablation.py, pre-registered rule: lowest median held-out L9 RMSE at
 | tau_95 | B3-lin | 0.109 | 0.196 / 0.255 | 0.145 |
 At n9 = 4: tau B3-lin ~0.15 vs L9-only 0.47-0.52; t_mix 0.51 vs 0.70-0.86. Upstream 90 % coverage 0.32-0.57 (its std
 vs noisy held-out data); FB 0.82-0.95. Figure: figures/bo2d/mf_ablation.png. Winners frozen for the split study.
+
+### 2026-11-10 ~13:30 "is 10 % the best we can do?" (user) - three tests
+- Factor effects (tab_ablation_factors.py, paired): fully Bayesian vs ML RMSE ratio 0.77-1.07 (win 44-82 %), but 90 %
+  coverage 0.82-0.91 vs 0.33-0.73; 3 vs 2 levels 0.89-1.07; quadratic hurts t_mix/tau at n9 = 4 (x2.4 / x1.9), helps kLa
+  at n9 >= 8 (0.79-0.82). Uniform score (RMSE / L9-only, mean over qoi x n9): B3-lin 0.84, B2-lin 0.89, U2-lin 0.96.
+- Noise is not the reason (tab_ablation_excess.py): floors 0.095 / 0.104 / 0.017 ln (kLa / t_mix / tau) << RMSE 0.3-0.5.
+- LF sparsity (diag_lf_bottleneck.py, B2-lin / B1 RMSE): t_mix at held-out sites WITH an L8 run 0.93-0.98, WITHOUT 1.34-1.44
+  -> for t_mix the LF interpolation is the bottleneck (L8 KRR leave-site-out 0.20 ln vs L9 sd 0.75); kLa 1.08-1.25 at both
+  -> not the reason for kLa; tau 0.35 / 0.45 / 0.83 at n9 = 4 / 8 / 16.
+- kLa (diag_kla_residual_rpm.py): along theta = 7, L9 kLa rises steadily with rpm (ln 2.53 -> 4.31, 15 -> 37.5 rpm) while
+  L8 is flat with a dip at 25-27.5 rpm (3.4-3.7) -> no function of f8 alone maps L8 to L9 for kLa; the L8 grid misses the
+  rpm trend. The transient-wave hypothesis is not supported (LOO residual rms 0.38 below 25 rpm vs 0.44 above).
+- NOTE: the 1D story (slide 8) is tau_95 and EDR, not kLa. The 2D tau result (MF error 0.35-0.45 of L9-only at 4-8 L9
+  runs) matches it.
