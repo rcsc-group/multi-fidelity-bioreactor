@@ -1374,3 +1374,14 @@ Course: the "search cheap, confirm at L9" policy (dev on synthetic, judge once o
 (diag_level_optima.py) is still fitting after 3 h on 2 CPUs.
 Figures: figures/bo2d/regret_real_frozen_{kla,mix}.png.
 Deck: slide 3 rebuilt ("Every piece exists, but not together", 4 clicks; kLa and t_mix defined in words on slide 2 notes and slide 3).
+
+### 2026-11-09 23:50 go/no-go for "search cheap, confirm at L9": NO-GO
+diag_level_optima.py (frozen truth; OOM at 16G interactive, rerun as batch 8759888, 64G, 3.5 min). Cap tau_95 <= 0.014.
+| objective | L9 optimum | L7 argmax -> L9 regret | L8 argmax -> L9 regret | grid within 5 % at L9 |
+|---|---|---|---|---|
+| kla | (26.7, 7.0) | (21.5, 4.3) 34 % | (15.0, 3.5) 28 % | 0.5 % |
+| mix (tau at same level) | (36.8, 4.4) | (32.8, 6.45) infeasible at L9 | (33.0, 6.65) infeasible at L9 | 0.2 % |
+| mix (tau at L9) | | (27.2, 6.9) 32 % | (29.2, 6.25) 32 % | |
+Interpretation: the cheap-level optima sit 28-34 % regret away from the L9 optimum, and for t_mix the cheap tau
+misjudges feasibility. A cheap search followed by 1-3 L9 confirmations cannot reach 5 %. Second fact: the 5 % basin is
+0.2-0.5 % of the grid, i.e. the 5 % target is a needle; compare it with the repeat-run noise (0.33 ln on t_mix) before using it again.
