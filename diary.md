@@ -1475,3 +1475,4 @@ vs noisy held-out data); FB 0.82-0.95. Figure: figures/bo2d/mf_ablation.png. Win
   kLa and t_mix: L9-only is better per core-h. The "~50 % less error" holds at equal L9 COUNT, not equal compute.
   The 80 L8 runs were not designed for MF (30 lie on theta = 7). The 1D variant table (slide 8 notes) had 10 L8
   doing as well as 40 for tau -> the L8 count is the lever (split study).
+- 2026-11-10: last frozen-truth arm done: kla seed 21 chain HIT at 29,461 core-h (l9only 20,776) -> kla 0/3, mix 1/3 for the chain; benchmark complete (old mf picker, old costs).
