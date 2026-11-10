@@ -1489,3 +1489,16 @@ vs noisy held-out data); FB 0.82-0.95. Figure: figures/bo2d/mf_ablation.png. Win
   bo1/bo3/bo4 L9), training draws with 0 or 1 theta = 7 site, L8 line rows kept or dropped (factor). Running.
 - Dense L7 screen (user go, "Both now"): screen_l7.py / screen_l7.sbatch, job 8788953; 200 maximin-LHS points, seed
   20261110, run ids scr_l7_*, <= 30 in flight, binary BioReactor-mpi-lean-2ef5b07. 30 submitted by 12:49.
+
+### 2026-11-10 ~15:00 fair ablation RESULT (24 cells x 20 reps, off-line L9 test sites only)
+- Table: state/mf_ablation_fair.csv (tab_ablation_fair.py). Ratio = median off-line RMSE / B1 (L9 only).
+- tau_95: EVERY MF variant beats B1 in every cell. Ratios 0.26-0.77 (n9 = 4), 0.35-0.70 (n9 = 8). Best: U2-lin at
+  n9 = 4 (0.26-0.30); B3-lin at n9 = 8 (0.36-0.51). Dropping the theta = 7 L8 line HELPS (drop < keep in all
+  tau cells) -> the gain is not a theta = 7 artifact.
+- kLa_1T_10: every MF variant is worse than B1 (1.00-2.38). The earlier kLa MF win was a theta = 7 artifact (confirmed).
+- dtmix_0.25: mixed. B3-lin wins only at n9 = 4 (0.81-0.96); at n9 = 8 all variants >= 0.94, mostly worse.
+- Interpretation: cheap grids pay off for the shear constraint (tau), not for kLa (smooth off-line; few L9 suffice).
+  Constrained BO is "max kLa s.t. tau cap" -> MF belongs on the constraint model. Next: rerun the BO regret-vs-cost
+  with MF on tau only, L9-only GP on kLa.
+- Power: 20 reps per cell, 17 off-line test sites; the tau effect (2-4x) is far outside rep scatter; the dtmix effect
+  (<20%) is not resolved.

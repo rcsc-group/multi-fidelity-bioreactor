@@ -48,6 +48,7 @@ print(f"# {Q}: L7 {int((d.level == 7).sum())}, L8 {int((d.level == 8).sum())} "
       f"({int(ON(d[d.level == 8]).sum())} on theta=7), L9 off-line sites {len(off)}, on-line sites {len(on)}", flush=True)
 X7, y7 = xy(d[d.level == 7]); lf7 = A.krr(X7, y7)
 print("qoi,n9,on7,l8line,rep,variant,rmse,cover90,seconds,ntest", flush=True)
+CACHE = {}
 for rep in range(20):
     rng = np.random.default_rng(1000 * rep + 10 * N9 + ON7)
     tr = list(rng.choice(off, N9 - ON7, replace=False)) + list(rng.choice(on, ON7, replace=False))
@@ -55,7 +56,10 @@ for rep in range(20):
     d8 = d[d.level == 8]
     if L8LINE == "drop":
         d8 = d8[~ON(d8) | d8.key.isin(tr)]
-    X8, y8 = xy(d8); lf8 = A.krr(X8, y8); fb8 = A.fb(X8, y8, lf7, False, floor)
+    k8 = tuple(d8.index)                      # L8 fits depend only on which L8 rows are kept: fit once per set
+    if k8 not in CACHE:
+        X8, y8 = xy(d8); CACHE[k8] = (X8, y8, A.krr(X8, y8), A.fb(X8, y8, lf7, False, floor))
+    X8, y8, lf8, fb8 = CACHE[k8]
     Xa, ya = xy(Atr); Xb, yb = xy(B)
     V = {
         "B1": lambda: bo.gauss(A.fb(Xa, ya, None, False, floor), Xb),
