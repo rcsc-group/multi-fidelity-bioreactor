@@ -1529,3 +1529,17 @@ vs noisy held-out data); FB 0.82-0.95. Figure: figures/bo2d/mf_ablation.png. Win
 - User design idea (30 L7 / 10 L8 / 6 L9 ~ 1,530 core-h ~ 8 L9): "landscape / initial DoE" at equal compute, error in
   both directions (less compute at equal error, or less error at equal compute). Test design to be agreed.
 - Deck: slide 5 C*/dC*dt and sigma^2/chi swapped (user ask).
+
+### 2026-11-10 ~17:30 deck: Results 1 (new slide 6) + zero-compute L10 mixing time
+- talks/dfd2026/tools/fig_r1_heldout.py -> public/r1_a.png, r1_b.png. theta = 7, four QoI, all predict L10. Chain L8 KRR ->
+  L9 GP -> L10 GP on 3 L10 runs (17.5, 25, 32.5 rpm, fixed before plotting). Cheap grids cleaned to one run per grid site
+  (user: old sweeps had no acquisition rule); this cut kLa held-out error 25 % -> 12 %.
+- L10 t_mix: time to chi = 0.25 recomputed from tr_oxy.dat (campaign.mix_value) for all 10 theta = 7 L10 runs; _ext runs
+  are continuations (same dtmix_0.25), the slow-mixing cases, not a protocol error. Only 3 reach chi = 0.50.
+- Existing L10 at 35 / 37.5 rpm theta 7 (fig11_l10_*, warm start from L9, release after 5 cycles) added as unseen points;
+  they sit on the prediction (extrapolation past 32.5). No new run, no mbessa-condo.
+- Held-out rel RMS: tau_95 8 %, EDR 7 %, kLa 12 %, t_mix 29 % (n unseen 6 / 6 / 9 / 9). Power: one fixed training set, no
+  draw scatter; the near-replicate L10 pairs (22.4-22.6, 29.9/30) show run-to-run scatter up to ~1.5x for t_mix.
+- Slide 6 inserted (clicks: 1, notes in user's voice); old 3-level slide now 7, left as is (user). Slidev servers 3031/4031
+  restarted (watcher missed new public/ files).
+- Ceiling test (BO, perfect tau): kla oracle hits 5 % at 4.5-5.9k core-h vs l9only 10-21k (~2.3-3.5x). mix rerun 8803957.
