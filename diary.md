@@ -1385,3 +1385,14 @@ diag_level_optima.py (frozen truth; OOM at 16G interactive, rerun as batch 87598
 Interpretation: the cheap-level optima sit 28-34 % regret away from the L9 optimum, and for t_mix the cheap tau
 misjudges feasibility. A cheap search followed by 1-3 L9 confirmations cannot reach 5 %. Second fact: the 5 % basin is
 0.2-0.5 % of the grid, i.e. the 5 % target is a needle; compare it with the repeat-run noise (0.33 ln on t_mix) before using it again.
+
+### 2026-11-10 06:55 check-in
+User (00:10): mfbml was strong in 1D and looks like trash in 2D -> "that smells". Hypotheses, each with a test:
+- H-picker: the benchmark tests the cost-aware picker, not mfbml (chain picked L9 ~every round). Test: diag_mf_recommend.py
+  (array 8774466, 2 obj x 8 reps; same L9 sites for both arms, n9 = 4..24; chain also gets L7/L8 at 36 sites + the L9 sites;
+  grid recommendation at P(feasible) >= 0.8; score = L9 regret on the frozen truth). No picker involved.
+- H-truth: the frozen truth = independent per-level GPs, so truth L8 vs L9 may be less correlated than real paired runs.
+  Test: diag_truth_corr.py (job 8774540): grid corr(truth L8, truth L9) vs corr(observed L8, L9) at paired sites.
+- H-theta (not yet tested): L8->L9 kLa error grows ~4x at low theta; basis [1, f8] cannot carry it (BO_THETA off).
+Both jobs queued until 06:53 (batch was full). Jobs healthy; autopilot alive; no STOP; stop rule not met (chain kla n9 = 5:
+its first new L9). In flight: chain 2 running + 2 new, l9only 2 running + 2 new. bo-real 8736824 (kla seed 21 chain) still running.
