@@ -1396,3 +1396,14 @@ User (00:10): mfbml was strong in 1D and looks like trash in 2D -> "that smells"
 - H-theta (not yet tested): L8->L9 kLa error grows ~4x at low theta; basis [1, f8] cannot carry it (BO_THETA off).
 Both jobs queued until 06:53 (batch was full). Jobs healthy; autopilot alive; no STOP; stop rule not met (chain kla n9 = 5:
 its first new L9). In flight: chain 2 running + 2 new, l9only 2 running + 2 new. bo-real 8736824 (kla seed 21 chain) still running.
+
+### 2026-11-10 08:40 results of the "mfbml smells" tests
+H-truth (diag_truth_corr, 8774540): corr(L8, L9) on the grid, truth vs observed at paired real sites:
+  kLa 1T_10: truth -0.03 vs observed 0.38 (n=18) -> truth UNFAIR for kLa (and the real L8-L9 link is weak anyway);
+  t_mix,25: 0.80 vs 0.83 (n=18) fair; tau_95: 0.97 vs 0.97 (n=30) fair.
+H-picker (diag_mf_recommend, 8774466; 8 reps; infeasible recommendation = failure; table: scripts/bo2d/tab_mfrec.py):
+  the chain's recommendations are INFEASIBLE in truth 12-62 % of the time at every n9 (L9-only: 0-25 %), although tau_95
+  has truth corr 0.97 between L8 and L9. That is the smell: with corr 0.97 mfbml should nail the constraint.
+  Feasible-regret medians are similar between arms (e.g. mix n9=16: chain 7 %, l9only 18 %; kla n9=16: 11 % vs 8 %).
+Next test (8777795, diag_chain_tau.py): bias / RMSE / 90 % coverage of the chain's L9 tau_95 predictive vs truth, on the grid
+and near the cap. Hypothesis: biased or overconfident chain tau (bug), not a data limit.
