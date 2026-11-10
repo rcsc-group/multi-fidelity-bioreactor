@@ -37,7 +37,7 @@ from scripts.bo2d import loop as LP  # noqa: E402
 from mfbml_local.krr_lr_gpr_fullbayes import FullBayesKRRLRGP  # noqa: E402
 import campaign as C  # noqa: E402
 
-Q, N9 = sys.argv[1], int(sys.argv[2]); D = C.DOMAIN; Z90 = 1.645
+D = C.DOMAIN; Z90 = 1.645
 
 
 class KLG(KLG):
@@ -117,34 +117,39 @@ def load(q):
     return d
 
 
-d = load(Q); floor = C.noise_floor(Q)
-xy = lambda s: (s[["rpm", "theta"]].to_numpy(float), s.ly.to_numpy(float))
-X7, y7 = xy(d[d.level == 7]); X8, y8 = xy(d[d.level == 8]); d9 = d[d.level == 9]; sites = d9.key.unique()
-print("qoi,n9,rep,variant,rmse,cover90,seconds", flush=True)
-lf8 = krr(X8, y8); lf7 = krr(X7, y7)
-up78 = {o: upstream(X8, y8, X7, y7, o, lf=_Fixed(lf7.predict)) for o in ("linear",)}
-fb8 = fb(X8, y8, lf7, False, floor)
-for rep in range(20):
-    rng = np.random.default_rng(100 * rep + N9)
-    tr = rng.choice(sites, N9, replace=False); A = d9[d9.key.isin(tr)]; B = d9[~d9.key.isin(tr)]
-    Xa, ya = xy(A); Xb, yb = xy(B)
-    V = {
-        "U1": lambda: up_pred(upstream(Xa, ya, X8, y8, "ordinary", lf=_Fixed(lf8.predict)), Xb),
-        "U2-lin": lambda: up_pred(upstream(Xa, ya, X8, y8, "linear", lf=_Fixed(lf8.predict)), Xb),
-        "U2-quad": lambda: up_pred(upstream(Xa, ya, X8, y8, "quadratic", lf=_Fixed(lf8.predict)), Xb),
-        "U3-lin": lambda: up_pred(upstream(Xa, ya, X8, y8, "linear", lf=_Fixed(lambda Z: up78["linear"].predict(Z))), Xb),
-        "U3-quad": lambda: up_pred(upstream(Xa, ya, X8, y8, "quadratic", lf=_Fixed(lambda Z: up78["linear"].predict(Z))), Xb),
-        "B1": lambda: bo.gauss(fb(Xa, ya, None, False, floor), Xb),
-        "B2-lin": lambda: bo.gauss(fb(Xa, ya, lf8, False, floor), Xb),
-        "B2-quad": lambda: bo.gauss(fb(Xa, ya, lf8, True, floor), Xb),
-        "B3-lin": lambda: bo.gauss(fb(Xa, ya, bo._Mean(fb8), False, floor), Xb),
-        "B3-quad": lambda: bo.gauss(fb(Xa, ya, bo._Mean(fb8), True, floor), Xb),
-    }
-    for name, f in V.items():
-        t0 = time.time()
-        try:
-            mu, sd = f()
-            rmse = float(np.sqrt(np.mean((mu - yb) ** 2))); cov = float(np.mean(np.abs(mu - yb) <= Z90 * sd))
-        except Exception as e:  # report, never hide
-            rmse, cov = np.nan, np.nan; print(f"# {name} rep {rep}: {type(e).__name__}: {e}", flush=True)
-        print(f"{Q},{N9},{rep},{name},{rmse:.4f},{cov:.3f},{time.time() - t0:.1f}", flush=True)
+def xy(s):
+    return s[["rpm", "theta"]].to_numpy(float), s.ly.to_numpy(float)
+
+
+if __name__ == "__main__":
+    Q, N9 = sys.argv[1], int(sys.argv[2])
+    d = load(Q); floor = C.noise_floor(Q)
+    X7, y7 = xy(d[d.level == 7]); X8, y8 = xy(d[d.level == 8]); d9 = d[d.level == 9]; sites = d9.key.unique()
+    print("qoi,n9,rep,variant,rmse,cover90,seconds", flush=True)
+    lf8 = krr(X8, y8); lf7 = krr(X7, y7)
+    up78 = {o: upstream(X8, y8, X7, y7, o, lf=_Fixed(lf7.predict)) for o in ("linear",)}
+    fb8 = fb(X8, y8, lf7, False, floor)
+    for rep in range(20):
+        rng = np.random.default_rng(100 * rep + N9)
+        tr = rng.choice(sites, N9, replace=False); A = d9[d9.key.isin(tr)]; B = d9[~d9.key.isin(tr)]
+        Xa, ya = xy(A); Xb, yb = xy(B)
+        V = {
+            "U1": lambda: up_pred(upstream(Xa, ya, X8, y8, "ordinary", lf=_Fixed(lf8.predict)), Xb),
+            "U2-lin": lambda: up_pred(upstream(Xa, ya, X8, y8, "linear", lf=_Fixed(lf8.predict)), Xb),
+            "U2-quad": lambda: up_pred(upstream(Xa, ya, X8, y8, "quadratic", lf=_Fixed(lf8.predict)), Xb),
+            "U3-lin": lambda: up_pred(upstream(Xa, ya, X8, y8, "linear", lf=_Fixed(lambda Z: up78["linear"].predict(Z))), Xb),
+            "U3-quad": lambda: up_pred(upstream(Xa, ya, X8, y8, "quadratic", lf=_Fixed(lambda Z: up78["linear"].predict(Z))), Xb),
+            "B1": lambda: bo.gauss(fb(Xa, ya, None, False, floor), Xb),
+            "B2-lin": lambda: bo.gauss(fb(Xa, ya, lf8, False, floor), Xb),
+            "B2-quad": lambda: bo.gauss(fb(Xa, ya, lf8, True, floor), Xb),
+            "B3-lin": lambda: bo.gauss(fb(Xa, ya, bo._Mean(fb8), False, floor), Xb),
+            "B3-quad": lambda: bo.gauss(fb(Xa, ya, bo._Mean(fb8), True, floor), Xb),
+        }
+        for name, f in V.items():
+            t0 = time.time()
+            try:
+                mu, sd = f()
+                rmse = float(np.sqrt(np.mean((mu - yb) ** 2))); cov = float(np.mean(np.abs(mu - yb) <= Z90 * sd))
+            except Exception as e:  # report, never hide
+                rmse, cov = np.nan, np.nan; print(f"# {name} rep {rep}: {type(e).__name__}: {e}", flush=True)
+            print(f"{Q},{N9},{rep},{name},{rmse:.4f},{cov:.3f},{time.time() - t0:.1f}", flush=True)

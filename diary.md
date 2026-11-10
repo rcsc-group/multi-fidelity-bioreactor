@@ -1476,3 +1476,16 @@ vs noisy held-out data); FB 0.82-0.95. Figure: figures/bo2d/mf_ablation.png. Win
   The 80 L8 runs were not designed for MF (30 lie on theta = 7). The 1D variant table (slide 8 notes) had 10 L8
   doing as well as 40 for tau -> the L8 count is the lever (split study).
 - 2026-11-10: last frozen-truth arm done: kla seed 21 chain HIT at 29,461 core-h (l9only 20,776) -> kla 0/3, mix 1/3 for the chain; benchmark complete (old mf picker, old costs).
+
+### 2026-11-10 ~14:00 theta = 7 draw bias (user, 3rd call-out), c2d L9 protocol, dense L7 screen
+- Transfer by site class (diag_kla_protocol.py): L8 -> L9 kLa LOO on the theta = 7 fig9 line R 0.59 (slope +1.29; t_mix R
+  0.25); on the 8 off-line c2d L9 sites R 1.57 (slope -0.28; t_mix 0.76). Cause: the c2d L9 warm starts were released
+  after 12 settle cycles; the L9 wave needs ~27 (2026-11-06 entry). bo1/bo4 L9 use N_WARM = 30. -> c2d_l9 DROPPED from
+  every no-compute test from now on; the frozen truth and the 11-10 ablation include them (flagged, superseded below).
+- Draw bias: in the snapshots 10/30 L9 and 30/80 L8 rows sit on theta = 7 (zero area, L8 densest there). Random site
+  draws therefore score the MF models mostly where L8 is dense. All earlier ablation / LOO / LF-bottleneck numbers are
+  pooled over that line -> treat as biased toward MF.
+- Fair protocol (mf_ablation_fair.py, pre-registered in its docstring): test = off-line L9 sites only (17 now, incl. live
+  bo1/bo3/bo4 L9), training draws with 0 or 1 theta = 7 site, L8 line rows kept or dropped (factor). Running.
+- Dense L7 screen (user go, "Both now"): screen_l7.py / screen_l7.sbatch, job 8788953; 200 maximin-LHS points, seed
+  20261110, run ids scr_l7_*, <= 30 in flight, binary BioReactor-mpi-lean-2ef5b07. 30 submitted by 12:49.
