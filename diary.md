@@ -1354,3 +1354,23 @@ scripts/bo2d/state/bo_real_frozen_jobs.txt (8736824-35). Pass rule unchanged. St
 Live campaign: both arms keep 4 tasks in flight; proposals tagged [kla]/[mix]. The chain arm has run no new L9 point yet
 (only L7/L8), so the stop rule (>= 3 L9 per objective per arm) is not met; this also means the real-campaign regret for the
 chain rests on its 4 seed L9 points -> the "confirm at L9" policy is needed for the talk.
+
+### 2026-11-09 21:50 check-in
+Jobs healthy: autopilot 8705897, 4 bioreactor-mpi running, interactive 8746011 (node1828). No STOP file; stop rule not met (chain has still no new L9).
+In flight: l9only 3 running + 1 new; chain 1 running + 1 new. The chain arm sits below 4 because its L7/L8 tasks finish fast and
+the running autopilot adds at most one proposal per arm per 15-min loop (not a fault; script not edited, per rule).
+Frozen-truth benchmark (core-h to <=5 % regret), now 11 of 12 arms done:
+| objective | seed | chain | l9only | winner |
+|---|---|---|---|---|
+| kla | 21 | running (8736824) | 20776 | open |
+| kla | 22 | 22836 | 10388 | l9only |
+| kla | 23 | miss (44762, stuck at 20.8 %) | 14840 | l9only |
+| mix | 21 | 15737 | 8904 | l9only |
+| mix | 22 | 11509 | 13356 | chain |
+| mix | 23 | 14748 | 7420 | l9only |
+Pass rule (chain wins >= 2/3 seeds): FAIL for mix (1/3) and FAIL for kla (<= 1/3 whatever seed 21 gives).
+Cause (already diagnosed): cost-aware AEI picks L9 in almost every chain round (0/0/4), so the chain = L9-only + overhead.
+Course: the "search cheap, confirm at L9" policy (dev on synthetic, judge once on seeds 24-26). Its go/no-go diagnostic
+(diag_level_optima.py) is still fitting after 3 h on 2 CPUs.
+Figures: figures/bo2d/regret_real_frozen_{kla,mix}.png.
+Deck: slide 3 rebuilt ("Every piece exists, but not together", 4 clicks; kLa and t_mix defined in words on slide 2 notes and slide 3).
