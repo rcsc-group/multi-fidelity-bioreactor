@@ -1407,3 +1407,14 @@ H-picker (diag_mf_recommend, 8774466; 8 reps; infeasible recommendation = failur
   Feasible-regret medians are similar between arms (e.g. mix n9=16: chain 7 %, l9only 18 %; kla n9=16: 11 % vs 8 %).
 Next test (8777795, diag_chain_tau.py): bias / RMSE / 90 % coverage of the chain's L9 tau_95 predictive vs truth, on the grid
 and near the cap. Hypothesis: biased or overconfident chain tau (bug), not a data limit.
+
+### 2026-11-10 09:10 chain tau is NOT broken; "infeasible" = on the boundary
+diag_chain_tau (8777795): chain L9 tau_95 predictive vs truth, n9 = 8: RMSE 0.07-0.10 ln (l9only 0.10-0.24), 90 % coverage
+0.71-1.00 near the cap; n9 = 16: both ~0.03 ln, coverage ~1. Hypothesis "biased/overconfident chain tau" REFUTED.
+diag_infeas_margin (8778560): excess ln(tau9/cap) of infeasible recommendations: chain median 0.015 (kla) / 0.027 (mix),
+max 0.16 / 0.22; l9only (4 rows) median 0.004. tau_95 noise floor 0.017. Feasible within 0.05 ln: chain 0.96 (kla) / 0.89 (mix).
+Interpretation: the constrained optimum lies ON the tau cap; the chain's narrower band puts its recommendation on the cap,
+so errors of the order of the noise floor flip "feasibility". mfbml is doing its job; the scoring of a boundary optimum is
+the issue, plus a tail (11 % of mix picks > 0.05 ln over).
+Fix candidate (a METHOD change, to be judged on fresh reps, not a scoring change): recommend with a margin equal to the noise
+floor (mean_t + z*sqrt(V_t + noise_t) <= ln cap).
