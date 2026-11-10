@@ -1418,3 +1418,12 @@ so errors of the order of the noise floor flip "feasibility". mfbml is doing its
 the issue, plus a tail (11 % of mix picks > 0.05 ln over).
 Fix candidate (a METHOD change, to be judged on fresh reps, not a scoring change): recommend with a margin equal to the noise
 floor (mean_t + z*sqrt(V_t + noise_t) <= ln cap).
+
+### 2026-11-10 09:50 check-in
+Jobs healthy (autopilot 8705897; 4 bioreactor-mpi; bo-real 8736824 = kla seed 21 chain, no HIT yet at 24.9k core-h; interactive
+8746011 node1828). No STOP; stop rule not met (chain arm L9 count 1-2). Chain L9 confirmations now running (bo4_l9 34.35/2.25).
+CORRECTION: the frozen benchmark used BO_METHOD=mf (MF-GP-UCB level rule, theta basis, fair seed), NOT the cost-aware aei;
+earlier entries that blame "aei" for the L9-heavy picks mean the mf rule. Level picks per seed (tab_bo_logs.py): chain
+0 L7 / 11-123 L8 / 29-116 L9. Live campaign (cascade): 30 L7 / 26 L8 / 1 L9. L9-only evaluations to 5 %: kla 56/28/40, mix 24/36/20.
+Proposed (user's idea, awaiting go): zero-compute budget-allocation study, fixed core-h budget, best L7/L8/L9 split at random
+nested sites, mfbml recommendation, scored with a noise-floor tolerance; mix primary (fair truth); dev reps then fresh reps.
