@@ -1500,5 +1500,5 @@ vs noisy held-out data); FB 0.82-0.95. Figure: figures/bo2d/mf_ablation.png. Win
 - Interpretation: cheap grids pay off for the shear constraint (tau), not for kLa (smooth off-line; few L9 suffice).
   Constrained BO is "max kLa s.t. tau cap" -> MF belongs on the constraint model. Next: rerun the BO regret-vs-cost
   with MF on tau only, L9-only GP on kLa.
-- Power: 20 reps per cell, 17 off-line test sites; the tau effect (2-4x) is far outside rep scatter; the dtmix effect
+- Power: 20 reps per cell, 17 off-line test sites. Rep scatter NOT yet computed (medians only); the tau effect is 2-4x, the dtmix effect
   (<20%) is not resolved.
