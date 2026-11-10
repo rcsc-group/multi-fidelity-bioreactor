@@ -1513,3 +1513,19 @@ vs noisy held-out data); FB 0.82-0.95. Figure: figures/bo2d/mf_ablation.png. Win
   Figures rebuilt with all 12 arms: figures/bo2d/regret_real_frozen_{kla,mix}.png.
 - Deck: slides 1-8 drafted (title, scaling, existing efforts, methods, QoI, 1D result, 1D cost, 2D baseline).
   Missing: the 2D BO result slide and Conclusions (empty). Pivot (MF on the tau constraint only) awaits user decision.
+
+### 2026-11-10 ~16:30 kLa evidence check (user challenge) + paired L8 runs
+- CORRECTION of my chat claim "MF 1.0-2.4x worse on kLa": 2.38 is ONE cell (B2-quad, n9 = 4, one theta = 7 site, keep).
+  Linear MF variants: 1.04-1.24x of B1; MF beats B1 in 5-45 % of draws (IQRs overlap). The ablation compares at EQUAL
+  L9 count with all 80 L8 rows; "8 L9 vs 6 L9 + 40 cheap" (user's design) was never tested.
+- The kLa test has almost no signal: off-line L9 ln kLa sd ~0.23; B1 RMSE 0.18-0.21 ~ predicting the mean (floor 0.095).
+- theta = 7 line (snapshot medians per 2.5 rpm bin): L8 vs L9 Pearson 0.85, Spearman 0.50; L7 vs L9 0.79. Rise above
+  30 rpm shared; 15-30 rpm L9 rises (2.53 -> 3.16), L8 does not (3.63 -> 3.73). My earlier "L8 flat" was too strong.
+- Off-line L8-L9 kLa link UNMEASURED: all 8 off-line paired sites are dropped c2d runs; the 12 bo1 L9 have no L8.
+- User go: pair_l8.py (pre-registered in its docstring; score = LOO prediction of L9 by mfbml vs L9-only, not Pearson,
+  per user), driver job 8801813, 12 L7 cold (8801857-68) -> L8 warm, ~276 core-h.
+- Ceiling test synth_ceiling.py (l9only arm with the TRUE tau): bounds what any better tau model can save in the BO.
+  Running on the interactive node (logs/ceiling_{kla,mix}.out).
+- User design idea (30 L7 / 10 L8 / 6 L9 ~ 1,530 core-h ~ 8 L9): "landscape / initial DoE" at equal compute, error in
+  both directions (less compute at equal error, or less error at equal compute). Test design to be agreed.
+- Deck: slide 5 C*/dC*dt and sigma^2/chi swapped (user ask).
