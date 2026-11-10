@@ -1427,3 +1427,28 @@ earlier entries that blame "aei" for the L9-heavy picks mean the mf rule. Level 
 0 L7 / 11-123 L8 / 29-116 L9. Live campaign (cascade): 30 L7 / 26 L8 / 1 L9. L9-only evaluations to 5 %: kla 56/28/40, mix 24/36/20.
 Proposed (user's idea, awaiting go): zero-compute budget-allocation study, fixed core-h budget, best L7/L8/L9 split at random
 nested sites, mfbml recommendation, scored with a noise-floor tolerance; mix primary (fair truth); dev reps then fresh reps.
+
+### 2026-11-10 ~12:30 model audit + ablation (user: "fully Bayesian contradicts the paper; theta not in the paper")
+Audit (read: Yi, Cheng & Bessa 2024 arXiv 2407.15110 v2 main text + App. A.2, B, E.1; upstream mfbml 90d344a = HEAD of
+both bessagroup/mfbml and JiaxiangYi96/mfbml = the .venv install):
+- Paper/upstream KRR-LR-GPR: 2 levels; LF KRR; rho closed form (eq. 22); GP hyperparameters by ML of the concentrated
+  likelihood (eq. 23; L-BFGS-B, restarts); anisotropic RBF; basis m = [1, f_l] (polynomial order = a hyperparameter,
+  quadratic native: lf_poly_order="quadratic"; App. E.1 found quadratic overfits with few LF points).
+- OURS, not the paper: FullBayesKRRLRGP (2026-10-08, T2b: integrates isotropic length scale + noise ratio on a 2400-node
+  grid, amplitude IG-integrated), the 3-level stacking, the L7 GP, the theta basis (2026-11-07), and two edits in the
+  vendored krr_lr_gpr.py (Cholesky jitter; numpy-2 float cast). Upstream fails on numpy 2.4.6 at `nll[i] = -logp.ravel()`;
+  mf_ablation.py subclasses it with that one line cast (verbatim otherwise). The noisy-branch "sigma2 not log sigma2" in
+  upstream matches the paper's eq. 23 (amplitude fixed in standardised units) -> not a bug.
+Costs (sacct, all completed campaign runs): L7 8 ranks 5.1 core-h (n=38); L8 16 ranks 18.0 (n=32); spin8 16.8 (n=25);
+L9 32 ranks 200 core-h, 6.25 h wall (n=26). The benchmark's 350/371/376 (from n=4 early runs) were ~1.75x too high.
+User: compare on core-h measured (ranks per level unchanged).
+Transfer-form test (diag_transfer_forms.py, 18 paired real sites, LOO): kLa linear 1.36, +theta 0.92, +f8^2 0.62 ->
+nonlinear transfer for kLa (user's hypothesis); t_mix linear best (0.32-0.36); tau any form 0.02-0.07.
+ABLATION (mf_ablation.py, pre-registered rule: lowest median held-out L9 RMSE at n9 = 8, 20 site draws; real data):
+| qoi | winner | RMSE | L9-only (U1 / B1) | upstream U2-lin |
+|---|---|---|---|---|
+| kLa | B2-quad (FB, L8->L9, quadratic) | 0.311 | 0.348 / 0.367 | 0.443 |
+| t_mix | B3-lin (FB, 3 levels, linear) | 0.406 | 0.625 / 0.520 | 0.663 |
+| tau_95 | B3-lin | 0.109 | 0.196 / 0.255 | 0.145 |
+At n9 = 4: tau B3-lin ~0.15 vs L9-only 0.47-0.52; t_mix 0.51 vs 0.70-0.86. Upstream 90 % coverage 0.32-0.57 (its std
+vs noisy held-out data); FB 0.82-0.95. Figure: figures/bo2d/mf_ablation.png. Winners frozen for the split study.
