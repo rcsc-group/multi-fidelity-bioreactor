@@ -1502,3 +1502,14 @@ vs noisy held-out data); FB 0.82-0.95. Figure: figures/bo2d/mf_ablation.png. Win
   with MF on tau only, L9-only GP on kLa.
 - Power: 20 reps per cell, 17 off-line test sites. Rep scatter NOT yet computed (medians only); the tau effect is 2-4x, the dtmix effect
   (<20%) is not resolved.
+
+### 2026-11-10 15:50 check-in
+- Jobs healthy: autopilot 8705897 (node1929), screen-l7 8788953 (123 submitted), 7 bioreactor-mpi running + 26 pending;
+  interactive 8746011 (node1828). Only failure in last 3 h: mf-abl-fair array 8789081 cancelled (superseded, intended).
+- Stop rule NOT met: chain kla best moved 3.03 -> 2.65 at its 6th L9 (> noise floor); chain mix has 4 L9, still moving.
+- Fresh autopilot queued: scripts/bo2d/autopilot_wed.sh (copy, deadline Wed 2026-11-11 00:00), job 8799733,
+  --begin 18:01, afterany:8705897. Running autopilot.sh not edited.
+- bo-real benchmark complete (8736824 ended 12:03). Pass rule FAIL both objectives (kla 0/3, mix 1/3).
+  Figures rebuilt with all 12 arms: figures/bo2d/regret_real_frozen_{kla,mix}.png.
+- Deck: slides 1-8 drafted (title, scaling, existing efforts, methods, QoI, 1D result, 1D cost, 2D baseline).
+  Missing: the 2D BO result slide and Conclusions (empty). Pivot (MF on the tau constraint only) awaits user decision.
