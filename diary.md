@@ -1466,3 +1466,12 @@ vs noisy held-out data); FB 0.82-0.95. Figure: figures/bo2d/mf_ablation.png. Win
   rpm trend. The transient-wave hypothesis is not supported (LOO residual rms 0.38 below 25 rpm vs 0.44 above).
 - NOTE: the 1D story (slide 8) is tau_95 and EDR, not kLa. The 2D tau result (MF error 0.35-0.45 of L9-only at 4-8 L9
   runs) matches it.
+- 1D recall (user): T7 (L8 -> L9, theta 7, n_HF = 3): kLa_1T_10 MF / HF-only / L8 x ratio = 22.9 / 42.4 / 26.2 % rel RMSE,
+  coverage 89 % -> the 1D kLa MF result was real (diary L199-201). dtmix_0.50 31.7 / 42.6 %; dtmix_0.95 45.0 / 46.1 %.
+- Definitions: kLa_1T_10 = log-linear fit of ln(1 - C*) over one rocking period centred on the first C* >= 0.10;
+  dtmix_0.25 = time to 25 % mixing (BO uses 0.25 because dtmix_0.50 is NaN in most 40-cycle BO L9 runs).
+- Error vs core-h (fig_levels_theta7_and_cost.py), charging ALL LF rows (80 L8 = 1,440 core-h ~ 7 L9 runs): at equal
+  compute MF wins only on tau (0.164 at 1.9k vs L9-only 0.255 at 1.7k; equal error 0.11 at 2.7k vs 3.5k ~ 1.3x);
+  kLa and t_mix: L9-only is better per core-h. The "~50 % less error" holds at equal L9 COUNT, not equal compute.
+  The 80 L8 runs were not designed for MF (30 lie on theta = 7). The 1D variant table (slide 8 notes) had 10 L8
+  doing as well as 40 for tau -> the L8 count is the lever (split study).
