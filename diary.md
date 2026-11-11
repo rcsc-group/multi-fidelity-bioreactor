@@ -1624,3 +1624,18 @@ vs noisy held-out data); FB 0.82-0.95. Figure: figures/bo2d/mf_ablation.png. Win
   second region (19.1, 2.9): 21.9 at tau 4.7 mPa (~85 % of the best kLa at ~1/3 of the shear). Two-mode landscape.
 - Still true: L8 kLa off theta = 7 does not rank L9 (rho 0.08, 3.7x high); L7/L8 hydro does (tau rho 0.99).
 - screen40 mix seed 22 HIT 9,040 core-h vs l9only 13,356 (1.5x).
+
+### 2026-11-11 ~08:40 c2d bias measured; truth v2; L8-L9 kLa scatter
+- User: "what do you mean c2d is bad data? replay?" -> NOT replay (all c2d runs fully coupled; the binary only lives in
+  the replay-gate folder). c2d L9 = first 2D-campaign L9 batch, released 12 cycles after the L8 -> L9 grid switch; the
+  wave needs ~27 (11-06). Measured now (diag_c2d_vs_proper.py), c2d / proper (30-cycle) kLa at 4 near sites:
+  1.05 (19.1, 2.9), 1.02 (32.2, 4.5), 1.13 (34.4, 2.7), 1.21 (33.7, 5.4): c2d reads +2..+21 % high, worst at high
+  rpm / angle. "Bad data" was too strong: a high-biased subset. The low-shear region (19 rpm, theta ~3) is CONFIRMED by a
+  proper run (20.8 vs 21.9): my 08:00 retraction is withdrawn.
+- fig_l8_vs_l9_pairs.py (figures/bo2d/l8_vs_l9_pairs.png): tau: L8 = L9 on one curve (line and off-line). kLa: no single
+  curve even on theta = 7 (one family, kmix L8 vs fig9 L9): agree > 30 rpm; 22.5 -> 27.5 rpm L9 jumps up, L8 drops ->
+  a regime change placed at a different rpm by the coarse grid. T(f8) cannot map a shifted jump; the GP discrepancy can
+  only near L9 data (1D: dense L9 on the line; 2D: sparse). The earlier theta = 7 Pearson 0.85 was carried by 37.5 rpm.
+- Truth v2 (freeze_truth_v2.py, env BO_TRUTH=_v2 in synth_bench): L9 30 -> 33 (8 c2d dropped, 11 proper bo1/bo4 added),
+  all three QoI. Rerun on v2 (user go, zero compute): l9only + screen40 + screen120, kla and mix, seeds 21-23,
+  jobs 8836089-106 (-t 4 h, 20 GB). Seed sites unchanged (locations only; values come from the truth GP).

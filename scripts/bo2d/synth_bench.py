@@ -52,7 +52,7 @@ def _real_truth(q, lev):
     from scripts.bo2d import loop as LP
     # FROZEN truth (2026-11-09 fix): the live campaign keeps adding runs, so a truth rebuilt per job drifted between
     # jobs (L9 n 29 -> 30, optimum moved). Every job now reads one snapshot per QoI; it is written once, never updated.
-    snap = Path(__file__).parent / "state" / f"truth_snapshot_{q}.csv"
+    snap = Path(__file__).parent / "state" / f"truth_snapshot{os.environ.get('BO_TRUTH', '')}_{q}.csv"   # BO_TRUTH="_v2": c2d L9 dropped (2026-11-11)
     if snap.exists():
         d = pd.read_csv(snap)
     else:
