@@ -1556,3 +1556,11 @@ vs noisy held-out data); FB 0.82-0.95. Figure: figures/bo2d/mf_ablation.png. Win
 - 19:00 user go (Results 3 = "MF on tau only, rerun"): scripts/bo2d/synth_taumf.py, pre-registered in its docstring
   (30 L7 / 10 L8 cheap design paid up front + L7/L8 at seed sites; tau = L7->L8->L9 chain; kLa / t_mix = L9-only GP;
   PASS if taumf < frozen l9only in >= 2/3 seeds per objective). Jobs 8813469-74 (kla 21-23, mix 21-23), 48G.
+- ~20:00 Results 2 draft (talks/dfd2026/tools/r2_cost_data.py + fig_r2_cost.py -> public/r2_cost.png; not in deck):
+  held-out L10 error vs core-h at theta = 7, n = 2-6 L10 training runs, 20 draws. Medians (n = 2 -> 6):
+  tau chain 6.6-6.1 % | L9 x ratio 8.6-8.1 | L10-only 36-17 | L9 alone 12.7.  EDR chain 8.6-5.4 | ratio 8.9-7.8 |
+  L10-only 157-78 | L9 alone 7.8.  kLa chain 15-8.5 | ratio 15-14 | L10-only 46-24 | L9 alone 44.5.
+  t_mix chain 41-37 | ratio 28-21 | L10-only 88-71 | L9 alone 38.  Cheap grid cost ~2.3-2.7k core-h (~4 L10).
+  Reading: cheap grid + a few L10 beats L10-only by 2-15x in error at equal compute on all four. The chain beats the
+  one-ratio baseline on tau and on kLa at n = 6; ties on EDR; LOSES on t_mix (only 3 theta = 7 L9 mix runs; linear top basis
+  suspected, not tested).
