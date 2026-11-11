@@ -1639,3 +1639,13 @@ vs noisy held-out data); FB 0.82-0.95. Figure: figures/bo2d/mf_ablation.png. Win
 - Truth v2 (freeze_truth_v2.py, env BO_TRUTH=_v2 in synth_bench): L9 30 -> 33 (8 c2d dropped, 11 proper bo1/bo4 added),
   all three QoI. Rerun on v2 (user go, zero compute): l9only + screen40 + screen120, kla and mix, seeds 21-23,
   jobs 8836089-106 (-t 4 h, 20 GB). Seed sites unchanged (locations only; values come from the truth GP).
+
+### 2026-11-11 08:45 morning check
+- Jobs healthy, no failures in 2 h. No campaign2d sims (campaign ended 00:16; no new L9 by rule). Cores used by 18 v2
+  benchmark jobs + 9 v1 screen jobs. Slide servers restarted on node1804 (listen on [::1]:4031 / 3031; tunnel via
+  localhost works). l7map OOM again at 64 GB on the dtmix step -> 8836172 (128 GB, 1 h).
+- v1 frozen truth, screen40 mix: 12424 / 9040 / 14680 vs l9only 8904 / 13356 / 7420 -> wins 1/3 -> FAIL (pre-registered).
+- kLa rpm-shift test (diag_kla_rpm_shift.py, theta = 7, 10 L9): ln kLa9(r) = a + b ln kLa8(s r). No shift LOO 0.37
+  (sd 0.48); best s = 1.16 LOO 0.26 but n drops to 7 with sd 0.25 -> no better than the mean. The "shifted regime"
+  hypothesis I gave the user at 08:20 is NOT supported (low power: 10 points). Control tau: s = 0.96 halves LOO
+  (0.093 -> 0.045): L8 tau = L9 tau at ~4 % lower rpm.
