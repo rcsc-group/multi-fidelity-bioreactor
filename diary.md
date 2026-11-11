@@ -1571,3 +1571,17 @@ vs noisy held-out data); FB 0.82-0.95. Figure: figures/bo2d/mf_ablation.png. Win
   mix 7232 / 6104 / 17384 vs l9only 8904 / 13356 / 7420 -> wins 2/3 -> PASS; per-seed saving 1.2x / 2.2x / 0.43x
   (geometric mean ~1.05x). Ceiling (perfect tau) 6x / 9x / 1.7x. The chain tau model captures little of the ceiling
   inside the search. Next (most ambitious, for user tomorrow): find where the gap to the ceiling comes from.
+
+### 2026-11-10 21:50 check-in
+- Jobs healthy, no failures in 3 h. Pair driver ended 20:32 (12/12 L8 done). Wed autopilot 8799733 running to 00:00.
+- BUG found: 6 of 8 campaign slots were dead. Tasks sat in "new" forever (some since 11-09): the proposal re-picked
+  sites whose run dir exists, submit skipped them silently, and the arm counted them as in flight. Earlier check-ins
+  counted "new" as in flight (my error). Fix (loop.py): state "dup" (excluded from proposals like in-flight points;
+  advance marks a task dup when its run dir exists). mark_dup.py set the 6 stuck tasks to dup.
+- ROOT CAUSE of the re-picks: the warm-run gate (campaign.warm_run_gate, GATE_HEIGHT_TOL = 0.01) drops 21 / 32 live
+  chain L8 runs and 8 / 12 pair L8 runs on wave height alone (height_rel 1-9 %; tau/EDR drift < 2 % in almost all).
+  So the live chain arm used ~1/3 of its L8 data and kept asking for the same sites. Gate NOT changed (user decision).
+- Pair test (pair_score.py, pre-registered rule): with the gate only 4 pairs -> not scorable. SENSITIVITY without the
+  gate (PAIR_NOGATE=1, 12 sites): kLa best-MF / L9-only RMSE 1.02 (Spearman +0.08) -> L8 does NOT carry kLa off-line;
+  t_mix 0.74 -> CARRIES; tau 2.7 (L9-only already 0.047 with sd 0.256: smooth).
+  Reading: matches the frozen BO (taumf kla FAIL, mix PASS) and the fair ablation: kLa needs L9; mixing gains.

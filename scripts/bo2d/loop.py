@@ -161,11 +161,14 @@ def propose(arm, go):
     free = q - len(busy)
     if free <= 0:
         print(f"{arm}: {len(busy)} task(s) in flight; no free slot"); return
-    pend = np.array([t["x"] for t in busy], float).reshape(-1, 2)
+    # 2026-11-10 21:55: "dup" = a re-proposal of a site whose run dir already exists (no finite QoI there, so the
+    # model asks again; submit skips it and the task sat in "new" forever). Excluded like in-flight points.
+    dup = [t["x"] for t in tasks if t["arm"] == arm and t["state"] == "dup"]
+    pend = np.array([t["x"] for t in busy] + dup, float).reshape(-1, 2)
     objs = next_objs(busy, free)
     for obj in dict.fromkeys(objs):
         _propose_obj(arm, obj, objs.count(obj), pend, q, lncap, tasks)
-        pend = np.array([t["x"] for t in tasks if t["arm"] == arm and t["state"] in ("running", "new")],
+        pend = np.array([t["x"] for t in tasks if t["arm"] == arm and t["state"] in ("running", "new", "dup")],
                         float).reshape(-1, 2)
     if go:
         save_tasks(tasks)
@@ -235,7 +238,7 @@ def _nearest(level, x):
 def advance(go):
     tasks = load_tasks()
     for t in tasks:
-        if t["state"] in ("done", "failed"):
+        if t["state"] in ("done", "failed", "dup"):
             continue
         if t["state"] == "running":
             st = job_state(t["jobs"][-1])
@@ -264,6 +267,8 @@ def advance(go):
         if jid:
             t["jobs"].append(jid); t["runs"].append(rid); t["state"] = "running"
             print(f"submitted {step} {rid} job {jid}")
+        elif go and (C.ROOT / "runs" / rid).exists():   # 2026-11-10: re-proposal of an existing run -> free the slot
+            t["state"] = "dup"; print(f"done dup {t['arm']} {t['x']} ({rid} exists)")
     if go:
         save_tasks(tasks)
 
