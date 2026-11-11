@@ -1794,3 +1794,17 @@ Common to both:
 - Test set B: k-fold (k = 4) over the 8 nested space-filling L9 (training L9 = the other folds).
 - Grid: n9 in {2, 4, 6, 8}; n8 in {0, 5, 10, 20}; n7 in {0, 10, 20, 40}. Methods: L9 only, L8 -> L9, L7 -> L8 -> L9.
 - Headline number: cost ratio at equal median E (interpolated in log cost), per QoI.
+
+## 2026-11-11 ~13:40 — 1D cost-error curve (deck tools/r1_cost_curve.py, fig_r1_cost_curve.py, r1_cost_model.py)
+- AMENDMENT before any number (logged in the script docstring): Results 1 L10 pool had 3 sites, so n10 could not
+  vary. Test = L10 22.5 / 27.5 / 35 / 37.5 rpm; pool = 17.5 / 20 / 25 / 30 / 32.5.
+- Cost, NORMALIZED (user: warm starts and short runs skew): every training run = one full cold run of the standard
+  protocol (T = 139.6 units, all four QoIs): rate_L(rpm) x T, ln rate linear in rpm per level, fitted on cold full
+  runs (L8 35, L9 fig9 10). L10: slope from 7 scalar restarts, level anchored on the only cold full L10 run (l10c,
+  28.5 core-h/unit; warm 6-cycle restarts read 93-135/unit = restart overhead). One standard run at 25 rpm:
+  L8 45, L9 766, L10 5,784 core-h (1 : 17 : 128). Approximations: same spin-up at every level; binaries differ.
+- Measured as-run medians (own cost only): L8 46 (35 cold), L9 781 (5 cold), L10 hydro 486 (6-cycle warm),
+  L10 scalar 1,792 (30-cycle continuations).
+- Result (job 8853124, 2164 fits, R = 20): best median held-out error, L10 only / L9->L10 / L8->L9->L10:
+  tau 42 / 11 / 6.6 %; EDR 80 / 57 / 29 %; kLa 44 / 15 / 15 %; t_mix 92 / 28 / 20 %. L10 only stays far above at
+  every cost (2 of 4 test sites extrapolate). L8 adds most for tau and EDR, little for kLa.
