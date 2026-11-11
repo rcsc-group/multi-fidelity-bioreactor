@@ -1712,3 +1712,17 @@ vs noisy held-out data); FB 0.82-0.95. Figure: figures/bo2d/mf_ablation.png. Win
   interpolation of the L8 data, 5 even L9 with NO L9 at the peak: L10 EDR peak at 22.6 rpm (ratio to 20 rpm 4.2; L10
   truth ~4.9), held-out ln err EDR 46 -> 20 %, kLa 22 -> 11 %, tau 7.4 -> 7.2 %, t_mix 24.5 -> 26.2 %. The interpolant
   also passes L8 noise (wiggles in kLa / t_mix).
+
+## 2026-11-11 12:50-13:55 - Results 1 v3: two-scale L8 KRR with a noise floor (user accepted)
+- Why the L8 peak was lost (tools/r1_l8_krr_params.py): mfbml RBF exp(-theta d^2), LOO-optimised (11 restarts,
+  search 0.5..159 rpm): length 20.6 rpm (interior). LOO error by length: 0.5 rpm 21.7, 5 rpm 13.0, 10 rpm 1.31,
+  20.6 rpm 0.17, 40 rpm 0.22; at the peak points short scales are better (0.23-0.33 vs 0.68). One scale cannot do both.
+  Noise parameter at its lower bound (1e-3).
+- tools/krr2.py: same KRR equations, kernel exp(-t1 d^2) + a exp(-t2 d^2), LOO-optimised; optional noise floor.
+  Without a floor the short scale fits L8 scatter (kLa wiggles). Floor = L8 replicate scatter (pairs within 0.15 rpm,
+  outside 21.9-23.1): tau 0.006, EDR 0.008, kLa 0.055, t_mix 0.015 (ln). With the floor: kLa short scale switches off
+  (both 15.5 rpm), EDR keeps 0.5 rpm (ON its lower bound - open flag).
+- r1_two_scale.py, 5 even L9 (none at the peak), held-out ln err one-scale / two-scale+floor: tau 7.4/7.2, EDR 45.8/25.2
+  (L10 peak 22.6/20 rpm 1.52 -> 2.80; truth ~4.9), kLa 22.2/17.2, t_mix 24.5/23.5.
+- fig_r1_v2.py v3: L9 sites fixed (15, 20, 25, 32.5, 37.5) for every QoI (nested() picked 30 for tau/EDR because of
+  extra e9 runs); 0.1 rpm grid; corrected band. public/r1v2_a/b.png rebuilt; data/r1v3_table.json.
