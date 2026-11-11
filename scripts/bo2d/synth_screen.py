@@ -69,7 +69,9 @@ def run(cap, seed, max_rounds=200):
         if best is None:
             best = float(np.log(K[9].y).min())
         mk, ck = Mk(G); mt, _ = Mt(G)
-        picks = bo.pick_budget(bo.aei(mk, ck, mt, best, lncap, COST), G, S.BUDGET, COST)
+        # L9 queries only (fix 23:20: chain moments carry levels 7/8/9; aei needs a cost per level, keep only L9)
+        a9 = bo.aei(mk, ck, mt, best, lncap, {7: COST[9], 8: COST[9], 9: COST[9]})[9]
+        picks = bo.pick_budget({9: a9}, G, S.BUDGET, COST)
         for x, _l in picks:
             for lev in (7, 8, 9):
                 S.add(K, T, lev, x[None], rng)

@@ -1602,3 +1602,14 @@ vs noisy held-out data); FB 0.82-0.95. Figure: figures/bo2d/mf_ablation.png. Win
   noise-limited, not model-limited: no surrogate can rank sites; a 5 % regret target sits inside the noise. On theta = 7
   kLa has a strong landscape set by hydrodynamics (why Results 1 works). Mixing has strong structure off-line and L8
   tracks it -> the 2D multi-fidelity story is mixing time (ceiling 6-9x) + mapping the shear cap (L8 rho ~1).
+
+### 2026-11-11 07:30-08:00
+- Lost night: the 12 screen jobs (8834735-48, after the KeyError fix in synth_screen: aei per level -> keep L9 only)
+  sat PENDING (Priority) 23:20 -> 07:37. Lesson: at night submit with short -t and small mem (taumf MaxRSS 13 GB).
+- Autopilot ended 00:16 as planned; last L9 before 00:00. Dense L7 screen complete (200 runs).
+- Results 2 small grids (r2_cost_small.py): random 10 L8 + 4 L9 (792 core-h) or 20 L8 + 6 L9 (1,444) per draw.
+  tau with 20/6 grid: 7.6 % at 2.8k vs L10-only 19 % at 2.7k. EDR / t_mix much worse with small grids (26-48 %,
+  39-79 %) than with the full grid (5-9 %) -> EDR needs the full grid; the grid size is a real lever, not free.
+- L7 screen as a map (diag_l7_screen_map.py, gate ignored): tau_95 Spearman (L7 map, L9) +0.99 at all 44 L9 sites;
+  off-line LOO calibrated ln error 0.031 vs 0.394 for the mean (13x lower, ~ the noise floor). 200 L7 = ~1,000 core-h
+  ~ 3 L9 runs. t_mix / kLa: batch job 8834811 (OOM on the 16 GB interactive node).
