@@ -1736,3 +1736,20 @@ vs noisy held-out data); FB 0.82-0.95. Figure: figures/bo2d/mf_ablation.png. Win
 - Fix (config/slurm_mpi_template.sh): if 'module load openmpi' fails, put the spack OpenMPI 5.0.8 that the binary links
   to (ldd) on PATH / LD_LIBRARY_PATH; ffmpeg load non-fatal (unused). Test job 8841778: 16 ranks, running > 4 min,
   output files growing. Then 19 more L8 (8842325-349; 4 on mbessa-condo). Failed run dirs kept as *.failed-<job>.
+- 15:20 CCV (via user): module system fixed. Template fallback only triggers on a failed load, so no change needed.
+
+## 2026-11-11 ~15:30 — Results 1 font size; theta backup (zero compute) and backlog
+- Results 1 figures (deck tools/fig_r1_v2.py): fonts 15-16 pt (user). Numbers unchanged (7.2 / 25.2 / 17.2 / 23.5 %).
+- MISS, recorded: I told the user the theta data were thin; the Results 1 loaders select runs by NAME, so I missed the
+  Kim Fig 10/13b theta sweep at 32.5 rpm (fig10_l9_th2..7, mf_l8_th2..6, x8_l10_th5.5). User had to point it out.
+  Fix: tools/r1_theta_audit.py reads params.json of EVERY run dir (655 at 32.5 rpm) -> data/r1_theta_audit.json.
+- Theta backup v1 (tools/fig_r1_theta.py, public/r1th_a/b.png), 32.5 rpm, same model as Results 1 v3. L8 cold t6/kmix
+  theta 2/4/5.5/7/9; L9 cold fig10 theta 2-7; L10 train theta 4/7/9. Unseen: theta 5.5 for tau_95 / EDR only:
+  ln error 1.8 % / 1.9 %. kLa and t_mix: no unseen L10 point (only 3 L10 runs exist).
+- Known unknowns (not scanned / excluded): archive tars; ~600 hash-named autopilot dirs at 32.5 rpm (protocol not
+  identified); mf_l10_th2/4/7 (t_end ~4.5, theta 4 is 20 % off x8 -> not settled); L10 theta 7 kLa differs 2x between
+  protocols (fig9_l10_seg2 52 vs v_l10 22.4; Results 1 uses v_l10).
+- BACKLOG (not submitted, user: backup slide only): minimum 2 L10 runs, ~3-3.5k core-h: (1) T10 tracer continuation of
+  x8_l10_rpm32.5_th5.5 (kLa / t_mix unseen at 5.5, ~1.1k); (2) L10 theta 2 warm from fig10_l9_th2 checkpoint, hydro
+  12 cycles + T10 tracer (unseen extrapolation, as 35 / 37.5 rpm, ~2.1k+). Full Kim grid adds theta 3 / 5 / 6
+  (~2k each, total ~9-10k core-h). Cost basis: L10 theta 4 at 32.5 rpm measured 97 min/cycle x 32 ranks.
