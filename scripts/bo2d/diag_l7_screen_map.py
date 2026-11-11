@@ -40,7 +40,8 @@ def clean(d):
 
 out = {}
 G = bo.grid()
-for q in ("tau_95", "dtmix_0.25", "kLa_1T_10"):
+QS = sys.argv[1:] or ["tau_95", "dtmix_0.25", "kLa_1T_10"]   # one QoI per process keeps memory < 16 GB (2026-11-11)
+for q in QS:
     d7 = clean(LP.as_objective(LP.rows(q, ["scr_l7_"], {7}), q))
     d9 = clean(LP.as_objective(LP.rows(q, ["bo1_", "bo4_", "fig9_l9_rpm"], {9}), q))
     X7, y7 = d7[["rpm", "theta"]].to_numpy(float), np.log(d7.y.to_numpy(float))
@@ -58,5 +59,7 @@ for q in ("tau_95", "dtmix_0.25", "kLa_1T_10"):
               f"LOO calibrated {r:.3f} vs mean {r0:.3f} ({r / r0:.2f})", flush=True)
     out[q] = {"grid": G.tolist(), "mean": np.ravel(m.predict_mean(G)).tolist(), "X7": X7.tolist(), "X9": X9.tolist(),
               "y9": y9.tolist()}
-(ROOT / "scripts/bo2d/state/l7_screen_map.json").write_text(json.dumps(out))
+p = ROOT / "scripts/bo2d/state/l7_screen_map.json"
+old = json.loads(p.read_text()) if p.exists() else {}
+p.write_text(json.dumps({**old, **out}))
 print("wrote state/l7_screen_map.json")

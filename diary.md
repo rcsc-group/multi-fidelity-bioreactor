@@ -1649,3 +1649,10 @@ vs noisy held-out data); FB 0.82-0.95. Figure: figures/bo2d/mf_ablation.png. Win
   (sd 0.48); best s = 1.16 LOO 0.26 but n drops to 7 with sd 0.25 -> no better than the mean. The "shifted regime"
   hypothesis I gave the user at 08:20 is NOT supported (low power: 10 points). Control tau: s = 0.96 halves LOO
   (0.093 -> 0.045): L8 tau = L9 tau at ~4 % lower rpm.
+- 09:30 user: "128 GB instead of being more efficient delays us" -> correct. Cancelled 8836172; the map script now
+  takes one QoI per process (argv). The OOM is in the final grid prediction (all 2,400 hyper-settings x full grid);
+  the scores print before it. L7 map (200 runs) vs L9 sites: tau rho 0.99 (error 0.17x of mean, 0.08x off-line);
+  dtmix rho 0.91 (0.40x); kLa rho 0.02 (1.00x: no information; 44/200 L7 runs give no finite kLa).
+- Benchmark so far. v1 kla: screen120 11120 / 12248 vs l9only 20776 / 10388; screen40 14680 / 18064 (seed 23s running).
+  v2 (no c2d) l9only: kla 19292 / 13356 / 31164; mix 10388 / (22 running) / 7420. v2 screen: started ~09:00; first
+  HIT screen40 mix seed 23 at 4528 (vs l9only 7420).
