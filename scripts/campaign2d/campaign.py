@@ -40,7 +40,7 @@ JOBS = STATE / "jobs.jsonl"                       # written ONLY by a real (--go
 
 RPM = (15.0, 37.5)                                # campaign domain = Kim's range (lead, 2026-11-04)
 THETA = (2.0, 7.0)
-EXCLUDE = "node2356"                              # hard rule: every sbatch
+EXCLUDE = "node2356,node2410"                    # hard rule: every sbatch; node2410 added 2026-11-11 (load ~194, L8 ran 10x slow)
 FORBIDDEN_PARTITION = "mbessa-condo"              # hard rule: never planned or submitted
 KIM_CORE_H_PER_CASE = 120.0                       # Kim 2025 p.6. PENDING AUDIT (another agent). Do not cite as final.
 SEED = 20261104

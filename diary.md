@@ -1808,3 +1808,9 @@ Common to both:
 - Result (job 8853124, 2164 fits, R = 20): best median held-out error, L10 only / L9->L10 / L8->L9->L10:
   tau 42 / 11 / 6.6 %; EDR 80 / 57 / 29 %; kLa 44 / 15 / 15 %; t_mix 92 / 28 / 20 %. L10 only stays far above at
   every cost (2 of 4 test sites extrapolate). L8 adds most for tau and EDR, little for kLa.
+
+## 2026-11-11 ~14:55 — node2410 overloaded; 3 nested L8 restarted
+- ns_l8 23.50/6.97, 15.42/4.66, 22.51/6.74 (jobs 8842336-338, all on node2410) ran at ~780 s per time unit; the 17
+  finished L8 ran at 45-102. node2410 load average 194. Cancelled; dirs kept as *.slow-node2410 (runs/ and scratch);
+  resubmitted 8857248/49/52. campaign.EXCLUDE now "node2356,node2410". Watcher re-armed: last 3 L9 (parents 27.30,
+  23.50, 15.42) go when their L8 finish. Slide 6 (three-level algorithm) hidden (user).
