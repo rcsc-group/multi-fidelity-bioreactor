@@ -32,8 +32,16 @@
 
 set -euo pipefail
 
-module load openmpi
-module load ffmpeg
+# [PROJECT FIX, 2026-11-11] CCV rewrote /oscar/rt/9.6/25/lmod/linux-oracle9-x86_64/Core at 11:13 (only igraph
+# left): 'module load openmpi' failed and set -e killed 35 L8 jobs in < 10 s. The binary links (RUNPATH) to the
+# spack OpenMPI 5.0.8 below; fall back to it directly. ffmpeg is not used by this script (load kept, non-fatal).
+OMPI_FALLBACK=/oscar/rt/9.6/25/spack/x86_64_v3/openmpi-5.0.8-q6ygsavgbbzcuxp2sog73dhpke6ttgfd
+if ! module load openmpi 2>/dev/null; then
+    echo "WARN: module openmpi unavailable; using $OMPI_FALLBACK" >&2
+    export PATH="$OMPI_FALLBACK/bin:$PATH"
+    export LD_LIBRARY_PATH="$OMPI_FALLBACK/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+fi
+module load ffmpeg 2>/dev/null || echo "WARN: module ffmpeg unavailable (not needed here)" >&2
 export PATH="/oscar/data/dharri15/eaguerov/basilisk/src:$PATH"
 
 # Set HOME so srun workers can initialise OpenMPI's opal layer.

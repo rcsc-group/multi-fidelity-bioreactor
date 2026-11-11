@@ -1726,3 +1726,13 @@ vs noisy held-out data); FB 0.82-0.95. Figure: figures/bo2d/mf_ablation.png. Win
   (L10 peak 22.6/20 rpm 1.52 -> 2.80; truth ~4.9), kLa 22.2/17.2, t_mix 24.5/23.5.
 - fig_r1_v2.py v3: L9 sites fixed (15, 20, 25, 32.5, 37.5) for every QoI (nested() picked 30 for tau/EDR because of
   extra e9 runs); 0.1 rpm grid; corrected band. public/r1v2_a/b.png rebuilt; data/r1v3_table.json.
+
+## 2026-11-11 ~11:00-11:25 - L8 submissions failed three times; root cause = CCV module tree change
+- 1st (8839176-195): sbatch from the interactive shell passed its module list (cuda, gcc-runtime ...) -> Lmod error.
+- 2nd (8841532-552): 'module purge' first -> MODULEPATH lost -> 'openmpi' unknown.
+- 3rd (8841585-604, clean submitter job nest2d_submit.sbatch, --export=NONE, bash -l): 'openmpi exists but cannot be
+  loaded'. Module test job 8841719: a clean batch job cannot find openmpi at all. Root cause:
+  /oscar/rt/9.6/25/lmod/linux-oracle9-x86_64/Core was rewritten by CCV staff at 11:13 today and holds only igraph.
+- Fix (config/slurm_mpi_template.sh): if 'module load openmpi' fails, put the spack OpenMPI 5.0.8 that the binary links
+  to (ldd) on PATH / LD_LIBRARY_PATH; ffmpeg load non-fatal (unused). Test job 8841778: 16 ranks, running > 4 min,
+  output files growing. Then 19 more L8 (8842325-349; 4 on mbessa-condo). Failed run dirs kept as *.failed-<job>.

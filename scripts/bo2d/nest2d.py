@@ -13,6 +13,7 @@ Accounts: default (priority QoS, 312 CPU per user) first; overflow to mbessa-con
   uv run python scripts/bo2d/nest2d.py submit l8|l9 [--go]
 """
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -96,7 +97,7 @@ def my_cpus(account):
 def submit(level, go):
     d = json.loads(DESIGN.read_text()); ranks = S.RANKS[level]
     used = {"default": my_cpus("default"), "mbessa-condo": my_cpus("mbessa-condo")}
-    for name, rpm, th in d[f"l{level}"]:
+    for name, rpm, th in d[f"l{level}"][:int(os.environ.get("NEST_N", "999"))]:   # NEST_N: submit only the first n (tests)
         src = name if level == 8 else C.run_id(8, rpm, th, tag=TAG)
         if level == 9 and not (ROOT / "runs" / src / "shear_stress.dat").exists():
             print("L8 not finished:", src); continue
