@@ -1564,3 +1564,10 @@ vs noisy held-out data); FB 0.82-0.95. Figure: figures/bo2d/mf_ablation.png. Win
   Reading: cheap grid + a few L10 beats L10-only by 2-15x in error at equal compute on all four. The chain beats the
   one-ratio baseline on tau and on kLa at n = 6; ties on EDR; LOSES on t_mix (only 3 theta = 7 L9 mix runs; linear top basis
   suspected, not tested).
+- 22:00 user: remove the L9 x ratio curve from talk figures (said many times; memory saved); curves "start very
+  expensive" is confusing. v2 figure: chain line starts at the cheap-grid-only point, linear compute axis from 0.
+- taumf RESULT (synth_taumf.py, jobs 8813469-74, pre-registered rule): core-h to 5 % regret
+  kla 17384 / 16256 / 16256 vs l9only 20776 / 10388 / 14840 -> wins 1/3 -> FAIL.
+  mix 7232 / 6104 / 17384 vs l9only 8904 / 13356 / 7420 -> wins 2/3 -> PASS; per-seed saving 1.2x / 2.2x / 0.43x
+  (geometric mean ~1.05x). Ceiling (perfect tau) 6x / 9x / 1.7x. The chain tau model captures little of the ceiling
+  inside the search. Next (most ambitious, for user tomorrow): find where the gap to the ceiling comes from.
