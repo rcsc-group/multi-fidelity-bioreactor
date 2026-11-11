@@ -1553,3 +1553,6 @@ vs noisy held-out data); FB 0.82-0.95. Figure: figures/bo2d/mf_ablation.png. Win
   Reading: a perfect constraint (tau) model saves up to ~9x on t_mix, ~3x on kLa. The 10x target is reachable only on
   t_mix and only if the cheap levels make the tau model near-perfect (fair ablation: MF tau error 0.26-0.77 of L9-only).
 - Deck unchanged since 17:30: missing Results 2 (cost), Results 3 (2D), Conclusions.
+- 19:00 user go (Results 3 = "MF on tau only, rerun"): scripts/bo2d/synth_taumf.py, pre-registered in its docstring
+  (30 L7 / 10 L8 cheap design paid up front + L7/L8 at seed sites; tau = L7->L8->L9 chain; kLa / t_mix = L9-only GP;
+  PASS if taumf < frozen l9only in >= 2/3 seeds per objective). Jobs 8813469-74 (kla 21-23, mix 21-23), 48G.
