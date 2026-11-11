@@ -1823,3 +1823,16 @@ Common to both:
 - Pareto-best CRPS, L10 only / L9->L10 / L8->L9->L10: tau 26 / 8 / 5; EDR 56 / 33 / 17; kLa 26 / 11 / 11;
   t_mix 50 / 19 / 13 (%). User view: L10-only GP is the naive baseline; the chain extrapolates better thanks to
   the cheap screen. Known: half the test set is outside the L10 range; L9 at 37.5 rpm drives the n9 = 5 vs 3 split.
+
+## 2026-11-11 ~16:50 — QoI colour code; 1D exhaustive CV (first try crashed)
+- QoI colours (user picked option A = slide-5 video colour maps): tau #E05A91, kLa #1F6FC0, EDR #DA6728,
+  t_mix #44AA99. scripts/figstyle.py QOI_COLOUR + qoi_axes() colour the y label and frame; curves keep LEVEL colours.
+  Accepted overlap: tau pink ~ L10 pink, kLa blue ~ L8 blue. Deck slide 5: names, definitions and the t_mix curve
+  in these colours; orange accents in def4 plots changed to ink (orange now means EDR).
+- 1D cost curve extended to the right (deck tools/r1_cost_cv.py): exhaustive CV over the 9 theta = 7 L10 sites
+  (17.5-37.5 rpm, one run per site: perturbation twins 22.4/22.6/29.9 dropped, they leak), n10 = 2..8, L9 n9 = 3, 5,
+  10. Job 8858253 (16 cores) crashed after 32 min: mf_band.joint_sample Cholesky fails when sample sites sit on
+  L9 training sites (posterior covariance ~0). Fix: eigh fallback (same Gaussian). Fits now return a 'failed'
+  record instead of killing the pool. Resubmitted 8863846 (32 cores). Lesson: wrap every pool task.
+- Nested 2D: L9 33.09/5.01 and 33.13/6.66 done; 17.26, 21.53, 31.74 at ~95 %; L8 parents 23.50, 15.42, 22.51
+  at ~70 %. Watcher submits the last 3 L9 when the L8 parents finish (user-approved after the Wed 00:00 backstop).

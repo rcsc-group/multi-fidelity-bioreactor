@@ -175,3 +175,24 @@ def rcparams() -> dict:
 
 
 GRID_KW = {"which": "major", "ls": ":", "alpha": 0.4}
+
+
+# ---- quantity-of-interest colour (2026-11-11, user chose option A = the slide-5 video colour maps) ----
+# Channel: y-label text and axes frame of a panel. Curves keep the LEVEL colour. Known overlap: tau pink is near
+# L10 pink and kLa blue is near L8 blue; the user accepted this.
+QOI_COLOUR = {"tau": "#E05A91", "kla": "#1F6FC0", "edr": "#DA6728", "mix": "#44AA99"}
+
+
+def qoi_colour(q):
+    """q: any QoI key (tau_95_t, edr_max_t, kLa_1T_10, dtmix_0.25, ...) -> its colour."""
+    k = q.lower()
+    return QOI_COLOUR["tau" if k.startswith("tau") else "edr" if k.startswith("edr") else
+                      "kla" if k.startswith("kla") else "mix"]
+
+
+def qoi_axes(ax, q, lw=1.6):
+    """Colour the y label and the frame of a panel by its QoI."""
+    c = qoi_colour(q)
+    ax.yaxis.label.set_color(c)
+    for s in ax.spines.values():
+        s.set_color(c); s.set_linewidth(lw)
