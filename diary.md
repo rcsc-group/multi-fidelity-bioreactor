@@ -1836,3 +1836,19 @@ Common to both:
   record instead of killing the pool. Resubmitted 8863846 (32 cores). Lesson: wrap every pool task.
 - Nested 2D: L9 33.09/5.01 and 33.13/6.66 done; 17.26, 21.53, 31.74 at ~95 %; L8 parents 23.50, 15.42, 22.51
   at ~70 %. Watcher submits the last 3 L9 when the L8 parents finish (user-approved after the Wed 00:00 backstop).
+
+## 2026-11-11 ~18:50 — 1D CV done; 40-subset test FAILED; Results 3 design; nested L9 status
+- 1D exhaustive CV (job 8863846, 32 cores, 44,088 fits, 0 failed; data/r1_cost_cv.json): errors fall to a few % as
+  data grow (tau, EDR ~4 %, kLa ~8 %, t_mix ~10 %). EDR: L10 only stalls at 40-55 %, chain 4 %. kLa / t_mix: all
+  methods meet at 8 L10. Equal-error saving ~2x or more (not 3-5x for all QoIs). Right end noisy (1-2 test runs).
+- Test (pre-stated): median over 40 random L10 subsets vs all subsets (tools/r1_cv_subsample_check.py, 500 repeats):
+  FAIL -- 95th-pct shift up to 10 points (L10 only) and 1-3 points (chains), as large as the gaps between curves.
+  Keep exhaustive subsets.
+- Deck: QoI colours (A); Results 2 = CV cost curve (same canvas/frames as Results 1; V.FIGSIZE / V.LAYOUT pinned,
+  right margin 0.93 for colour bars); slide 9 Conclusions + kLa strip video (tools/render_kla_strip.py); slide 10
+  deleted; backups: 2D slices, 2D parity, 2D cost curve (drafts).
+- Results 3 design (user): one QoI per slide (tau, t_mix), columns = L9 only vs L7 -> L8 -> L9 on the SAME L9 runs,
+  header = campaign cost, top = map, bottom = predicted vs true (tools/fig_r3_compare.py). No conclusions until 8 L9
+  (user: stop "levels don't correlate" claims on few runs).
+- Nested L9: 5 of 8 done. 27.30 / 23.50 end ~19:55 / ~20:35. 15.42 on node1818 runs at ~880 s per time unit
+  (17.26 ran at ~420 on node2421; node1818 not overloaded: older 48-core node) -> ends ~03:00 Thu.
