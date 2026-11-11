@@ -1814,3 +1814,12 @@ Common to both:
   finished L8 ran at 45-102. node2410 load average 194. Cancelled; dirs kept as *.slow-node2410 (runs/ and scratch);
   resubmitted 8857248/49/52. campaign.EXCLUDE now "node2356,node2410". Watcher re-armed: last 3 L9 (parents 27.30,
   23.50, 15.42) go when their L8 finish. Slide 6 (three-level algorithm) hidden (user).
+
+## 2026-11-11 ~15:40 — 1D cost curve, random subsets (user choice), relative error + CRPS
+- deck tools/r1_cost_random.py (job 8857681, 8112 fits): paired, every distinct L10 subset (pool 5) and L9 subset
+  (5 sites), L8 all 35 or 5 fixed random 10-subsets. Error = RMS(pred/true - 1) %, test L10 22.5/27.5/35/37.5.
+  CRPS on ln QoI x 100 from predictive draws (chains: 30 joint L9 posterior curves, L10 re-trained per curve,
+  10 draws each; L10 only: 300 draws). Figures public/r1_cost_random.png, r1_cost_random_crps.png (x in 1000 core-h).
+- Pareto-best CRPS, L10 only / L9->L10 / L8->L9->L10: tau 26 / 8 / 5; EDR 56 / 33 / 17; kLa 26 / 11 / 11;
+  t_mix 50 / 19 / 13 (%). User view: L10-only GP is the naive baseline; the chain extrapolates better thanks to
+  the cheap screen. Known: half the test set is outside the L10 range; L9 at 37.5 rpm drives the n9 = 5 vs 3 split.
