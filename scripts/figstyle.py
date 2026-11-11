@@ -52,12 +52,13 @@ KIM = "black"
 
 # Level -> hue. Fig 13 is the replica that has been checked against Kim by
 # eye and approved, so its assignments (L6 orange, L8 blue, L9 green,
-# L10 pink) are the ones every other figure moves to match. L7 takes the
+# L10 pink) are the ones every other figure moves to match. L7 took the
 # remaining Okabe-Ito sky blue; it previously held #009E73, which Fig 13
-# had already given to L9.
+# had already given to L9. 2026-11-11 (user): L7 -> vermillion, because sky
+# blue was hard to tell from L8 blue; the x-component moved to mustard.
 LEVEL_COLOUR = {
     6:  "#E69F00",   # orange
-    7:  "#56B4E9",   # sky blue
+    7:  "#D55E00",   # vermillion (2026-11-11, user: sky blue read as L8 blue)
     8:  "#0072B2",   # blue
     9:  "#009E73",   # bluish green
     10: "#CC79A7",   # reddish purple
@@ -66,7 +67,7 @@ LEVEL_COLOUR = {
 # Vector components in single-run figures (Figs 2, A.18). Deliberately
 # disjoint from LEVEL_COLOUR: a reader who has learned that blue means L8
 # must not meet a blue that means u_x three figures later.
-COMPONENT_COLOUR = {"x": "#D55E00", "y": "#882255", "z": "#117733"}
+COMPONENT_COLOUR = {"x": "#DDAA33", "y": "#882255", "z": "#117733"}
 
 # Tracer configurations in Figs 5-6. Also disjoint from the level hues.
 TRACER_COLOUR = {

@@ -75,7 +75,7 @@ def design():
     t = pd.read_csv(S.STATE / "truth_snapshot_v2_tau_95.csv"); t = t[t.level == 9]   # the 33 test L9 (truth v2)
     for L, pts, ms in ((7, l7, 4), (8, l8, 7), (9, l9, 11)):
         c = fs.level_colour(L)
-        ax[0].plot([p[1] for p in pts], [p[2] for p in pts], "o", ms=ms, color=c, mfc="none" if L < 9 else c, mew=1.4,
+        ax[0].plot([p[1] for p in pts], [p[2] for p in pts], "o", ms=ms, color=c, mfc="none", mew=1.4,
                    ls="none", label=f"L{L} ({len(pts)})")
     ax[0].set_title("training (nested)")
     c9 = fs.level_colour(9)
