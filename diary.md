@@ -1736,9 +1736,9 @@ vs noisy held-out data); FB 0.82-0.95. Figure: figures/bo2d/mf_ablation.png. Win
 - Fix (config/slurm_mpi_template.sh): if 'module load openmpi' fails, put the spack OpenMPI 5.0.8 that the binary links
   to (ldd) on PATH / LD_LIBRARY_PATH; ffmpeg load non-fatal (unused). Test job 8841778: 16 ranks, running > 4 min,
   output files growing. Then 19 more L8 (8842325-349; 4 on mbessa-condo). Failed run dirs kept as *.failed-<job>.
-- 15:20 CCV (via user): module system fixed. Template fallback only triggers on a failed load, so no change needed.
+- ~12:15 CCV (via user): module system fixed. Template fallback only triggers on a failed load, so no change needed.
 
-## 2026-11-11 ~15:30 — Results 1 font size; theta backup (zero compute) and backlog
+## 2026-11-11 ~12:00-12:40 — Results 1 font size; theta backup (zero compute) and backlog
 - Results 1 figures (deck tools/fig_r1_v2.py): fonts 15-16 pt (user). Numbers unchanged (7.2 / 25.2 / 17.2 / 23.5 %).
 - MISS, recorded: I told the user the theta data were thin; the Results 1 loaders select runs by NAME, so I missed the
   Kim Fig 10/13b theta sweep at 32.5 rpm (fig10_l9_th2..7, mf_l8_th2..6, x8_l10_th5.5). User had to point it out.
@@ -1753,3 +1753,21 @@ vs noisy held-out data); FB 0.82-0.95. Figure: figures/bo2d/mf_ablation.png. Win
   x8_l10_rpm32.5_th5.5 (kLa / t_mix unseen at 5.5, ~1.1k); (2) L10 theta 2 warm from fig10_l9_th2 checkpoint, hydro
   12 cycles + T10 tracer (unseen extrapolation, as 35 / 37.5 rpm, ~2.1k+). Full Kim grid adds theta 3 / 5 / 6
   (~2k each, total ~9-10k core-h). Cost basis: L10 theta 4 at 32.5 rpm measured 97 min/cycle x 32 ranks.
+
+## 2026-11-11 12:47 — DFD check-in
+- Queue: nested L8: 15 COMPLETED, 3 running (default). 4 condo jobs waited 1.5 h on QOSGrpMemLimit (condo group
+  memory full); moved to account default / QoS priority with scontrol (8842346-349), all running at 12:50.
+  L9 parents done: 5 of 8 (27.30/4.36, 23.50/6.97, 15.42/4.66 still running).
+- Autopilot ended 2026-11-11 00:16 (built-in end). Stop rule: backstop reached (no new BO L9 after Wed 00:00);
+  touched scripts/bo2d/state/STOP. CONFLICT flagged to the user: the nested Results 3 design (user, today) needs 8 new
+  L9 after the backstop.
+- v2 benchmark tally (frozen v2 truth; reference = v2 l9only jobs 8836089-104: kla 19292 / 13356 / 31164,
+  mix 10388 / 38584 / 7420 core-h to first feasible <= 5 % regret). NOTE: the synth_screen.py docstring lists the
+  v1 l9only numbers; the v2 rerun uses the v2 truth, so the v2 l9only runs are the fair reference (as in the
+  09:35 entry). Five screen jobs hit the 4 h walltime (censored, no HIT).
+  - mix, screen40: 11296 / 12424 / 4528 -> wins 2/3 -> PASS, saving geo-mean 1.7x.
+  - mix, screen120: 20144 / 14504 / 16760 -> 1/3 -> FAIL (0.85x): the bigger screen costs more than it saves.
+  - kla, screen40: >= 16936 (censored) / 20320 / >= 39496 (censored) -> at most 1/3 -> FAIL.
+  - kla, screen120: >= 28040 / >= 16760 / >= 26912 (all censored) -> at most 1/3 -> FAIL.
+  Reading (agrees with the learning curve, 09:35): L7/L8 carry t_mix information but almost none for kLa.
+  Figure: figures/bo2d/regret_screen_v2.png (scripts/bo2d/fig_regret_screen.py).
