@@ -1656,3 +1656,8 @@ vs noisy held-out data); FB 0.82-0.95. Figure: figures/bo2d/mf_ablation.png. Win
 - Benchmark so far. v1 kla: screen120 11120 / 12248 vs l9only 20776 / 10388; screen40 14680 / 18064 (seed 23s running).
   v2 (no c2d) l9only: kla 19292 / 13356 / 31164; mix 10388 / (22 running) / 7420. v2 screen: started ~09:00; first
   HIT screen40 mix seed 23 at 4528 (vs l9only 7420).
+- ~09:45 user: Spearman is the wrong test for "no transfer function" (a decreasing or non-monotone T gives |rho| < 1
+  or ~0). CONCEDED. Shape-free test (diag_transfer_exists.py): equal-L8 / different-L9 pairs. kLa: (34.4, 2.7) vs
+  (36.4, 2.0) L8 40.2 / 40.9, L9 10.0 / 17.7 (~6x noise; the 36.4 L8 run failed the drift gate); theta = 7: 15 vs 30 rpm
+  L8 37.6 / 40.3, L9 12.6 / 23.6. -> no single-valued T(L8) for kLa; T(L8, x) not excluded (that is the GP discrepancy,
+  fed by nearby L9). tau: L9 rises in step with L8 in both sets. theta = 7 NN-in-L8 kLa error 0.30 vs mean 0.54: some info.
