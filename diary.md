@@ -1696,3 +1696,19 @@ vs noisy held-out data); FB 0.82-0.95. Figure: figures/bo2d/mf_ablation.png. Win
   with few L9). First OOM run: learning_curve imported diag_l7_screen_map, which runs its full grid map at import.
 - v2 benchmark, mix, screen40 vs l9only (core-h to hit): 11296/12424/4528 vs 10388/38584/7420 -> 2/3 wins, PASS
   (geo-mean ~1.7x). kla screens and mix screen120 still running.
+
+## 2026-11-11 10:30-12:40 - Nested 2D design submitted; Results 1 v2: two defects found (user challenges)
+- nest2d.py: 40 L7 (reused scr_l7) > 20 L8 (new, warm) > 8 L9 (after L8); coverage-radius subsets (greedy maximin
+  was edge-biased). Test set = the 33 truth-v2 L9. 20 L8 jobs 8839176-195 (15 default, 5 mbessa-condo; condo pending
+  QOSGrpMemLimit: another user holds ~2 TB). figstyle: L7 -> vermillion #D55E00 (user), x-component -> #DDAA33.
+- Results 1 v2 (talks tools/fig_r1_v2.py): L8 = one run per distinct speed (35; drops 5 stacked dose runs at 22.5).
+  An even 15-speed thinning stepped over the L8 EDR resonance (< 1 rpm wide, 3 families agree: 22.0 0.036, 22.4 0.060,
+  22.6 0.087, 23.0 0.048). Metric changed to held-out RMS of ln(pred/true) (old rel RMS was asymmetric).
+- DEFECT 1 (user: "isn't L10 the highest fidelity?"): fig_r1_heldout.fit band ADDED rho*sd(L9) everywhere, so it never
+  closed at L10 training points. Fix tools/mf_band.py: joint L9 posterior curves, L10 re-trained on each. Test
+  (r1_peak_diag.py, 5 L9 not nested): half-width ln at L10 sites 1.26/0.24/1.44 -> 0.11/0.11/0.10. Mean unchanged.
+- DEFECT 2 (user: "if L8 shows a clear peak, why is it not present?"): the LOO-tuned L8 KRR flattens the resonance
+  (surrogate 0.045 at 22.6 vs data 0.087; surrogate monotone). Test r1_l8interp_test.py (pre-registered): L8 level =
+  interpolation of the L8 data, 5 even L9 with NO L9 at the peak: L10 EDR peak at 22.6 rpm (ratio to 20 rpm 4.2; L10
+  truth ~4.9), held-out ln err EDR 46 -> 20 %, kLa 22 -> 11 %, tau 7.4 -> 7.2 %, t_mix 24.5 -> 26.2 %. The interpolant
+  also passes L8 noise (wiggles in kLa / t_mix).
