@@ -1661,3 +1661,14 @@ vs noisy held-out data); FB 0.82-0.95. Figure: figures/bo2d/mf_ablation.png. Win
   (36.4, 2.0) L8 40.2 / 40.9, L9 10.0 / 17.7 (~6x noise; the 36.4 L8 run failed the drift gate); theta = 7: 15 vs 30 rpm
   L8 37.6 / 40.3, L9 12.6 / 23.6. -> no single-valued T(L8) for kLa; T(L8, x) not excluded (that is the GP discrepancy,
   fed by nearby L9). tau: L9 rises in step with L8 in both sets. theta = 7 NN-in-L8 kLa error 0.30 vs mean 0.54: some info.
+- ~10:30 user asks: (a) 2D held-out parity, (b) training probes, (c) L8 surface + L9 scatter, (d) swap slides 6/7,
+  (e) Results 1 nested design (L-low >> L-high), (f) explain the cost plot.
+  (d) DONE: three-level method slide is now 6, Results 1 is 7 (pure reorder, verified by sorted diff; backup
+  scratchpad/slides_bak_swap67.md).
+  (a) fig_l9_heldout_2d.py (truth v2, leave one L9 site out, 33 sites): RMSE ln (L9 only / L8->L9 / L7->L8->L9):
+  tau 0.064 / 0.039 / 0.034 (theta 7: 0.092 / 0.051 / 0.041; off-line ~0.028 all); kLa 0.215 / 0.212 / 0.204
+  (theta 7: 0.28 / 0.25 / 0.25; off-line 0.15 / 0.18 / 0.17); t_mix 0.269 / 0.253 / 0.261 (theta 7: 0.35 / 0.27 / 0.27;
+  off-line 0.19 / 0.24 / 0.26). 95 % coverage 0.94-1.00. sd ln y9: tau 0.45, kLa 0.38, t_mix 0.69.
+  Reading: with 33 L9 runs every model is fair (kLa ~20 %); the chain helps on theta = 7 (all three QoI) and not off-line.
+  With this many L9 the cheap levels have little left to add; their value is at small L9 counts (fair ablation).
+  (c) fig_l8_surface_l9.py: tau and t_mix L8 patterns match L9; kLa L8 hot spot (15-20 rpm, theta ~3) has L9 ~15-20, not high.
