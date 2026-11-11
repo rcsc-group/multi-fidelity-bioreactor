@@ -1672,3 +1672,10 @@ vs noisy held-out data); FB 0.82-0.95. Figure: figures/bo2d/mf_ablation.png. Win
   Reading: with 33 L9 runs every model is fair (kLa ~20 %); the chain helps on theta = 7 (all three QoI) and not off-line.
   With this many L9 the cheap levels have little left to add; their value is at small L9 counts (fair ablation).
   (c) fig_l8_surface_l9.py: tau and t_mix L8 patterns match L9; kLa L8 hot spot (15-20 rpm, theta ~3) has L9 ~15-20, not high.
+- ~11:30 user: Results 1 figure shows L8 and L9 at the same rpm and the model secretly trains cross-theta. CONFIRMED
+  (fig_r1_heldout: L8 KRR on all thetas, L9 GP on all thetas). Faithful v2 (talks tools/fig_r1_v2.py, rules fixed in
+  its docstring): theta = 7 only; L8 = 45 cold 80-cycle runs (r12 = 12-cycle release and warm kmix dropped;
+  r1_l8_quality.py: tau / EDR / t_mix sweeps agree, kLa sweeps differ up to ~30 %); L9 nested evenly spaced subsets.
+  Held-out rel RMS (tau / EDR / kLa / t_mix): all 10 L9 5.7 / 9.8 / 25.1 / 29.4; 7: 8.1 / 16.7 / 27.4 / 28.3;
+  5: 6.9 / 20.4 / 15.0 / 26.1; 4: 6.2 / 20.1 / 16.5 / 23.6 (chosen by the mean-within-10 % rule); 3: 8.3 / 21.0 / 14.1 / 58.4.
+  Old cross-theta Results 1: 8 / 7 / 12 / 29. Caveat: the mean rule hides EDR doubling (the 22.5 rpm EDR peak needs its L9).
