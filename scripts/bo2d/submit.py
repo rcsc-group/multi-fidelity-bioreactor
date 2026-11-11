@@ -90,7 +90,8 @@ def warm_params(level: int, source: str, rpm: float, th: float, tag: str = TAG) 
     return p
 
 
-def warm(level: int, source: str, rpm: float, th: float, arm: str, go: bool = False, tag: str = TAG):
+def warm(level: int, source: str, rpm: float, th: float, arm: str, go: bool = False, tag: str = TAG,
+         account: str = "default"):
     from scripts import simulate
     p = warm_params(level, source, rpm, th, tag=tag)
     if (ROOT / "runs" / p["run_id"]).exists():
@@ -101,7 +102,7 @@ def warm(level: int, source: str, rpm: float, th: float, arm: str, go: bool = Fa
     jid = simulate.submit_slurm(p, project_root=ROOT, runs_root=ROOT / "runs", walltime=WALL[level],
                                 ntasks=RANKS[level], template=ROOT / "config" / "slurm_mpi_template.sh",
                                 checkpoint=str((sd / "checkpoint.dump").resolve()), exclude=C.EXCLUDE,
-                                partition="batch", account="default", cpus=1, mem="4G")
+                                partition="batch", account=account, cpus=1, mem="4G")
     rp = ROOT / "runs" / p["run_id"] / "params.json"
     rp.write_text(json.dumps(C.warm_provenance(json.loads(rp.read_text()), source, ROOT / "logs" / f"slurm_{jid}.err"), indent=1))
     record(job=str(jid), level=level, run=p["run_id"], rpm=rpm, theta=th, ranks=RANKS[level], arm=arm, start="warm",

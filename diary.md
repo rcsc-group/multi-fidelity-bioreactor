@@ -1679,3 +1679,20 @@ vs noisy held-out data); FB 0.82-0.95. Figure: figures/bo2d/mf_ablation.png. Win
   Held-out rel RMS (tau / EDR / kLa / t_mix): all 10 L9 5.7 / 9.8 / 25.1 / 29.4; 7: 8.1 / 16.7 / 27.4 / 28.3;
   5: 6.9 / 20.4 / 15.0 / 26.1; 4: 6.2 / 20.1 / 16.5 / 23.6 (chosen by the mean-within-10 % rule); 3: 8.3 / 21.0 / 14.1 / 58.4.
   Old cross-theta Results 1: 8 / 7 / 12 / 29. Caveat: the mean rule hides EDR doubling (the 22.5 rpm EDR peak needs its L9).
+
+## 2026-11-11 09:35-10:20 - How many runs per level? (user: "200 for 2D, is that not overkill? how many L9?")
+- Nested 40 L8 / 12 L9 design NOT submitted: those numbers were rules of thumb (~10 per dimension), not derived.
+  submit.warm got an optional `account` argument (default unchanged) for a later condo split.
+- Limits checked: priority QoS 312 CPU per user on batch/default; mbessa-condo QoS grp 320 CPU (user cap: 50 % = 160).
+- learning_curve.py (pre-registered in its docstring): A = L7 map (GP on N7 random screen sites) -> L9 via a + b*map,
+  LOO over 33 L9; B = L9-only GP on N9 random of the 33 L9 sites, test = rest. Bias: the 33 L9 are not
+  space-filling (near tau cap and theta = 7). Figure figures/bo2d/fig_learning_curve.png. Mean held-out L9 error (%):
+  - tau: L7 map 10 (N7 10) -> 8 (N7 160): saturates by N7 ~ 20. L9 only: 21 (6) / 13 (10) / 11 (15) / 11 (25).
+  - t_mix: L7 map 36 -> 29 (slow gain). L9 only: 52 / 40 / 25 / 24.
+  - kLa: L7 map ~38 = mean-only (L7 kLa carries no L9 information; 44/200 L7 sites have no finite kLa, all < 21 rpm).
+    L9 only: 35 / 30 / 20 / 18.
+- Reading: 200 L7 is overkill for tau (~20 suffice) and buys little for t_mix; useless for kLa. L9-only plateaus at
+  ~15 L9 for all three QoI (~3,000 core-h at ~200 core-h each). Caveat: the calibration used all 33 L9 (to be redone
+  with few L9). First OOM run: learning_curve imported diag_l7_screen_map, which runs its full grid map at import.
+- v2 benchmark, mix, screen40 vs l9only (core-h to hit): 11296/12424/4528 vs 10388/38584/7420 -> 2/3 wins, PASS
+  (geo-mean ~1.7x). kla screens and mix screen120 still running.
