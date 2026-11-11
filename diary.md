@@ -1613,3 +1613,14 @@ vs noisy held-out data); FB 0.82-0.95. Figure: figures/bo2d/mf_ablation.png. Win
 - L7 screen as a map (diag_l7_screen_map.py, gate ignored): tau_95 Spearman (L7 map, L9) +0.99 at all 44 L9 sites;
   off-line LOO calibrated ln error 0.031 vs 0.394 for the mean (13x lower, ~ the noise floor). 200 L7 = ~1,000 core-h
   ~ 3 L9 runs. t_mix / kLa: batch job 8834811 (OOM on the 16 GB interactive node).
+
+### 2026-11-11 08:00 check-in + CORRECTION
+- Jobs healthy: 12 bo-screen running since 07:37; no bioreactor-mpi / autopilot (campaign ended 00:16 by the backstop).
+  l7map 8834811 OOM at 32 GB on the t_mix step -> resubmitted 8835567 (64 GB).
+- CORRECTION (user challenge: "kLa wasn't flat in 1D; I'd raise an eyebrow at a flat 2D landscape"): my 'off-line kLa
+  is flat' was a SAMPLING artifact. The off-line L9 sites were chosen by the searches and sit mostly at low theta or low
+  rpm. Truth snapshot L9 (diag_kla_vs_tau.py): theta = 7 rises 12.6 -> 74 (1/h) from 15 to 37.5 rpm; off-line 10 -> 25.
+- kLa vs tau at L9 (n = 30): Spearman +0.58 only. Feasible (tau <= 14 mPa) best: 25.7 at (27.5, 7) on the cap;
+  second region (19.1, 2.9): 21.9 at tau 4.7 mPa (~85 % of the best kLa at ~1/3 of the shear). Two-mode landscape.
+- Still true: L8 kLa off theta = 7 does not rank L9 (rho 0.08, 3.7x high); L7/L8 hydro does (tau rho 0.99).
+- screen40 mix seed 22 HIT 9,040 core-h vs l9only 13,356 (1.5x).
