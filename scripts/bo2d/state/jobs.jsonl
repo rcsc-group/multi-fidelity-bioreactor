@@ -166,3 +166,271 @@
 {"job": "8777413", "level": 8, "run": "bo1_l8_rpm35.92_th4.85", "rpm": 35.925, "theta": 4.85, "ranks": 16, "arm": "l9only", "start": "spin", "submitted": "2026-11-10T13:17:20.054414+00:00"}
 {"job": "8778536", "level": 9, "run": "bo4_l9_rpm34.35_th2.25", "rpm": 34.35, "theta": 2.25, "ranks": 32, "arm": "chain", "start": "warm", "source": "bo4_l8_rpm34.35_th2.25", "submitted": "2026-11-10T13:47:30.313434+00:00"}
 {"job": "8779133", "level": 9, "run": "bo1_l9_rpm35.92_th4.85", "rpm": 35.925, "theta": 4.85, "ranks": 32, "arm": "l9only", "start": "warm", "source": "bo1_l8_rpm35.92_th4.85", "submitted": "2026-11-10T14:02:36.692592+00:00"}
+{"job": "8788454", "level": 7, "run": "bo4_l7_rpm19.50_th3.05", "rpm": 19.5, "theta": 3.05, "ranks": 8, "arm": "chain", "start": "cold", "submitted": "2026-11-10T17:22:55.308304+00:00"}
+{"job": "8788957", "level": 7, "run": "scr_l7_rpm24.40_th5.27", "rpm": 24.399, "theta": 5.267, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T17:49:01.393381+00:00"}
+{"job": "8788958", "level": 7, "run": "scr_l7_rpm34.41_th3.53", "rpm": 34.409, "theta": 3.532, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T17:49:01.445925+00:00"}
+{"job": "8788959", "level": 7, "run": "scr_l7_rpm24.14_th2.44", "rpm": 24.14, "theta": 2.444, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T17:49:01.576988+00:00"}
+{"job": "8788960", "level": 7, "run": "scr_l7_rpm30.66_th4.47", "rpm": 30.662, "theta": 4.469, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T17:49:01.722737+00:00"}
+{"job": "8788961", "level": 7, "run": "scr_l7_rpm28.22_th6.19", "rpm": 28.223, "theta": 6.191, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T17:49:01.860667+00:00"}
+{"job": "8788962", "level": 7, "run": "scr_l7_rpm27.25_th5.07", "rpm": 27.255, "theta": 5.068, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T17:49:02.000397+00:00"}
+{"job": "8788963", "level": 7, "run": "scr_l7_rpm31.74_th2.98", "rpm": 31.736, "theta": 2.981, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T17:49:02.345876+00:00"}
+{"job": "8788964", "level": 7, "run": "scr_l7_rpm18.01_th5.32", "rpm": 18.012, "theta": 5.316, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T17:49:02.477255+00:00"}
+{"job": "8788965", "level": 7, "run": "scr_l7_rpm19.92_th2.04", "rpm": 19.919, "theta": 2.035, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T17:49:02.609534+00:00"}
+{"job": "8788966", "level": 7, "run": "scr_l7_rpm23.50_th6.97", "rpm": 23.5, "theta": 6.973, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T17:49:02.742257+00:00"}
+{"job": "8788967", "level": 7, "run": "scr_l7_rpm33.86_th5.41", "rpm": 33.857, "theta": 5.414, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T17:49:02.876427+00:00"}
+{"job": "8788968", "level": 7, "run": "scr_l7_rpm23.31_th4.79", "rpm": 23.31, "theta": 4.792, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T17:49:03.048623+00:00"}
+{"job": "8788969", "level": 7, "run": "scr_l7_rpm26.83_th4.69", "rpm": 26.834, "theta": 4.686, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T17:49:03.186222+00:00"}
+{"job": "8788970", "level": 7, "run": "scr_l7_rpm21.53_th2.72", "rpm": 21.532, "theta": 2.724, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T17:49:03.316711+00:00"}
+{"job": "8788971", "level": 7, "run": "scr_l7_rpm20.46_th4.83", "rpm": 20.463, "theta": 4.832, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T17:49:03.454924+00:00"}
+{"job": "8788972", "level": 7, "run": "scr_l7_rpm26.55_th5.85", "rpm": 26.555, "theta": 5.854, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T17:49:03.590298+00:00"}
+{"job": "8788973", "level": 7, "run": "scr_l7_rpm34.83_th2.41", "rpm": 34.825, "theta": 2.412, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T17:49:03.722840+00:00"}
+{"job": "8788974", "level": 7, "run": "scr_l7_rpm35.53_th6.45", "rpm": 35.534, "theta": 6.448, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T17:49:03.868332+00:00"}
+{"job": "8788975", "level": 7, "run": "scr_l7_rpm15.01_th3.18", "rpm": 15.014, "theta": 3.176, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T17:49:04.252751+00:00"}
+{"job": "8788976", "level": 7, "run": "scr_l7_rpm34.69_th5.67", "rpm": 34.689, "theta": 5.665, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T17:49:04.408923+00:00"}
+{"job": "8788977", "level": 7, "run": "scr_l7_rpm17.17_th5.19", "rpm": 17.172, "theta": 5.186, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T17:49:04.541493+00:00"}
+{"job": "8788978", "level": 7, "run": "scr_l7_rpm32.70_th4.15", "rpm": 32.695, "theta": 4.149, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T17:49:04.675448+00:00"}
+{"job": "8788979", "level": 7, "run": "scr_l7_rpm16.03_th3.48", "rpm": 16.03, "theta": 3.475, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T17:49:04.808214+00:00"}
+{"job": "8788980", "level": 7, "run": "scr_l7_rpm27.60_th2.89", "rpm": 27.6, "theta": 2.894, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T17:49:04.943911+00:00"}
+{"job": "8788981", "level": 7, "run": "scr_l7_rpm22.58_th5.55", "rpm": 22.577, "theta": 5.548, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T17:49:05.077038+00:00"}
+{"job": "8788982", "level": 7, "run": "scr_l7_rpm30.08_th4.42", "rpm": 30.076, "theta": 4.42, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T17:49:05.228095+00:00"}
+{"job": "8788983", "level": 7, "run": "scr_l7_rpm37.27_th3.51", "rpm": 37.274, "theta": 3.512, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T17:49:05.361733+00:00"}
+{"job": "8788984", "level": 7, "run": "scr_l7_rpm19.63_th5.73", "rpm": 19.631, "theta": 5.729, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T17:49:05.504235+00:00"}
+{"job": "8788985", "level": 7, "run": "scr_l7_rpm35.73_th6.09", "rpm": 35.731, "theta": 6.09, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T17:49:05.642738+00:00"}
+{"job": "8788986", "level": 7, "run": "scr_l7_rpm22.88_th5.08", "rpm": 22.875, "theta": 5.083, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T17:49:05.780806+00:00"}
+{"job": "8789749", "level": 8, "run": "bo4_l8_rpm19.50_th3.05", "rpm": 19.5, "theta": 3.05, "ranks": 16, "arm": "chain", "start": "warm", "source": "bo4_l7_rpm19.50_th3.05", "submitted": "2026-11-10T18:08:12.744486+00:00"}
+{"job": "8789839", "level": 7, "run": "scr_l7_rpm30.28_th3.02", "rpm": 30.282, "theta": 3.025, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T18:10:23.081792+00:00"}
+{"job": "8789867", "level": 7, "run": "scr_l7_rpm21.49_th2.92", "rpm": 21.49, "theta": 2.918, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T18:11:23.829762+00:00"}
+{"job": "8789904", "level": 7, "run": "scr_l7_rpm23.03_th5.72", "rpm": 23.028, "theta": 5.723, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T18:12:38.569874+00:00"}
+{"job": "8789939", "level": 7, "run": "scr_l7_rpm33.96_th3.15", "rpm": 33.961, "theta": 3.151, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T18:13:45.743823+00:00"}
+{"job": "8789940", "level": 7, "run": "scr_l7_rpm24.00_th2.49", "rpm": 24.001, "theta": 2.489, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T18:13:45.892887+00:00"}
+{"job": "8790002", "level": 7, "run": "scr_l7_rpm24.95_th4.12", "rpm": 24.947, "theta": 4.116, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T18:15:46.326849+00:00"}
+{"job": "8790035", "level": 7, "run": "scr_l7_rpm15.24_th4.75", "rpm": 15.24, "theta": 4.746, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T18:16:46.603254+00:00"}
+{"job": "8790072", "level": 7, "run": "scr_l7_rpm27.55_th3.79", "rpm": 27.554, "theta": 3.789, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T18:17:46.890808+00:00"}
+{"job": "8790096", "level": 7, "run": "scr_l7_rpm36.90_th5.17", "rpm": 36.898, "theta": 5.171, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T18:18:47.166008+00:00"}
+{"job": "8790134", "level": 7, "run": "scr_l7_rpm15.16_th4.85", "rpm": 15.159, "theta": 4.85, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T18:19:49.144445+00:00"}
+{"job": "8790198", "level": 7, "run": "scr_l7_rpm33.74_th2.36", "rpm": 33.741, "theta": 2.361, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T18:21:49.524423+00:00"}
+{"job": "8790225", "level": 7, "run": "scr_l7_rpm27.38_th3.48", "rpm": 27.382, "theta": 3.48, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T18:22:49.806588+00:00"}
+{"job": "8790964", "level": 7, "run": "scr_l7_rpm31.31_th6.56", "rpm": 31.308, "theta": 6.564, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T18:24:51.898651+00:00"}
+{"job": "8791330", "level": 7, "run": "scr_l7_rpm27.80_th3.09", "rpm": 27.799, "theta": 3.094, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T18:25:53.304205+00:00"}
+{"job": "8791331", "level": 7, "run": "scr_l7_rpm27.06_th2.14", "rpm": 27.056, "theta": 2.139, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T18:25:53.473213+00:00"}
+{"job": "8792209", "level": 7, "run": "scr_l7_rpm31.11_th6.95", "rpm": 31.108, "theta": 6.95, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T18:30:04.288719+00:00"}
+{"job": "8792239", "level": 7, "run": "scr_l7_rpm27.85_th5.46", "rpm": 27.85, "theta": 5.464, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T18:31:10.915205+00:00"}
+{"job": "8792240", "level": 7, "run": "scr_l7_rpm35.62_th5.04", "rpm": 35.622, "theta": 5.043, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T18:31:11.282397+00:00"}
+{"job": "8792437", "level": 7, "run": "scr_l7_rpm31.88_th4.51", "rpm": 31.878, "theta": 4.513, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T18:34:12.324063+00:00"}
+{"job": "8792438", "level": 7, "run": "scr_l7_rpm33.13_th6.66", "rpm": 33.128, "theta": 6.664, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T18:34:12.478604+00:00"}
+{"job": "8792535", "level": 7, "run": "scr_l7_rpm30.78_th6.27", "rpm": 30.78, "theta": 6.268, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T18:36:41.373997+00:00"}
+{"job": "8792536", "level": 7, "run": "scr_l7_rpm34.99_th2.75", "rpm": 34.989, "theta": 2.747, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T18:36:41.533076+00:00"}
+{"job": "8792631", "level": 7, "run": "scr_l7_rpm33.42_th3.40", "rpm": 33.422, "theta": 3.398, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T18:39:07.637047+00:00"}
+{"job": "8792744", "level": 7, "run": "scr_l7_rpm15.56_th3.83", "rpm": 15.559, "theta": 3.831, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T18:42:08.396310+00:00"}
+{"job": "8792816", "level": 7, "run": "scr_l7_rpm20.96_th5.61", "rpm": 20.961, "theta": 5.605, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T18:45:04.345252+00:00"}
+{"job": "8792874", "level": 7, "run": "scr_l7_rpm29.50_th3.32", "rpm": 29.499, "theta": 3.319, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T18:47:14.761380+00:00"}
+{"job": "8792889", "level": 7, "run": "scr_l7_rpm29.92_th6.15", "rpm": 29.92, "theta": 6.148, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T18:47:38.506004+00:00"}
+{"job": "8792890", "level": 7, "run": "scr_l7_rpm23.61_th6.24", "rpm": 23.611, "theta": 6.244, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T18:47:38.651242+00:00"}
+{"job": "8792949", "level": 7, "run": "scr_l7_rpm32.47_th4.82", "rpm": 32.465, "theta": 4.817, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T18:50:40.442628+00:00"}
+{"job": "8792997", "level": 7, "run": "scr_l7_rpm20.29_th6.87", "rpm": 20.286, "theta": 6.867, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T18:51:45.830733+00:00"}
+{"job": "8792998", "level": 7, "run": "scr_l7_rpm36.50_th3.63", "rpm": 36.498, "theta": 3.629, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T18:51:45.993547+00:00"}
+{"job": "8793042", "level": 7, "run": "scr_l7_rpm15.92_th2.55", "rpm": 15.918, "theta": 2.548, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T18:53:46.667335+00:00"}
+{"job": "8793065", "level": 7, "run": "scr_l7_rpm36.98_th5.91", "rpm": 36.976, "theta": 5.912, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T18:54:46.946322+00:00"}
+{"job": "8793066", "level": 7, "run": "scr_l7_rpm21.01_th6.39", "rpm": 21.01, "theta": 6.395, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T18:54:47.090315+00:00"}
+{"job": "8793067", "level": 7, "run": "scr_l7_rpm27.95_th4.00", "rpm": 27.954, "theta": 4.001, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T18:54:47.249008+00:00"}
+{"job": "8793191", "level": 7, "run": "scr_l7_rpm23.35_th4.08", "rpm": 23.351, "theta": 4.081, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T18:58:57.413808+00:00"}
+{"job": "8793204", "level": 7, "run": "scr_l7_rpm22.06_th3.42", "rpm": 22.056, "theta": 3.42, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T18:59:05.699001+00:00"}
+{"job": "8793254", "level": 7, "run": "scr_l7_rpm32.17_th4.89", "rpm": 32.168, "theta": 4.895, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T19:00:50.909054+00:00"}
+{"job": "8793259", "level": 7, "run": "scr_l7_rpm36.01_th4.76", "rpm": 36.008, "theta": 4.758, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T19:00:51.342425+00:00"}
+{"job": "8793347", "level": 7, "run": "scr_l7_rpm29.34_th4.33", "rpm": 29.343, "theta": 4.33, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T19:01:55.292962+00:00"}
+{"job": "8793484", "level": 7, "run": "scr_l7_rpm26.22_th6.54", "rpm": 26.224, "theta": 6.54, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T19:05:18.798090+00:00"}
+{"job": "8793553", "level": 7, "run": "scr_l7_rpm16.80_th4.93", "rpm": 16.8, "theta": 4.926, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T19:07:28.249974+00:00"}
+{"job": "8793625", "level": 7, "run": "scr_l7_rpm23.77_th3.10", "rpm": 23.77, "theta": 3.1, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T19:08:32.708029+00:00"}
+{"job": "8793697", "level": 7, "run": "scr_l7_rpm19.04_th3.88", "rpm": 19.044, "theta": 3.88, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T19:09:32.998177+00:00"}
+{"job": "8793698", "level": 7, "run": "scr_l7_rpm24.57_th2.23", "rpm": 24.572, "theta": 2.235, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T19:09:33.177868+00:00"}
+{"job": "8793699", "level": 7, "run": "scr_l7_rpm25.94_th2.26", "rpm": 25.939, "theta": 2.264, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T19:09:33.332577+00:00"}
+{"job": "8793777", "level": 7, "run": "scr_l7_rpm20.02_th5.59", "rpm": 20.019, "theta": 5.59, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T19:13:02.882516+00:00"}
+{"job": "8793824", "level": 7, "run": "scr_l7_rpm31.60_th2.64", "rpm": 31.597, "theta": 2.643, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T19:14:38.377418+00:00"}
+{"job": "8793825", "level": 7, "run": "scr_l7_rpm21.09_th5.35", "rpm": 21.09, "theta": 5.354, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T19:14:38.816753+00:00"}
+{"job": "8793837", "level": 7, "run": "scr_l7_rpm30.36_th3.28", "rpm": 30.363, "theta": 3.278, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T19:15:39.239772+00:00"}
+{"job": "8793867", "level": 7, "run": "scr_l7_rpm19.20_th5.39", "rpm": 19.204, "theta": 5.389, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T19:17:39.861915+00:00"}
+{"job": "8793928", "level": 7, "run": "scr_l7_rpm19.42_th5.12", "rpm": 19.423, "theta": 5.123, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T19:20:51.721887+00:00"}
+{"job": "8793937", "level": 7, "run": "scr_l7_rpm36.65_th3.43", "rpm": 36.651, "theta": 3.43, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T19:21:52.268324+00:00"}
+{"job": "8793938", "level": 7, "run": "scr_l7_rpm17.04_th5.64", "rpm": 17.038, "theta": 5.64, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T19:21:52.438295+00:00"}
+{"job": "8793974", "level": 7, "run": "scr_l7_rpm28.84_th2.38", "rpm": 28.839, "theta": 2.381, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T19:23:55.084366+00:00"}
+{"job": "8793997", "level": 7, "run": "scr_l7_rpm22.20_th3.58", "rpm": 22.195, "theta": 3.58, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T19:24:55.383413+00:00"}
+{"job": "8794126", "level": 7, "run": "scr_l7_rpm20.53_th3.22", "rpm": 20.53, "theta": 3.216, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T19:29:02.745328+00:00"}
+{"job": "8794127", "level": 7, "run": "scr_l7_rpm25.46_th3.90", "rpm": 25.462, "theta": 3.9, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T19:29:02.904062+00:00"}
+{"job": "8795373", "level": 7, "run": "scr_l7_rpm17.66_th2.84", "rpm": 17.665, "theta": 2.836, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T19:39:58.697018+00:00"}
+{"job": "8795546", "level": 7, "run": "scr_l7_rpm19.28_th6.17", "rpm": 19.279, "theta": 6.175, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T19:43:06.467639+00:00"}
+{"job": "8795723", "level": 7, "run": "scr_l7_rpm32.99_th2.66", "rpm": 32.992, "theta": 2.661, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T19:46:08.737622+00:00"}
+{"job": "8796423", "level": 7, "run": "scr_l7_rpm30.50_th4.70", "rpm": 30.5, "theta": 4.701, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T19:56:04.920164+00:00"}
+{"job": "8796740", "level": 7, "run": "scr_l7_rpm33.64_th2.31", "rpm": 33.643, "theta": 2.311, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T20:00:17.427572+00:00"}
+{"job": "8796742", "level": 7, "run": "scr_l7_rpm20.38_th3.73", "rpm": 20.38, "theta": 3.73, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T20:00:17.595969+00:00"}
+{"job": "8797080", "level": 7, "run": "scr_l7_rpm36.78_th2.97", "rpm": 36.785, "theta": 2.967, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T20:04:04.437851+00:00"}
+{"job": "8797122", "level": 7, "run": "scr_l7_rpm33.09_th5.01", "rpm": 33.095, "theta": 5.015, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T20:05:04.752980+00:00"}
+{"job": "8797256", "level": 7, "run": "scr_l7_rpm35.89_th2.77", "rpm": 35.886, "theta": 2.766, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T20:06:08.164787+00:00"}
+{"job": "8797450", "level": 7, "run": "scr_l7_rpm32.86_th3.61", "rpm": 32.86, "theta": 3.606, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T20:08:25.961889+00:00"}
+{"job": "8797451", "level": 7, "run": "scr_l7_rpm20.82_th6.04", "rpm": 20.816, "theta": 6.037, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T20:08:26.183059+00:00"}
+{"job": "8797486", "level": 7, "run": "scr_l7_rpm28.53_th5.24", "rpm": 28.534, "theta": 5.24, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T20:09:26.504899+00:00"}
+{"job": "8797487", "level": 7, "run": "scr_l7_rpm19.10_th4.90", "rpm": 19.097, "theta": 4.904, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T20:09:26.667594+00:00"}
+{"job": "8797535", "level": 7, "run": "scr_l7_rpm18.80_th5.34", "rpm": 18.795, "theta": 5.345, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T20:10:31.261022+00:00"}
+{"job": "8797699", "level": 7, "run": "scr_l7_rpm23.88_th4.98", "rpm": 23.879, "theta": 4.983, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T20:11:58.979594+00:00"}
+{"job": "8797787", "level": 7, "run": "bo4_l7_rpm36.60_th3.90", "rpm": 36.6, "theta": 3.9, "ranks": 8, "arm": "chain", "start": "cold", "submitted": "2026-11-10T20:12:58.244505+00:00"}
+{"job": "8797867", "level": 7, "run": "scr_l7_rpm29.16_th3.56", "rpm": 29.159, "theta": 3.557, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T20:15:09.676973+00:00"}
+{"job": "8797891", "level": 7, "run": "scr_l7_rpm33.48_th3.81", "rpm": 33.477, "theta": 3.809, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T20:16:11.121529+00:00"}
+{"job": "8797907", "level": 7, "run": "scr_l7_rpm22.84_th3.66", "rpm": 22.842, "theta": 3.663, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T20:17:11.457804+00:00"}
+{"job": "8797931", "level": 7, "run": "scr_l7_rpm32.64_th2.30", "rpm": 32.636, "theta": 2.296, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T20:18:19.445256+00:00"}
+{"job": "8797932", "level": 7, "run": "scr_l7_rpm28.44_th6.50", "rpm": 28.44, "theta": 6.502, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T20:18:19.611354+00:00"}
+{"job": "8798063", "level": 7, "run": "scr_l7_rpm35.21_th2.93", "rpm": 35.206, "theta": 2.929, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T20:19:36.458473+00:00"}
+{"job": "8798168", "level": 7, "run": "scr_l7_rpm15.42_th4.66", "rpm": 15.423, "theta": 4.655, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T20:20:37.436971+00:00"}
+{"job": "8798169", "level": 7, "run": "scr_l7_rpm28.08_th2.16", "rpm": 28.079, "theta": 2.16, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T20:20:37.607016+00:00"}
+{"job": "8798309", "level": 7, "run": "scr_l7_rpm30.55_th5.29", "rpm": 30.546, "theta": 5.29, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T20:24:58.984984+00:00"}
+{"job": "8798349", "level": 7, "run": "scr_l7_rpm16.22_th2.59", "rpm": 16.219, "theta": 2.594, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T20:25:59.513086+00:00"}
+{"job": "8798414", "level": 9, "run": "bo4_l9_rpm19.50_th3.05", "rpm": 19.5, "theta": 3.05, "ranks": 32, "arm": "chain", "start": "warm", "source": "bo4_l8_rpm19.50_th3.05", "submitted": "2026-11-10T20:28:00.976859+00:00"}
+{"job": "8798500", "level": 7, "run": "scr_l7_rpm18.46_th5.48", "rpm": 18.465, "theta": 5.484, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T20:30:24.796382+00:00"}
+{"job": "8799071", "level": 7, "run": "scr_l7_rpm26.09_th3.13", "rpm": 26.085, "theta": 3.133, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T20:39:03.275879+00:00"}
+{"job": "8799212", "level": 7, "run": "scr_l7_rpm17.51_th2.79", "rpm": 17.512, "theta": 2.786, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T20:40:11.914749+00:00"}
+{"job": "8799305", "level": 7, "run": "scr_l7_rpm20.15_th4.31", "rpm": 20.151, "theta": 4.309, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T20:41:13.799431+00:00"}
+{"job": "8799306", "level": 7, "run": "scr_l7_rpm15.65_th5.56", "rpm": 15.651, "theta": 5.564, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T20:41:13.999374+00:00"}
+{"job": "8799489", "level": 7, "run": "scr_l7_rpm17.26_th6.88", "rpm": 17.257, "theta": 6.876, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T20:43:15.995823+00:00"}
+{"job": "8799570", "level": 7, "run": "scr_l7_rpm36.32_th6.92", "rpm": 36.32, "theta": 6.924, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T20:44:16.445023+00:00"}
+{"job": "8799571", "level": 7, "run": "scr_l7_rpm16.41_th3.35", "rpm": 16.415, "theta": 3.346, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T20:44:19.290587+00:00"}
+{"job": "8799643", "level": 7, "run": "scr_l7_rpm21.38_th4.27", "rpm": 21.379, "theta": 4.274, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T20:45:19.611603+00:00"}
+{"job": "8799835", "level": 7, "run": "scr_l7_rpm26.99_th5.83", "rpm": 26.993, "theta": 5.832, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T20:50:25.195034+00:00"}
+{"job": "8799899", "level": 7, "run": "scr_l7_rpm37.36_th5.69", "rpm": 37.357, "theta": 5.693, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T20:52:25.624815+00:00"}
+{"job": "8799945", "level": 7, "run": "scr_l7_rpm23.99_th4.43", "rpm": 23.994, "theta": 4.426, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T20:53:27.982848+00:00"}
+{"job": "8800064", "level": 7, "run": "scr_l7_rpm18.50_th4.00", "rpm": 18.499, "theta": 3.997, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T20:56:31.373502+00:00"}
+{"job": "8800215", "level": 7, "run": "scr_l7_rpm29.85_th5.78", "rpm": 29.847, "theta": 5.783, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T21:01:32.184747+00:00"}
+{"job": "8800382", "level": 7, "run": "scr_l7_rpm17.41_th6.21", "rpm": 17.413, "theta": 6.205, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T21:06:06.387661+00:00"}
+{"job": "8801578", "level": 7, "run": "scr_l7_rpm26.29_th6.63", "rpm": 26.286, "theta": 6.634, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T21:26:45.791397+00:00"}
+{"job": "8801857", "level": 7, "run": "pr8_l7_rpm15.45_th5.00", "rpm": 15.45, "theta": 5.0, "ranks": 8, "arm": "pair", "start": "cold", "submitted": "2026-11-10T21:31:11.687732+00:00"}
+{"job": "8801858", "level": 7, "run": "pr8_l7_rpm17.02_th4.80", "rpm": 17.025, "theta": 4.8, "ranks": 8, "arm": "pair", "start": "cold", "submitted": "2026-11-10T21:31:11.742833+00:00"}
+{"job": "8801859", "level": 7, "run": "pr8_l7_rpm17.93_th3.15", "rpm": 17.925, "theta": 3.15, "ranks": 8, "arm": "pair", "start": "cold", "submitted": "2026-11-10T21:31:11.788632+00:00"}
+{"job": "8801860", "level": 7, "run": "pr8_l7_rpm18.60_th4.60", "rpm": 18.6, "theta": 4.6, "ranks": 8, "arm": "pair", "start": "cold", "submitted": "2026-11-10T21:31:11.824848+00:00"}
+{"job": "8801861", "level": 7, "run": "pr8_l7_rpm20.18_th4.40", "rpm": 20.175, "theta": 4.4, "ranks": 8, "arm": "pair", "start": "cold", "submitted": "2026-11-10T21:31:11.868969+00:00"}
+{"job": "8801862", "level": 7, "run": "pr8_l7_rpm21.52_th3.15", "rpm": 21.525, "theta": 3.15, "ranks": 8, "arm": "pair", "start": "cold", "submitted": "2026-11-10T21:31:11.904957+00:00"}
+{"job": "8801863", "level": 7, "run": "pr8_l7_rpm30.75_th5.50", "rpm": 30.75, "theta": 5.5, "ranks": 8, "arm": "pair", "start": "cold", "submitted": "2026-11-10T21:31:11.962446+00:00"}
+{"job": "8801864", "level": 7, "run": "pr8_l7_rpm33.23_th4.50", "rpm": 33.225, "theta": 4.5, "ranks": 8, "arm": "pair", "start": "cold", "submitted": "2026-11-10T21:31:12.049353+00:00"}
+{"job": "8801865", "level": 7, "run": "pr8_l7_rpm33.45_th3.05", "rpm": 33.45, "theta": 3.05, "ranks": 8, "arm": "pair", "start": "cold", "submitted": "2026-11-10T21:31:12.128373+00:00"}
+{"job": "8801866", "level": 7, "run": "pr8_l7_rpm34.35_th2.70", "rpm": 34.35, "theta": 2.7, "ranks": 8, "arm": "pair", "start": "cold", "submitted": "2026-11-10T21:31:12.209403+00:00"}
+{"job": "8801867", "level": 7, "run": "pr8_l7_rpm35.48_th2.35", "rpm": 35.475, "theta": 2.35, "ranks": 8, "arm": "pair", "start": "cold", "submitted": "2026-11-10T21:31:12.265843+00:00"}
+{"job": "8801868", "level": 7, "run": "pr8_l7_rpm36.38_th2.00", "rpm": 36.375, "theta": 2.0, "ranks": 8, "arm": "pair", "start": "cold", "submitted": "2026-11-10T21:31:12.349260+00:00"}
+{"job": "8802003", "level": 7, "run": "scr_l7_rpm29.97_th2.83", "rpm": 29.971, "theta": 2.825, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T21:34:49.314828+00:00"}
+{"job": "8802191", "level": 7, "run": "scr_l7_rpm34.69_th4.39", "rpm": 34.685, "theta": 4.386, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T21:37:53.322701+00:00"}
+{"job": "8802278", "level": 7, "run": "scr_l7_rpm24.69_th2.68", "rpm": 24.69, "theta": 2.676, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T21:39:06.991229+00:00"}
+{"job": "8802383", "level": 7, "run": "scr_l7_rpm26.60_th4.55", "rpm": 26.602, "theta": 4.555, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T21:40:08.975537+00:00"}
+{"job": "8802506", "level": 7, "run": "scr_l7_rpm25.76_th4.95", "rpm": 25.757, "theta": 4.953, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T21:41:09.282498+00:00"}
+{"job": "8802689", "level": 7, "run": "scr_l7_rpm30.97_th3.97", "rpm": 30.972, "theta": 3.972, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T21:42:23.509709+00:00"}
+{"job": "8802732", "level": 7, "run": "scr_l7_rpm22.21_th5.95", "rpm": 22.209, "theta": 5.951, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T21:43:24.123687+00:00"}
+{"job": "8802733", "level": 7, "run": "scr_l7_rpm32.38_th3.70", "rpm": 32.383, "theta": 3.704, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T21:43:24.290383+00:00"}
+{"job": "8802734", "level": 7, "run": "scr_l7_rpm19.82_th5.88", "rpm": 19.817, "theta": 5.878, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T21:43:24.448830+00:00"}
+{"job": "8802736", "level": 7, "run": "scr_l7_rpm31.50_th6.85", "rpm": 31.497, "theta": 6.847, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T21:43:24.620820+00:00"}
+{"job": "8802831", "level": 8, "run": "bo4_l8_rpm36.60_th3.90", "rpm": 36.6, "theta": 3.9, "ranks": 16, "arm": "chain", "start": "warm", "source": "bo4_l7_rpm36.60_th3.90", "submitted": "2026-11-10T21:43:52.974839+00:00"}
+{"job": "8803055", "level": 7, "run": "scr_l7_rpm22.51_th6.74", "rpm": 22.512, "theta": 6.741, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T21:45:29.738847+00:00"}
+{"job": "8803159", "level": 7, "run": "scr_l7_rpm35.34_th5.94", "rpm": 35.344, "theta": 5.937, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T21:46:30.082156+00:00"}
+{"job": "8803281", "level": 7, "run": "scr_l7_rpm29.72_th6.71", "rpm": 29.718, "theta": 6.715, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T21:47:40.593722+00:00"}
+{"job": "8803669", "level": 7, "run": "scr_l7_rpm18.18_th3.27", "rpm": 18.177, "theta": 3.268, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T21:50:44.938578+00:00"}
+{"job": "8803936", "level": 7, "run": "scr_l7_rpm34.09_th4.24", "rpm": 34.093, "theta": 4.243, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T21:52:49.979103+00:00"}
+{"job": "8803937", "level": 7, "run": "scr_l7_rpm22.76_th3.24", "rpm": 22.756, "theta": 3.238, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T21:52:50.220766+00:00"}
+{"job": "8804183", "level": 7, "run": "scr_l7_rpm16.29_th5.13", "rpm": 16.286, "theta": 5.135, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T21:55:52.852820+00:00"}
+{"job": "8804184", "level": 7, "run": "scr_l7_rpm21.30_th6.41", "rpm": 21.299, "theta": 6.414, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T21:55:53.198780+00:00"}
+{"job": "8804228", "level": 7, "run": "scr_l7_rpm22.32_th2.10", "rpm": 22.316, "theta": 2.099, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T21:56:53.498786+00:00"}
+{"job": "8804345", "level": 7, "run": "scr_l7_rpm26.72_th4.18", "rpm": 26.716, "theta": 4.18, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T21:58:55.406988+00:00"}
+{"job": "8804384", "level": 7, "run": "scr_l7_rpm24.82_th2.55", "rpm": 24.821, "theta": 2.553, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T21:59:55.696856+00:00"}
+{"job": "8804456", "level": 7, "run": "scr_l7_rpm25.03_th6.02", "rpm": 25.034, "theta": 6.02, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T22:01:25.905212+00:00"}
+{"job": "8804457", "level": 7, "run": "scr_l7_rpm28.98_th6.33", "rpm": 28.985, "theta": 6.335, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T22:01:26.179002+00:00"}
+{"job": "8804515", "level": 7, "run": "scr_l7_rpm26.39_th6.29", "rpm": 26.386, "theta": 6.292, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T22:02:26.841144+00:00"}
+{"job": "8804635", "level": 7, "run": "scr_l7_rpm33.23_th2.52", "rpm": 33.231, "theta": 2.52, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T22:06:28.677371+00:00"}
+{"job": "8804776", "level": 7, "run": "scr_l7_rpm28.69_th6.82", "rpm": 28.691, "theta": 6.815, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T22:08:53.153574+00:00"}
+{"job": "8804871", "level": 7, "run": "scr_l7_rpm34.51_th4.55", "rpm": 34.505, "theta": 4.548, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T22:10:56.748427+00:00"}
+{"job": "8804913", "level": 8, "run": "pr8_l8_rpm30.75_th5.50", "rpm": 30.75, "theta": 5.5, "ranks": 16, "arm": "pair", "start": "warm", "source": "pr8_l7_rpm30.75_th5.50", "submitted": "2026-11-10T22:11:22.832228+00:00"}
+{"job": "8804914", "level": 8, "run": "pr8_l8_rpm33.23_th4.50", "rpm": 33.225, "theta": 4.5, "ranks": 16, "arm": "pair", "start": "warm", "source": "pr8_l7_rpm33.23_th4.50", "submitted": "2026-11-10T22:11:22.943766+00:00"}
+{"job": "8804915", "level": 8, "run": "pr8_l8_rpm34.35_th2.70", "rpm": 34.35, "theta": 2.7, "ranks": 16, "arm": "pair", "start": "warm", "source": "pr8_l7_rpm34.35_th2.70", "submitted": "2026-11-10T22:11:23.252092+00:00"}
+{"job": "8805311", "level": 7, "run": "scr_l7_rpm16.52_th3.00", "rpm": 16.517, "theta": 3.004, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T22:19:12.091005+00:00"}
+{"job": "8805366", "level": 7, "run": "scr_l7_rpm20.69_th3.87", "rpm": 20.688, "theta": 3.873, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T22:20:15.543934+00:00"}
+{"job": "8805421", "level": 8, "run": "pr8_l8_rpm20.18_th4.40", "rpm": 20.175, "theta": 4.4, "ranks": 16, "arm": "pair", "start": "warm", "source": "pr8_l7_rpm20.18_th4.40", "submitted": "2026-11-10T22:21:25.883282+00:00"}
+{"job": "8805422", "level": 8, "run": "pr8_l8_rpm21.52_th3.15", "rpm": 21.525, "theta": 3.15, "ranks": 16, "arm": "pair", "start": "warm", "source": "pr8_l7_rpm21.52_th3.15", "submitted": "2026-11-10T22:21:25.995050+00:00"}
+{"job": "8805423", "level": 8, "run": "pr8_l8_rpm33.45_th3.05", "rpm": 33.45, "theta": 3.05, "ranks": 16, "arm": "pair", "start": "warm", "source": "pr8_l7_rpm33.45_th3.05", "submitted": "2026-11-10T22:21:26.300700+00:00"}
+{"job": "8805424", "level": 8, "run": "pr8_l8_rpm35.48_th2.35", "rpm": 35.475, "theta": 2.35, "ranks": 16, "arm": "pair", "start": "warm", "source": "pr8_l7_rpm35.48_th2.35", "submitted": "2026-11-10T22:21:26.426665+00:00"}
+{"job": "8805425", "level": 8, "run": "pr8_l8_rpm36.38_th2.00", "rpm": 36.375, "theta": 2.0, "ranks": 16, "arm": "pair", "start": "warm", "source": "pr8_l7_rpm36.38_th2.00", "submitted": "2026-11-10T22:21:26.536024+00:00"}
+{"job": "8805448", "level": 7, "run": "scr_l7_rpm15.74_th4.06", "rpm": 15.737, "theta": 4.056, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T22:22:18.544045+00:00"}
+{"job": "8805559", "level": 7, "run": "scr_l7_rpm36.16_th4.29", "rpm": 36.165, "theta": 4.286, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T22:24:32.916238+00:00"}
+{"job": "8805560", "level": 7, "run": "scr_l7_rpm29.62_th4.16", "rpm": 29.618, "theta": 4.156, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T22:24:33.081455+00:00"}
+{"job": "8805628", "level": 7, "run": "scr_l7_rpm31.40_th5.51", "rpm": 31.396, "theta": 5.515, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T22:25:58.941560+00:00"}
+{"job": "8805695", "level": 7, "run": "scr_l7_rpm16.60_th6.12", "rpm": 16.604, "theta": 6.123, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T22:26:59.258028+00:00"}
+{"job": "8805711", "level": 7, "run": "scr_l7_rpm25.46_th6.76", "rpm": 25.465, "theta": 6.762, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T22:27:01.322176+00:00"}
+{"job": "8805802", "level": 7, "run": "scr_l7_rpm18.92_th6.58", "rpm": 18.916, "theta": 6.576, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T22:29:03.931404+00:00"}
+{"job": "8805894", "level": 8, "run": "pr8_l8_rpm17.02_th4.80", "rpm": 17.025, "theta": 4.8, "ranks": 16, "arm": "pair", "start": "warm", "source": "pr8_l7_rpm17.02_th4.80", "submitted": "2026-11-10T22:31:29.020050+00:00"}
+{"job": "8805895", "level": 8, "run": "pr8_l8_rpm17.93_th3.15", "rpm": 17.925, "theta": 3.15, "ranks": 16, "arm": "pair", "start": "warm", "source": "pr8_l7_rpm17.93_th3.15", "submitted": "2026-11-10T22:31:29.127827+00:00"}
+{"job": "8805896", "level": 8, "run": "pr8_l8_rpm18.60_th4.60", "rpm": 18.6, "theta": 4.6, "ranks": 16, "arm": "pair", "start": "warm", "source": "pr8_l7_rpm18.60_th4.60", "submitted": "2026-11-10T22:31:29.230277+00:00"}
+{"job": "8805898", "level": 7, "run": "scr_l7_rpm29.18_th2.20", "rpm": 29.181, "theta": 2.196, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T22:31:32.337210+00:00"}
+{"job": "8805934", "level": 7, "run": "scr_l7_rpm25.63_th4.49", "rpm": 25.628, "theta": 4.489, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T22:32:32.656698+00:00"}
+{"job": "8806004", "level": 7, "run": "scr_l7_rpm34.30_th3.95", "rpm": 34.3, "theta": 3.95, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T22:33:32.975906+00:00"}
+{"job": "8806097", "level": 7, "run": "scr_l7_rpm25.28_th2.85", "rpm": 25.276, "theta": 2.853, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T22:35:33.430522+00:00"}
+{"job": "8806134", "level": 7, "run": "scr_l7_rpm21.80_th2.02", "rpm": 21.795, "theta": 2.02, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T22:36:33.910146+00:00"}
+{"job": "8806192", "level": 7, "run": "scr_l7_rpm16.73_th3.76", "rpm": 16.725, "theta": 3.762, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T22:37:36.958845+00:00"}
+{"job": "8806337", "level": 8, "run": "pr8_l8_rpm15.45_th5.00", "rpm": 15.45, "theta": 5.0, "ranks": 16, "arm": "pair", "start": "warm", "source": "pr8_l7_rpm15.45_th5.00", "submitted": "2026-11-10T22:41:31.774533+00:00"}
+{"job": "8806402", "level": 7, "run": "scr_l7_rpm23.21_th6.06", "rpm": 23.212, "theta": 6.056, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T22:42:56.814134+00:00"}
+{"job": "8806647", "level": 7, "run": "scr_l7_rpm31.76_th4.59", "rpm": 31.764, "theta": 4.59, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T22:48:16.056769+00:00"}
+{"job": "8806701", "level": 7, "run": "scr_l7_rpm28.83_th5.44", "rpm": 28.828, "theta": 5.438, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T22:49:21.290391+00:00"}
+{"job": "8806829", "level": 7, "run": "scr_l7_rpm32.02_th2.34", "rpm": 32.018, "theta": 2.341, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T22:52:21.874516+00:00"}
+{"job": "8806830", "level": 7, "run": "scr_l7_rpm35.10_th2.07", "rpm": 35.097, "theta": 2.069, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T22:52:22.047999+00:00"}
+{"job": "8806893", "level": 7, "run": "scr_l7_rpm24.26_th6.68", "rpm": 24.26, "theta": 6.681, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T22:53:43.851503+00:00"}
+{"job": "8806894", "level": 7, "run": "scr_l7_rpm25.85_th6.79", "rpm": 25.846, "theta": 6.787, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T22:53:44.206261+00:00"}
+{"job": "8806967", "level": 7, "run": "scr_l7_rpm37.40_th2.21", "rpm": 37.402, "theta": 2.208, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T22:54:48.372643+00:00"}
+{"job": "8806968", "level": 7, "run": "scr_l7_rpm37.12_th4.65", "rpm": 37.118, "theta": 4.646, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T22:54:48.539098+00:00"}
+{"job": "8807004", "level": 7, "run": "scr_l7_rpm24.56_th6.50", "rpm": 24.561, "theta": 6.495, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T22:55:48.882513+00:00"}
+{"job": "8807005", "level": 7, "run": "scr_l7_rpm35.44_th4.03", "rpm": 35.435, "theta": 4.034, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T22:55:49.217743+00:00"}
+{"job": "8807064", "level": 7, "run": "scr_l7_rpm32.32_th3.35", "rpm": 32.322, "theta": 3.353, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T22:56:49.522455+00:00"}
+{"job": "8807065", "level": 7, "run": "scr_l7_rpm18.36_th3.07", "rpm": 18.358, "theta": 3.066, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T22:56:49.677140+00:00"}
+{"job": "8807118", "level": 7, "run": "scr_l7_rpm34.18_th2.62", "rpm": 34.181, "theta": 2.624, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T22:57:51.405291+00:00"}
+{"job": "8807341", "level": 7, "run": "scr_l7_rpm36.39_th6.45", "rpm": 36.392, "theta": 6.451, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T23:00:59.826554+00:00"}
+{"job": "8807420", "level": 7, "run": "scr_l7_rpm19.60_th6.98", "rpm": 19.603, "theta": 6.976, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T23:02:20.421849+00:00"}
+{"job": "8807610", "level": 7, "run": "scr_l7_rpm17.87_th6.36", "rpm": 17.868, "theta": 6.362, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T23:05:27.771596+00:00"}
+{"job": "8807661", "level": 7, "run": "scr_l7_rpm28.34_th4.21", "rpm": 28.342, "theta": 4.215, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T23:06:32.085000+00:00"}
+{"job": "8808099", "level": 7, "run": "scr_l7_rpm31.02_th4.62", "rpm": 31.023, "theta": 4.619, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T23:11:40.253450+00:00"}
+{"job": "8808177", "level": 7, "run": "scr_l7_rpm21.94_th5.80", "rpm": 21.944, "theta": 5.802, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T23:12:40.549664+00:00"}
+{"job": "8808487", "level": 7, "run": "scr_l7_rpm18.14_th5.77", "rpm": 18.137, "theta": 5.774, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T23:18:41.494995+00:00"}
+{"job": "8808545", "level": 7, "run": "bo4_l7_rpm35.48_th4.00", "rpm": 35.475, "theta": 4.0, "ranks": 8, "arm": "chain", "start": "cold", "submitted": "2026-11-10T23:20:43.926563+00:00"}
+{"job": "8808639", "level": 7, "run": "scr_l7_rpm17.79_th2.46", "rpm": 17.788, "theta": 2.457, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T23:21:43.032756+00:00"}
+{"job": "8808640", "level": 7, "run": "scr_l7_rpm18.71_th2.11", "rpm": 18.712, "theta": 2.107, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T23:21:43.195548+00:00"}
+{"job": "8808703", "level": 7, "run": "scr_l7_rpm21.73_th5.21", "rpm": 21.735, "theta": 5.211, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T23:23:43.620349+00:00"}
+{"job": "8808704", "level": 7, "run": "scr_l7_rpm15.81_th6.32", "rpm": 15.812, "theta": 6.316, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T23:23:43.773319+00:00"}
+{"job": "8808906", "level": 7, "run": "scr_l7_rpm36.15_th5.99", "rpm": 36.15, "theta": 5.986, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T23:26:45.056681+00:00"}
+{"job": "8808907", "level": 7, "run": "scr_l7_rpm27.30_th4.36", "rpm": 27.297, "theta": 4.357, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T23:26:45.222791+00:00"}
+{"job": "8808929", "level": 7, "run": "scr_l7_rpm25.14_th6.62", "rpm": 25.145, "theta": 6.617, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T23:27:45.535225+00:00"}
+{"job": "8808930", "level": 7, "run": "scr_l7_rpm16.98_th3.70", "rpm": 16.98, "theta": 3.698, "ranks": 8, "arm": "screen", "start": "cold", "submitted": "2026-11-10T23:27:45.710653+00:00"}
+{"job": "8811148", "level": 8, "run": "bo4_l8_rpm35.48_th4.00", "rpm": 35.475, "theta": 4.0, "ranks": 16, "arm": "chain", "start": "warm", "source": "bo4_l7_rpm35.48_th4.00", "submitted": "2026-11-11T00:06:00.475250+00:00"}
+{"job": "8813843", "level": 7, "run": "bo4_l7_rpm35.48_th3.95", "rpm": 35.475, "theta": 3.95, "ranks": 8, "arm": "chain", "start": "cold", "submitted": "2026-11-11T00:55:38.946257+00:00"}
+{"job": "8814854", "level": 8, "run": "bo1_l8_rpm22.20_th7.00", "rpm": 22.2, "theta": 7.0, "ranks": 16, "arm": "l9only", "start": "spin", "submitted": "2026-11-11T01:11:07.281717+00:00"}
+{"job": "8815695", "level": 8, "run": "bo4_l8_rpm35.48_th3.95", "rpm": 35.475, "theta": 3.95, "ranks": 16, "arm": "chain", "start": "warm", "source": "bo4_l7_rpm35.48_th3.95", "submitted": "2026-11-11T01:26:11.364590+00:00"}
+{"job": "8816950", "level": 9, "run": "bo1_l9_rpm22.20_th7.00", "rpm": 22.2, "theta": 7.0, "ranks": 32, "arm": "l9only", "start": "warm", "source": "bo1_l8_rpm22.20_th7.00", "submitted": "2026-11-11T02:16:00.346461+00:00"}
+{"job": "8817693", "level": 8, "run": "bo1_l8_rpm34.35_th5.10", "rpm": 34.35, "theta": 5.1, "ranks": 16, "arm": "l9only", "start": "spin", "submitted": "2026-11-11T03:02:06.410153+00:00"}
+{"job": "8817694", "level": 8, "run": "bo1_l8_rpm32.77_th5.35", "rpm": 32.775, "theta": 5.35, "ranks": 16, "arm": "l9only", "start": "spin", "submitted": "2026-11-11T03:02:06.464589+00:00"}
+{"job": "8817874", "level": 7, "run": "bo4_l7_rpm31.65_th4.85", "rpm": 31.65, "theta": 4.85, "ranks": 8, "arm": "chain", "start": "cold", "submitted": "2026-11-11T03:11:14.291147+00:00"}
+{"job": "8817875", "level": 7, "run": "bo4_l7_rpm37.50_th3.90", "rpm": 37.5, "theta": 3.9, "ranks": 8, "arm": "chain", "start": "cold", "submitted": "2026-11-11T03:11:14.346111+00:00"}
+{"job": "8817876", "level": 7, "run": "bo4_l7_rpm33.90_th4.15", "rpm": 33.9, "theta": 4.15, "ranks": 8, "arm": "chain", "start": "cold", "submitted": "2026-11-11T03:11:14.384991+00:00"}
+{"job": "8818297", "level": 8, "run": "bo1_l8_rpm20.40_th7.00", "rpm": 20.4, "theta": 7.0, "ranks": 16, "arm": "l9only", "start": "spin", "submitted": "2026-11-11T03:26:54.565675+00:00"}
+{"job": "8818593", "level": 9, "run": "bo1_l9_rpm34.35_th5.10", "rpm": 34.35, "theta": 5.1, "ranks": 32, "arm": "l9only", "start": "warm", "source": "bo1_l8_rpm34.35_th5.10", "submitted": "2026-11-11T03:42:00.022544+00:00"}
+{"job": "8818594", "level": 9, "run": "bo1_l9_rpm32.77_th5.35", "rpm": 32.775, "theta": 5.35, "ranks": 32, "arm": "l9only", "start": "warm", "source": "bo1_l8_rpm32.77_th5.35", "submitted": "2026-11-11T03:42:00.209484+00:00"}
+{"job": "8818595", "level": 8, "run": "bo4_l8_rpm31.65_th4.85", "rpm": 31.65, "theta": 4.85, "ranks": 16, "arm": "chain", "start": "warm", "source": "bo4_l7_rpm31.65_th4.85", "submitted": "2026-11-11T03:42:00.328250+00:00"}
+{"job": "8818596", "level": 8, "run": "bo4_l8_rpm37.50_th3.90", "rpm": 37.5, "theta": 3.9, "ranks": 16, "arm": "chain", "start": "warm", "source": "bo4_l7_rpm37.50_th3.90", "submitted": "2026-11-11T03:42:00.434963+00:00"}
+{"job": "8818597", "level": 8, "run": "bo4_l8_rpm33.90_th4.15", "rpm": 33.9, "theta": 4.15, "ranks": 16, "arm": "chain", "start": "warm", "source": "bo4_l7_rpm33.90_th4.15", "submitted": "2026-11-11T03:42:00.636561+00:00"}
+{"job": "8820045", "level": 9, "run": "bo1_l9_rpm20.40_th7.00", "rpm": 20.4, "theta": 7.0, "ranks": 32, "arm": "l9only", "start": "warm", "source": "bo1_l8_rpm20.40_th7.00", "submitted": "2026-11-11T04:42:26.235002+00:00"}
+{"job": "8820462", "level": 7, "run": "bo4_l7_rpm31.43_th4.90", "rpm": 31.425, "theta": 4.9, "ranks": 8, "arm": "chain", "start": "cold", "submitted": "2026-11-11T05:01:51.850607+00:00"}
+{"job": "8839176", "level": 8, "run": "ns_l8_rpm23.88_th4.98", "rpm": 23.879, "theta": 4.983, "ranks": 16, "arm": "nest", "start": "warm", "source": "scr_l7_rpm23.88_th4.98", "submitted": "2026-11-11T14:57:50.060072+00:00"}
+{"job": "8839177", "level": 8, "run": "ns_l8_rpm20.38_th3.73", "rpm": 20.38, "theta": 3.73, "ranks": 16, "arm": "nest", "start": "warm", "source": "scr_l7_rpm20.38_th3.73", "submitted": "2026-11-11T14:57:50.231282+00:00"}
+{"job": "8839178", "level": 8, "run": "ns_l8_rpm18.80_th5.34", "rpm": 18.795, "theta": 5.345, "ranks": 16, "arm": "nest", "start": "warm", "source": "scr_l7_rpm18.80_th5.34", "submitted": "2026-11-11T14:57:50.378427+00:00"}
+{"job": "8839179", "level": 8, "run": "ns_l8_rpm36.15_th5.99", "rpm": 36.15, "theta": 5.986, "ranks": 16, "arm": "nest", "start": "warm", "source": "scr_l7_rpm36.15_th5.99", "submitted": "2026-11-11T14:57:50.536509+00:00"}
+{"job": "8839180", "level": 8, "run": "ns_l8_rpm15.92_th2.55", "rpm": 15.918, "theta": 2.548, "ranks": 16, "arm": "nest", "start": "warm", "source": "scr_l7_rpm15.92_th2.55", "submitted": "2026-11-11T14:57:50.703532+00:00"}
+{"job": "8839181", "level": 8, "run": "ns_l8_rpm33.13_th6.66", "rpm": 33.128, "theta": 6.664, "ranks": 16, "arm": "nest", "start": "warm", "source": "scr_l7_rpm33.13_th6.66", "submitted": "2026-11-11T14:57:50.819909+00:00"}
+{"job": "8839182", "level": 8, "run": "ns_l8_rpm23.50_th6.97", "rpm": 23.5, "theta": 6.973, "ranks": 16, "arm": "nest", "start": "warm", "source": "scr_l7_rpm23.50_th6.97", "submitted": "2026-11-11T14:57:50.952449+00:00"}
+{"job": "8839183", "level": 8, "run": "ns_l8_rpm15.42_th4.66", "rpm": 15.423, "theta": 4.655, "ranks": 16, "arm": "nest", "start": "warm", "source": "scr_l7_rpm15.42_th4.66", "submitted": "2026-11-11T14:57:51.185837+00:00"}
+{"job": "8839184", "level": 8, "run": "ns_l8_rpm22.51_th6.74", "rpm": 22.512, "theta": 6.741, "ranks": 16, "arm": "nest", "start": "warm", "source": "scr_l7_rpm22.51_th6.74", "submitted": "2026-11-11T14:57:51.344739+00:00"}
+{"job": "8839185", "level": 8, "run": "ns_l8_rpm21.53_th2.72", "rpm": 21.532, "theta": 2.724, "ranks": 16, "arm": "nest", "start": "warm", "source": "scr_l7_rpm21.53_th2.72", "submitted": "2026-11-11T14:57:51.454162+00:00"}
+{"job": "8839186", "level": 8, "run": "ns_l8_rpm31.74_th2.98", "rpm": 31.736, "theta": 2.981, "ranks": 16, "arm": "nest", "start": "warm", "source": "scr_l7_rpm31.74_th2.98", "submitted": "2026-11-11T14:57:51.612575+00:00"}
+{"job": "8839187", "level": 8, "run": "ns_l8_rpm33.74_th2.36", "rpm": 33.741, "theta": 2.361, "ranks": 16, "arm": "nest", "start": "warm", "source": "scr_l7_rpm33.74_th2.36", "submitted": "2026-11-11T14:57:51.741345+00:00"}
+{"job": "8839188", "level": 8, "run": "ns_l8_rpm17.26_th6.88", "rpm": 17.257, "theta": 6.876, "ranks": 16, "arm": "nest", "start": "warm", "source": "scr_l7_rpm17.26_th6.88", "submitted": "2026-11-11T14:57:51.871616+00:00"}
+{"job": "8839189", "level": 8, "run": "ns_l8_rpm33.09_th5.01", "rpm": 33.095, "theta": 5.015, "ranks": 16, "arm": "nest", "start": "warm", "source": "scr_l7_rpm33.09_th5.01", "submitted": "2026-11-11T14:57:52.035635+00:00"}
+{"job": "8839190", "level": 8, "run": "ns_l8_rpm29.72_th6.71", "rpm": 29.718, "theta": 6.715, "ranks": 16, "arm": "nest", "start": "warm", "source": "scr_l7_rpm29.72_th6.71", "submitted": "2026-11-11T14:57:52.184845+00:00"}
+{"job": "8839191", "level": 8, "run": "ns_l8_rpm36.39_th6.45", "rpm": 36.392, "theta": 6.451, "ranks": 16, "arm": "nest", "start": "warm", "source": "scr_l7_rpm36.39_th6.45", "submitted": "2026-11-11T14:57:52.338757+00:00"}
+{"job": "8839192", "level": 8, "run": "ns_l8_rpm34.69_th4.39", "rpm": 34.685, "theta": 4.386, "ranks": 16, "arm": "nest", "start": "warm", "source": "scr_l7_rpm34.69_th4.39", "submitted": "2026-11-11T14:57:52.490628+00:00"}
+{"job": "8839193", "level": 8, "run": "ns_l8_rpm28.84_th2.38", "rpm": 28.839, "theta": 2.381, "ranks": 16, "arm": "nest", "start": "warm", "source": "scr_l7_rpm28.84_th2.38", "submitted": "2026-11-11T14:57:52.632796+00:00"}
+{"job": "8839194", "level": 8, "run": "ns_l8_rpm27.30_th4.36", "rpm": 27.297, "theta": 4.357, "ranks": 16, "arm": "nest", "start": "warm", "source": "scr_l7_rpm27.30_th4.36", "submitted": "2026-11-11T14:57:52.800445+00:00"}
+{"job": "8839195", "level": 8, "run": "ns_l8_rpm34.99_th2.75", "rpm": 34.989, "theta": 2.747, "ranks": 16, "arm": "nest", "start": "warm", "source": "scr_l7_rpm34.99_th2.75", "submitted": "2026-11-11T14:57:52.930509+00:00"}
