@@ -1771,3 +1771,26 @@ vs noisy held-out data); FB 0.82-0.95. Figure: figures/bo2d/mf_ablation.png. Win
   - kla, screen120: >= 28040 / >= 16760 / >= 26912 (all censored) -> at most 1/3 -> FAIL.
   Reading (agrees with the learning curve, 09:35): L7/L8 carry t_mix information but almost none for kLa.
   Figure: figures/bo2d/regret_screen_v2.png (scripts/bo2d/fig_regret_screen.py).
+
+## 2026-11-11 ~13:10 — PRE-REGISTERED (before any number): error and cost for the cost curves (user: define 1D and 2D)
+Common to both:
+- Error E = RMS of ln(prediction / truth) over a FIXED test set, per QoI (tau_95, EDR, kLa, t_mix); test runs never
+  enter training. Reported in %, = relative error for small values.
+- Ablation: training sets are subsets of a fixed training pool. For each (n per level), R = 20 random subsets (seed
+  20261111); plot the median E (thick) and the 25-75 % range (band) against the median cost.
+- Cost C = sum of measured core-h (sacct elapsed x CPUs) of every training run, with its warm-start parent counted
+  once. A run whose parent is not in the subset is charged its parent too (never a free warm start).
+  Top-level-only baseline: each top run is charged a COLD start (measured on cold runs of the same level), because
+  without cheap levels there is no parent. Assumption (stated): warm and cold top-level QoIs are equal
+  (xlevel check at 32.5 rpm: 0.2-1 %).
+- Floor: the replicate scatter of the top level (same rule as the L8 floor) is drawn as a dashed line; no method can
+  be judged below it.
+1D (Results 1, theta = 7, top = L10):
+- Test set: the 6 unseen L10 runs of Results 1 plus 35 / 37.5 rpm (fixed); pool: the remaining theta = 7 L10 runs.
+- Grid: n10 in {2, 3, 4, all pool}; n9 in {0, 3, 5}; n8 in {0, 10, 35}. Methods: L10 only, L9 -> L10, L8 -> L9 -> L10.
+2D (Results 3, rpm x theta, top = L9):
+- Test set A: the 33 old L9 runs, weighted by Voronoi area in the normalized (rpm, theta) domain; theta = 7 sites
+  capped at the median weight (they cluster on one line; memory "theta = 7 draw bias").
+- Test set B: k-fold (k = 4) over the 8 nested space-filling L9 (training L9 = the other folds).
+- Grid: n9 in {2, 4, 6, 8}; n8 in {0, 5, 10, 20}; n7 in {0, 10, 20, 40}. Methods: L9 only, L8 -> L9, L7 -> L8 -> L9.
+- Headline number: cost ratio at equal median E (interpolated in log cost), per QoI.
