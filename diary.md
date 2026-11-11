@@ -1585,3 +1585,20 @@ vs noisy held-out data); FB 0.82-0.95. Figure: figures/bo2d/mf_ablation.png. Win
   gate (PAIR_NOGATE=1, 12 sites): kLa best-MF / L9-only RMSE 1.02 (Spearman +0.08) -> L8 does NOT carry kLa off-line;
   t_mix 0.74 -> CARRIES; tau 2.7 (L9-only already 0.047 with sd 0.256: smooth).
   Reading: matches the frozen BO (taumf kla FAIL, mix PASS) and the fair ablation: kLa needs L9; mixing gains.
+
+### 2026-11-10 ~23:00 root cause: why 2D kLa is weak (user: "get to the bottom of this")
+- User questions: (1) why does the L10-only curve start cheaper? -> the chain line started at the cost of the WHOLE
+  cheap grid (30 L8 + 16 L9 ~ 2.7k core-h = 4 L10 runs). Grid was never sized. Fix running: r2_cost_small.py
+  (random grid subsets 10 L8 + 4 L9, 20 L8 + 6 L9). (2) why not a fine L8 screen then few L9? -> never tested as such
+  (benchmark level rule spent on L9; taumf used cheap levels for tau only; live chain lost 2/3 of L8 to the gate).
+  Test running: synth_screen.py (pre-registered docstring), screen N = 40 and 120, jobs 8817513-24.
+- diag_pair_keys.py (12 pair sites): L8 HYDRO tracks L9 (vel_rms rho 1.00, tau_98_max 1.00, vor_mean 0.83, edr_95 0.84);
+  L8 kLa does NOT (rho 0.08) and is 3.7x too high -> L8 kLa = numerical (under-resolved concentration boundary layer).
+- diag_hydro_kla.py: no L8 feature (incl. eddy-cell (eps)^1/4) ranks L9 kLa at those 12 sites.
+- diag_l9_kla_structure.py (all L9): kLa on theta = 7: sd ln 0.52 (5x floor), rho with edr_95 = 1.00, rpm 0.95.
+  kLa OFF-line (n = 25): sd ln 0.21 (~2x floor 0.095), rho with any hydro <= 0.29. t_mix off-line: sd 0.54, rho -0.88
+  with dissipation.
+- ROOT CAUSE: off theta = 7, under the tau cap, L9 kLa is a near-flat plateau (~2x noise). The kLa search is
+  noise-limited, not model-limited: no surrogate can rank sites; a 5 % regret target sits inside the noise. On theta = 7
+  kLa has a strong landscape set by hydrodynamics (why Results 1 works). Mixing has strong structure off-line and L8
+  tracks it -> the 2D multi-fidelity story is mixing time (ceiling 6-9x) + mapping the shear cap (L8 rho ~1).
