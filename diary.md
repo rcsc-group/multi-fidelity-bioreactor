@@ -2040,3 +2040,8 @@ the rectangular bag look like a wedge; smoothing, near-wall fill).
   band legend alpha 0.25 -> 0.15 = band), 2D compare tau/EDR/kLa (fig_r3_compare default sizes 3/5/8 -> 4/5.5/8, L7
   >= 4 rule), r3_slices and r3_parity (L9 unseen = hollow hexagon; minor log labels "6x10^1" removed). Deck notes:
   [click] marker added before the existing take-home sentence on slides 6, 7, 8 (no words changed).
+- ~15:10 2D data-loading cache (deck tools/r3_cost_2d.data): profile showed 23.5 of 27.7 s in postprocess._load_dat
+  (546 .dat parses). data() now caches each parsed file in deck data/dat_cache.pkl (185 MB), key (path, size,
+  mtime_ns), repo loader patched only during the call; --refit ignores the cache. Test (scratchpad
+  test_dat_cache.py): cold and warm outputs equal the uncached output bit for bit; load 18.7 -> 2.9 s. One 2D compare
+  figure 25 -> 10.6 s end to end, pixel-identical.
