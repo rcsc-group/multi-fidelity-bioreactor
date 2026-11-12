@@ -51,7 +51,7 @@ src/                 Basilisk solver: a short driver + one local header per conc
   BioReactor.c       driver: includes, parameters, main(); target < 500 lines
   geometry.h  forcing.h  restart.h  replay.h  init.h  diagnostics.h  outputs.h  ...
   README.md          event order, compile switches table, how to add a feature
-mfb/ (or scripts/lib) importable Python library (postprocess, campaign, bo, mfbml_local, figstyle)
+mfb/                 importable Python library (postprocess, campaign, bo, mfbml_local, figstyle)
 scripts/             entry points only, grouped: run/  analyse/  figures/  admin/ ; each folder has a README
 tests/               ALL tests (unit, medium, hpc); no test_*.py elsewhere
 config/              canonical configs + examples/ ; one-offs archived
@@ -184,9 +184,14 @@ Done when: `BioReactor.c` < 500 lines and no header > 700; top-level `scripts/` 
 `tests/`; every folder has a README; mkdocs strict build passes; repo audit shows 0 unreferenced scripts outside
 `archive`; golden runs byte-identical.
 
-## 9. Open questions
+## 9. Decisions (user, 2026-11-12)
 
-1. Library name and place: `mfb/` package at root, or `scripts/lib/`? (affects every import)
-2. Lessons in the public pitfalls page: acceptable to name the bug class publicly (no dates, no costs)?
-3. `talks/dfd2026/` inside the repo (31 files): keep as internal, or move out next to the live deck?
-4. Archive form: a git tag only, or also an `archive/` folder for scripts a diary entry cites?
+1. Library: `mfb/` package at the repo root (`from mfb.postprocess import ...`); old paths keep re-export shims.
+2. Lessons: split. Technical content -> public "developer pitfalls" page (no dates, no costs); the story -> internal
+   history page; the two link to each other.
+3. `talks/dfd2026/` in the repo: no change before the talk; after it, the final deck goes to an internal archive
+   outside the repo and the repo keeps a link.
+4. Archive: git tag `archive/pre-lean-2026-11` only, then delete; each diary entry that cites a deleted file gets the
+   tag name. No `archive/` folder.
+5. Record/replay stays in the solver (the repo outlives the DFD talk).
+6. Results: keep small results in git, move big media out, no history rewrite.
