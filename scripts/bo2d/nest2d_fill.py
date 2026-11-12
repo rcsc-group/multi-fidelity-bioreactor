@@ -38,7 +38,7 @@ def main(go):
         if jid:
             # pin to Genoa (2026-11-11 ~21:15): Cascade Lake nodes ran these 3-4x slower (nest2d_fill_fast.py)
             import subprocess
-            subprocess.run(["scontrol", "update", f"JobId={jid}", "Features=genoa"], check=False)
+            subprocess.run(["scontrol", "update", f"JobId={jid}", "Features=genoa", "TimeLimit=06:00:00"], check=False)  # short limit: backfill (Genoa run ~3.5 h)
             used[acct] += ranks; print(f"submitted L9 {rpm} {th} on {acct} job {jid} (genoa)")
 
 

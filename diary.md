@@ -1912,3 +1912,10 @@ Common to both:
   Features=genoa (286 Genoa cores idle). nest2d_fill.py now pins every fill job to Genoa. The 18.80 Genoa copy
   (nfg, 8899706) was cancelled too, to keep one naming scheme (nf_).
 - Resubmit loop: first pattern counted 0 (run names contain dots); fixed to exclude .slow/.failed/.cancelled.
+
+## 2026-11-11 ~21:55 — check-in: Genoa queue
+- Genoa-pinned fill jobs pended on Priority with start estimates 05:20 Thu - 02:00 Fri (16 h walltime blocks
+  backfill). TimeLimit lowered to 6 h (Genoa run ~3-3.5 h, 1.7x margin): estimates now 23:49 - 05:20 Thu.
+  nest2d_fill.py sets the same limit. Risk: a 6 h limit kills a run that lands on a slow Genoa node; check at 03:17.
+- Healthy: 3 Genoa fill L9 + nsf 15.42 running; ns_l9 27.30, 23.50 and fill 33.74 finished.
+- Deck: 10 main slides done; open: slide 8 [TBD: X] (needs the final grid), speaker-note length (user edits).
