@@ -2009,3 +2009,11 @@ the rectangular bag look like a wedge; smoothing, near-wall fill).
   data/*_fit_cache.pkl, keyed by a hash of every input array (new data -> refit; --refit forces). Test: cached run
   pixel-identical to fresh fit and to the pre-cache figure (3 figures). Results 1 71 s -> 13 s; 2D compare 35 -> 25 s
   (rest = loading run data, T.data()).
+- ~14:40 Results 1 band "not centred on the line" (user). Hypothesis: line (L10 fit on the MEAN L9 curve) differs
+  from the MC mixture centre. FALSIFIED (scratchpad band_centre_test.py, same seed): line = MC median within 0.0-0.8 %
+  (log) in all 4 QoIs; the MC median itself is off the band middle by 0.06/0.12/0.24/0.25 of the half-width (tau,
+  EDR, kLa, t_mix; max 0.48). The predictive is skewed; an equal-tailed 95 % band is correctly asymmetric. Cause of
+  the skew (L9 uncertainty propagated nonlinearly through the L10 refit) not tested.
+- Slide 8 + 3 Backup 2D compare figures: title tokens in level colours (arrows, cost in ink), parity points L9 brown
+  in both columns (= Results 1: hollow = unseen top level), colour bar labelled "predicted <QoI> (unit)", round 1-2-5
+  ticks without tick marks (a 2 px mark next to "4.85" read as a minus sign).
