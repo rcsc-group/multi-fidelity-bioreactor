@@ -2045,3 +2045,9 @@ the rectangular bag look like a wedge; smoothing, near-wall fill).
   mtime_ns), repo loader patched only during the call; --refit ignores the cache. Test (scratchpad
   test_dat_cache.py): cold and warm outputs equal the uncached output bit for bit; load 18.7 -> 2.9 s. One 2D compare
   figure 25 -> 10.6 s end to end, pixel-identical.
+- ~15:40 Slide 8 marker sizes 3/5/9 (user; overrides the L7 >= 4 rule for this figure only). Title/closing videos
+  "more faithful" (user): deck tools/render_faithful.py removes v2 distortions (oxygen blur 1.2 x 4 cells, sqrt scale
+  saturated at 0.12, EDR blur + gamma, cubic/VOF smoothing, colour carried into air, tank ends cropped); fixed scale and
+  centre over the rocking. Rendered from existing L9 frames (scal_l9_rpm32.5_th7, 13.6 frames/cycle, real time,
+  cycles 80-90): public/title_v3_faithful.mp4, kla_strip_faithful.mp4. User: keep the old videos (not in the deck).
+  Finding: on a linear scale the oxygen at cycles 80-90 is a thin layer under the surface; the bulk is faint.
