@@ -1863,3 +1863,25 @@ Common to both:
   L9; warm L9 from each (tag nf), 9 submitted (5 default, 4 mbessa-condo, jobs 8886591-99), 3 more when CPU frees
   (background loop). L9 only will then train on 20 L9; chain keeps its 4. Test set unchanged.
 - r3_cost_2d.data() now loads ns_ + nsf_ + nf_ L9 (duplicate site: first finished run kept).
+
+## 2026-11-11 ~20:20 — Results 3 post mortem (deck tools/r3_postmortem.py, data/r3_postmortem.json)
+- First run hung 47 min: 4 pool workers x 7 BLAS threads on 4 cores (srun without OMP_NUM_THREADS=1; the sbatch
+  scripts set it). Single fits take <= 3 s. Rerun with 1 thread per worker: 268 fits in ~15 min. Lesson: export
+  OMP/OPENBLAS/MKL_NUM_THREADS=1 for every srun Pool job.
+- Error (%, weighted RMS ln on the 33 unseen L9), same 4 chain L9 for every model; 6 L9 finished at run time:
+  | QoI   | L9 only 4 | L9 only 6 | L8->L9 | L7(40) chain | L7(all) chain | perfect linear map |
+  | tau   | 18.1 | 7.6  | 4.2  | 3.5  | 3.4  | 9.0  |
+  | EDR   | 47.2 | 21.2 | 13.3 | 16.7 | 15.9 | 29.1 |
+  | kLa   | 18.6 | 17.0 | 23.5 | 23.8 | 24.0 | 19.0 |
+  | t_mix | 35.0 | 22.8 | 52.2 | 37.1 | 41.6 | 15.6 |
+- A (pre-stated: 40 -> 200 L7 changes < 1 point -> L7 count is not the limit): tau -0.1, EDR -0.8, kLa +0.2,
+  t_mix +4.5 (worse). User reading confirmed: more L7 does not help. Power: one fit per cell, one L9 subset;
+  differences of a few points are within noise.
+- B (L8 leave-one-out): L7 changes L8 error by -3 to +6 points; no QoI gains clearly from 200 L7 at L8 either.
+- C (oracle straight-line map from the L8 surrogate to the 33 L9 truths): t_mix 15.6 % vs chain 37-42 % -> the
+  L8 surrogate carries the shape; the chain cannot learn offset (raw L8 vs L9 132 %) + slope (1.39) from 4 L9.
+  kLa: fitted slope 0.11 (L8 surrogate barely informs the L9 kLa map on these 33 runs); not a final claim (user rule).
+  tau, EDR: the chain already beats the straight-line map (its discrepancy GP adds shape).
+- D (cold old L9 vs warm nested L9): mean z 0.27, 0.00, 0.45, 0.11 -> no confound.
+- Reading: the limit is the top step (4 L9 to learn the L8 -> L9 map), not L7. Lever: more L9 (fill running) and a
+  matched-count comparison (chain and L9 only at the same n9, cost on x) when the fill finishes.
