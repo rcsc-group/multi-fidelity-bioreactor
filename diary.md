@@ -1924,3 +1924,4 @@ Common to both:
 - 11 of 20 L9 sites finished (fill 22.51, 29.72, 33.74, 36.39 done). 7 running on Genoa/Ice Lake, all inside the 6 h
   limit (projected 2.4-4.7 h). nsf 15.42 ends ~01:55. Pending: 18.80 (est. start 04:03), 28.84 (05:20); widened to
   Features=genoa|icelake (estimates unchanged). All 20 expected ~09:00; final grid + selection loop alive.
+- 00:47 check: 13 of 20 L9 done; 18.80 started 00:21; only 28.84 pending (est. 05:20); final loop alive.

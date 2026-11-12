@@ -522,3 +522,4 @@
 {"job": "8899792", "level": 9, "run": "nf_l9_rpm15.92_th2.55", "rpm": 15.918, "theta": 2.548, "ranks": 32, "arm": "fill", "start": "warm", "source": "ns_l8_rpm15.92_th2.55", "submitted": "2026-11-12T02:03:35.255964+00:00"}
 {"job": "8899846", "level": 9, "run": "nf_l9_rpm18.80_th5.34", "rpm": 18.795, "theta": 5.345, "ranks": 32, "arm": "fill", "start": "warm", "source": "ns_l8_rpm18.80_th5.34", "submitted": "2026-11-12T02:03:58.053481+00:00"}
 {"job": "8899847", "level": 9, "run": "nf_l9_rpm28.84_th2.38", "rpm": 28.839, "theta": 2.381, "ranks": 32, "arm": "fill", "start": "warm", "source": "ns_l8_rpm28.84_th2.38", "submitted": "2026-11-12T02:03:58.329440+00:00"}
+{"job": "8905038", "level": 9, "run": "nf_l9_rpm34.99_th2.75", "rpm": 34.989, "theta": 2.747, "ranks": 32, "arm": "fill", "start": "warm", "source": "ns_l8_rpm34.99_th2.75", "submitted": "2026-11-12T02:54:27.266166+00:00"}
