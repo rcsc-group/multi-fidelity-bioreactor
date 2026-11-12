@@ -1902,3 +1902,13 @@ Common to both:
   (316, not a script) -> 1379 without. User tweaks notes; overnight = data only.
 - Automatic: fill resubmit loop; final grid + selection when 20 L9 exist or the queue empties. Then: figures (--equal),
   fill [TBD: X] in slide 9 notes from the result.
+
+## 2026-11-11 ~21:20 — slow nodes: test passed, runs moved to Genoa
+- ns_l9 15.42/4.66: Genoa copy (nsf, job 8884011, node2429) 470 s per time unit incl. start-up vs 939 on node1818
+  (Intel Cascade Lake). Pre-stated test (copy clearly below ~880) passed -> node was the cause. Slow job 8868642
+  cancelled; dirs renamed .slow-8868642 (runs/ and mpi_runs/).
+- Fill L9 speeds at 21:05: Cascade 794-1037 s/unit, Ice Lake 444, Genoa 202-315. Four fill runs on Cascade
+  (23.88, 20.38, 18.80, 15.92; <= 3 of 40 units done) cancelled, dirs .slow-<job>, resubmitted pinned
+  Features=genoa (286 Genoa cores idle). nest2d_fill.py now pins every fill job to Genoa. The 18.80 Genoa copy
+  (nfg, 8899706) was cancelled too, to keep one naming scheme (nf_).
+- Resubmit loop: first pattern counted 0 (run names contain dots); fixed to exclude .slow/.failed/.cancelled.

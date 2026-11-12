@@ -36,7 +36,10 @@ def main(go):
             print("no room now for", rpm, th); continue
         jid = S.warm(9, src, rpm, th, arm="fill", go=go, tag=TAG, account=acct)
         if jid:
-            used[acct] += ranks; print(f"submitted L9 {rpm} {th} on {acct} job {jid}")
+            # pin to Genoa (2026-11-11 ~21:15): Cascade Lake nodes ran these 3-4x slower (nest2d_fill_fast.py)
+            import subprocess
+            subprocess.run(["scontrol", "update", f"JobId={jid}", "Features=genoa"], check=False)
+            used[acct] += ranks; print(f"submitted L9 {rpm} {th} on {acct} job {jid} (genoa)")
 
 
 if __name__ == "__main__":
