@@ -69,6 +69,11 @@ LEVEL_COLOUR = {
     10: "#262626",   # charcoal (Kim stays black: tell apart by line style, dotted = ours)
 }
 
+# Level -> shape, ONLY for one-QoI-per-panel surrogate figures (Results 1 and 3, user 2026-11-12), where
+# "marker = quantity" carries nothing. It clashes with MK (square = EDR): never use both in one figure.
+# Shapes are unreadable below ~4 pt, so the smallest level marker there is >= 4.
+LEVEL_MARKER = {7: "^", 8: "s", 9: "h", 10: "o"}
+
 # Vector components in single-run figures (Figs 2, A.18). Deliberately
 # disjoint from LEVEL_COLOUR: a reader who has learned that blue means L8
 # must not meet a blue that means u_x three figures later.

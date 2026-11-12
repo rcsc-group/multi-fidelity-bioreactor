@@ -2027,3 +2027,12 @@ the rectangular bag look like a wedge; smoothing, near-wall fill).
   median |e| 12.7 %. Chain (4.6k): 21/33 within +-10 %, 5 below -20 %, range -55..+42, median |e| 7.1 %. Chain is
   more often close but has heavier tails. Scatter moved to a new Backup slide; slide 8 notes: one sentence + one
   Backup line changed to match.
+- ~15:30 Level shapes (user chose "Shapes, L7 min size 4"): figstyle LEVEL_MARKER {7 ^, 8 s, 9 h, 10 o}, only for
+  one-QoI-per-panel surrogate figures (clashes with MK square = EDR; never both in one figure). Results 1 (fig_r1_v2)
+  and slide 8 (fig_r3_compare --sizes 4,7,11) rebuilt. Backup figures with levels (r1th_b, other r3_cmp, r3_slices)
+  still use circles: not done.
+- ~16:00 Take-home layout on result slides 6-8 (PI: plot tucked left, one take-home line + arrow on the last click):
+  deck style.css .th-crop (one shared crop box, PNG x 47-1840, y 32-1103, so panels stay aligned between slides) and
+  .th (22 px). Messages: s6 "3 L10 runs predict 9 unseen", s7 "same error for half the cost" (arrow to EDR chain),
+  s8 "31 % of the cost, same error" (arrow to chain histogram peak). Rendered and checked: 2 lines each, no overlap.
+  Speaker notes still need a [click] for the new step on each slide.
