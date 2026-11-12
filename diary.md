@@ -1962,3 +1962,11 @@ L7 that did not fill space; plot L9, then L8, then L7 (small on top). Question: 
 - User chose the 4.6k t_mix cell for the deck (all L7, 20 L8, 4 L9; CRPS 9.5 vs 10.7; ~3.2x less). Notes: "about
   three times less compute"; Backup line states the dip (5 L9 -> 17.8, 8 L9 at 7.4k -> 10.4). Backup slides use
   rule (a) cells: tau 4.74k (2.2 vs 2.3, 3.1x), EDR 5.43k (9.3 vs 9.3, 2.7x), kLa 14.8k (no saving).
+
+## 2026-11-12 ~10:00 — daily check; deck additions
+- No bioreactor-mpi jobs queued or running; nothing failed to resubmit. Interactive 8632099 (node1804, slide servers,
+  8 h left) and 8746011 (node1828) alive. Slide servers restarted; they bind [::1] only (tunnel to [::1]:3031).
+- Deck: new Backup slide "2D: mixing time, accuracy against cost" (tools/fig_r3_cost_designed.py, data
+  r3_designed.json); t_mix floor ~10 % explained in its notes as a likely, untested cause (threshold crossing on an
+  oscillating chi curve; user chose not to test). Shear-stress version built (public/r3_cost_designed_tau_95_t.png),
+  not in the deck. No [TBD]. Spoken words 1696 incl. slide 6 reference notes (~1380 without) vs ~1300.
