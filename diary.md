@@ -2036,3 +2036,7 @@ the rectangular bag look like a wedge; smoothing, near-wall fill).
   .th (22 px). Messages: s6 "3 L10 runs predict 9 unseen", s7 "same error for half the cost" (arrow to EDR chain),
   s8 "31 % of the cost, same error" (arrow to chain histogram peak). Rendered and checked: 2 lines each, no overlap.
   Speaker notes still need a [click] for the new step on each slide.
+- ~15:00 Backup figures moved to level shapes: r1th_b (fig_r1_theta: L8 s 4.5, L9 h 6.5; frames now QoI-coloured;
+  band legend alpha 0.25 -> 0.15 = band), 2D compare tau/EDR/kLa (fig_r3_compare default sizes 3/5/8 -> 4/5.5/8, L7
+  >= 4 rule), r3_slices and r3_parity (L9 unseen = hollow hexagon; minor log labels "6x10^1" removed). Deck notes:
+  [click] marker added before the existing take-home sentence on slides 6, 7, 8 (no words changed).
