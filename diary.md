@@ -1986,3 +1986,18 @@ the rectangular bag look like a wedge; smoothing, near-wall fill).
   oxygen 0-0.03 (liquid 90 % < 0.023), tracer 0-1. Lab videos on slide 5; bag-frame videos on a new Backup slide.
   Renders checked (all clicks): videos and colour bars fit. Backup cost slide: legend overlapped the title -> image
   moved down (class r3c-img), checked.
+
+## 2026-11-12 ~14:05 — level colours: violet ramp (PI comment)
+- PI read level hues as QoIs (L10 pink = shear stress, L7 vermillion = EDR, L8 blue = kLa, L9 green = mixing
+  time). User chose: QoIs keep hues; levels = one violet ramp, light -> dark (levels are ordered). figstyle
+  LEVEL_COLOUR: 6 #D8CEF0, 7 #B09BE0, 8 #8462CC, 9 #55309E, 10 #1F0B45 (first ramp #A58FD6..#2A1260 made L9 and
+  L10 lines too close in the Results 1 cost figure; widened). Kim stays black; L10 is near-black, so ours vs Kim
+  is told apart by line style (dotted = ours).
+- Deck: 15 figures rebuilt (Results 1 a/b + cost, Results 3 maps x4 + cost x2, slices, parity, s7a/b, hidden
+  slide-6 chain, mf_stage1-6, r1th_b). Hard-coded hexes replaced in fig_s7a_band_r1, fig_s7_validation_r2,
+  fig_s6_slide_r11. Results 1 band: always alpha 0.15 of L10 pink (near white on screen, user "band does not
+  appear"); the legend patch used 0.25 -> now 0.15 = the band. With indigo the band is clearly visible.
+- r3_slices / r3_parity were drafts (11-11, 4 of 8 nested L9); rebuilt on all runs (all L7, 20 L8, 20 L9).
+- Inefficiency (user): each figure tool refits its models (~7 min for the 15 figures). Fix = cache fits, plot
+  from the cache. Not done yet.
+- Repo figures (paper) pick up the ramp on their next build; not rebuilt.

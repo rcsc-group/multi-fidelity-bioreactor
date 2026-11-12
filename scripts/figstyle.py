@@ -56,12 +56,16 @@ KIM = "black"
 # remaining Okabe-Ito sky blue; it previously held #009E73, which Fig 13
 # had already given to L9. 2026-11-11 (user): L7 -> vermillion, because sky
 # blue was hard to tell from L8 blue; the x-component moved to mustard.
+# 2026-11-12 (user, after the PI meeting): the PI read the old hues as QoIs (L10 pink = shear stress, L7
+# vermillion = EDR, L8 blue = kLa, L9 green = mixing time). Levels are ORDERED, so they are now one violet
+# ramp, light -> dark (no QoI uses violet); marker size still grows with level. Old: 6 #E69F00, 7 #D55E00,
+# 8 #0072B2, 9 #009E73, 10 #CC79A7.
 LEVEL_COLOUR = {
-    6:  "#E69F00",   # orange
-    7:  "#D55E00",   # vermillion (2026-11-11, user: sky blue read as L8 blue)
-    8:  "#0072B2",   # blue
-    9:  "#009E73",   # bluish green
-    10: "#CC79A7",   # reddish purple
+    6:  "#D8CEF0",   # pale lilac
+    7:  "#B09BE0",   # light violet
+    8:  "#8462CC",   # mid violet
+    9:  "#55309E",   # deep violet
+    10: "#1F0B45",   # indigo (Kim stays black: tell apart by line style, dotted = ours)
 }
 
 # Vector components in single-run figures (Figs 2, A.18). Deliberately
