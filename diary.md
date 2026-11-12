@@ -1885,3 +1885,11 @@ Common to both:
 - D (cold old L9 vs warm nested L9): mean z 0.27, 0.00, 0.45, 0.11 -> no confound.
 - Reading: the limit is the top step (4 L9 to learn the L8 -> L9 map), not L7. Lever: more L9 (fill running) and a
   matched-count comparison (chain and L9 only at the same n9, cost on x) when the fill finishes.
+
+## 2026-11-11 ~20:40 — Results 3 rule: equal error at minimal cost (fixed before the L9 fill results)
+- User: the t_mix slide compares "equal error at minimal cost".
+- Grid (tools/r3_cost_2d.py): n9 in {2,4,6,8,10,12,16,all}, n8 in {5,10,20}, n7 in {40, all}; R = 20 random subsets
+  per cell; L9 pool = nested + fill L9. Score = CRPS x 100 on the 33 unseen L9 (as Results 2); cell = median.
+- Target E* per QoI = L9 only with all finished L9. Each method's answer = its cheapest cell with median CRPS <= E*
+  (tools/r3_equal_error.py). Figure instance = the subset closest to the cell median.
+- Test of the code path now (6 L9): job 8892663. Final run after the fill finishes (Thu morning).
