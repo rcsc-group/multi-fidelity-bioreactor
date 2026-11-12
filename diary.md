@@ -1852,3 +1852,14 @@ Common to both:
   (user: stop "levels don't correlate" claims on few runs).
 - Nested L9: 5 of 8 done. 27.30 / 23.50 end ~19:55 / ~20:35. 15.42 on node1818 runs at ~880 s per time unit
   (17.26 ran at ~420 on node2421; node1818 not overloaded: older 48-core node) -> ends ~03:00 Thu.
+
+## 2026-11-11 ~19:35 — Results 3 in the deck; post mortem started; L9 fill submitted
+- User: t_mix Results 3 slide goes in the main talk (replaces the old "2d campaign, baseline data" template slide);
+  tau / EDR / kLa Results 3 and the 2D cost curve go to Backup. Chain now uses all 200 L7 (uniformity rule passed).
+- User reading: adding 100+ L7 did not visibly improve the chain. Post mortem (deck tools/r3_postmortem.py, hypotheses
+  fixed before running): A top-level error for L9 only / L8->L9 / L7(40) / L7(200) chains on the same 4 L9; B L8 LOO
+  with 40 vs 200 L7; C oracle linear-transfer floor (L8 surrogate -> L9 test); D cold-vs-warm L9 consistency.
+- L9-only looks sparse with 8 L9 (user). Fill (scripts/bo2d/nest2d_fill.py): reuse the 12 nested L8 runs that have no
+  L9; warm L9 from each (tag nf), 9 submitted (5 default, 4 mbessa-condo, jobs 8886591-99), 3 more when CPU frees
+  (background loop). L9 only will then train on 20 L9; chain keeps its 4. Test set unchanged.
+- r3_cost_2d.data() now loads ns_ + nsf_ + nf_ L9 (duplicate site: first finished run kept).
