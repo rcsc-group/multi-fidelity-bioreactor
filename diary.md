@@ -1919,3 +1919,8 @@ Common to both:
   nest2d_fill.py sets the same limit. Risk: a 6 h limit kills a run that lands on a slow Genoa node; check at 03:17.
 - Healthy: 3 Genoa fill L9 + nsf 15.42 running; ns_l9 27.30, 23.50 and fill 33.74 finished.
 - Deck: 10 main slides done; open: slide 8 [TBD: X] (needs the final grid), speaker-note length (user edits).
+
+## 2026-11-12 00:17 — overnight check
+- 11 of 20 L9 sites finished (fill 22.51, 29.72, 33.74, 36.39 done). 7 running on Genoa/Ice Lake, all inside the 6 h
+  limit (projected 2.4-4.7 h). nsf 15.42 ends ~01:55. Pending: 18.80 (est. start 04:03), 28.84 (05:20); widened to
+  Features=genoa|icelake (estimates unchanged). All 20 expected ~09:00; final grid + selection loop alive.
