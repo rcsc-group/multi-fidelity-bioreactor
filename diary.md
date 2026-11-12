@@ -2017,3 +2017,8 @@ the rectangular bag look like a wedge; smoothing, near-wall fill).
 - Slide 8 + 3 Backup 2D compare figures: title tokens in level colours (arrows, cost in ink), parity points L9 brown
   in both columns (= Results 1: hollow = unseen top level), colour bar labelled "predicted <QoI> (unit)", round 1-2-5
   ticks without tick marks (a 2 px mark next to "4.85" read as a minus sign).
+- ~14:55 Skew source (user: "mfbml predicts GPRs, something smells"). Results 1 model is NOT vanilla mfbml: it is
+  mfbml_local FullBayesKRRLRGP (T2b, grid mixture of Student-t over length scale and noise) + band_mc (MC over 200
+  L9 curves). Test (scratchpad skew_source_test.py): L10 model alone is near-symmetric (mean off band centre <= 0.15
+  half-width, |mean - median| <= 0.5 % ln); the skew (up to 0.48) comes from the MC propagation of L9 uncertainty.
+  Line = mixture mean of ln(QoI) -> exp = geometric mean (= lognormal median). User: mixture acceptable, leave it.
