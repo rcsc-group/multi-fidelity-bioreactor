@@ -59,13 +59,14 @@ KIM = "black"
 # 2026-11-12 (user, after the PI meeting): the PI read the old hues as QoIs (L10 pink = shear stress, L7
 # vermillion = EDR, L8 blue = kLa, L9 green = mixing time). Levels are ORDERED, so they are now one violet
 # ramp, light -> dark (no QoI uses violet); marker size still grows with level. Old: 6 #E69F00, 7 #D55E00,
-# 8 #0072B2, 9 #009E73, 10 #CC79A7.
+# 8 #0072B2, 9 #009E73, 10 #CC79A7. Same day, user: the violet ramp failed (L7 and L8 looked the same) ->
+# palette A from a rendered mock (scratchpad palette_mock.png): hues that no QoI uses, roughly light -> dark.
 LEVEL_COLOUR = {
-    6:  "#D8CEF0",   # pale lilac
-    7:  "#B09BE0",   # light violet
-    8:  "#8462CC",   # mid violet
-    9:  "#55309E",   # deep violet
-    10: "#1F0B45",   # indigo (Kim stays black: tell apart by line style, dotted = ours)
+    6:  "#E8D27A",   # pale mustard (not in the deck)
+    7:  "#D9A300",   # mustard
+    8:  "#9B59B6",   # amethyst
+    9:  "#7A4A2A",   # brown
+    10: "#262626",   # charcoal (Kim stays black: tell apart by line style, dotted = ours)
 }
 
 # Vector components in single-run figures (Figs 2, A.18). Deliberately

@@ -2001,3 +2001,11 @@ the rectangular bag look like a wedge; smoothing, near-wall fill).
 - Inefficiency (user): each figure tool refits its models (~7 min for the 15 figures). Fix = cache fits, plot
   from the cache. Not done yet.
 - Repo figures (paper) pick up the ramp on their next build; not rebuilt.
+- ~14:15 UPDATE: the violet ramp failed in the deck (user: L7 and L8 look the same). Three palettes drawn on a mock
+  (dot map, cost lines, band); user chose A: L7 mustard #D9A300, L8 amethyst #9B59B6, L9 brown #7A4A2A, L10
+  charcoal #262626 (L6 #E8D27A). No QoI uses these hues. All 15 deck figures rebuilt; slide 3 equation f_H/f_L
+  recoloured; "draft" removed from the three 2D Backup notes (now all L7, 20 L8, 20 L9).
+- Fit cache (user: "10+ minutes for a single colour"): fig_r1_v2.py and fig_r3_compare.py keep fit results in
+  data/*_fit_cache.pkl, keyed by a hash of every input array (new data -> refit; --refit forces). Test: cached run
+  pixel-identical to fresh fit and to the pre-cache figure (3 figures). Results 1 71 s -> 13 s; 2D compare 35 -> 25 s
+  (rest = loading run data, T.data()).
