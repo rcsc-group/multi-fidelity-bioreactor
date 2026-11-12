@@ -1959,3 +1959,6 @@ L7 that did not fill space; plot L9, then L8, then L7 (small on top). Question: 
   11.0, 11.3, 10.4, 10.2 (1.03, 1.06, 0.97, 0.95 E*). L9 only on cover(n9) at ~7k: 11.5-11.9.
 - Old random-subset kLa chain instance had 5 random L8 (pathological, user). Figure: L9 drawn first, L7 on top.
 - Candidate t_mix figures: public/r3_cmp_dtmix_0.25_{all_20_4,all_10_7,all_10_8}.png (4.6k / 6.6k / 7.4k).
+- User chose the 4.6k t_mix cell for the deck (all L7, 20 L8, 4 L9; CRPS 9.5 vs 10.7; ~3.2x less). Notes: "about
+  three times less compute"; Backup line states the dip (5 L9 -> 17.8, 8 L9 at 7.4k -> 10.4). Backup slides use
+  rule (a) cells: tau 4.74k (2.2 vs 2.3, 3.1x), EDR 5.43k (9.3 vs 9.3, 2.7x), kLa 14.8k (no saving).
