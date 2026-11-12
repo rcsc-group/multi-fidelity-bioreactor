@@ -1939,3 +1939,23 @@ Common to both:
   full-set cell is not the best L9-only error). Reported as measured; rule not changed after the fact.
 - Deck: public/r3_cmp_*.png rebuilt with --equal (main: t_mix; Backup: tau, EDR, kLa). Slide 9 notes:
   "[TBD: X] times less" -> "about 40 percent less compute" (9.2k vs 14.9k).
+
+## 2026-11-12 ~08:50 — Results 3 v2 rule: DESIGNED subsets, not random (fixed before any v2 result)
+User: random subsets were "slightly random"; L9 only must use ALL L9; the kLa chain instance had 5 random L8 and
+L7 that did not fill space; plot L9, then L8, then L7 (small on top). Question: at ~7k core-h, similar error?
+- No random draws, no subset chosen by test error. L9 only = all 20 L9 -> target E* (CRPS x 100, test set A, 33 L9).
+- Chain L7 -> L8 -> L9: L9 = nest2d.cover(the 20 L9 sites, n9, seed 0), n9 = 2..20; L8 = all 20 or cover(20, 10);
+  L7 = all screen L7 or the 40 design L7. Also L9 only on cover(n9) for the curve.
+- Answers: (a) cheapest chain cell with CRPS <= E*; (b) at cost <= 7.0k core-h, the lowest-CRPS chain cell;
+  "similar error" = CRPS <= 1.1 E*. tools/r3_designed.py -> data/r3_designed.json.
+- Result (fresh fits, 0 failed; tools/r3_designed.py, r3_designed_table.py). E* = L9 only, all 20 L9, 14.85k:
+  | QoI   | E*   | (a) cheapest chain <= E*         | (b) chain <= 7.0k, best         |
+  | t_mix | 10.7 | 4.60k (all L7, 20 L8, 4 L9) 9.5  | same                            |
+  | tau   | 2.3  | 4.74k (40 L7, 20 L8, 5 L9) 2.2   | 6.73k (40, 10, 8) 1.75 = 0.77 E* |
+  | EDR   | 9.3  | 5.43k (all, 20, 5) 9.3           | same                            |
+  | kLa   | 5.8  | 14.8k (30, 10, 19) 5.7           | 6.34k 9.2 = 1.6 E* (no)         |
+- Caveat: the chain curves against n9 are NOISY with one designed subset per n9 (t_mix all/20: n9 = 4 -> 9.5,
+  n9 = 5 -> 17.8). The t_mix 4.60k cell is a dip. Steadier t_mix cells: all L7, 10 L8, 6-9 L9 = 6.0-8.0k, CRPS
+  11.0, 11.3, 10.4, 10.2 (1.03, 1.06, 0.97, 0.95 E*). L9 only on cover(n9) at ~7k: 11.5-11.9.
+- Old random-subset kLa chain instance had 5 random L8 (pathological, user). Figure: L9 drawn first, L7 on top.
+- Candidate t_mix figures: public/r3_cmp_dtmix_0.25_{all_20_4,all_10_7,all_10_8}.png (4.6k / 6.6k / 7.4k).
