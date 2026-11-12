@@ -2022,3 +2022,8 @@ the rectangular bag look like a wedge; smoothing, near-wall fill).
   L9 curves). Test (scratchpad skew_source_test.py): L10 model alone is near-symmetric (mean off band centre <= 0.15
   half-width, |mean - median| <= 0.5 % ln); the skew (up to 0.48) comes from the MC propagation of L9 uncertainty.
   Line = mixture mean of ln(QoI) -> exp = geometric mean (= lognormal median). User: mixture acceptable, leave it.
+- ~15:10 Slide 8 (user): marker sizes L7/L8/L9 2/6/11 there only (fig_r3_compare --sizes); bottom row = histogram of
+  error 100 ln(pred/true), 5 % bins (--hist) on the 33 unseen L9. L9 only: 12/33 within +-10 %, range -26..+35,
+  median |e| 12.7 %. Chain (4.6k): 21/33 within +-10 %, 5 below -20 %, range -55..+42, median |e| 7.1 %. Chain is
+  more often close but has heavier tails. Scatter moved to a new Backup slide; slide 8 notes: one sentence + one
+  Backup line changed to match.
