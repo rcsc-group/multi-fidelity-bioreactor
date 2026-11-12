@@ -1926,3 +1926,4 @@ Common to both:
   Features=genoa|icelake (estimates unchanged). All 20 expected ~09:00; final grid + selection loop alive.
 - 00:47 check: 13 of 20 L9 done; 18.80 started 00:21; only 28.84 pending (est. 05:20); final loop alive.
 - 03:17 check: 16 of 20 L9 done (nsf 15.42 done). 4 running, all inside 6 h (4.0-4.9 h). Last (28.84, Ice Lake) ends ~06:05; final grid then. Loop alive.
+- 03:47 check: 17 of 20 L9 done (20.38 done). 3 running, last ~06:05. Loop alive.
