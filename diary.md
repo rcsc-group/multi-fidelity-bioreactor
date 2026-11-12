@@ -1970,3 +1970,19 @@ L7 that did not fill space; plot L9, then L8, then L7 (small on top). Question: 
   r3_designed.json); t_mix floor ~10 % explained in its notes as a likely, untested cause (threshold crossing on an
   oscillating chi curve; user chose not to test). Shear-stress version built (public/r3_cost_designed_tau_95_t.png),
   not in the deck. No [TBD]. Spoken words 1696 incl. slide 6 reference notes (~1380 without) vs ~1300.
+
+## 2026-11-12 ~16:00 — deck revisions from the PI meeting (slides 1, 3, 4, 5; deck not in git)
+PI comments (user, after the meeting): overall happy; slide 1 cost too specific; slide 3 images not visibly
+two-phase; slide 4 spacing, tracer is advection-diffusion; slide 5 videos "artistically unfaithful" (gas crop made
+the rectangular bag look like a wedge; smoothing, near-wall fill).
+- Slide 1: user text "1s of simulation -> 10 core-h"; notes say "tens of hours". Measured: L10 ~29 CPU-h per
+  simulated second (ours), ~55 (Kim's code); 3D ~8x (user estimate). Literature: only Kim et al. IJMF 193 (2025)
+  105375 gives a number ("120 cores and 120 CPU core hours" per case), ~70x off our measurement of their code ->
+  confirm with Minki. Zhan 2019, Seidel 2022, Kiviat 2025: no cost. Objective equation: max kLa s.t. tau, t_mix caps.
+- Slide 3: two-phase images from Zhan 2019 Fig 3b and Kim 2025 Fig 6b (tools/crop_s3_v2.py, stack_s3_v2.py).
+- Slide 4: "carried by the flow u" block: VOF advection only; tracer and oxygen advection-diffusion (D_c), Henry's law.
+- Slide 5: new raw videos (tools/fig_def4_raw.py, job 8946477): field as stored per cell (pcolormesh), no smoothing,
+  no fill, rectangle kept, lab frame = rigid rotation by theta(t). Colour limits: tau 0-p90, EDR log p20-p97,
+  oxygen 0-0.03 (liquid 90 % < 0.023), tracer 0-1. Lab videos on slide 5; bag-frame videos on a new Backup slide.
+  Renders checked (all clicks): videos and colour bars fit. Backup cost slide: legend overlapped the title -> image
+  moved down (class r3c-img), checked.
