@@ -1927,3 +1927,15 @@ Common to both:
 - 00:47 check: 13 of 20 L9 done; 18.80 started 00:21; only 28.84 pending (est. 05:20); final loop alive.
 - 03:17 check: 16 of 20 L9 done (nsf 15.42 done). 4 running, all inside 6 h (4.0-4.9 h). Last (28.84, Ice Lake) ends ~06:05; final grid then. Loop alive.
 - 03:47 check: 17 of 20 L9 done (20.38 done). 3 running, last ~06:05. Loop alive.
+
+## 2026-11-12 ~06:20 — Results 3 final: equal error at minimal cost (rule pre-registered 2026-11-11 ~20:40)
+- All 20 L9 finished 06:07 (8 nested + 12 fill). Grid job 8930608: 6400 fits, 0 failed. tools/r3_equal_error.py:
+  | QoI   | target CRPS (L9 only, 20 L9) | L9 only cheapest | chain L7->L8->L9 cheapest      | saving |
+  | t_mix | 10.7 | 14.85k (20 L9) | 9.21k (200 L7, 20 L8, 10 L9)  | 1.6x |
+  | tau   | 2.3  | 14.85k (20 L9) | 8.47k (200 L7, 5 L8, 10 L9)   | 1.8x |
+  | EDR   | 9.3  | 8.91k (12 L9)  | 15.89k (40 L7, 20 L8, 20 L9)  | 0.6x (L8->L9: 6.70k, 1.3x) |
+  | kLa   | 5.8  | 14.85k (20 L9) | 15.68k (156 L7, 5 L8, 20 L9)  | 0.9x (no saving) |
+- EDR: L9 only reaches the target with 12 L9 (median CRPS 7.9 < 9.3 at 20: non-monotone in n9 -> the target from the
+  full-set cell is not the best L9-only error). Reported as measured; rule not changed after the fact.
+- Deck: public/r3_cmp_*.png rebuilt with --equal (main: t_mix; Backup: tau, EDR, kLa). Slide 9 notes:
+  "[TBD: X] times less" -> "about 40 percent less compute" (9.2k vs 14.9k).
