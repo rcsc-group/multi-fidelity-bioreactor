@@ -1893,3 +1893,12 @@ Common to both:
 - Target E* per QoI = L9 only with all finished L9. Each method's answer = its cheapest cell with median CRPS <= E*
   (tools/r3_equal_error.py). Figure instance = the subset closest to the cell median.
 - Test of the code path now (6 L9): job 8892663. Final run after the fill finishes (Thu morning).
+
+## 2026-11-11 ~20:50 — handover for the night
+- Test grid (6 L9, job 8892663): code path OK (2400 fits, 0 failed). Not a result.
+- fig_r3_compare.py --equal draws the equal-error instances from data/r3_equal_error.json; guard: refuses if the
+  grid ran on a different L9 count (fired once: 23.50 finished after the test grid). Code path tested (R3_EQ scratch).
+- Speaker notes: slide 9 (t_mix) and 10 (conclusions) drafted; spoken count 1695 words incl. slide 6 reference notes
+  (316, not a script) -> 1379 without. User tweaks notes; overnight = data only.
+- Automatic: fill resubmit loop; final grid + selection when 20 L9 exist or the queue empties. Then: figures (--equal),
+  fill [TBD: X] in slide 9 notes from the result.
