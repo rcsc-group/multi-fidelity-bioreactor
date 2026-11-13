@@ -122,6 +122,25 @@ core-hours saved vs error added, one point per QoI, L6 bundle value next to the 
 - The L6 value next to the production value also tests the idea behind the bundle: does the cheap level
   predict the effect at the fine level? If not for some mechanism, the ledger says so.
 
+### 4.4a Stale production runs (user, 2026-11-13: "when a binary gets updated, the runs go probably stale")
+
+A production number is a measurement of one binary, not of the code today. Rules:
+
+1. **Provenance per run.** Each run's source commit and flags come from its binary's build sidecar
+   (`<binary>.build.json`, as the campaign rule uses). A binary without a sidecar is matched by SHA-256
+   against the known sidecars; if that fails, the run is "provenance unknown" and is left out of the
+   ledger (the count is reported, not hidden).
+2. **Pairs only within one source.** A warm/cold or replay/coupled pair counts only if both runs have the
+   same source commit and differ only by the mechanism's own flag (campaign `same_source` rule). A pair
+   across sources is listed as confounded, not used.
+3. **Carried to today by the L6 bundle.** For each production source commit C in the ledger, the bundle
+   runs once on C and once on HEAD. If mechanism M's L6 effect (its guard outputs and its error numbers)
+   is the same on C and HEAD (bitwise, or within the stated bar), M's production numbers from C still
+   describe today's code. If not, M's ledger row is marked **stale** with the first differing output, and
+   a new production pair goes to the user for a go. The bundle on an old commit is a few core-hours; a new
+   L9/L10 pair is hundreds.
+4. The ledger prints, per row: source commit, binaries, run folders, and "current" / "stale" / "confounded".
+
 ### 4.4 Retire duplicate compute
 
 `medium` tests whose check moves into the bundle (e.g. test_mpi_checkpoint_parity, test_restart_continue)
