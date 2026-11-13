@@ -29,12 +29,12 @@ from pathlib import Path
 
 import numpy as np
 
-SRC = Path(__file__).parents[2] / "src" / "BioReactor.c"
+from tests.conftest import solver_source
 PARAMS_H = Path(__file__).parents[2] / "src" / "params_read.h"
 
 
 def test_dt_video_is_not_an_exact_divisor_of_the_period():
-    text = SRC.read_text()
+    text = solver_source()
     m = re.search(r"dt_video\s*=\s*T_per_st\s*/\s*\(([^;]+)\);", text)
     assert m, "could not find the dt_video assignment in BioReactor.c"
     expr = m.group(1)

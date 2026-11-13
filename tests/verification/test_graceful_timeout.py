@@ -43,9 +43,8 @@ import pytest
 
 PROJECT_ROOT = pathlib.Path(__file__).parents[2]
 sys.path.insert(0, str(PROJECT_ROOT))
-from tests.conftest import CANONICAL_PARAMS, run_bioreactor  # noqa: E402
+from tests.conftest import CANONICAL_PARAMS, run_bioreactor, solver_source  # noqa: E402
 
-SRC = PROJECT_ROOT / "src" / "BioReactor.c"
 TEMPLATE = PROJECT_ROOT / "config" / "slurm_mpi_template.sh"
 
 _L, _B = CANONICAL_PARAMS["geometry"]["a"], CANONICAL_PARAMS["geometry"]["b"]
@@ -70,7 +69,7 @@ N_RAMP_CYCLES = 3
 # before", which looks identical to the bug it fixes.
 
 def test_solver_has_a_walltime_deadline_event():
-    src = SRC.read_text()
+    src = solver_source()
     assert ENV_DEADLINE in src, "solver never learns its own walltime"
 
 
@@ -81,7 +80,7 @@ def test_deadline_is_agreed_across_ranks():
     the others, enter dump() alone, and hang the job until the very kill the
     feature exists to pre-empt -- strictly worse than not having it.
     """
-    src = SRC.read_text()
+    src = solver_source()
     assert re.search(r"mpi_all_reduce\s*\(\s*[\w.]+\s*,\s*MPI_DOUBLE\s*,"
                      r"\s*MPI_MAX\s*\)", src), \
         "no MPI_MAX reduction guarding the deadline check"
@@ -89,7 +88,7 @@ def test_deadline_is_agreed_across_ranks():
 
 def test_emergency_dump_records_its_phase():
     """The writer must write its phase down, not leave it to be inferred."""
-    src = SRC.read_text()
+    src = solver_source()
     assert PHASE_SIDECAR in src, "no phase sidecar written"
 
 
@@ -99,7 +98,7 @@ def test_restart_prefers_a_recorded_phase_over_guessing():
     The nearest-boundary form stays as the fallback so every checkpoint
     written before this feature still restores correctly.
     """
-    src = SRC.read_text()
+    src = solver_source()
     assert "round (t_ck/T_per_st)" in src, \
         "the legacy inference was removed; old checkpoints would break"
     i_side = src.index(PHASE_SIDECAR)
@@ -120,7 +119,7 @@ def test_reserve_exceeds_the_time_a_dump_takes():
     shorter than the write leaves a truncated dump, which is worse than none
     because it looks resumable.
     """
-    src = SRC.read_text()
+    src = solver_source()
     m = re.search(r"MAXRUNTIME_RESERVE_S\s+(\d+)", src)
     assert m, "no named reserve constant"
     assert int(m.group(1)) >= 300, "reserve too short for a 196 MB write"

@@ -32,6 +32,18 @@ CANONICAL_PARAMS = {
 }
 
 
+def solver_source() -> str:
+    """All solver source as one text, for tests that check the code itself.
+
+    The solver is src/BioReactor.c plus one header per concern (src/README.md),
+    so a check must not look only in BioReactor.c. The vendored JSON parser
+    jsmn.h is left out.
+    """
+    src = PROJECT_ROOT / "src"
+    files = [src / "BioReactor.c"] + sorted(p for p in src.glob("*.h") if p.name != "jsmn.h")
+    return "\n".join(p.read_text() for p in files)
+
+
 def pytest_configure(config):
     config.addinivalue_line("markers", "medium: short CFD run, fidelity 3; ~2 min on OSCAR")
     config.addinivalue_line("markers", "hpc: SLURM-required; fidelity 5-7")
