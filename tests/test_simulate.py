@@ -223,3 +223,42 @@ class TestRunTrial:
                     SHORT_PARAMS, backend="slurm",
                     project_root=PROJECT_ROOT, runs_root=tmp_path,
                 )
+
+
+# ── a restart must carry the forcing it continues (pitfall "restart-ramp") ────
+# Every restart ramps the forcing from *_prev to the current values over 3 periods; with no *_prev the solver
+# takes 0 and ramps from zero rocking (fig9_l9_rpm37.5_ext1, 2026-11-13). Refused before anything is written.
+
+def _restart(**extra):
+    return {**SHORT_PARAMS, "run_id": "restart_test", "t_checkpoint": 10.0, "t_end": 5.0,
+            "restart_continue": 1, "n_mix_cycles": 0, **extra}
+
+
+def _prev(p):
+    return {"omega_b_prev": p["omega_b"], "theta_max_prev": list(p["theta_max"]),
+            "phi_angular_prev": list(p["phi_angular"]), "amplitude_h_prev": list(p["amplitude_h"]),
+            "phi_horizontal_prev": list(p["phi_horizontal"]), "omega_h_prev": p["omega_h"]}
+
+
+def test_restart_without_prev_is_refused(tmp_path):
+    with patch("subprocess.run", side_effect=AssertionError("sbatch must not be called")):
+        with pytest.raises(ValueError, match="restart-ramp"):
+            submit_slurm(_restart(), project_root=PROJECT_ROOT, runs_root=tmp_path,
+                         mpi_scratch_root=tmp_path / "mpi")
+    assert not (tmp_path / "restart_test").exists()
+
+
+def test_restart_with_prev_is_submitted(tmp_path):
+    ok = MagicMock(stdout="Submitted batch job 42\n", returncode=0)
+    with patch("subprocess.run", return_value=ok):
+        p = _restart()
+        assert submit_slurm(p | _prev(p), project_root=PROJECT_ROOT, runs_root=tmp_path,
+                            mpi_scratch_root=tmp_path / "mpi") == "42"
+
+
+def test_replay_restart_needs_no_prev(tmp_path):
+    """A replay run solves only scalars on a recorded flow; the forcing does not drive it."""
+    ok = MagicMock(stdout="Submitted batch job 43\n", returncode=0)
+    with patch("subprocess.run", return_value=ok):
+        assert submit_slurm(_restart(rec_dir="/x"), project_root=PROJECT_ROOT, runs_root=tmp_path,
+                            mpi_scratch_root=tmp_path / "mpi") == "43"

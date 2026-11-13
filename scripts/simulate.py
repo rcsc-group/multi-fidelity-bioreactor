@@ -53,6 +53,26 @@ def _t_mix_nd(params: dict) -> float:
     return T_per_st * n_mix_cycles
 
 
+RESTART_PREV_KEYS = ("omega_b_prev", "theta_max_prev")
+
+
+def _check_restart_forcing(params: dict) -> None:
+    """Refuse a restart that does not say which forcing it continues.
+
+    Every restart ramps the forcing from the *_prev values to the current ones over 3 periods; without *_prev
+    the solver takes 0 and ramps from zero rocking while the liquid still sloshes (fig9_l9_rpm37.5_ext1:
+    velocity +49 % after the seam). Use scripts/submit_continue.build_params or chain.py, which set them.
+    A replay run (rec_dir set) solves scalars on a recorded flow and is not driven by the forcing.
+    Pitfall "restart-ramp" in docs_site/developer/solver-pitfalls.md.
+    """
+    if params.get("t_checkpoint", 0) > 0 and "rec_dir" not in params:
+        missing = [k for k in RESTART_PREV_KEYS if k not in params]
+        if missing:
+            raise ValueError(f"{params.get('run_id')}: restart without {missing}: the solver would ramp the "
+                             f"forcing again from zero (pitfall restart-ramp, docs_site/developer/"
+                             f"solver-pitfalls.md). Build the params with scripts/submit_continue.build_params.")
+
+
 def _check_t_end_vs_t_mix(params: dict) -> None:
     """Warn if t_end is set and is less than t_mix — run will produce no kLa data."""
     t_end = params.get("t_end")
@@ -101,6 +121,7 @@ def run_local(
     runs_root    = Path(runs_root) if runs_root else project_root / "runs"
     binary       = project_root / "build" / "BioReactor"
 
+    _check_restart_forcing(params)
     _check_t_end_vs_t_mix(params)
     if not binary.exists():
         raise FileNotFoundError(f"BioReactor binary not found at {binary}; run 'make build'")
@@ -170,6 +191,7 @@ def submit_slurm(
     project_root = Path(project_root) if project_root else Path(__file__).parents[1]
     runs_root    = Path(runs_root) if runs_root else project_root / "runs"
     template     = Path(template) if template else _DEFAULT_TEMPLATE
+    _check_restart_forcing(params)
     _check_t_end_vs_t_mix(params)
 
     run_dir      = _prepare_run_dir(params, runs_root)
