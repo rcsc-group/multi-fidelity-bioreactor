@@ -5,6 +5,13 @@ Entries before 2026-10-08 are kept verbatim in diary_archive_to_2026-10-07.md (s
 pre-split file at /oscar/scratch/eaguerov/tmp/diary_backup_20261010.md). The archive is NOT re-audited line by line:
 where it conflicts with CURRENT STATE, CURRENT STATE wins, and the known conflicts are listed under CORRECTIONS.
 
+## 2026-11-13 — Feature guardrails: L6 bundle (spec docs/specs/2026-11-13-feature-guardrails-design.md, plan docs/plans/...-plan.md)
+
+- User (high level only; I own the design): guard every compute-saving/repair mechanism and measure its effect; reuse compute at the lowest useful level; production runs go stale when the binary changes (-> spec 4.4a: provenance per run, same-source pairs only, L6 bundle on the old commit vs HEAD decides current/stale).
+- Task 1 tools/bundle/cases.py: 14 cases (cold, cold2, half, cont, kill, kill_resume, replay, loop, lean, l5, xl6, caseB_cold, caseB_warm, mpi4). Caught by a test before any run: the solver restarts only when t_checkpoint > 0 (BioReactor.c:284) and t_end is then a duration; kill_resume takes both from the dump (runner).
+- Task 2 tools/bundle/bundle.py + bundle.sbatch. Smoke (job 9000916): cold, cold2 at L6, 3 periods, 26 s each on one core; bitwise equal except logstats.dat = the noise floor stated before the run. Many postprocess QoIs are NaN after 3 periods (qss windows need settled cycles) -> guards compare raw series (normf, shear_stress, edr_pct, tr_oxy), not those QoIs.
+- Level check (jobs 9000937/38, cold only): L4 1.8 s: dtmix_0.25/0.50 NaN, kLa_10 2716 (L6: 254, ~11x); L5 5.3 s: dtmix_0.50 0.77 (L6: 2.65, 3.5x); L6 26 s: dtmix_0.50 2.65. L4 rejected (mixing undefined), L6 kept; the whole bundle is ~6 min serial.
+
 ## 2026-11-13 — Lean repo, phase 2 (branch lean/phase2; merge after DFD)
 
 - README.md rewritten: what the repo does, quick start, "where do I start" table by task, folder map. New folder READMEs: config/, experiments/, tests/.
