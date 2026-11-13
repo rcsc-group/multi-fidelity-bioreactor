@@ -44,21 +44,23 @@ import re
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).parents[2]
-SRC = PROJECT_ROOT / "src" / "BioReactor.c"
+from tests.conftest import solver_source
 
 # Real `if (...)` masks that select liquid cells. Comments mentioning the
 # mask are deliberately excluded -- only executable conditions count.
-# Currently: the initialisation of the extra tracer configurations and the
-# top-half tracer (both require cs[]==1), the tau/EDR averaging pass, the
-# histogram pass, and the video field pass.
-# [2026-09-16] 4 -> 5: the Fig. 5/6 tracer configurations (left half, circle,
-# line) are initialised in a loop of their own, and it masks on cs[]==1 like
-# its neighbour. Raised deliberately, which is what this guard is for.
-_EXPECTED_MASKED_LOOPS = 5
+# Currently 7:
+#   scalars.h  event tracer:       extra tracer configurations; top-half tracer (both cs[]==1)
+#   diagnostics.h event normcal:   tau/EDR averaging pass; tau_95/98 histogram;
+#                                  edr_max pass; edr_95 histogram
+#   movies.h   event movies_output_tau: the video field
+# [2026-09-16] 4 -> 5: the Fig. 5/6 tracer configurations got a loop of their own.
+# [2026-11-13] 5 -> 7: the edr_max and edr_95 passes (added 2026-11-04, 2ef5b07) were never
+# counted, so this guard had been failing since then; recounted after the src split.
+_EXPECTED_MASKED_LOOPS = 7
 
 
 def _mask_lines() -> list[str]:
-    text = SRC.read_text()
+    text = solver_source()
     out = []
     for ln in text.splitlines():
         st = ln.strip()
@@ -72,7 +74,7 @@ def _mask_lines() -> list[str]:
 def test_every_liquid_mask_also_checks_cs():
     """No tau/EDR mask may select on `f[] > 0.5` without also requiring cs[] > 0."""
     masks = _mask_lines()
-    assert masks, f"no `f[] > 0.5` masks found in {SRC} -- has the diagnostic moved?"
+    assert masks, f"no `f[] > 0.5` masks found in src/ -- has the diagnostic moved?"
     assert len(masks) == _EXPECTED_MASKED_LOOPS, (
         f"expected {_EXPECTED_MASKED_LOOPS} liquid-masked loops, found {len(masks)}:\n"
         + "\n".join(masks)
@@ -91,7 +93,7 @@ def test_every_liquid_mask_also_checks_cs():
 
 def test_area_accumulators_are_weighted_by_cs():
     """Areas must be cs-weighted: a cut cell is only partly fluid."""
-    text = SRC.read_text()
+    text = solver_source()
     # the averaging pass defines dA once and uses it for every accumulation
     assert re.search(r"double\s+dA\s*=\s*cs\[\]\s*\*\s*\(\s*Delta\s*\*\s*Delta\s*\)", text), (
         "expected `double dA = cs[]*(Delta*Delta);` in the tau/EDR averaging pass -- "
