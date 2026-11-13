@@ -42,10 +42,18 @@ def test_cold_point_is_refused():
 
 
 def test_warm_point_gets_its_source_run(tmp_path):
-    _run(tmp_path, "done_l8", 20.0, 4.0)
-    _run(tmp_path, "other_l8", 30.0, 6.0)
+    # sources and target share one binary with a build sidecar (same-source rule, test_campaign_source_rule.py)
+    binary = tmp_path / "bin"
+    binary.write_bytes(b"x")
+    (tmp_path / "bin.build.json").write_text(json.dumps({"commit": "2ef5b07", "flags": ["-D_MPI=1"]}))
+    runs = tmp_path / "runs"
+    for name, rpm, th in (("done_l8", 20.0, 4.0), ("other_l8", 30.0, 6.0)):
+        d = _run(runs, name, rpm, th)
+        p = json.loads((d / "params.json").read_text())
+        p["_binary"] = str(binary)
+        (d / "params.json").write_text(json.dumps(p))
     smap = {(20.0, 4.0): "done_l8", (30.0, 6.0): "other_l8"}
-    got = c.require_warm_sources([[20.0, 4.0], [30.0, 6.0]], smap, __file__, runs_root=tmp_path)
+    got = c.require_warm_sources([[20.0, 4.0], [30.0, 6.0]], smap, binary, runs_root=runs)
     assert got == ["done_l8", "other_l8"]
 
 
