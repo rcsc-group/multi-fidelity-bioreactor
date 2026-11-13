@@ -135,6 +135,31 @@ def test_override_passes_and_says_why(repo):
     assert "typo fix" in res.stderr
 
 
+def _stage_media(r: Path, name: str, size: int) -> None:
+    (r / name).write_bytes(b"\0" * size)
+    git(r, "add", name)
+
+
+def test_new_media_over_1mb_blocks(repo):
+    r = repo()
+    _stage_media(r, "big.mp4", 1024 * 1024 + 1)
+    res = run_hook(r)
+    assert res.returncode == 1
+    assert "big.mp4" in res.stderr
+
+
+def test_small_media_passes(repo):
+    r = repo()
+    _stage_media(r, "small.png", 200 * 1024)
+    assert run_hook(r).returncode == 0
+
+
+def test_media_override_passes(repo):
+    r = repo()
+    _stage_media(r, "big.gif", 2 * 1024 * 1024)
+    assert run_hook(r, MEDIA_OK="docs hero").returncode == 0
+
+
 @pytest.mark.skipif(shutil.which("git") is None, reason="needs git")
 def test_installed_copy_matches_tracked_hook():
     root = HOOK.parents[2]
