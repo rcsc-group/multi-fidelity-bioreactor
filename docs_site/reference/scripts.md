@@ -9,9 +9,9 @@
 | `sample.py` | `uv run python scripts/sample.py config.yaml` | Space-filling batch of independent runs (LHS / random / grid / Sobol) — [how-to](../how-to/batch-sampling.md) |
 | `loop.py` | `uv run python scripts/loop.py config.yaml` | Full multi-fidelity BO loop (DoE → train surrogate → suggest → repeat) — [how-to](../how-to/run-bo-loop.md) |
 | `postprocess.py` | `uv run python scripts/postprocess.py runs/my_run/` | Extract kLa, mixing time, vorticity, and shear-stress KPIs → `results.json` |
-| `collect_results.py` | `uv run python scripts/collect_results.py --sweep config/my_sweep.json` | Aggregate all `results.json` files into a single CSV |
-| `plot_heatmaps.py` | `uv run python scripts/plot_heatmaps.py` | Generate KPI heatmap figures from completed sweep results → `experiments/figures/` |
-| `render_videos.py` | `uv run python scripts/render_videos.py runs/my_run/` | Convert raw frame dumps to MP4 (called automatically by SLURM jobs) |
+| `collect_results.py` | `uv run python scripts/analyse/collect_results.py --sweep config/my_sweep.json` | Aggregate all `results.json` files into a single CSV |
+| `plot_heatmaps.py` | `uv run python scripts/figures/plot_heatmaps.py` | Generate KPI heatmap figures from completed sweep results → `experiments/figures/` |
+| `render_videos.py` | `uv run python scripts/figures/render_videos.py runs/my_run/` | Convert raw frame dumps to MP4 (called automatically by SLURM jobs) |
 | `suggest.py` | `uv run python scripts/suggest.py exp_dir param_space.yaml` | Print the next highest-EI parameter point to stdout |
 | `train_surrogate.py` | `uv run python scripts/train_surrogate.py exp_dir model.pkl` | Train the multi-fidelity surrogate from existing run data |
 | `stage_segment.py` | `uv run python scripts/stage_segment.py <prev_run_id> <next_run_id>` | Safely stage a chain-restart checkpoint — refuses unless the predecessor has a genuine `results.json` |

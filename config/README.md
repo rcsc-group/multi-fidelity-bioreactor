@@ -11,7 +11,7 @@
 | `sweep_fb_*.json` | `scripts/sweep.py` | Angle (`theta`) and fill (`fill`) sweeps at level 7 and 8 behind early results in `experiments/`. |
 | `slurm_template.sh` | `make submit` | SLURM script for one serial run. |
 | `slurm_mpi_template.sh` | most launchers | SLURM script for one MPI run. |
-| `slurm_video_template.sh`, `slurm_health_template.sh` | `scripts/submit_video_run.py`, `scripts/submit_health_runs.py` | SLURM scripts for the `-video` and `-health` binaries. |
+| `slurm_video_template.sh`, `slurm_health_template.sh` | `scripts/run/submit_video_run.py`, `scripts/run/submit_health_runs.py` | SLURM scripts for the `-video` and `-health` binaries. |
 
 One run's parameters are a JSON file with the keys in `sweep_example.json` (without `_sweep`). The
 solver reads it with `src/params_read.h`; the meaning of each key is in

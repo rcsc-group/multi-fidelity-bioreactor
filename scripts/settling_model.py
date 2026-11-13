@@ -298,7 +298,7 @@ def settling_cycles(level: int, from_rpm: float, from_theta: float,
     rows = _load_fit()
     if not rows:
         raise RuntimeError("settling_model_fit.json not found -- run "
-                            "scripts/fit_settling_model.py first")
+                            "scripts/analyse/fit_settling_model.py first")
 
     for r in rows:
         if r["confidence"] == "flagged_anomaly" and \

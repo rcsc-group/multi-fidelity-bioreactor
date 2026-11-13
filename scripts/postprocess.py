@@ -45,7 +45,7 @@ Each is estimated two ways:
   same log-linear fit over ONE full rocking period centred on the crossing.
   This is the cycle-averaged rate. The 5-point fit spans ~0.13 of a period
   and is phase-locked to the in-cycle modulation (+-10-36% at L9/L10,
-  scripts/diag_kla_phase_lock.py). The 5-point value is kept for
+  scripts/analyse/diag_kla_phase_lock.py). The 5-point value is kept for
   protocol-matched comparison with Kim et al.
 
 - **Instantaneous** (``kLa_inst_10``, ``kLa_inst_25``, ``kLa_inst_50``):
@@ -407,7 +407,7 @@ def _kla_period_at_threshold(t: np.ndarray, c_star: np.ndarray,
     every output sample with |t - t_cross| <= n_periods*T/2, where t_cross is the
     first sample with C* >= threshold. The 5-sample window spans only ~0.13 of a
     period (t_out = 0.02, T = 0.607), and oxygen transfer is modulated at 2 f_b
-    within each cycle. Measured on the L9/L10 runs (scripts/diag_kla_phase_lock.py,
+    within each cycle. Measured on the L9/L10 runs (scripts/analyse/diag_kla_phase_lock.py,
     2026-10-01): the sliding 5-sample kLa oscillates by 8-40%, the 5-sample /
     one-period ratio spans 0.83-1.36, and two round-off repeats differ by 30%
     (5-sample) vs 6.8% (one period).
@@ -473,7 +473,7 @@ def _compute_mixing_bulk(run_dir: Path, params: dict) -> dict | None:
 
     The old c2_liq_sum = sum c2*f counts c*f^2 (c2 is the TOTAL amount per cell in henry_oxy2), and the old
     f > 0.5 seed put liquid concentration 1/f > 1 into interface cells; together they made dtmix ~2x slow at
-    chi = 0.2 (diary 2026-10-29, scripts/mix_bias_check.py). The solver now writes b0 b1 b2 = sum over cells
+    chi = 0.2 (diary 2026-10-29, scripts/analyse/mix_bias_check.py). The solver now writes b0 b1 b2 = sum over cells
     with f >= 0.5 of f, f*cl, f*cl^2 (cl = liquid concentration) every t_out, and the same sums at the release
     step in mix_release.dat (chain root), so sigma^2_max is taken at the release, not one t_out later.
     """

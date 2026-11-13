@@ -58,7 +58,7 @@ plt.rcParams.update({
     "xtick.direction": "in", "ytick.direction": "in",
 })
 
-# level -> run_id, written by scripts/submit_figA16_c.py
+# level -> run_id, written by scripts/run/submit_figA16_c.py
 SERIES = {6: "figA16c_l6", 7: "figA16c_l7", 8: "figA16c_l8",
           9: "figA16c_l9", 10: "figA16c_l10"}
 REF_LEVEL = 10
@@ -106,7 +106,7 @@ def main() -> None:
     if REF_LEVEL not in fields:
         raise SystemExit(
             f"no reference field: runs/{SERIES[REF_LEVEL]}/uv_field.bin is "
-            f"missing. Submit the set with scripts/submit_figA16_c.py first; "
+            f"missing. Submit the set with scripts/run/submit_figA16_c.py first; "
             f"levels present: {sorted(fields)}")
 
     ref = fields[REF_LEVEL]

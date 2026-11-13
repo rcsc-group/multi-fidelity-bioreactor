@@ -1,6 +1,6 @@
 """L8 runs for tests T5 (dtmix roughness in rpm) and T6 (rpm x angle design), pre-registered in diary 2026-10-08.
 
-Same protocol and binary as the kmix_l8 ladder (scripts/submit_kla_mix_ladder.py): cold start, 80-cycle
+Same protocol and binary as the kmix_l8 ladder (scripts/run/submit_kla_mix_ladder.py): cold start, 80-cycle
 spin-up, tracer + oxygen released at cycle 80, then 150 cycles. Binary f1c11e0 (lean), copied to persistent
 storage. Only rpm and theta change.
   T5: theta 7, rpm 20.625..31.875 step 0.625 (not already on the 2.5 grid) + rpm 22.4/22.6/29.9/30.1.

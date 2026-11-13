@@ -23,7 +23,7 @@ change restart code, face fields, or events.
 | `diagnostics.h` | Time series: `logstats.dat`, `normf.dat`, `vol_frac_interf.dat`, `tr_oxy.dat`, `shear_stress.dat`, `edr_pct.dat`. |
 | `restart.h` | Restart checks: `assert_fs_sane()`, `restart_diagnostic_*.txt`. |
 | `replay.h`, `replay_events.h` | Flux record/replay (`-DRECORD_FLUX`, `-DREPLAY_FLUX`); file format in `replay.h`. |
-| `movies.h` | Video frames (`-DVIDEOS=1`), rendered by `scripts/render_videos.py`. |
+| `movies.h` | Video frames (`-DVIDEOS=1`), rendered by `scripts/figures/render_videos.py`. |
 | `henry_oxy2.h` | Two-phase scalars with a Henry's-law jump: advection and diffusion (from Kim et al., with MPI/restart fixes). |
 | `utils2.h` | `statsf2()`: statistics over the liquid (Kim et al., unchanged). |
 | `params_read.h`, `jsmn.h` | `params.json` reader (jsmn, MIT licence). |
@@ -61,8 +61,8 @@ Set with `-DNAME=value` (the `Makefile` targets do this). Defaults in **bold**.
 | `N_RAMP_CYCLES` | **3** | length of the forcing ramp, in periods | slow-ramp tests |
 | `STREAMING_VORTICITY` | **1** | steady-streaming vorticity output | — |
 | `SEED_KIM` | **1** | tracer seeded in full liquid cells only (0: also f > 0.5) | `scripts/mixfix_check.py` |
-| `LEGACY_SU` | **0** | old restart velocity rescale (A/B only) | `scripts/ab_test_su_rescale.py` |
-| `REC_KIM_FLUX`, `REC_KIM_MASK` | **0** | record a rebuilt flux, to measure that approach's error | `scripts/replay_kim.py` |
+| `LEGACY_SU` | **0** | old restart velocity rescale (A/B only) | `scripts/analyse/ab_test_su_rescale.py` |
+| `REC_KIM_FLUX`, `REC_KIM_MASK` | **0** | record a rebuilt flux, to measure that approach's error | `scripts/analyse/replay_kim.py` |
 | `PREREG_DIAG` | **0** | per-step sums, same code as on the Kim et al. side | `scripts/prereg_offline.py`, `scripts/kim_prereg/` |
 | `REC_CHECKSUM` | **0** | per-step weighted sums in record and replay, to find where they part | `scripts/replay_gate_f3/` (flags on the build command line) |
 

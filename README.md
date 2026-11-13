@@ -50,7 +50,7 @@ On a shared cluster, run simulations through SLURM (`make submit PARAMS=...`), n
 | Folder | Contents |
 |---|---|
 | `src/` | The Basilisk solver: `BioReactor.c` plus one header per concern. Map and event order: `src/README.md`. |
-| `scripts/` | Python: run and chain simulations, postprocess, campaigns (`campaign2d/`), surrogate and optimisation (`bo2d/`, `mfbml_local/`), figures. |
+| `scripts/` | Python. Top level: shared modules (run, chain, postprocess, surrogate). Folders: `run/`, `analyse/`, `figures/`, `hypotheses/`, and the packages `campaign2d/`, `bo2d/`, `mfbml_local/`. Map: `scripts/README.md`. |
 | `config/` | Parameter spaces, sweep and chain configurations, SLURM templates. |
 | `tests/` | Unit tests (default), `medium`/`hpc` tests (CI or cluster only), `verification/` physics checks. |
 | `tools/` | Repository tools: golden-run gate for solver changes (`tools/golden/`), repository audit. |

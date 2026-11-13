@@ -33,6 +33,11 @@ item starts, give it a diary entry; when it lands, delete it here.
   (test A coverage 0-57%). Fix candidates: prior on the residual amplitude,
   or n_HF >= 5.
 
+## Repository (lean clean-up, branch lean/phase2)
+
+- **Fixed /oscar paths in scripts.** 84 scripts contain `Path("/oscar/...")`. Paths to run data are expected on this cluster, but some point at a checkout (e.g. `scripts/figures/plot_fig9.py`: `ROOT = Path(".../multi-fidelity-bioreactor")`), so they read and write the main checkout even when run from another one. Replace checkout paths with `Path(__file__).resolve().parents[k]`; keep run-data paths in one config place.
+- **Merge lean/phase2 only when no chain runs** from the campaign-2d checkout (scripts moved; `make hooks` after the merge installs the media-size hook).
+
 ## Figures / runs
 
 - **tau_95 histogram quantisation.** tau_95 = upper edge of 200 linear bins up to the per-step tau_max; tau_max/tau_95 grows 3.6 (L8) -> 12-13 (L10), so one bin is 2-7% of tau_95, level-dependent (archive audit 2026-10-10). Fix before final L10 runs: exact per-step percentile (sort) or >= 2000 bins; re-derive tau_95 from snapshots where available.

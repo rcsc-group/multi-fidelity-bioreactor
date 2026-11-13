@@ -19,7 +19,24 @@ Most scripts that run the solver submit SLURM jobs. Do not run them on a login n
 | 5. Surrogate and optimiser | `train_surrogate.py`, `suggest.py`, `loop.py` | Fit the multi-fidelity surrogate; propose the next run (expected improvement); the full optimisation loop (`config/bo_config.yaml`). |
 | Figures | `figstyle.py` | The shared style (colour = grid level or Kim et al., line style = Kim solid or ours dotted, marker = quantity). New figure scripts must use it. |
 
-## Packages (sub-folders)
+## Layout
+
+The top level of `scripts/` holds only **shared modules**: files that other code imports (`from scripts.X import
+...`). Every runnable script that nothing imports is in a sub-folder, by what it does:
+
+| Folder | Files | What is in it |
+|---|---|---|
+| `run/` | 33 | Scripts that submit or watch SLURM jobs (`submit_*`, `*_watchdog`). |
+| `analyse/` | 130 | Analyses behind diary findings (`analyze_*`, `diag_*`, `check_*`, `probe_*`, `compare_*`, ...). They read run data and print or write a small result. |
+| `figures/` | 74 | Figures and videos (`plot_*`, `fig_*`, `render_*`). `render_videos.py` is called by the video SLURM template. |
+| `hypotheses/` | 34 | `test_*.py`: **numerical experiments, not pytest tests**, one per hypothesis in `diary.md` (for example `test_t4_retro_bo.py` writes `experiments/multifidelity/test_t4_retro_bo.json`). Many submit jobs. |
+
+Eighteen `test_*.py` stay at the top level because other code imports them (`tests/test_test_*.py` test them).
+
+The diary cites scripts by their path before 2026-11-13 (`scripts/NAME.py`). The new path of each one is in
+`docs/history/moved-scripts.md`; `git log --follow` gives a moved file's full history.
+
+## Packages
 
 | Folder | Contents |
 |---|---|
@@ -30,19 +47,7 @@ Most scripts that run the solver submit SLURM jobs. Do not run them on a login n
 | `replay_gate_f3/` | Drivers and analysis for the flux record/replay checks at fidelity 3. |
 | `hooks/` | Git pre-commit hook (`make hooks` installs it). |
 
-## Naming of the other top-level scripts
-
-The name prefix tells what a script is. Each script's first docstring line says what it makes.
-
-| Prefix | Count | Kind |
-|---|---|---|
-| `test_*` | 52 | **Numerical experiments, not pytest tests.** One per hypothesis in `diary.md` (for example `test_t4_retro_bo.py` writes `experiments/multifidelity/test_t4_retro_bo.json`). Many submit jobs. |
-| `plot_*`, `fig_*`, `render_*` | 83 | Figures and videos from finished runs. |
-| `analyze_*`, `diag_*`, `check_*`, `probe_*`, `compare_*` | ~85 | Analyses behind diary findings. They read run data and print or write a small result. |
-| `submit_*` | 33 | Launchers for one campaign or test (the finished ones were archived). |
-| `replay_*` | 9 | Flux record/replay: the gate (`replay_gate.py`) and low-fidelity replay (`replay_lf.py`). |
-
-Shared modules that other scripts import most: `postprocess`, `figstyle`, `simulate`, `chain`,
+Each script's first docstring line says what it makes. Shared modules that other code imports most: `postprocess`, `figstyle`, `simulate`, `chain`,
 `settling_study_grid`, `replay_gate`, `hydro_dataset_v2`, `loop`, `dump_fields`, `cost_model`,
 `autoextend`, `chi_scale`, `fields`, `eca_hoekstra`, `periods`, `lagrangian_mix`.
 

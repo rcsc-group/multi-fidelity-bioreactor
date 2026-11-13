@@ -43,7 +43,7 @@ def collect(patterns, q):
 
 
 def main(l8_swap=None, out_path=None):
-    """l8_swap: optional {q: {run name: value}} that replaces L8 points (scripts/replay_chain_loo.py)."""
+    """l8_swap: optional {q: {run name: value}} that replaces L8 points (scripts/analyse/replay_chain_loo.py)."""
     warnings.filterwarnings("ignore")
     old_only = "--old-only" in sys.argv
     out = {}

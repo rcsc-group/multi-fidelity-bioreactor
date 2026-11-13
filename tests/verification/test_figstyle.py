@@ -18,6 +18,14 @@ from scripts import figstyle as fs
 ROOT = Path(__file__).resolve().parents[2]
 SCRIPTS = ROOT / "scripts"
 
+
+def _script(name):
+    """A figure script: scripts/figures/ since the 2026-11 regroup; scripts/ for shared modules."""
+    for d in (SCRIPTS / "figures", SCRIPTS):
+        if (d / name).exists():
+            return d / name
+    return SCRIPTS / "figures" / name
+
 # Figures that draw more than one mesh level, or Kim alongside us, and so
 # must speak the grammar. Schematics (Fig 1) and field maps are exempt.
 GRAMMAR_SCRIPTS = [
@@ -135,7 +143,7 @@ def test_scripts_do_not_hardcode_owned_hues(name):
     says L9 is green, the script still says pink, and both are 'correct'
     in isolation.
     """
-    path = SCRIPTS / name
+    path = _script(name)
     if not path.exists():
         pytest.skip(f"{name} not present")
     body = _code_only(path.read_text())
@@ -145,7 +153,7 @@ def test_scripts_do_not_hardcode_owned_hues(name):
 
 @pytest.mark.parametrize("name", GRAMMAR_SCRIPTS)
 def test_scripts_do_not_use_the_old_ad_hoc_names(name):
-    path = SCRIPTS / name
+    path = _script(name)
     if not path.exists():
         pytest.skip(f"{name} not present")
     body = _code_only(path.read_text())

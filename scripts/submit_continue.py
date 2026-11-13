@@ -2,7 +2,7 @@
 
 This is "chaining" in the project's vocabulary, not "checkpointing": the experiment (tracer + oxygen) goes on.
   - params = the source run's params.json (same level, rpm, theta, geometry, binary `_binary`);
-  - t_checkpoint = last logged time of the source (shear_stress.dat, as scripts/submit_x8_extend.py);
+  - t_checkpoint = last logged time of the source (shear_stress.dat, as scripts/run/submit_x8_extend.py);
     the solver re-reads the exact dump time from checkpoint.dump;
   - restart_continue = 1: tracers and oxygen keep their restored values and are NOT re-released;
   - *_prev = current forcing: no ramp from zero (the solver ramps *_prev -> current over N_RAMP_CYCLES);

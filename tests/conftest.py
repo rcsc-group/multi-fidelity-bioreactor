@@ -119,7 +119,7 @@ def run_bioreactor(params: dict, tmp_path: pathlib.Path, timeout: int = 300,
     # Single-threaded unless the caller asks otherwise. The binary is built with
     # -fopenmp, and OpenMP reduction order is not fixed. On a 4-core CI runner two
     # identical L4 runs gave kLa_50 = 0.93 and 0.45, while OMP_NUM_THREADS=1 runs
-    # are bit-identical (scripts/diag_omp_determinism.py, 2026-09-30). Every test
+    # are bit-identical (scripts/analyse/diag_omp_determinism.py, 2026-09-30). Every test
     # that compares two runs was therefore comparing round-off noise in CI and
     # the physics locally, where the node has 1 core.
     run_env = {**os.environ, "OMP_NUM_THREADS": "1", **(env or {})}

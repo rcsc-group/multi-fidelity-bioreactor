@@ -4,7 +4,7 @@
 # render_videos.py (called below) is what actually renders them, producing
 # volume_fraction.mp4 (body frame) and volume_fraction_lab.mp4 (lab frame)
 # in the run directory alongside the standard output files.
-# Submit via scripts/submit_video_run.py.
+# Submit via scripts/run/submit_video_run.py.
 #
 #SBATCH --job-name=bioreactor-video
 #SBATCH --output=logs/slurm_%j.out
@@ -50,6 +50,6 @@ else
 fi
 
 "$PROJECT_ROOT/.venv/bin/python" "$PROJECT_ROOT/scripts/postprocess.py" "$RUN_DIR"
-"$PROJECT_ROOT/.venv/bin/python" "$PROJECT_ROOT/scripts/render_videos.py" "$RUN_DIR"
+"$PROJECT_ROOT/.venv/bin/python" "$PROJECT_ROOT/scripts/figures/render_videos.py" "$RUN_DIR"
 
 echo "Done. Videos and results written to $RUN_DIR"

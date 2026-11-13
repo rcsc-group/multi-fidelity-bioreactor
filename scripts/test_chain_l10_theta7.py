@@ -28,7 +28,7 @@ L10 = ["t10_l10_rpm17.5_th7", "t10_l10_rpm20_th7", "t10_l10_rpm22.5_th7", "t10_l
 
 
 def main(q=Q, l8_swap=None, out_path=None, quiet=False):
-    """l8_swap: optional {run name: value} that replaces L8 points (scripts/replay_chain_loo.py: replay in place of DNS)."""
+    """l8_swap: optional {run name: value} that replaces L8 points (scripts/analyse/replay_chain_loo.py: replay in place of DNS)."""
     warnings.filterwarnings("ignore")
     l8 = collect(["t6_l8_*", "kmix_l8_*", "t5_l8_*", "e8_l8_*", "w_l8_*", "dose_l8_*"], q)
     if l8_swap:
