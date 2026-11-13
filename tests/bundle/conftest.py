@@ -56,7 +56,7 @@ def bundle() -> dict:
     if not p.is_file():
         pytest.fail(f"MFB_BUNDLE={p}: no such file", pytrace=False)
     b = json.loads(p.read_text())
-    now = src_hash(ROOT / "src")
+    now = src_hash(Path(os.environ.get("MFB_BUNDLE_SRC", ROOT / "src")))   # MFB_BUNDLE_SRC: power runs (tools/bundle/mutants.py)
     if b.get("src_hash") != now:
         pytest.fail(f"stale bundle: built from src_hash {b.get('src_hash')}, src/ is now {now}. "
                     f"Run the bundle again on this source (tools/bundle/bundle.sbatch).", pytrace=False)
