@@ -231,10 +231,22 @@ def plan_extension(runs_root: Path, base_run_id: str,
             "blocked": False}
 
 
+def extension_params(plan: dict, t_ck: float) -> dict:
+    """Params of an extension: the continuation rule of submit_continue.build_params (restart_continue=1,
+    *_prev = the current forcing so the solver does not ramp it again from zero, n_mix_cycles=0 so the oxygen
+    event runs from the first step), with this plan's run id. The old version set none of the *_prev keys and
+    n_mix_cycles=1 (fig9_l9_rpm37.5_ext1: velocity +49 % in the 3rd period after the seam; diary 2026-11-13)."""
+    from scripts.submit_continue import build_params
+    p = build_params(plan["params"], plan["parent"], "ext", t_ck, plan["cycles"], 0.0, None)
+    p["run_id"] = plan["run_id"]
+    return p
+
+
 def submit_extension(plan: dict, ntasks: int, min_per_cycle: float,
                      walltime_safety: float = 1.6, dry: bool = False) -> str | None:
     from scripts.simulate import submit_slurm
     from scripts.dump_fields import fields as dump_fields
+    from scripts.submit_continue import MPI_SCRATCH, stage_phase
 
     runs_root, parent = ROOT / "runs", plan["parent"]
     ckpt = runs_root / parent / "checkpoint.dump"
@@ -249,16 +261,8 @@ def submit_extension(plan: dict, ntasks: int, min_per_cycle: float,
         print(f"  {plan['run_id']}: checkpoint reports t={t_ck}; cannot arm a restart")
         return None
 
-    T_bio, T_per_nd = _t_scales(plan["params"])
-    params = dict(plan["params"])
-    params.update({
-        "run_id": plan["run_id"],
-        "t_checkpoint": t_ck,
-        "t_end": round(plan["cycles"] * T_per_nd, 4),
-        "n_mix_cycles": 1,          # continuation: the tracer is already in
-        "restart_continue": 1,      # keep tracers, do not re-inject
-        "_parent_run": parent,
-    })
+    params = extension_params(plan, t_ck)
+    stage_phase(ckpt.parent, MPI_SCRATCH / plan["run_id"])
     hours = plan["cycles"] * min_per_cycle / 60.0 * walltime_safety
     walltime = f"{min(int(hours) + 1, 47):02d}:00:00"
     print(f"  {plan['run_id']}: chi={plan['chi_now']:.4f} -> "

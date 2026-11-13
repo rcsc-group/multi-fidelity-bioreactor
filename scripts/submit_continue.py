@@ -35,6 +35,14 @@ from scripts.simulate import submit_slurm  # noqa: E402
 MPI_SCRATCH = Path("/oscar/scratch/eaguerov/mpi_runs")
 
 
+def stage_phase(src: Path, stage: Path) -> None:
+    """Copy an early dump's phase sidecar next to the staged checkpoint. The solver reads checkpoint.phase from
+    its working directory; without it, a resume from a mid-period dump is up to half a period off phase."""
+    if (src / "checkpoint.phase").exists():
+        stage.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src / "checkpoint.phase", stage / "checkpoint.phase")
+
+
 def build_params(src_params: dict, src_id: str, tag: str, t_ck: float, cycles: float, n_mix: float,
                  binary: str | None) -> dict:
     p = dict(src_params)
@@ -78,8 +86,7 @@ def main() -> None:
         return
     stage = MPI_SCRATCH / p["run_id"]
     stage.mkdir(parents=True, exist_ok=True)
-    if (src / "checkpoint.phase").exists():
-        shutil.copy2(src / "checkpoint.phase", stage / "checkpoint.phase")
+    stage_phase(src, stage)
     job = submit_slurm(p, project_root=ROOT, runs_root=ROOT / "runs", walltime=a.walltime,
                        template=ROOT / "config" / "slurm_mpi_template.sh", checkpoint=str(ck.resolve()),
                        cpus=1, ntasks=a.ntasks, mem="4G", exclude=a.exclude or None)
