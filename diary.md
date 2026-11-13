@@ -19,6 +19,7 @@ where it conflicts with CURRENT STATE, CURRENT STATE wins, and the known conflic
 - Bug found: movies.h had two bare `return;` in events (movies_output, movies_output_tau), the undefined-return trap. Now `return 0;`. Video runs produced full frame sets, so the old value happened to be 0; only VIDEOS builds were affected. New tests/test_src_events.py fails on the old headers (finds both) and passes now.
 - Golden power, extra: mutation "statistics before scalar release" -> 0 diffs; correct, t_mix (0.607) is not a multiple of t_out (0.02), so the two never fire on the same step.
 - Size: src/*.c,*.h 7,540 -> 3,754 lines (incl. jsmn 476); BioReactor.c 3,759 -> 510; largest header replay.h (~470).
+- Merged into campaign-2d 2026-11-13 (user decision: merge now, NO rebuild). **Do not rebuild campaign binaries from this source while warm chains run**: same outputs, but a new binary has a new SHA-256, and campaign.require_warm_sources() refuses warm sources made by another binary. Rebuild after the campaigns end (then every new chain starts from the new binary).
 
 ## 2026-11-06 — Stray SLURM submissions from pytest; test guard; shared uv cache
 
