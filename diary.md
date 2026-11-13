@@ -5,6 +5,12 @@ Entries before 2026-10-08 are kept verbatim in diary_archive_to_2026-10-07.md (s
 pre-split file at /oscar/scratch/eaguerov/tmp/diary_backup_20261010.md). The archive is NOT re-audited line by line:
 where it conflicts with CURRENT STATE, CURRENT STATE wins, and the known conflicts are listed under CORRECTIONS.
 
+## 2026-11-13 — Lean repo, phase 2 (branch lean/phase2; merge after DFD)
+
+- README.md rewritten: what the repo does, quick start, "where do I start" table by task, folder map. New folder READMEs: config/, experiments/, tests/.
+- config/: 13 files that no code, test or doc named (MPI smoke/diagnostic chains, L8 restart-recovery pair, two early L7 fill sweeps, a sweep watcher) removed; kept in tag archive/pre-lean-2026-11; list in docs/history/archived-files.md. sweep_fb_fill_l7_v2.json kept: plot_checkpoint_validation.py selects runs by that name.
+- Plan change (spec W2 item 4): do NOT move scripts/test_*.py into tests/. The 52 files are numerical experiments (one per diary hypothesis), many submit SLURM jobs; inside tests/ pytest would collect them (the 2026-11-06 incident: ~90 jobs). tests/README.md says so.
+
 ## 2026-11-12/13 — Lean repo, phase 0-1: golden-run gate; solver split (branch lean/src-split)
 
 - Plan: docs/specs/2026-11-12-lean-repo-spec.md. Tag `archive/pre-lean-2026-11` (= 7f9f3f4) pushed: the old tree is one checkout away.

@@ -101,7 +101,9 @@ plus the pointer. Target comment share ~20 %, not lower: comments are wanted.
    (one line per script: what it makes, which input).
 3. One-off scripts of finished campaigns (`submit_*`, `resubmit_*`, `diag_*` for closed bugs): archived (tag +
    delete) unless a diary entry or a figure still needs them; the diary entry gets the tag name.
-4. `scripts/test_*.py` (52): pytest tests -> `tests/`; ad-hoc checks -> archived or turned into tests.
+4. `scripts/test_*.py` (52): ~~pytest tests -> `tests/`~~ **Amended 2026-11-13:** these are numerical
+   experiments (one per diary hypothesis; many submit SLURM jobs), not pytest tests. They stay out of `tests/`
+   (pytest would collect them). They keep their names because the diary cites them.
 
 ### W3. `tests/`
 
