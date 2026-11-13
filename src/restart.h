@@ -1,35 +1,11 @@
-// restart.h -- Restart checks: assert_fs_sane() and write_restart_diagnostic().
+// restart.h -- restart checks: assert_fs_sane() and write_restart_diagnostic().
 // Part of BioReactor.c: included at one fixed place; the place sets the event order.
 
-
-// [PROJECT ADDED, 2026-09-07] Restart-correctness diagnostic (Test C,
-// diary.md 2026-09-07): field-level summary statistics (Basilisk's
-// statsf(), already used elsewhere in this file, MPI-safe), written to
-// restart_diagnostic.txt. Called BOTH right before dump() (this run's own
-// pre-dump state, in event dump_checkpoint below) and immediately after
-// restore() succeeds on any restart (this run's post-restore state, in
-// event init below) -- BEFORE any of the restart-specific fixups (fs
-// recompute, omega_b rescaling, stracer reset) so it reflects exactly
-// what restore() itself reconstructed, unmodified by anything else.
-// Comparing the two files across a dump-then-restore pair (source run's
-// file vs the restarted run's file) checks whether restore() faithfully
-// reconstructs dump()'s content, independent of what the ramp/forcing
-// does afterward -- the question the missing-dAk/dt-term and Delta_theta
-// investigations couldn't answer on their own.
-// [PROJECT ADDED, 2026-09-14] Invariant guard for the cross-level bug of
-// 2026-09-14 (diary.md): fs does not survive dump/restore -- Basilisk's
-// dump_list() skips face fields outright (output.h:1037) -- and what comes
-// back has ~50% of FULLY OPEN faces at hard zero. Since refine_embed_linear
-// gates its interpolation branches on fs truthiness, that silently degrades
-// half the domain to piecewise-constant injection during a cross-level
-// refine(), costing +30-42% on tau and +126-220% on dissipation with no
-// crash, no warning, and a physically plausible-looking result.
-//
-// The invariant: a face whose BOTH neighbouring cells are entirely fluid
-// cannot have zero open area. Violations mean fs is stale/partial and must
-// not be used. Cheap (one pass), so it runs on every restart rather than
-// behind a debug flag -- this class of bug is silent, which is exactly why
-// it needs an always-on check.
+// Stop if the embedded face fractions fs are not usable. A face between two cells that are both fully
+// fluid must be open (fs > 0). After restore() about half of such faces are 0 (face fields are not in the
+// dump), and refine_embed_linear, which tests fs, then silently degrades to piecewise-constant values:
+// +30% on shear stress, +200% on dissipation, no crash. The check costs one pass, so it runs on every
+// restart. Pitfall "fs-after-restore" in docs_site/developer/solver-pitfalls.md.
 static void assert_fs_sane (const char *tag)
 {
 #if EMBED
@@ -45,7 +21,7 @@ static void assert_fs_sane (const char *tag)
                "faces (both neighbours cs>0.99) have fs==0. Face fields do "
                "not survive dump/restore; recompute cs/fs with solid() "
                "BEFORE any refine() that interpolates u/p/g. "
-               "See diary.md 2026-09-14.\n", tag, nzero, nopen);
+               "See docs_site/developer/solver-pitfalls.md.\n", tag, nzero, nopen);
     exit (1);
   }
   if (pid() == 0)
@@ -54,6 +30,11 @@ static void assert_fs_sane (const char *tag)
 #endif
 }
 
+// restart_diagnostic_<tag>.txt: min, max, sum and standard deviation of every field a restart must carry.
+// Written before the dump ("pre_dump", checkpoint.h), right after restore() ("post_restore") and at the end
+// of event init ("post_init"). pre_dump of one run vs post_restore of the next tests restore() alone;
+// post_restore vs post_init shows what event init changed. Cover every field the experiment depends on:
+// the scalars c2 and oxy were once lost across restarts while u, p and f round-tripped exactly.
 #if REPLAY_FLUX
 // Replay has no u, p, g: only the fields it advances.
 static void write_restart_diagnostic (const char *tag)
@@ -87,28 +68,9 @@ static void write_restart_diagnostic (const char *tag)
   stats sv   = statsf (u.y);
   stats sp   = statsf (p);
   stats sfv  = statsf (f);
-  // [PROJECT ADDED, 2026-09-07] Extended past u.x/u.y/p/f (which all
-  // matched exactly in the first pass) to every OTHER field the su-
-  // rescaling code (event init's restart branch, a few hundred lines
-  // below) itself flags as needing special restart handling: pf (half-
-  // step pressure), g.x/g.y (BCG pressure-gradient/acceleration term),
-  // uf.x/uf.y (face-centered velocity). The kick test (diary.md
-  // 2026-09-07) ruled out the continuous PDE itself as the source of the
-  // escape-to-a-different-branch behavior -- a direct, tiny, non-
-  // checkpoint velocity perturbation causes no drift at all -- so
-  // whatever's wrong must be a field the FIRST diagnostic pass didn't
-  // check.
   stats spf  = statsf (pf);
   stats sgx  = statsf (g.x);
   stats sgy  = statsf (g.y);
-  // [PROJECT ADDED, 2026-09-15] The passive tracer and oxygen were NOT
-  // covered here, and that gap is exactly why their loss across a restart
-  // went unnoticed: every field this diagnostic DID track round-tripped to
-  // full double precision, so the restart looked clean. Probe 6410668
-  // measured c2 mass 0.0534 -> 0 and oxy 0.0803 -> 0 across a seam while
-  // u/p/f/g were bit-exact. A guard must cover the fields the experiment
-  // depends on, not only the ones a previous investigation happened to
-  // suspect. Fig 9/10 (mixing) and Fig 11/12 (kLa) all hinge on these.
   stats sc2  = statsf (c2);
   stats soxy = statsf (oxy);
 #if _MPI

@@ -1,8 +1,6 @@
 // replay.h -- Flux record/replay: file format, write (-DRECORD_FLUX) and read (-DREPLAY_FLUX).
 // Part of BioReactor.c: included at one fixed place; the place sets the event order.
 
-//                  FLUX RECORD / REPLAY (see top of file)            //
-// ================================================================== //
 #if RECORD_FLUX || REPLAY_FLUX
 #if REPLAY_FLUX && (VIDEOS || CROSS_LEVEL_WARMSTART)
 #error "REPLAY_FLUX has no velocity field: VIDEOS and CROSS_LEVEL_WARMSTART are not available"
@@ -27,7 +25,7 @@
 // -DREC_KIM_FLUX=1 (with -DRECORD_FLUX; default 0): store ufk = fm*face_value(u) instead of uf. It emulates
 // an offline solver that rebuilds the advecting face velocity from the stored cell-centred velocity (not
 // divergence-free), to measure the error of that approach. Same record format; uf, u and the run are untouched.
-// -DREC_KIM_MASK=1: also set ufk = 0 on faces with fs = 0, as Kim's Field_define does (diary 2026-10-29).
+// -DREC_KIM_MASK=1: also set ufk = 0 on faces with fs = 0, as Kim et al.'s Field_define does.
 #ifndef REC_KIM_MASK
 #define REC_KIM_MASK 0
 #endif
@@ -41,10 +39,10 @@
 #error "REC_KIM_FLUX is 2D only"
 #endif
 #if REC_KIM_FLUX
-face vector ufk[];                          // declared once at file scope (see the note at tau_field)
+face vector ufk[];                          // declared once at file scope
 #endif
 static const char rec_magic[8] = {'F','L','X','R','E','C','0','1'};
-static double t_rec0 = -1., t_rec_end = 1e30;   // record window; set in main()
+static double t_rec0 = -1., t_rec_end = 1e30;   // record window; set in set_run_window()
 static FILE * fp_rec = NULL;
 
 // Leaf cells owned by this rank. foreach_cell() is serial, so the gather/scatter order is the traversal

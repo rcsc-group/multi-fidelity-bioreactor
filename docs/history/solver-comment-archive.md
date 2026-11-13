@@ -1,0 +1,2130 @@
+# Solver comment archive (internal)
+
+Verbatim copy of every comment block of 4+ lines in `src/`, taken at tag `archive/pre-lean-2026-11`
+(after the split into headers, before the comments were shortened). The code now keeps a short
+comment; the full reasoning, dates and measurements are here. Public, neutral versions of the
+technical lessons: `docs_site/developer/solver-pitfalls.md`.
+
+## BioReactor.c:1 -- `// [PROJECT ADDED, 2026-10-16] Passive-scalar record/replay (diary.md 2026-10-16). Oxygen `
+
+```c
+// Primary author: Minki Kim
+// Contributor: Radu Cimpeanu
+// Contributor: Daniel Harris
+// Date: 03/04/2025
+//
+// ============================================================================
+// ANNOTATION LEGEND (this project's additions on top of the file above)
+// ============================================================================
+// This file began as Minki Kim et al.'s driver code, published at
+// https://github.com/rcsc-group/BioReactor/tree/main/DriverCodes (predates
+// the Basilisk version this fork compiles against). Everything below without
+// a `[PROJECT ...]` tag is Kim et al.'s original code/comments, unmodified
+// in substance even where reformatted.
+//
+//   [PROJECT ADDED: ...]    a block that does not exist in Kim's upstream file
+//   [PROJECT CHANGED: ...]  upstream had different logic/values here; why we
+//                           changed it
+//   [PROJECT REMOVED: ...]  upstream had code here that this fork deletes
+//                           outright (noted at the point of removal, or in
+//                           a summary comment where nothing replaces it)
+//
+// Full account of what's changed and why is in diary.md (repo root) and the
+// project's own commit history (`git log -- src/BioReactor.c`).
+// ============================================================================
+```
+
+## BioReactor.c:26 -- `#ifndef RECORD_FLUX`
+
+```c
+// [PROJECT ADDED, 2026-10-16] Passive-scalar record/replay (diary.md 2026-10-16). Oxygen `oxy` and
+// tracer `c2` never enter rho or mu, so the flow does not depend on them. Two compile-time modes of
+// THIS file (both off by default; the default build is the unchanged coupled solver):
+//   -DRECORD_FLUX  coupled run that also writes, once per step from t_rec0 for n_rec_periods, the face
+//                  flux uf exactly as the VOF step of f consumes it, plus a start checkpoint
+//                  (replay_start.dump, written at the end of the step that lands on t_rec0).
+//   -DREPLAY_FLUX  no Navier-Stokes: restore replay_start.dump (params: t_checkpoint = t_rec0,
+//                  restart_continue = 1, n_mix_cycles = 0), then each step read (i,t,dt,uf) and run
+//                  only what the coupled run does to f, phi1, phi2 and the scalar diffusion.
+// What else touches f or the scalars between steps, and whether replay reproduces it:
+//   vof_advection of f and f.tracers (phi1, phi2 of oxy and c2)   same code, same uf, dt, parity of i
+//   conserving.h's momentum tracers q1, q2                         not needed: they never feed back on f
+//   event adapt (centered.h): fractions_cleanup(cs,fs), uf=0 where fs=0   cleanup repeated after restore; the uf
+//                                                                  zeroing is already in the recorded uf
+//   event tracer (t=t_mix), event oxygen (t=t_mix; every step)    same bodies, triggered by t >= t_mix
+//   iforce.h event acceleration: f = clamp(f,0,1) every step      same clamp (event clamp_f); this one mattered
+//   remove_drop                                                    same event (a function of f only)
+//   boundary conditions of f, oxy, c2, embed no-flux of the scalars  same declarations
+//   NOT reproduced: anything the flow does to f through u itself (that is what the record replaces);
+//   looped replay is exact only to the extent that the flow is periodic.
+```
+
+## BioReactor.c:100 -- `#include "tag.h"`
+
+```c
+// [PROJECT ADDED] Reinstates upstream's REMOVE_DROP feature (droplet/bubble
+// removal via tag()), deleted during an earlier cleanup because the
+// validated baseline (theta=7deg/32.5rpm) doesn't need it -- see the
+// [PROJECT REMOVED] note below. Brought back as a runtime params.json
+// toggle (params.remove_drop) rather than the original compile-time
+// #define, so the sweep pipeline can test it on/off from the same binary.
+// remove_droplets() signature verified against the canonical Basilisk
+// install (tag.h) -- unchanged from what upstream called.
+```
+
+## BioReactor.c:115 -- `#include "params_read.h"`
+
+```c
+// [PROJECT ADDED] JSON parameter reader (jsmn-based). Upstream took L_bio,
+// ANGLE, RPM as three positional argv[] floats; this project needed many
+// more tunable parameters (fidelity, geometry shape, multi-harmonic forcing,
+// checkpoint-restart timing, ...) for the sweep/optimization pipeline, so
+// argv parsing was replaced with a params.json file. See main()'s
+// [PROJECT CHANGED] block below for exactly which upstream argv reads this
+// replaces.
+```
+
+## BioReactor.c:124 -- `#define EMBED            1   // Enable embedded boundary for solid geometry`
+
+```c
+// [PROJECT REMOVED] Upstream also defines these feature flags, along with
+// the code blocks they gate, all deleted from this fork (unused for the
+// validated baseline configuration; not required by Kim et al.'s published
+// results at theta=7deg/32.5rpm, which use none of them):
+//   CONTACT (contact-angle BC), OXYGEN_CIRCLE (circular oxygen init),
+//   HORIZONTAL_MIXL/HORIZONTAL_MIXR (horizontal tracer mixing variants),
+//   VERTICAL_MIXDOWN (downward tracer mixing variant), AMR (adaptive mesh
+//   refinement — see MINLEVEL/MAXLEVEL note above; upstream itself ran with
+//   AMR=0 for its own published results, so this is not a discrepancy vs.
+//   Kim's actual runs), CFL_COND (custom CFL override), DUMP (upstream's
+//   own dump mechanism — this fork has its own checkpoint-restart
+//   dump/restore, added separately, see event dump_checkpoint below).
+//   REMOVE_DROP (droplet/bubble removal) was also removed here, but later
+//   reinstated as a runtime params.remove_drop toggle -- see the tag.h
+//   include and remove_drop event below.
+// Flags to control the inclusion of features (set to 1 = enable, 0 = disable)
+```
+
+## BioReactor.c:157 -- `#ifndef VIDEOS`
+
+```c
+// [PROJECT ADDED] VIDEOS/DIAGNOSTICS have no upstream equivalent (upstream
+// has no compile-time video toggle — its view3.h/draw3.h calls are
+// unconditional — and no separate pressure-residual health-check output).
+// `#ifndef` (rather than plain #define) so `make build-video`/`build-mpi-
+// video` can override via `-DVIDEOS=1` without editing this file.
+```
+
+## BioReactor.c:178 -- `#ifndef N_RAMP_CYCLES`
+
+```c
+// [PROJECT CHANGED] Upstream: `const double t_change = 30;` — a fixed 30
+// PHYSICAL SECONDS before regular rocking motion is established (Main.tex
+// line 430: "constant amplitude at the regular mode is attained after 30
+// seconds"), i.e. Kim et al.'s own paper explicitly uses this criterion.
+// Changed to a fixed cycle-count so the ramp scales with omega_b instead of
+// being a fixed physical duration (commit 7ec98f9, "ramp duration = 3
+// rocking cycles instead of hardcoded 30 s" -- rationale not recorded beyond
+// the commit subject). NOTE (diary.md, 2026-07-28): because T_bio scales
+// with 1/omega_b, a fixed-cycle-count ramp is proportionally MUCH shorter in
+// real seconds at high RPM than at low RPM, whereas Kim's fixed-30s ramp is
+// not. Tested whether skipping more analysis-window time reproduces the
+// effect of a longer forcing ramp -- it does not (see diary.md) -- but that
+// only tested the post-hoc window, not re-running with the actual 30s
+// forcing profile itself. Still open.
+// [PROJECT ADDED, 2026-09-07] Overridable via -DN_RAMP_CYCLES=<n> (mirrors
+// the VIDEOS/DIAGNOSTICS pattern) so a slow-ramp test binary can be built
+// without disturbing the default for every other binary -- direct test of
+// the hysteresis/multiple-coexisting-branches hypothesis for the cold-
+// start-beats-warm-start anomaly (diary.md 2026-09-07): if a quasi-static
+// (long) ramp between conditions stays on the reference branch instead of
+// jumping to the other one that a fast (3-cycle) ramp lands on, that's
+// direct evidence for genuine bistability, not a residual bug.
+```
+
+## BioReactor.c:211 -- `double dt_video;  // Interval for video frames; set from T_per_st/params.frames_per_period`
+
+```c
+// Output time intervals (derived from experimental timing)
+// [PROJECT ADDED] `dt_video`/`t_out` have no upstream equivalent — Kim et
+// al.'s driver has no shear-stress KPI pipeline at all (see the tau_95/98/
+// 100/mean block in event normcal below, entirely new) and no video-frame
+// dumping at a tunable interval.
+// [PROJECT ADDED, 2026-07-30] frames_per_period wired from params.json so a
+// one-off higher-cadence video render doesn't require editing/recompiling
+// this file; default (5) preserves prior behavior exactly for existing
+// production configs that don't set it.
+```
+
+## BioReactor.c:221 -- `const double t_out   = 0.02;      // Output interval for statistics [non-dim time]`
+
+```c
+// [PROJECT CHANGED, commit 1c3440c, 2026-07-14] was t_out=0.1 (~6.1 samples/
+// rocking-period, T_per_nd~0.608 is RPM-independent by construction), raised
+// to 0.02 (~30 samples/cycle) to at least match Kim et al. (2024)'s stated
+// ~13 samples/cycle for their own extended-window turbulent-case sampling.
+// CORRECTION (diary.md, 2026-07-28): the commit message claims this change
+// alone moved tau_100_max from 0.37x to 1.03x Kim's value at 22.5 rpm/
+// fidelity 9, citing experiments/hypothesis_ledger.json — that file was
+// never actually updated with the entry, and the run pair that appears to
+// be the actual A/B test
+// (/oscar/scratch/eaguerov/mpi_runs/8994c04a.STALE_pre_tout_fix vs.
+// _tout_test_22p5) shows NO meaningful difference when recomputed directly
+// (0.371x vs. 0.372x Kim). That specific justification did not survive
+// re-verification. t_out=0.02 is kept anyway (finer sampling is not
+// expected to hurt, and it did fix a real aliasing problem in velocity
+// time-series reconstruction — see diary.md), but do not cite the commit's
+// stated tau_100_max improvement as evidence of anything.
+```
+
+## BioReactor.c:268 -- `double Th_max, T_per, R_tr, x_tr, y_tr;`
+
+```c
+// ================================================================== //
+//                 SCALARS AND FIELD POINTERS                         //
+// ================================================================== //
+// Parameters related to oscillation and tracer release
+```
+
+## BioReactor.c:276 -- `#ifndef EXTRA_TRACERS`
+
+```c
+// Conditional stracers list: only include scalars that are active.
+// Required for MPI correctness — unused scalars must not appear in stracers
+// when their compile-time flags are off, or boundary reductions will
+// reference uninitialised memory across MPI ranks.
+// [PROJECT ADDED, 2026-09-15] c, c1 and c3 are the horizontal-left,
+// horizontal-right and vertical-down tracer variants. Only ONE variant is
+// ever initialised (VERTICAL_MIXUP -> c2), and postprocess reads only c2
+// (dtmix) and oxy (kLa) -- so with the default flags c, c1 and c3 stay
+// identically zero for the whole run while STILL costing, every timestep,
+// two VOF-advected fields each (henry_oxy2.h event vof clones phi1/phi2 and
+// appends both to f.tracers) plus a multigrid diffusion solve each
+// (event tracer_diffusion). That is 3 of 5 tracers doing no work at full
+// price. EXTRA_TRACERS=0 drops them. Default 1 preserves existing behaviour
+// exactly; set 0 for mixing/kLa production runs.
+```
+
+## BioReactor.c:312 -- `#ifndef STREAMING_VORTICITY`
+
+```c
+// ── Steady-streaming vorticity, Kim's <|xi_bar_b'|> ───────────────────────
+// [PROJECT ADDED, 2026-09-15] Kim's Fig 9/10/11/12 right-hand axis is the
+// spatial mean of |vorticity OF THE TIME-AVERAGED FLOW| in the water. The
+// overbar is INSIDE: average the velocity field over a rocking period FIRST,
+// then take its curl. What this project reported as `vor_mean` was instead
+// the time-average of the spatial mean of |instantaneous vorticity| -- a
+// different quantity, dominated by the rocking oscillation rather than by the
+// slow secondary circulation, and additionally normalised by the whole
+// embedded fluid volume rather than the liquid. For an oscillatory flow the
+// two can differ without limit (the mean flow can be ~0 while |omega| is
+// large), so the old number was not comparable to Kim at all. See diary.md
+// 2026-09-15 (12).
+```
+
+## BioReactor.c:341 -- `double _theta_env_deg = 0.0;`
+
+```c
+// [PROJECT ADDED, 2026-09-07] Diagnostic-only mirror of the k=1 harmonic's
+// ramped amplitude, updated every step inside event acceleration() so
+// movies_output() (a separate event) can stamp the CURRENT (post-ramp-
+// interpolation) envelope angle onto video frames -- not the same as Th,
+// which is the instantaneous oscillating tilt, not the envelope. Used to
+// visually verify checkpoint-restart chaining (diary.md 2026-09-07).
+```
+
+## BioReactor.c:352 -- `static double t_ramp_start      = 0.0;   // simulation time when the current ramp began`
+
+```c
+// [PROJECT ADDED] Checkpoint-restart bookkeeping. Upstream has no restart
+// concept at all — every run is a fresh cold start. This project's sweeps
+// are walltime-limited, so a run may need to continue across multiple SLURM
+// jobs (or deliberately warm-start a new condition from a converged one);
+// these three globals carry the state that decision needs. See main()'s
+// [PROJECT ADDED] checkpoint-restart block below.
+```
+
+## BioReactor.c:365 -- `#define MAXRUNTIME_RESERVE_S 300   // time left for the dump: a 196 MB L10`
+
+```c
+// [PROJECT ADDED, 2026-09-21] Graceful stop before the queueing system kills
+// us. `event dump_checkpoint` fires exactly once, at t_end, so a run that
+// runs out of clock before reaching it loses everything it has computed --
+// measured 2026-09-21, when fig9_l9_rpm20 was 49% through 24 h of L9 with no
+// checkpoint on disk and SLURM refused to raise TimeLimit on a RUNNING job.
+//
+// Modelled on Basilisk's own src/maxruntime.h: a deadline, not a signal.
+// A deadline needs no async-signal-safe handler and does not depend on the
+// queueing system delivering a signal to every MPI rank at a comparable
+// timestep -- and the MPI_MAX reduction below makes all ranks agree on the
+// same step for free. One rank entering the collective dump() alone would
+// hang the job until the very kill this exists to pre-empt.
+//
+// The limit is declared through the environment rather than argv because
+// argv[2] is already the restart file and the submit path is shared by every
+// sweep script; the template exports it from SLURM's own accounting.
+```
+
+## BioReactor.c:389 -- `int MINLEVEL, MAXLEVEL;    // Mesh refinement levels`
+
+```c
+// Upstream declares these for its `#if AMR` adaptive-refinement path (see
+// upstream BioReactor.c:141,160-162,445-448). Upstream itself runs with
+// `#define AMR 0` (uniform grid) for its published results, same as this
+// fork — AMR was never actually exercised in either codebase's production
+// runs. [PROJECT: the `#if AMR` refine() block itself was not carried over
+// into this fork at all; these two variables are vestigial, kept only so
+// nothing else referencing them fails to compile.]
+```
+
+## BioReactor.c:403 -- `#define PERIOD_TOL 1e-5`
+
+```c
+// [PROJECT FIX, 2026-09-30] The run stops at the SMALLEST period boundary at
+// or after the requested end: n = max(1, ceil(x - PERIOD_TOL)), x = t/T. The
+// old rule, (int)x + 1, gave k OR k+1 periods for a request of exactly k,
+// depending on the last bit of x. Measured: 10 requested -> 11, 20 -> 20 on
+// the same binary, which split test_restart_continue's two runs by 2 periods.
+// scripts/periods.py implements the same expression, and chain.py/sweep.py use
+// it to predict the dump time -- keep the two in step.
+```
+
+## BioReactor.c:421 -- `if (argc < 2) { fprintf(stderr, "Usage: BioReactor params.json\n"); return 1; }`
+
+```c
+  // [PROJECT CHANGED] Upstream: `double L_bio=atof(argv[1]); double ANGLE=
+  // atof(argv[2]); double RPM=atof(argv[3]);` — three positional command-line
+  // floats. Replaced with a single params.json (see params_read.h) because
+  // this project's sweeps need many more knobs than upstream's three
+  // (fidelity, geometry shape/fill, multi-harmonic forcing, checkpoint-restart
+  // timing, MPI/video toggles, ...) and passing dozens of positional argv
+  // floats does not scale.
+```
+
+## BioReactor.c:431 -- `L_bio = params.geometry_a;  // bag half-length (m); sets all non-dim scales`
+
+```c
+  // Derive legacy scalars from params for the rest of main() unchanged.
+  // omega_b (rad/s) and theta_max[0] (deg) replace the old ANGLE/RPM CLI args.
+  // Multi-harmonic forcing and superellipse geometry will consume params directly
+  // once the acceleration event and init event are extended (next steps).
+```
+
+## BioReactor.c:438 -- `NN    = 1 << params.fidelity;             // fidelity → grid cells per side (4→16, 7→128, `
+
+```c
+  // [PROJECT CHANGED] Upstream: `const double NN = 64;` — a fixed resolution
+  // (equivalent to fidelity 6 in this project's convention). Made runtime-
+  // configurable because comparing accuracy/cost across resolutions is this
+  // project's actual purpose (multi-fidelity optimization).
+```
+
+## BioReactor.c:445 -- `L0 = 1. [0];  // [0] declares space dimensionless: simulation is fully non-dimensionalized`
+
+```c
+  // [PROJECT CHANGED] Upstream: `L0 = LL;` with `LL` a plain (undimensioned)
+  // constant =1.0. The `[0]` annotation is required by the current Basilisk
+  // install's dimensional-analysis checking (see CLAUDE.md) — Kim et al.'s
+  // upstream code predates that requirement, not a physics difference.
+```
+
+## BioReactor.c:450 -- `DT = 1. [0];`
+
+```c
+  // [PROJECT ADDED] Upstream never sets DT (uses Basilisk's default, unbounded).
+  // DT: maximum allowed timestep (dimensionless).  HUGE is fine for serial/OpenMP
+  // but MPI's global dtmax reduction can behave unexpectedly with infinity on
+  // some implementations.  1.0 [0] (one non-dim time unit) is always larger than
+  // the CFL-limited dt (~dx/U_max << 1) so it never artificially constrains the step.
+```
+
+## BioReactor.c:460 -- `Ly = params.geometry_b / L_bio;  // dimensionless half-height; overwrites hardcoded 0.286`
+
+```c
+  // [PROJECT CHANGED] Upstream: `double Ly = 0.286;` — a fixed constant
+  // (aspect ratio for the one geometry Kim et al. studied). Made runtime-
+  // configurable (geometry.b/geometry.a) so the sweep/optimization pipeline
+  // can vary bag shape as a parameter. At Kim's own values (a=0.25, b=0.071)
+  // this recovers Ly=0.284, matching upstream's 0.286 to within rounding.
+  // Bag geometry from params (must precede anything that uses Ly or H_bio)
+```
+
+## BioReactor.c:477 -- `H_bio  = 2.*L_bio*Ly;`
+
+```c
+  // [PROJECT FIX, 2026-08-03, diary.md] `Ly` above is a HALF-height semi-axis
+  // (matches its use in solid()/y_fill and docs_site/reference/params.md's
+  // documented meaning of geometry.b), but H_bio must be the FULL bag height
+  // to match upstream's convention (where the old fixed `Ly=0.286` constant
+  // WAS the full height by construction). Missing the factor of 2 here made
+  // every run's simulated bag exactly 2x taller than intended -- confirmed
+  // by comparing ux_liq_vol (0.568, should be 0.286) against Kim's own
+  // upstream driver recompiled and run at the same conditions, and by the
+  // resulting u'_x,rms sitting at ~half of Kim's published Fig. A.16 value
+  // while u'_y,rms matched. See diary.md 2026-08-03 for the full derivation.
+```
+
+## BioReactor.c:494 -- `{`
+
+```c
+  // [PROJECT FIXED, 2026-09-15, diary.md] Frame cadence must NOT divide the
+  // rocking period exactly. It used to be dt_video = T_per_st/N, which makes
+  // every frame land on the SAME N phases of the cycle forever -- measured on
+  // real runs: a34fc4d4 (L9, 130 frames) and 57f68830 (L10, 50 frames) sample
+  // only 5 distinct phases (0.0,0.2,0.4,0.6,0.8), so recording more frames
+  // adds zero phase coverage and the true peak of any oscillating quantity is
+  // never captured, only a max-over-5-samples lower bound. Every <tau> and
+  // <eps> peak this project has reported from frames is therefore slightly
+  // understated. (l8_coldstart_vid escaped only because its dt happened to
+  // drift relative to its period.)
+  //
+  // Kim et al. hit the same trap and designed around it -- Main.tex: "a
+  // constant time gap of 0.05 simulation time ... approximately 13 simulation
+  // points per cycle but is intentionally misaligned with the period to
+  // ensure convergence."
+  //
+  // Fix: offset the divisor by the golden ratio conjugate. phi = 0.618... is
+  // the irrational that is hardest to approximate by rationals, so successive
+  // frames land at maximally-spread phases and N frames over many periods
+  // give near-uniform (low-discrepancy) phase coverage rather than N points.
+  // Default raised 5 -> 13 to match Kim's cadence.
+```
+
+## BioReactor.c:524 -- `if (params.t_checkpoint > 0.0) {`
+
+```c
+  // [PROJECT ADDED] Checkpoint restart — has no upstream equivalent at all;
+  // Kim et al.'s driver is always a single cold-started run. Added because
+  // this project's fidelity-9/10 sweeps need days per condition, longer than
+  // one SLURM job's walltime allows, and because warm-starting a new
+  // condition from an already-developed flow field (skipping its own
+  // cold-start transient) makes chained sweeps far cheaper.
+  // ── Checkpoint restart ─────────────────────────────────────────────────────
+  // Detected via params.t_checkpoint > 0 (set by chain.py for restart segments).
+  // params.t_end is a RELATIVE duration; the C code adds params.t_checkpoint.
+  // All timing is computed HERE (before run()) so that the Basilisk event system
+  // registers t_dump_checkpoint at the correct value — not as a placeholder that
+  // gets overridden too late.  restore() itself is called in event init so that
+  // the grid infrastructure is fully active.
+```
+
+## BioReactor.c:543 -- `{`
+
+```c
+    // [PROJECT FIXED, 2026-09-07] Restart forcing-phase error. Simulation
+    // time is measured in units of T_bio = L_bio/U_bio, and U_bio depends on
+    // BOTH omega_b and theta_max (see V_bio above), so the nondimensional
+    // rocking period T_per_st differs between two segments that differ in
+    // either. A checkpoint is written at an integer multiple of the SOURCE
+    // segment's T_per_st (the n_per*T_per_st dump time below), i.e. at a
+    // genuine zero-crossing of the run that wrote it -- but restore() hands
+    // that t straight to a segment whose T_per_st is different, where it is
+    // no longer a whole number of periods. The forcing
+    // Th = Ak*sin(k*w_bio_st*t + phk) therefore resumes at an arbitrary
+    // phase while the restored velocity and interface fields still
+    // correspond to phase 0. This is the same wrong assumption the u/p/g
+    // rescale in event init fixes ("U_bio is independent of theta_max"),
+    // applied to the clock instead of to the fields.
+    //
+    // Measured phase errors into theta=7: source theta 6.9 gave -23.9deg,
+    // 4.0 gave -53.7deg, 2.0 gave +116.6deg, and 7.0 gave exactly 0 --
+    // which is the only reason trivial restarts ever looked clean. Because
+    // the error is (period count)x(period ratio) mod 2pi it is pseudo-random
+    // rather than proportional to Delta_theta_max, which is what made the
+    // anomaly look like a step function: 0.1deg and 5deg steps both landed
+    // ~25% high in quasi-steady tau_mean while 0deg was exact. Proven in
+    // both directions (diary.md 2026-09-07 (4)): injecting a 30deg phase
+    // error into an otherwise-clean restart with NO theta change reproduced
+    // the escape (1.2596x, against 1.2547x for the real Delta_theta=0.1
+    // case), and cancelling the phase error on the real Delta_theta=0.1
+    // restart removed it entirely (0.9962x, against 0.9961x for a trivial
+    // restart and 1.0000x for a cold start).
+    //
+    // The correction is a constant offset added to the forcing's time
+    // argument, t_phase_offset, chosen so the forcing is at a zero-crossing
+    // at the restart instant -- which is the phase the restored fields are
+    // actually at. The scheduler's t is deliberately NOT touched: writing it
+    // from event init desynchronizes the event system and dies with an FPE
+    // in dtnext().
+    //
+    // The offset is derived from the restored t alone, NOT from the U_bio
+    // ratio between the two segments. Deriving it from the ratio is the
+    // obvious move and it is wrong for chains: a second segment that
+    // changes nothing computes a ratio of 1 and therefore an offset of 0,
+    // but its restored t is already displaced from a period boundary by the
+    // FIRST segment's offset, so it resumes off-phase and escapes. Measured
+    // on a theta 2 -> 7 -> 7 chain: segment 0 landed at 1.0003 and segment 1
+    // at 1.2564, the full escape, one link down (diary.md 2026-09-07 (5)).
+    //
+    // Every checkpoint is written at a zero-crossing of ITS OWN writer's
+    // forcing -- cold starts by n_per*T_per_st below, restarted segments by
+    // the same expression shifted by their offset -- so the alignment
+    // condition is simply w_bio_st*(t + t_phase_offset) == 2*pi*m, giving
+    // the nearest-period-boundary form used here. That is provenance-free:
+    // it needs nothing about the previous segment, self-heals over any
+    // chain depth, and is bounded by T_per_st/2 rather than growing with t
+    // the way the ratio form did (which reached 2.23 time units on the
+    // theta 2 -> 7 case). For a single segment it reproduces the ratio
+    // form's value exactly -- theta 6.9 -> 7 gives +23.86deg either way,
+    // the value independently verified by the phi_angular cancellation
+    // test.
+```
+
+## BioReactor.c:601 -- `double t_ck = params.t_checkpoint;`
+
+```c
+      // The exact dump time, read from the checkpoint itself. params
+      // .t_checkpoint is chain.py's estimate from the source's last
+      // shear_stress.dat sample and can be off by an output interval
+      // (15.74 vs 15.750302 for the theta=6.9 source), which here would
+      // leave a residual phase error of a few degrees.
+```
+
+## BioReactor.c:648 -- `t_mix            = params.t_checkpoint + T_per_st * params.n_mix_cycles;`
+
+```c
+    // [OPEN, 2026-09-16] A split run does not exactly reproduce an unbroken
+    // one: measured at fidelity 4, oxygen transfer over a 3-cycle continuation
+    // segment lands ~7.6% below a continuous 6-cycle run. Two mechanisms were
+    // hypothesised and BOTH were falsified by measurement:
+    //   (a) oxygen replenishment pausing, because `event oxygen (t=t_mix; i++)`
+    //       has t_mix recomputed relative to the new checkpoint. Firing it
+    //       immediately (n_mix_cycles=0) gave 0.9238 vs 0.9236 -- no change.
+    //       It accounts for only ~1.5% (n_mix=8, never firing, gives 0.9100).
+    //   (b) the smooth-step ramp. A continuation sets no *_prev fields, so
+    //       alpha interpolates from ZERO forcing over N_RAMP_CYCLES, which
+    //       looks like it must underdrive the segment. Backdating t_ramp_start
+    //       so alpha=1 from the first step made it WORSE, 0.9236 -> 0.9100.
+    // Removing an under-driving ramp reducing oxygen transfer is not
+    // understood, so no change is being shipped on the strength of it. The
+    // guard in tests/verification/test_restart_continue.py is set at 10% so it
+    // still catches total field loss and re-injection, which is its purpose;
+    // this ~8% is a separate, smaller, and currently UNEXPLAINED restart
+    // artifact. restart_continue=1 has not yet been used in production.
+```
+
+## BioReactor.c:669 -- `double t_end_abs = params.t_checkpoint + params.t_end;`
+
+```c
+      // The dump must land on a zero-crossing of THIS segment's forcing,
+      // which t_phase_offset has shifted: the forcing argument is
+      // w_bio_st*(t + t_phase_offset), so a whole number of periods means
+      // t + t_phase_offset == n*T_per_st, not t == n*T_per_st. Without
+      // this the fix would hand the next segment in a chain a checkpoint
+      // that is itself off-phase, reintroducing the same bug one link down.
+```
+
+## BioReactor.c:703 -- `{`
+
+```c
+  // [PROJECT ADDED, 2026-09-21] Walltime deadline, if the queueing system
+  // told us one. Absent (interactive runs, tests that do not set it) the
+  // limit stays HUGE and the deadline event never fires, so behaviour is
+  // exactly as before.
+```
+
+## BioReactor.c:777 -- `#if !REPLAY_FLUX    // a replay has no velocity field`
+
+```c
+// Boundary conditions
+// [VERIFIED UNCHANGED vs. upstream, diary.md 2026-07-28] Line-for-line
+// identical to upstream's BC block, including the embed BCs below. Checked
+// specifically because it looked, from the geometry formula alone, like this
+// fork might be embedding all four walls where Kim only embeds two — it
+// isn't; see the [PROJECT CHANGED] note at the superellipse solid() call.
+```
+
+## checkpoint.h:4 -- `static void write_phase_sidecar (double t_now)`
+
+```c
+// [PROJECT ADDED, 2026-09-21] Record the phase this checkpoint was written
+// at, next to the checkpoint itself.
+//
+// The restart path INFERS the writer's phase by snapping to the nearest
+// period boundary (t_phase_offset = T_per_st*round(t_ck/T_per_st) - t_ck).
+// That is correct only because every checkpoint so far is written AT a
+// zero-crossing. An emergency dump lands wherever the clock ran out, and
+// snapping it moves the forcing by up to half a period -- the bag resumes at
+// a different angle than it stopped at, which is the "escape" failure
+// documented above at the t_phase_offset derivation.
+//
+// So the writer writes its phase down. A sidecar rather than a field inside
+// the dump: `dump()` serialises the grid, and adding a scalar to it would
+// change the checkpoint format and break every existing checkpoint on disk.
+// JSON because params_read.h already parses JSON and the file is read once.
+```
+
+## checkpoint.h:37 -- `event maxruntime_stop (i += 10) {`
+
+```c
+// Stop cleanly when the wall clock is nearly gone.
+//
+// i += 10 rather than i++ so the reduction is not paid every step; at L10 a
+// step is seconds, so ten steps is far finer than the 300 s reserve.
+```
+
+## checkpoint.h:75 -- `p.nodump = pf.nodump = false;`
+
+```c
+  // p and pf have nodump=true by default in centered.h (they're reconstructed
+  // from scratch after a restore, causing a first-step velocity crash).
+  // Force them into the checkpoint so the restart Poisson solve starts from
+  // the correct pressure and applies only a tiny correction.
+```
+
+## checkpoint.h:83 -- `write_phase_sidecar (t);`
+
+```c
+  // [PROJECT ADDED, 2026-09-21] A planned dump is at a zero-crossing, so the
+  // reader's nearest-boundary inference would get it right -- but only if it
+  // knows which kind of dump this is, and it cannot. Writing the sidecar
+  // unconditionally makes the recorded phase the single path for every
+  // checkpoint, so the inference is a fallback for OLD dumps alone rather
+  // than a branch that has to be chosen correctly at read time.
+```
+
+## checkpoint.h:90 -- `return 1;`
+
+```c
+  // acceleration(i++) and oxygen(t=t_mix;i++) are unconditional (no t<=t_end
+  // bound), so Basilisk's events() never marks them done and run() keeps
+  // stepping forever past t_dump_checkpoint once every t<=t_end-bounded event
+  // (logstats/normcal/movies_output) has expired -- confirmed by direct
+  // instrumentation: iter/t kept climbing indefinitely with zero further
+  // file output after the checkpoint write, for both fidelity 6 and 7, with
+  // both oversubscribed and dedicated MPI ranks.  This is why every SHORT
+  // fresh run (short relative to typical L7 t_end) was walltime-killed with
+  // no results.json, while long L7 runs happened to fit under the walltime.
+  // Returning 1 from an event action is the documented Basilisk idiom for
+  // stopping run()'s event loop immediately and cleanly (main()'s fclose()
+  // calls after run() still execute) -- see grid/events.h: event_do() treats
+  // a nonzero action return as event_stop, and events() then returns 0.
+```
+
+## checkpoint.h:107 -- `event end_replay (i++; i < 2000000000) {`
+
+```c
+// Ends the run, at the same place in the event order as event dump_checkpoint ends the coupled run (before
+// the outputs of the step that would start at the end time). The condition (i < INT_MAX) is not decoration: Basilisk's events() stops the loop when no
+// event with a condition (or with a time and no increment) is left alive, and every other event of a
+// replay is unconditional, so without one the run would end after its first step.
+```
+
+## diagnostics.h:59 -- `oxy_liq[] = f[]*oxy[]/(f[]*c_oxy_alpha + (1.-f[]) + 1e-10);`
+
+```c
+      // BUG (upstream rcsc-group/BioReactor): oxy[]*f[] mixes gas-phase oxygen into
+      // the integral at interface cells, inflating oxy_liq_sum above its physical bound.
+      // FIX: extract only the liquid-phase contribution via Henry's law activity.
+      // oxy[] = a*(f*alpha + (1-f))  where a = gas-equivalent activity.
+      // Liquid-phase concentration (normalised by saturation = alpha) = f*a = f*oxy/(f*alpha+(1-f)).
+      // Result: oxy_liq=0 in pure gas, oxy_liq=1 in pure liquid at saturation.
+```
+
+## diagnostics.h:67 -- `f_liq[]   = f[];`
+
+```c
+      // BUG (upstream): (1-cs[])*f[] is zero everywhere inside the bag (cs=1 in fluid cells),
+      // so statsf2(f_liq).sum ≈ 0.002 (only bag-wall cut cells) instead of ~0.28 (liquid volume).
+      // Dividing oxy_liq_sum by this tiny number pushed C* >> 1 immediately.
+      // FIX: use f[] directly — statsf2(f).sum = true liquid volume via embed-aware dv().
+```
+
+## diagnostics.h:95 -- `double ux_sig = 0., uy_sig = 0., wsum = 0.;`
+
+```c
+    // [PROJECT ADDED, 2026-09-16] SIGNED spatial means of the liquid velocity.
+    // Basilisk's normf(v).avg is sum(|v| dv)/volume -- an absolute value -- so
+    // ux_liq_avg rectifies the signal: it oscillates at TWICE the rocking
+    // frequency and never goes negative. Kim's Fig. 2 plots the signed means
+    // against the rocking angle, and a rectified series cannot show the phase
+    // relationship that figure exists to show.
+```
+
+## diagnostics.h:111 -- `double uz_liq_savg = 0., uz_liq_rms = 0.;`
+
+```c
+    // [PROJECT ADDED, 2026-09-16] The SPANWISE component, for Kim's Fig. A.18
+    // (2D vs 3D). The solver compiles and runs unchanged under -grid=octree --
+    // the embedded bag is a function of x and y only, so it extrudes into a
+    // slab and the liquid volume comes out identical to 2D -- but nothing
+    // logged u_z, so the one quantity the comparison turns on was the one
+    // quantity missing. Zero by construction in 2D, where these two columns
+    // are written as zeros to keep the file's shape the same at both
+    // dimensionalities.
+```
+
+## diagnostics.h:137 -- `double x_lo = X0 + 0.02*L0, x_hi = X0 + L0 - 0.02*L0;`
+
+```c
+    // [PROJECT ADDED, 2026-09-16] Interface height at the two ENDS of the bag.
+    // Kim's Fig. 14 is "the maximum surface elevation at the left end", and
+    // Fig. 15 is the frequency spectrum of the surface elevation -- neither is
+    // the global posY_max, which is wherever the crest happens to be and
+    // wanders across the bag over a cycle. The probe is the outermost 2% of
+    // the bag width; narrower than that and a coarse grid has no interface
+    // cell in it on some timesteps, leaving the column empty at random.
+```
+
+## diagnostics.h:167 -- `double tau_max_val = 0., tau_sum = 0., tau_vol = 0.;`
+
+```c
+    // [PROJECT ADDED] The entire shear-stress KPI pipeline (this block through
+    // the tau_95/98/100/mean percentile walk and fp_tau write below) has no
+    // upstream equivalent whatsoever — Kim et al.'s driver computes no shear
+    // stress at all (it is presumably computed in their own postprocessing,
+    // outside this file). Added (commits bc1c74a, 6d08f53) to reproduce their
+    // Fig. 13a tau_liq_max/tau_liq_mean KPIs from this project's own sweeps.
+    //
+    // CAUTION (diary.md, 2026-07-28): the comment below claims this stencil
+    // "mirrors vorticity() in basilisk/src/utils.h" — checked directly against
+    // basilisk/src/utils.h:286-292, and that claim is only half true. The real
+    // vorticity() weights by face metric factors fm.x/fm.y/cm and divides by
+    // 2*(cm[]+SEPS)*Delta, which correct the finite-difference stencil near
+    // embedded cut-cells (i.e. near walls — exactly where peak shear stress is
+    // largest). This implementation uses plain 2*Delta with no metric
+    // correction at all. This is a real, confirmed discrepancy from the
+    // pattern it claims to follow. NOT YET FIXED: has not been shown to
+    // explain the ~5x mean-VELOCITY mismatch found in the same investigation
+    // (velocity is a primitive field, this bug can only affect a derivative
+    // quantity), so it is at most a partial explanation, and the user's
+    // explicit instruction is to make no changes beyond what's strictly
+    // numerically necessary — not yet applied pending further diagnosis.
+    //
+    // ── 98th-percentile shear stress τ₉₈(t) ──────────────────────────────────
+    // tau = |μ(∂u/∂y + ∂v/∂x)| in the liquid domain (f[] > 0.5).
+    // Masked to bulk liquid to exclude interface artefacts.
+    //
+    // Implementation: two-pass 200-bin histogram — no dynamic memory, MPI-safe.
+    //   Pass 1: global tau_max via statsf2 (Basilisk internally does MPI_Allreduce).
+    //   Pass 2: local bin counts → MPI_Allreduce(SUM) → global percentile walk.
+    //
+    // Stencil mirrors vorticity() in basilisk/src/utils.h: uses face-centred
+    // velocity values u.x[0,±1] and u.y[±1] for 2nd-order centred differences.
+    // Pass 1: global max and mean via inline reduction (no scalar allocation).
+    // Declaring scalar tau_liq[] inside an event leaks a Basilisk scalar on every
+    // call and corrupts the global scalar list, causing segfaults at fidelity ≥7.
+    // [PROJECT ADDED, 2026-08-07] tau_*_strict mirrors Kim et al.'s own
+    // postprocessing (dev/postprocessing/bio_stress.m, shared directly):
+    // `in_liq_field2 = find(abs(al_2D_proj) > 1-1e-10)` -- pure liquid only,
+    // excluding ANY interface/mixed cell, vs. our existing f[]>0.5 which
+    // includes the whole liquid-side half of the interface transition band.
+    // Computed in the SAME pass as the existing (f[]>0.5) reduction to avoid
+    // a second loop -- both masks share the identical tau formula, just a
+    // stricter threshold gates the _strict accumulators. 1e-6 instead of
+    // Kim's 1e-10: our f[] is a VOF fraction from a finite-precision solve,
+    // not his post-hoc alpha field, so exact machine-precision equality to 1
+    // is not expected; 1e-6 is still far tighter than the interface's
+    // O(1) width in f, so it excludes the same cells his 1e-10 would.
+    // [PROJECT ADDED, 2026-08-07] tau_max_signed mirrors Kim et al.'s own
+    // formula LITERALLY: dev/postprocessing/bio_stress.m:345,
+    // `tau_field = mu_field.*(duxdy_field(:,3) + duydx_field(:,3))` -- no
+    // fabs() anywhere in his script -- vs. our existing fabs(du_dy+dv_dx).
+    // max(signed) <= max(|signed|) always, and shear reverses sign every
+    // half rocking-cycle, so this could plausibly explain us reading
+    // persistently higher than Kim by a wide margin. Init to a large
+    // negative sentinel, not 0, since the signed quantity can legitimately
+    // be negative throughout a liquid region.
+    // [PROJECT ADDED, 2026-08-08] Energy dissipation rate (EDR), for Fig. 8a
+    // reproduction: epsilon = mu*[2*(du_x/dx)^2 + 2*(du_y/dy)^2 +
+    // (du_x/dy+du_y/dx)^2] -- matches Kim et al.'s own formula exactly
+    // (Main.tex, Sec. "Shear stress and energy dissipation rate", and their
+    // shared bio_stress.m:346 -- Ediss_field = mu_field.*(2*duxdx.^2 +
+    // 2*duydy.^2 + (duxdy+duydx).^2)). Only the domain-mean is needed here
+    // (Fig. 8a plots spatially-averaged tau and epsilon vs. time, not a
+    // max); reuses the exact same f[]>0.5 mask as tau for consistency.
+```
+
+## diagnostics.h:233 -- `double tau_kim_max = -HUGE, tau_kim_sum = 0., kim_vol = 0.;`
+
+```c
+    // [PROJECT ADDED, 2026-09-15] Kim-EXACT mask, read from his own
+    // postprocessing (rcsc-group/BioReactor3D dev/postprocessing/bio_stress.m,
+    // private repo): line 412 `in_solid = find(sol_2D == 1)` and line 546
+    // `in_liq_field2 = find(abs(al_2D_proj)>1-1e-10)` -- FULLY-fluid AND
+    // FULLY-liquid cells only, excluding every interface cell and every embed
+    // cut cell. He also takes max()/mean() of the SIGNED tau (line 583-585:
+    // `tau_field_liq2_dim = tau_field_liq2*U_bio/L_bio`, no abs()), where our
+    // tau_100 is max|tau|. And he reports an Ediss MAX (line 600) that this
+    // project never logged at all -- Kim's Fig 13 has four series per panel.
+```
+
+## diagnostics.h:246 -- `double tau_sum_signed = 0.;`
+
+```c
+    // [PROJECT ADDED, 2026-08-09] tau_sum_signed: Kim et al.'s Fig. 8a
+    // plots <tau_w'>, the domain-mean of the SIGNED shear stress (their
+    // Fig_tau_Ediss.pdf shows it oscillating through zero, -1.8e-3 to
+    // +1.8e-3 Pa) -- not mean(|tau|). tau_mean_val below has always been
+    // mean(|tau|) (tau_sum accumulates the fabs()'d `tau`, not
+    // `tau_signed`); that's a genuinely different statistic, not just a
+    // scale/units difference, and the one Fig. 8a needs to actually match
+    // Kim's plotted quantity. Caught by the user pointing out Fig 8a's
+    // reproduction didn't match Kim's real figure's shape (sign-crossing)
+    // once actually rendered and viewed side by side, not just captioned.
+```
+
+## diagnostics.h:262 -- `if (cs[] > 0. && f[] > 0.5) {`
+
+```c
+      // [PROJECT FIX, 2026-09-15, diary.md] Mask on cs[] too, and weight by
+      // it. `f` is initialised with fraction(f, y_init - y), which fills the
+      // lower half of the WHOLE DOMAIN -- including everything outside the
+      // embedded bag, where there is no fluid and u is identically zero.
+      // Masking on `f[] > 0.5` alone therefore swept those cells into the
+      // spatial averages: they add nothing to the numerator but inflate the
+      // area in the denominator. Measured at L10 (runs/57f68830): cells with
+      // f>0.5 cover 0.5000 of the domain while the liquid actually inside the
+      // bag covers 0.1425 -- a 3.51x inflation, so every reported spatial mean
+      // of tau and EDR was ~3x too small. That is the entire "~3x below Kim"
+      // discrepancy: with the bag mask applied, tau_liq_mean becomes 1.685e-3
+      // Pa vs Kim's 1.803e-3 (0.93x) and Ediss_liq_mean 0.2773 vs 0.2866
+      // W/m3 (0.97x). Spatial MAXIMA were never affected (u=0 outside the bag
+      // => tau=0 there), which is why peak tau always looked reasonable while
+      // the means did not, and why the deficit was resolution-independent.
+      // cs[] is the embed fluid fraction, so cs[]*Delta*Delta is the true
+      // fluid area of a cut cell.
+```
+
+## diagnostics.h:321 -- `#define TAU_BINS 2000`
+
+```c
+    // Pass 2: 200-bin histogram — recomputes tau inline, no scalar needed
+    // [FIX, 2026-08-20, diary.md] `bins[b]++` used to be a manual array
+    // increment with no protection -- not a pattern Basilisk's foreach()/
+    // OpenMP auto-reduction recognizes (unlike the scalar max/sum
+    // accumulators above, which DO get an automatic reduction clause), so
+    // under -fopenmp with >1 thread it was a genuine, unprotected data
+    // race: concurrent non-atomic read-modify-write to the same bins[b]
+    // silently loses increments. MPI builds never hit this (qcc disables
+    // OpenMP under -D_MPI=1, confirmed by its own "OpenMP cannot be used
+    // with MPI (yet)" warning, so each MPI rank is single-threaded here)
+    // -- only OpenMP-only builds (the DEFAULT for chain.py sweeps that
+    // don't explicitly set mpi:true) were affected. Confirmed empirically,
+    // not just by inspection: two identical OpenMP runs (same params, same
+    // binary) gave tau_95 values 38% apart and tau_98 values 6.3% apart,
+    // while tau_100/tau_mean/ediss_mean (computed via the auto-reduced
+    // accumulators) differed by <1% (ordinary floating-point reduction-
+    // order noise, not a bug). Both `#pragma omp atomic` and Basilisk's own
+    // OMP(omp atomic) pragma-insertion macro (grid/config.h) fail to
+    // compile at this exact position -- qcc's stencil-analysis AST walk
+    // chokes on a pragma inside this foreach() body (confirmed: same
+    // "expected expression before '}' token" error from both). Worked
+    // around with per-thread-local bins (flat 1D array, indexed by
+    // omp_get_thread_num() -- a plain function call, not a pragma, so qcc
+    // parses it fine) merged into the final histogram after the loop.
+    // Re-verified after this fix: the same reproducibility test now gives
+    // tau_95/98 differing by ~0.87% between identical runs, matching
+    // tau_100/mean's ordinary noise level -- the race is gone.
+```
+
+## diagnostics.h:391 -- `double _tau_w = tau_max_val / (TAU_BINS - 1.0);`
+
+```c
+    // Bin k holds tau in [k, k+1)*tau_max_val/(TAU_BINS-1) (see the index
+    // map above). The percentile is the linear interpolation of the cumulative
+    // count inside the crossing bin: lower edge + fraction*width (2026-10-10;
+    // the old rule returned the upper edge, biasing tau_95 high by up to a bin).
+```
+
+## diagnostics.h:414 -- `double edr_max_val = 0.;`
+
+```c
+    // [PROJECT ADDED, 2026-11-04] edr_95: 95th percentile of the local EDR
+    // ediss = mu*(2 du/dx^2 + 2 dv/dy^2 + (du/dy+dv/dx)^2), on the SAME mask as
+    // tau_95 (cs>0, f>0.5), with the same stencil as the ediss_mean pass above.
+    // Same two-pass 2000-bin histogram as tau_95 (per-thread bins, no pragma
+    // inside foreach). Also writes the per-step spatial max, so that
+    // edr_mean(t) <= edr_95(t) <= edr_max(t) can be checked sample by sample.
+    // Collective: every rank runs it, outside the pid() == 0 block.
+```
+
+## forcing.h:10 -- `event streaming_vorticity (i++)`
+
+```c
+// Kim's steady-streaming vorticity: average u over ONE rocking period, then
+// take the curl of that average, then spatially average |curl| over the WATER.
+//
+// Accumulating u*dt every step (rather than sampling) makes the window average
+// exact for any variable timestep. The window is reset each period, so a
+// restart loses at most one window rather than corrupting the series.
+//
+// Masked with `cs[] > 0. && f[] > 0.5` and area-weighted by cs[]*Delta*Delta,
+// the same bag mask the tau/EDR diagnostics use -- `f` alone fills the whole
+// lower half-DOMAIN including cells outside the embedded bag (diary.md
+// 2026-09-15 (2)). Normalising by that liquid area is what makes this a water
+// average, as Kim defines it, rather than a whole-fluid-volume average.
+```
+
+## forcing.h:24 -- `foreach() {`
+
+```c
+  // LIQUID-CONDITIONED time average: accumulate u*f dt and f dt, so
+  // ubar = INT(u f dt)/INT(f dt) is the mean velocity OF THE WATER.
+  //
+  // [PROJECT FIXED, 2026-09-15] A plain INT(u dt)/T average is contaminated by
+  // the free surface: the interface sloshes through a band of cells, so those
+  // cells hold water for part of the period and air for the rest, and the
+  // unconditioned average blends the two into an enormous spurious mean shear.
+  // Measured (job 6427163, L6): it gave <|xi_bar|> = 10.9 non-dim with a local
+  // max of 241, ABOVE the time-averaged |instantaneous vorticity| (~12.4 once
+  // correctly normalised by liquid area) -- impossible for a genuine mean-flow
+  // vorticity, since omega is linear in u so omega(ubar) = mean of omega(u)
+  // and |mean| <= mean|.|. That bound is the check that caught it.
+```
+
+## forcing.h:54 -- `double vsum = 0., varea = 0., vmax = 0.;`
+
+```c
+    // Average only over cells that were water for essentially the WHOLE
+    // period. Cells the interface swept through have a noisy ubar and, more
+    // importantly, noisy neighbours -- and the vorticity stencil reads
+    // neighbours. Kim's quantity is defined in the water, not at the surface.
+```
+
+## forcing.h:60 -- `if (cs[] > 1. - 1e-10 && f_acc[] > 0.99*streaming_acc_dt) {`
+
+```c
+      // cs == 1, not cs > 0: Kim's own postprocessing masks on `sol_2D == 1`
+      // (bio_stress.m:412), excluding embed CUT cells. Measured here: the
+      // f-conditioned average alone left vor_max pinned at 241 non-dim, so the
+      // extreme was never at the interface -- it is at the bag wall, where cut
+      // cells carry huge velocity gradients. Same mask as the Kim-exact
+      // tau/EDR columns.
+```
+
+## forcing.h:80 -- `{`
+
+```c
+    // [PROJECT ADDED, 2026-09-16] The steady-streaming FIELD, not just its
+    // spatial mean. Kim's Fig. 4 is the mean-flow vorticity field and the
+    // volume fraction field, each overlaid with streamlines of the mean flow,
+    // and streamlines need ubar itself -- streaming.dat's single number cannot
+    // produce them. Rewritten every window rather than accumulated: the file
+    // that matters is the last (most settled) one, and at L10 each is 16 MB.
+```
+
+## forcing.h:135 -- `double elapsed  = t - t_ramp_start;`
+
+```c
+  // [PROJECT CHANGED] Upstream's ramp is a plain LINEAR interpolation over a
+  // fixed 30 PHYSICAL SECONDS, applied only to amplitude (phase/frequency
+  // unramped): `Th_max2 = (Th_max/t_change_st)*t; Th = Th_max2*sin(w_bio_st*t);`
+  // (see upstream BioReactor.c lines ~397-407). Replaced with a smooth-step
+  // (3x²-2x³) interpolation of BOTH amplitude and phase, over N_RAMP_CYCLES
+  // cycles instead of a fixed time, so that: (a) checkpoint-restart segments
+  // that warm-start a NEW condition from an old one can interpolate between
+  // two nonzero states (upstream's ramp only makes sense starting from
+  // Th_max2=0, i.e. a true cold start) and (b) the ramp duration scales with
+  // omega_b rather than being a fixed physical duration. See N_RAMP_CYCLES's
+  // definition above for the still-open question of whether this changes
+  // quasi-steady-state results relative to upstream's 30s linear ramp.
+  // Smooth-step parameter interpolation: alpha: 0→1 over N_RAMP_CYCLES.
+  // For fresh runs, *_prev fields are 0 → reproduces the original cold-start ramp.
+  // For restarts, *_prev fields carry the previous segment's values → smooth transition
+  // between two fully-forced steady states without ever underdriving the system.
+```
+
+## forcing.h:156 -- `double dalpha_dt   = in_ramp ? 6.*x_ss*(1.-x_ss)/ramp_dur : 0.0;`
+
+```c
+  // [PROJECT FIXED, 2026-09-07] d(alpha)/dt and d²(alpha)/dt², needed below.
+  // Th_d/Th_2d previously assumed Ak(t)/phk(t) constant in time (correct
+  // only once the ramp has finished, alpha'=alpha''=0) -- but during any
+  // restart with theta_max_prev != theta_max, Ak(t) = Ak_prev+alpha(t)*dAk
+  // genuinely varies over the ramp, and the old formulas silently dropped
+  // the resulting Ak'(t)*sin(...) term entirely. This meant the velocity/
+  // acceleration fed to the embedded-boundary condition was inconsistent
+  // with the angle Th(t) actually being imposed, for the full N_RAMP_CYCLES
+  // window, regardless of how small the parameter change was -- diary.md
+  // 2026-09-07: an infinitesimal Delta_theta_max=0.1deg restart was found
+  // to settle into a persistently different (14-23% offset) quasi-steady
+  // tau_mean than an independent cold start at the IDENTICAL target
+  // condition, while the trivial Delta_theta_max=0 identity-restart
+  // control settled instantly and exactly -- consistent with a spurious
+  // "kick" from this missing term tipping the flow into a different
+  // attractor, present whenever alpha'(t) != 0 (i.e. whenever anything is
+  // actually being ramped), independent of the ramp's amplitude.
+  // d/dx[3x²-2x³] = 6x-6x², chain-ruled by dx_ss/dt = 1/ramp_dur (0 once
+  // clamped past the ramp window, matching alpha itself being clamped).
+```
+
+## forcing.h:178 -- `Th = 0;  Th_d = 0;  Th_2d = 0;`
+
+```c
+  // [PROJECT CHANGED] Upstream applies a single harmonic unconditionally:
+  // `Th=Th_max*sin(w_bio_st*t); Th_d=w_bio_st*Th_max*cos(...); Th_2d=-w_bio_st²*
+  // Th_max*sin(...)`. Generalized to a sum over params.n_harmonics so the
+  // sweep/optimization pipeline can explore multi-harmonic rocking motions;
+  // at n_harmonics=1 this reduces to exactly upstream's formula (verified
+  // algebraically, diary.md 2026-07-28 — Ak=theta_max[0]*pi/180, phk=0).
+  // Multi-harmonic angular forcing with smooth-step interpolation of amplitude and phase.
+  // For each harmonic k: Ak and phk are interpolated from _prev → current over N_RAMP_CYCLES.
+  // wk (frequency) is NOT ramped -- see N_RAMP_CYCLES's definition above;
+  // that remains a real, separate, unfixed discontinuity at omega_b-
+  // changing restarts, orthogonal to the Ak(t)/phk(t) fix below.
+```
+
+## forcing.h:212 -- `double x_acc = 0.;`
+
+```c
+  // [PROJECT ADDED] Horizontal translational forcing has no upstream
+  // equivalent at all — Kim et al.'s bioreactor only rocks (angular motion).
+  // Added so the sweep/optimization pipeline can also explore horizontal
+  // shaking/translation as a control parameter. Zero by default
+  // (omega_h=0), which recovers upstream's pure-rocking motion exactly.
+  // Multi-harmonic horizontal forcing with smooth-step interpolation.
+```
+
+## forcing.h:247 -- `event remove_drop(i++) {`
+
+```c
+// [PROJECT ADDED] Reinstated upstream event (see REMOVE_DROP note near the
+// tag.h include above). Runtime-gated on params.remove_drop instead of a
+// compile-time #if, so a single binary can run both arms of the on/off
+// matrix. Upstream ran this unconditionally once enabled, every step
+// (i++); logic unchanged from upstream's remove_drop event.
+```
+
+## forcing.h:261 -- `#ifndef KICK_TEST`
+
+```c
+// [PROJECT ADDED, 2026-09-07] One-shot velocity-field "kick" test (diary.md
+// 2026-09-07): direct test of whether the cold-start-beats-warm-start
+// escape-to-a-different-branch behavior is a genuine property of the
+// continuous dynamical system (any tiny perturbation escapes to the same
+// branch, regardless of how it's introduced) or something specific to the
+// checkpoint dump/restore code path (already ruled out as a slow-ramp
+// artifact -- a 40-cycle quasi-static ramp landed on the same branch as a
+// 3-cycle one). Enabled only when compiled with -DKICK_TEST=1; fires ONCE
+// at t=KICK_T (nondim) in a single, otherwise-uninterrupted continuous run
+// -- no dump/restore involved at all, so this isolates the continuous PDE's
+// own dynamics from anything checkpoint-related.
+//
+// [PROJECT AMENDED, 2026-09-07] KICK_MODE. The original kick (now mode 0)
+// was u *= (1+KICK_EPS): a UNIFORM rescale. That is a bad probe of
+// stability, and its null result was over-read. A uniform rescale keeps the
+// field divergence-free, preserves every symmetry of the state, and is very
+// nearly tangent to the one-parameter family of periodic orbits -- i.e. it
+// is close to the single direction guaranteed NOT to excite a transverse
+// mode. Its decay says almost nothing.
+//
+// Mode 1 is the honest probe: u *= (1 + KICK_EPS*noise()) per cell, a
+// spatially-random, zero-mean, KICK_EPS-relative perturbation that breaks
+// the symmetries and projects onto every mode, including the ones a uniform
+// rescale cannot reach. It is not divergence-free; the projection step at
+// the next timestep handles that, which is precisely what a generic
+// perturbation does.
+//
+// The question this settles: the 2x2 (diary.md 2026-09-07) showed the
+// escape is driven by the restored STATE, not the ramp code path -- a
+// restart whose state is ~0.3% off the target's own converged state
+// diverges, while a bit-exact one and a 1e-7 forcing change do not. Either
+// the reference state is linearly stable with a finite basin that 0.3%
+// escapes (then a 0.3% random kick on a pure cold start must also escape,
+// and nothing about this is restart-specific), or it is not (then the
+// restart path is still doing something extra).
+```
+
+## henry_oxy2.h:2 -- `attribute {`
+
+```c
+// [PROJECT NOTE] This header began as Kim et al.'s upstream henry_oxy2.h
+// (https://github.com/rcsc-group/BioReactor/tree/main/DriverCodes). It has
+// grown from 273 to 397 lines in this fork, almost entirely to fix MPI
+// checkpoint-restart bugs that only manifest under conditions upstream never
+// exercises (upstream has no restart at all — see BioReactor.c's [PROJECT
+// ADDED] checkpoint-restart note). Every added block below already carries
+// its own detailed "why" comment (from the debugging thread recorded in
+// experiments/hypothesis_ledger.json and diary.md) — those existing comments
+// ARE this file's project-authorship markers; anything reading as generic
+// Basilisk-style documentation prose (like the "Defaults"/tree-conservation
+// paragraph immediately below) is upstream's original text, unchanged.
+//# Advection/diffusion of a soluble tracer
+```
+
+## henry_oxy2.h:78 -- `restriction ({phi1, phi2});`
+
+```c
+    // Restrict phi1/phi2 from leaf cells to all coarse levels before VOF
+    // advection accesses them.  On restart, scalar pool memory may contain NaN
+    // at coarse levels (the foreach() above only sets leaf cells).  VOF
+    // advection reads coarse values at coarse-fine boundaries → NaN in oxy.
+```
+
+## henry_oxy2.h:105 -- `int _fpe_prev = fedisableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);`
+
+```c
+  // On MPI checkpoint restart, Basilisk allocates fresh pool memory for local
+  // face vectors D and beta (which are not dumped to the checkpoint).  Pool
+  // slots for ghost cells at coarse non-leaf levels that are not covered by
+  // masked_boundary_restriction retain the pool initialiser — signaling NaN
+  // (0x7ff0000000000001) after set_fpe() enables FE_INVALID trapping.
+  //
+  // The crash manifests only at t_mix (when tracer c2 first becomes non-zero
+  // and the multigrid actually iterates at coarse levels for the first time).
+  //
+  // Fix: disable FP exception trapping for the duration of h_relax.  Ghost
+  // cells at coarse levels may produce quiet NaN from pool-NaN arithmetic, but
+  // (a) boundary_level() overwrites ghost da values before bilinear uses them,
+  // and (b) the foreach() apply step in mg_cycle touches only leaf cells.
+  // The NaN is therefore transient and does not affect the converged answer.
+  // feclearexcept before re-enabling prevents a stale status bit from firing.
+```
+
+## henry_oxy2.h:164 -- `{`
+
+```c
+    //*/
+    // Guard: beta terms can drive d <= 0 for large-alpha tracers at thin VOF
+    // interface cells (ff→0 makes beta ≈ −D/ff → large).  Clamp d to a floor
+    // proportional to the diagonal cm/dt term so the relaxation stays bounded.
+```
+
+## henry_oxy2.h:197 -- `foreach_cell()`
+
+```c
+  // Zero ALL res[] cells (leaf AND non-leaf) before the leaf foreach() writes
+  // leaf residuals.  foreach() only visits OWNED leaf cells; ghost leaf cells
+  // (owned by other MPI ranks) retain whatever was in the scalar pool from a
+  // previous use of this slot.  mg_cycle calls restriction(res) which averages
+  // over ALL children including ghost leaf ones — stale ghost leaf pool values
+  // (which can be ~1e32 after a prior blow-up) propagate into the level-0
+  // restricted residual and cascade through h_relax.
+  // Zeroing ALSO ghost leaf cells via foreach_cell() ensures they start at 0
+  // before mpi_boundary_restriction updates them from the owning rank's correct
+  // computed values.  Non-zero pool values in any cell are thus eliminated.
+```
+
+## henry_oxy2.h:209 -- `restriction ({res});`
+
+```c
+  // foreach_cell() zeros cells in the LOCAL active tree, but coarse ghost cells
+  // at MPI rank boundaries that have no fine-level descendants on this rank may
+  // be absent from the active tree and escape the loop.  Those cells retain pool
+  // garbage from a prior mg_solve (pressure Poisson) and survive into
+  // restriction_level({res}) → b[] in h_relax at level 2.  Explicitly restricting
+  // from the all-zero leaf state propagates zeros to ALL coarse ghost cells via
+  // halo_restriction, eliminating the pool contamination before leaf residuals
+  // are computed below.  mg_cycle's own restriction_level passes then overwrite
+  // coarse cells with the actual restricted residuals — no double-counting.
+```
+
+## henry_oxy2.h:219 -- `foreach (reduction(max:maxres)) {`
+
+```c
+  // Compute residual inline using D/beta directly (no local face vector g[]).
+  // The original g[] TREE version stored face fluxes in a local face vector and
+  // then read g.x[1] in foreach().  On MPI restart, foreach_face() only writes
+  // *owned* faces; ghost faces at rank boundaries retain pool-SNaN.  boundary({g})
+  // does not fill them for locally-allocated face vectors in Basilisk MPI.
+  // Instead, use D.x[1]/beta.x[1] directly — their ghost faces are properly
+  // filled by boundary({D,beta}) in tracer_diffusion before mg_solve.
+  // For a uniform grid (all cells same level) this is numerically identical to
+  // the g[] conservative formulation; the difference only arises at coarse/fine
+  // AMR interfaces, which are absent at fixed fidelity.
+```
+
+## henry_oxy2.h:309 -- `restriction ({r});`
+
+```c
+    // Also restrict r so that coarse non-leaf r[] cells carry meaningful values
+    // (averaged from leaf) before mg_solve.  halo_restriction (triggered by the
+    // stencil extension below) communicates coarse r[] to MPI neighbour ghost
+    // cells; without this, those ghost cells receive pool garbage → O(1e141)
+    // b[] in h_relax at coarse levels → FE_OVERFLOW SIGFPE on restart.
+```
+
+## henry_oxy2.h:336 -- `boundary ({D, beta});`
+
+```c
+    // Sync leaf-level ghost faces across MPI ranks before restricting.
+    // face vector D[], beta[] are freshly allocated each call: ghost faces at
+    // MPI-rank boundaries retain pool-initialized NaN until boundary() fills them.
+    // Without this, restriction() averages NaN ghost children into coarse values,
+    // which halo_restriction then propagates to neighbouring ranks' ghost cells.
+    // h_relax reads D.x[1]/D.y[0,1] at every multigrid level — if those ghost
+    // faces are NaN, FE_INVALID fires. boundary() here overwrites the pool NaN
+    // with the correct neighbour-rank values before restriction proceeds.
+```
+
+## henry_oxy2.h:351 -- `foreach_cell()`
+
+```c
+    // Extend qcc's stencil analysis to non-leaf levels for ALL fields that
+    // h_relax accesses at coarse ghost cells via foreach_dimension().
+    //
+    // h_relax uses foreach_dimension(), which in 2D expands to x and y iterations.
+    // In the y-direction it reads D.y[1] and beta.y[1] — i.e., D.y[] and beta.y[]
+    // of the ghost coarse cell above the rank boundary.  Without D.y[], beta.x[],
+    // and beta.y[] in the stencil, halo_restriction never communicates those face-
+    // vector components for non-leaf ghost cells; they retain pool-garbage values.
+    // h_relax then computes c[] = n/d with garbage ghost inputs → multigrid diverges
+    // → oxy reaches ~1e275 → statsf2 overflow → 0*Inf = NaN → FE_INVALID crash.
+    //
+    // KEY DISTINCTION (confirmed by experiment):
+    //   WRONG: (void)(D.x[1]) — adds OFFSET cell (x+1,y) to stencil → widens MPI
+    //          halo for restriction at all levels → ~7000x slowdown (commit b3e4163).
+    //   RIGHT: (void)(D.y[]) — adds y-COMPONENT of same ghost cell → same halo
+    //          width, only more fields per ghost cell → no slowdown.
+    //
+    // c[], r[] — solution and RHS scalars (covers h_relax reads of a[1]=c[] and b[])
+    // D.x[], D.y[] — x and y face-vector components of diffusivity
+    // beta.x[], beta.y[] — x and y face-vector components of advective coefficient
+```
+
+## init.h:10 -- `#if !REPLAY_FLUX`
+
+```c
+    // ── Checkpoint restart ────────────────────────────────────────────────
+    // restore() is called here so that Basilisk's grid infrastructure is
+    // fully active.  It sets t = t_checkpoint and restores all fields.
+    // All timing was already computed in main() from params.t_checkpoint so
+    // the event system has the correct t_dump_checkpoint before run().
+    //
+    // [PROJECT FIXED, 2026-09-07] restore() internally calls Basilisk's own
+    // dump_list(all, true) to decide which scalars to populate, and that
+    // function skips any scalar whose CURRENT (in-memory, on THIS restoring
+    // process) .nodump flag is true. p/pf default to nodump=true (per the
+    // comment below) in a fresh process, regardless of what the DUMPING
+    // side set before calling dump(). Without this override, restore()
+    // finds "p" in the file's field-name table, fails to match it against
+    // its own (p-excluded) scalar list, and silently routes that column's
+    // data to a discarded placeholder instead of the real p[] field --
+    // meaning p (and pf) were NEVER actually restored, staying at their
+    // fresh-declaration default (exactly zero), for every restart this
+    // project has ever run, no exceptions. Confirmed directly (Test C,
+    // diary.md 2026-09-07): u.x/u.y/f matched the pre-dump state to full
+    // double precision, but p came back as EXACTLY zero (min=max=sum=
+    // stddev=0) regardless of whether the restart was a trivial identity
+    // restart or an already-anomalous one -- this bug is present on EVERY
+    // restart, independent of theta_max/omega_b changing at all, and is
+    // the leading root-cause candidate for the whole cold-start-beats-
+    // warm-start investigation (a from-scratch pressure solve is forced on
+    // every restart instead of the "tiny correction" the code intended,
+    // directly contradicting the p.nodump=false comment at the dump call
+    // site below).
+```
+
+## init.h:53 -- `foreach_face()`
+
+```c
+    // Coarse-level metric. A fresh coupled run never restricts fs after solid(): embed.h's event metric
+    // restricts fs = 1 once at i = 0, and the multigrid of the scalar diffusion (h_relax, embed_flux) reads
+    // the coarse levels of fs ever after. The dump has no face fields, and the restart path's own
+    // restriction({cs,fs}) after solid() would give the coarse levels a different value than the run being
+    // replayed had; that changes the oxygen solve (measured: 1e-3 after one step). So reproduce the fresh
+    // run: fs = 1 on all levels here, and no restriction after solid() below. The coarse cs is dumped, and
+    // restriction({D, beta, cm}) in tracer_diffusion refreshes it every step as in the coupled run.
+```
+
+## init.h:66 -- `#if TREE`
+
+```c
+    // Re-apply the prolongation/restriction setup from event defaults(i=0) in
+    // henry_oxy2.h.  That event fires at i=0 on a fresh start but is skipped on
+    // restart (i resumes from the checkpoint value, so i==0 is never seen again).
+    // Basilisk's dump/restore does NOT serialize scalar function-pointer attributes
+    // (restriction, prolongation, refine), so they revert to defaults.  Without
+    // restriction_volume_average the multigrid h_relax propagates NaN from solid
+    // cells (cm=0 → d=0 → c[]=n/0) into fluid cells → NaN kLa and tracer sums.
+    //
+    // [PROJECT MOVED, 2026-09-12] This whole block (prolongation/restriction
+    // re-application for stracers, u/p/pf/g/uf, and f) used to sit AFTER the
+    // cross-level warm-start's refine() call below -- meaning refine()
+    // interpolated every field using Basilisk's generic, non-embed-aware
+    // default prolongation instead of the embed-aware one this project's own
+    // (pre-existing) comments already say is required near the embedded
+    // boundary. Moved here, before refine(), so cross-level interpolation
+    // uses the correct prolongation from the start. Ordering is harmless for
+    // an ordinary (non-cross-level) restart, since no refine() call happens
+    // there either way. Falsifiable test: does this close (or shrink) the
+    // ~32%/~49% L6->L7/L7->L8 cross-level tau discrepancy (diary.md
+    // 2026-09-12)? Not yet re-run.
+```
+
+## init.h:94 -- `#if TREE && EMBED`
+
+```c
+    // Re-apply centered.h's EMBED defaults (event defaults(i=0) is skipped on
+    // restart because i resumes from the checkpoint value).  Without these,
+    // p/pf/u/g use non-EMBED prolongation/restriction and uf uses
+    // refine_face_solenoidal instead of refine_face.  The pressure gradient at
+    // the embedded wall falls back to the generic gradient (no
+    // pressure_embed_gradient), so the Poisson solve near the solid accumulates
+    // small errors each timestep.  After ~300 steps (~1 T) the velocity
+    // diverges → SIGFPE in tracer_diffusion/h_residual.
+    // Confirmed experimentally: fresh run to t=15 is stable; restart crashes at
+    // t=t_checkpoint+1.14T with both 4 and 16 MPI ranks.
+```
+
+## init.h:118 -- `cs.refine = embed_fraction_refine;`
+
+```c
+    // [PROJECT ADDED, 2026-09-13] cs/fs themselves have exactly the same
+    // restart-attribute-loss problem as u/p/pf/g/uf above, and it was never
+    // fixed: embed.h's own `event metric (i=0)` is what normally assigns
+    // cs.refine=embed_fraction_refine, cs.prolongation=fraction_refine,
+    // fs.x.prolongation=embed_face_fraction_refine_x, and it is the ONLY
+    // place in Basilisk that calls `restriction ({cs,fs})` -- both skipped
+    // on restart for the same reason (i != 0). Root cause of the
+    // cross-level checkerboard (diary.md 2026-09-13): cs/fs are restored
+    // (cs) or recomputed (fs, via the solid() call below) at LEAF level
+    // only; nothing ever pushed the corrected leaf values up to the tree's
+    // coarse (non-leaf) cached cs/fs. Confirmed against Basilisk's own
+    // canonical idiom for recomputing solid() outside the normal i=0 init
+    // path (src/test/neumann3D.c:43-47): solid() must always be followed by
+    // reasserting cs/fs's refine+prolongation attributes and an explicit
+    // restriction({cs,fs}) call. None of the six fix attempts already
+    // documented below touched cs/fs's own attributes or tree consistency
+    // -- they all operated on u/p/g instead.
+```
+
+## init.h:148 -- `#if CROSS_LEVEL_WARMSTART`
+
+```c
+    // [PROJECT ADDED, 2026-09-10] Cross-level warm-start pilot (diary.md
+    // 2026-09-10): restore() reconstructs the checkpoint's tree EXACTLY as
+    // dumped -- a checkpoint written at fidelity F restores as a uniform
+    // tree of depth F, even when THIS run's own NN/init_grid was set up
+    // for a finer fidelity. Gated behind -DCROSS_LEVEL_WARMSTART=1, off by
+    // default and NOT part of the normal restart path.
+    //
+    // [CORRECTED, 2026-09-10] First attempt used adapt_wavelet() with a
+    // deliberately tiny (1e-30) tolerance on every field, reasoning that
+    // any nonzero wavelet detail coefficient would trigger refinement.
+    // Wrong, caught by the verification below on a smoke test (not
+    // assumed correct and left unverified): grid->n came back 752 against
+    // a wanted 16384. adapt_wavelet refines on the wavelet DETAIL
+    // coefficient, which is bit-exactly 0.0 over large flat sub-regions of
+    // these fields (f exactly 0 or 1 away from the interface, quiescent
+    // near-zero velocity in the air phase) -- and 0.0 is not greater than
+    // any positive tolerance, however small, so those regions never
+    // refined at all. An error-driven criterion cannot deliver unconditional
+    // uniform refinement no matter how the tolerance is tuned.
+    //
+    // Fixed: Basilisk's own `refine (bool cond)` macro
+    // (grid/tree-common.h) is genuinely unconditional -- it loops
+    // (foreach_leaf, refine_cell) until no leaf satisfies `cond` anywhere,
+    // with no error estimate involved, and refines with field list `all`
+    // (interpolates every declared scalar via its own .prolongation
+    // attribute, not just the ones named explicitly). `level < params.
+    // fidelity` refines every leaf below the target depth, repeatedly,
+    // until the whole domain is uniform at that depth -- the actual
+    // "spatially interpolate the coarse field onto the finer grid
+    // everywhere" operation the experiment needs.
+    //
+    // Verified after the call, not assumed: depth() and the leaf count
+    // must both match the fully-refined uniform grid this run's own NN
+    // implies. If either check fails the run aborts rather than silently
+    // continuing on a partially-refined grid.
+```
+
+## init.h:185 -- `// [PROJECT ADDED, 2026-09-14] Recompute cs/fs analytically on the`
+
+```c
+      // [CORRECTED, 2026-09-10] The first two attempts checked
+      // grid->n == NN*NN, assuming the checkpoint's grid is uniform across
+      // the WHOLE bounding box -- wrong, and caught by looking at the
+      // actual pre-refine count instead of assuming it: restore() hands
+      // back only 512 active leaves for a nominally-uniform L6 grid whose
+      // full bounding box would be 4096, because embed.h's own machinery
+      // keeps cells entirely outside the thin bag geometry coarse (no
+      // fluid physics there to resolve) -- true of every run this project
+      // has ever done, at every fidelity, not a defect in this checkpoint.
+      // The actual success criterion is that refine() cleanly multiplied
+      // whatever active-cell count existed by exactly 4 (one uniform
+      // level, one pass), which is what a leaf refining into 4 children
+      // means in 2D -- not that the whole box reached maximum depth.
+```
+
+## init.h:199 -- `#ifndef CROSS_LEVEL_PREREFINE_SOLID`
+
+```c
+      // [PROJECT ADDED, 2026-09-14] Recompute cs/fs analytically on the
+      // COARSE grid BEFORE refine(), so refine_embed_linear has correct fs
+      // to work with when it prolongates u/p/g.
+      //
+      // Why this matters: refine() prolongates u/p/g with
+      // refine_embed_linear (embed-tree.h:268), and EVERY interpolation
+      // branch there is gated on the COARSE fs -- bilinear and triangular
+      // both require `coarse(fs.x,i) && coarse(fs.y,0,j)`, diagonal
+      // requires `coarse(fs.x,i) && coarse(fs.y,child.x,j)` (or the
+      // transpose); if all fail it falls to "pathological cases", whose
+      // two 1D-gradient corrections are ALSO fs-gated, leaving
+      // `s[] = coarse(s)` (piecewise-constant injection). So whatever fs
+      // holds at refine() time directly controls the quality of the
+      // interpolation.
+      //
+      // What fs actually holds after restore(), MEASURED on the L6->L7
+      // pilot rather than assumed (fs is a face field, and Basilisk's
+      // dump_list() skips face fields outright -- output.h:1037,
+      // `if (!s.face && ...)`):
+      //   cs   restores EXACTLY          (sum 1171.46, = analytic to 5 figs)
+      //   fs.x sum 594.99 vs 1189.76 analytic
+      //   fs.y sum 594.32 vs 1216   analytic
+      // and, decisively, among faces that should be FULLY OPEN (both
+      // neighbours cs > 0.99, no geometry anywhere near) roughly HALF come
+      // back as hard ZERO: 586 of 1170 in x, 576 of 1088 in y, already so
+      // the instant restore() returns. Since the branch tests above are
+      // truthiness tests on fs, that alternating half-zero pattern throws
+      // ~50% of cells onto the injection branch while the interleaved rest
+      // interpolate properly -- which IS the period-2 "checkerboard", and
+      // it is imposed over the WHOLE domain, not just near the wall.
+      //
+      // With this call in place: 0 of 1224 open x-faces and 0 of 1152 open
+      // y-faces are zero, and the real 60-cycle L6->L7 pilot lands at
+      // +0.04% on tau and +0.01% on dissipation versus the L7 cold start
+      // (vs +29.7% / +219.8% without it). See diary.md 2026-09-14.
+      //
+      // The post-refine solid() call further below is still required and
+      // still runs; it makes cs/fs exactly analytic at the FINE resolution,
+      // which prolongation alone only approximates.
+      //
+      // Toggle for A/B verification: -DCROSS_LEVEL_PREREFINE_SOLID=0
+      // reproduces the old (broken) ordering.
+```
+
+## init.h:265 -- `long ratio = (n_before > 0) ? n_after / n_before : 0;`
+
+```c
+      // [PROJECT GENERALIZED, 2026-09-15] This check used to demand
+      // `n_after == 4 * n_before` -- a hardcoded SINGLE-level assumption.
+      // refine() loops internally until no leaf satisfies the condition, so
+      // a k-level jump multiplies the active leaf count by 4^k in 2D (an
+      // L6->L8 jump measured 512 -> 8192 = 16x = 4^2 and was rejected as
+      // "incomplete" even though it was correct, job 6402091). A k=0 jump
+      // (restarting at the SAME fidelity, e.g. the 2nd and later segments
+      // of a chained run) leaves the count unchanged and was likewise
+      // rejected, which forced chains to swap binaries mid-run.
+      //
+      // The real invariant is: the grid reached the target depth, and every
+      // refined leaf split cleanly, i.e. the ratio is an exact power of 4.
+```
+
+## init.h:303 -- `if (params.replay_scalar_level > params.fidelity) {`
+
+```c
+    // Scalars on a finer grid than the flow (F3): refine the restored grid to replay_scalar_level. Order as
+    // in the cross-level path above (CLAUDE.md): cs/fs from solid() on the coarse grid FIRST, because
+    // refine_embed_linear and embed_fraction_refine read fs; then refine(); the fine solid() and the cleanup
+    // follow below. The fs = 1 coarse-level convention of a fresh run is set again on the new levels.
+```
+
+## init.h:348 -- `#if EMBED`
+
+```c
+    // fs (embed face fractions) does not survive dump/restore intact, so it
+    // must be recomputed from the same static geometry used at fresh-start
+    // (rocking is body forces, not a moving solid). Without this the NS
+    // solver misreads the walls and the velocity collapses on the first step.
+    //
+    // [CORRECTED, 2026-09-14] This comment used to say "After restore, fs=0
+    // everywhere". That is FALSE and it cost real debugging time (it was
+    // taken at face value and used to build a wrong root-cause story; see
+    // diary.md 2026-09-14). MEASURED on the L6 restart, before any
+    // recompute: fs is roughly half-correct in aggregate (fs.x sum 594.99
+    // vs 1189.76 analytic; fs.y 594.32 vs 1216), and cs restores EXACTLY
+    // (1171.46 both). The real defect is structural, not a blanket zero:
+    // ~50% of fully-open fluid faces (both neighbours cs > 0.99, geometry
+    // nowhere near) come back as hard ZERO -- 586/1170 in x, 576/1088 in y.
+    // That alternating half-zero pattern is what drives refine_embed_linear
+    // onto its fs-gated pathological branch for half the cells during a
+    // cross-level refine(), which is the actual origin of the "checkerboard".
+```
+
+## init.h:374 -- `#if TREE && !REPLAY_FLUX      // a replay keeps the coarse levels it set up above, see the`
+
+```c
+      // [PROJECT ADDED, 2026-09-13] solid() only writes LEAF cells
+      // (fractions.h's foreach()/foreach_face() default to leaves). On a
+      // cross-level refine(), the tree's coarse (non-leaf, pre-refine)
+      // cs/fs cache is never touched by solid() and is never restricted
+      // anywhere else on the restart path -- it keeps the STALE, aliased
+      // pre-refine values (diary.md 2026-09-13's root cause) forever,
+      // feeding the embedded Poisson/diffusion operators at coarse tree
+      // levels every single timestep. Canonical Basilisk idiom for calling
+      // solid() outside the normal i=0 init path always follows it with
+      // this restriction (src/test/neumann3D.c:43-47); our restart path
+      // was missing it.
+```
+
+## init.h:389 -- `assert_fs_sane ("post-solid");`
+
+```c
+    // fs must also be usable here, on the FINAL grid the solver will run on
+    // -- this covers the ordinary (non-cross-level) restart path too, where
+    // fs is likewise broken by restore() and only repaired by the solid()
+    // call just above.
+```
+
+## init.h:397 -- `#if TREE && EMBED`
+
+```c
+    // The coupled run repeats fractions_cleanup(cs, fs) every step (event adapt of centered.h, trees
+    // only), so the cs/fs it advects f with are the cleaned ones, and the dump holds them; solid() above
+    // has just rebuilt the raw ones. The cleanup is deterministic and reaches a fixed point, so one call
+    // restores the cleaned geometry. The uf=0 on closed faces that event adapt also does is already in
+    // the recorded uf.
+```
+
+## init.h:433 -- `#if !REPLAY_FLUX`
+
+```c
+    // [PROJECT NOTE, 2026-09-13] A cross-level warm-start (CROSS_LEVEL_
+    // WARMSTART) introduces a real, root-caused artifact: a checkerboard
+    // pattern in u/p in a ~5-coarse-cell-wide band
+    // next to the embedded wall, which accounts for the ENTIRE observed
+    // 32-49% domain-mean tau discrepancy against a same-condition cold
+    // start (measured directly by exclusion, diary.md 2026-09-13). Root
+    // cause: Basilisk's refine_embed_linear (embed-tree.h:268) picks its
+    // per-child interpolation formula from the COARSE parent's fs/cs
+    // neighbor pattern, and the coarse source grid's own discretization of
+    // the curved bag boundary has a genuine period-2 aliasing in fs.x near
+    // the wall -- refine_embed_linear faithfully (and correctly, per its
+    // own contract) propagates that into the fine grid. SEVEN independent
+    // fixes have been tried and removed from this file after all failing on
+    // the real 60-cycle L6->L7 pilot (five had zero effect, one made it
+    // worse, one -- the cs/fs reapplication + restriction({cs,fs}) added
+    // above, 2026-09-13, the same restart-attribute-loss bug already fixed
+    // for u/p/pf/g/uf but never extended to cs/fs itself -- produced a
+    // trajectory BIT-IDENTICAL to the unfixed run, max diff 7.9e-7 over the
+    // whole 60-cycle run): moving this prolongation re-application before
+    // refine() (kept -- see below, it's a real separate bug, just not the
+    // cause of this artifact), an explicit post-refine incompressibility
+    // projection, plain non-embed-aware interpolation, near-wall corrective
+    // smoothing at two widths (one verified via direct measurement to
+    // actually clean the field at t=0), propagating that correction to the
+    // tree's coarse-level cache via restriction(), and the cs/fs restart-
+    // attribute fix. The checkerboard regenerates within under 1% of one
+    // rocking cycle even from a verified-clean start, and does NOT appear
+    // in an ordinary (non-cross-level) restart into the same converged
+    // state, nor in a cold start forced through an near-instant ramp -- so
+    // it is specific to the cross-level refine() path, not to onset speed
+    // or to handling a converged flow in general, and lives in the solver's
+    // own per-timestep dynamics, not in the initial condition, and not in
+    // anything related to cs/fs's own tree consistency either (that fix is
+    // kept anyway -- it's a real, separate correctness fix matching
+    // upstream's own contract, just not the cause of this artifact). See
+    // diary.md 2026-09-13 for the full investigation (kept there, not
+    // here, to keep this file uncluttered) before attempting further fixes.
+```
+
+## init.h:472 -- `if (params.omega_b_prev > 0.) {`
+
+```c
+    // Rescale stored velocity and pressure to the new segment's non-dim frame.
+    // [PROJECT FIXED, 2026-09-07] The comment this replaces claimed "U_bio ∝
+    // omega_b (fixed geometry, theta_max)" and rescaled by su =
+    // omega_b_prev/omega_b alone -- but U_bio = V_bio/(H_bio/2)/T_per, and
+    // V_bio = L_bio/4*(H_bio + 0.5*L_bio*tan(theta_max)) depends on
+    // theta_max too. That assumption is simply wrong for exactly the case
+    // this project's settling-time sweeps rely on: checkpointing across a
+    // theta_max-only change (omega_b_prev == omega_b, so the old code
+    // silently applied su=1, no rescale at all, regardless of how much
+    // theta_max changed). Fix: compute the FULL U_bio ratio (both omega_b
+    // and theta_max contributions), not just the omega_b part.
+    //
+    // HONEST STATUS: dimensionally required, empirically inert. This was
+    // first committed (646b7b3) as a "confirmed bug fix" and as the likely
+    // seed of the cold-start-beats-warm-start anomaly. Both claims were
+    // wrong. The anomaly is the restart forcing-phase error fixed in
+    // main(); A/B'ing this term against -DLEGACY_SU=1 with that fix in
+    // place (scripts/ab_test_su_rescale.py, diary.md 2026-09-07 (4)) gives
+    //     Delta_theta = 0.1 (term = 0.26% on u): 1.0001 vs 1.0005
+    //     Delta_theta = 5   (term = 14%   on u): 0.9999 vs 1.0002
+    // against a 0.43-0.48% cycle-to-cycle spread -- no measurable effect at
+    // any Delta_theta_max tested, including the 14% case. It is kept
+    // because u_nd = u_phys/U_bio and a segment that changes U_bio must
+    // convert, not because any experiment supports it; the reference state
+    // simply re-equilibrates within its basin. Do not cite it as evidence
+    // for anything.
+```
+
+## init.h:507 -- `#if LEGACY_SU`
+
+```c
+      // [PROJECT ADDED, 2026-09-07] -DLEGACY_SU=1 restores the original
+      // omega_b-only ratio, so the theta_max contribution to su can be
+      // A/B'd against this fix rather than asserted. It needs A/B'ing: the
+      // change was committed as a "confirmed bug fix" on dimensional
+      // grounds alone, and its one verification run moved the metric from
+      // 5.8% to 5.4%, i.e. not at all. For a theta 6.9->7 restart the term
+      // it adds is 0.26% on velocity, and the kicknoise run showed a
+      // deliberate 0.3% per-cell random velocity perturbation decaying to
+      // nothing (every quantity back to 1.000 within 0.1% over 160 cycles),
+      // so it cannot matter at small Delta_theta_max. At theta 2->7 it is
+      // 14%, which is the case worth measuring.
+```
+
+## init.h:530 -- `foreach_face()`
+
+```c
+      // uf (face-centered velocity) must also be rescaled.  centered.h's
+      // advection scheme (BCG), the VOF step, and the AMR adapt-at-t=0
+      // all use uf directly before it is rebuilt from u.  Without this,
+      // the first Poisson projection sees a factor-of-(1/su)^2 kinetic
+      // energy mismatch and destroys the restored velocity field.
+```
+
+## init.h:538 -- `#ifndef G_RESTART_MODE`
+
+```c
+      // Scale g (combined pressure-gradient + acceleration term from BCG predictor).
+      // g is stored in the checkpoint in seg0 non-dim units.  With ramp=1 immediately,
+      // the acceleration part of g is correct (w_bio_st is constant across omega_b).
+      // The pressure-gradient part scales as su² (same as p).  Scale by su² to keep
+      // the pressure-gradient contribution accurate in the first BCG half-step.
+      // [PROJECT ADDED, 2026-09-08] G_RESTART_MODE. The uniform su^2 below is
+      // provably wrong: g combines the pressure gradient with the whole
+      // acceleration field a, and those do NOT share a scaling law --
+      //   -sin(Th)/Fr^2            gravity      ~ su^2
+      //   2*Th_d*u                 Coriolis     ~ su   (Th_d is su-invariant)
+      //   Th_d^2*(x+L_piv sin Th)  centrifugal  ~ 1
+      //   Th_2d*(y+L_piv cos Th)   Euler        ~ 1
+      // so scaling all of g by su^2 mis-scales three of the four terms, by
+      // |su^2-1| on the su-invariant ones: 24% at theta 2->7 (su=0.874,
+      // converges) but 33% at omega 37.5->32.5 (su=1.154, escapes) and 71%
+      // at omega 17.5->32.5 (su=0.538, escapes). Harmless while su stayed
+      // near 1 on theta-only restarts; exposed by omega restarts.
+      //
+      // g only feeds the first BCG predictor half-step and is rebuilt by
+      // centered_gradient(p,g) at the end of it, and a COLD start runs that
+      // first half-step with g==0 (centered.h's event init never sets it).
+      // Mode 2 therefore reproduces cold-start behaviour exactly, mode 1
+      // leaves the restored value untouched, mode 0 is the current su^2.
+      // Measured on the worst case (omega 17.5->32.5, su=0.538, 71% error
+      // on the su-invariant terms): all three modes give tau/tau_ref
+      // 1.2273-1.2308, identical to within noise. g simply does not matter
+      // -- it survives one predictor half-step. So the su^2 scaling was
+      // never the cause of the omega escape (that is a basin crossing set
+      // by the size of the jump), but it is still provably wrong code, and
+      // the default is now mode 2: match a cold start exactly rather than
+      // apply a scaling that is right for one of four terms.
+```
+
+## init.h:589 -- `if (!params.restart_continue)`
+
+```c
+    // Reset ALL stracers to zero at EVERY multigrid level.  reset() zeroes
+    // owned cells; boundary() communicates zeroed leaf ghost values.  But
+    // coarse-level ghost cells (owned by a neighbouring MPI rank) are NOT
+    // updated by boundary() — they retain stale checkpoint values.  When
+    // h_relax runs at a coarse V-cycle level it reads a[1] which can be a
+    // coarse ghost cell, producing a spurious non-zero restricted residual
+    // (b[] >> 1) and driving a gradual multigrid divergence over ~5 periods.
+    // restriction() propagates leaf=0 to coarse own cells and then runs
+    // halo_restriction which communicates those zeroed coarse values to
+    // neighbouring ranks' ghost slots, closing the ghost-cell gap.
+    //
+    // [PROJECT FIXED, 2026-09-15] The zeroing is now conditional. Note what
+    // the diagnosis above actually says: the problem is STALE COARSE-LEVEL
+    // values, and restriction() is what fixes it, by recomputing coarse cells
+    // from the leaves and communicating them to neighbours' ghost slots. The
+    // leaf values are not the problem -- and on a CONTINUATION they are the
+    // entire experiment. Measured (probe job 6411170): c2 and oxy round-trip
+    // through restore() bit-exact and were then destroyed here, which made
+    // every chained mixing/kLa run silently measure from a blank tracer
+    // field. restore() and solid() were both ruled out by direct measurement
+    // before this line was touched. See diary.md 2026-09-15 (8).
+```
+
+## init.h:620 -- `double y_fill = b_nd * (2.*params.fill_level - 1.);`
+
+```c
+    // [PROJECT CHANGED] Upstream: `double y_init = 0.0;` — fixed liquid
+    // level (always half-full, matching Kim's own 0.5 fill fraction). Made
+    // parametric for the sweep/optimization pipeline. At fill_level=0.5 this
+    // reduces to y_fill = b_nd*(2*0.5-1) = 0, i.e. y_init=0.0 exactly,
+    // matching upstream for Kim's own condition.
+    // Fill level: liquid occupies fill_level fraction of bag height, measured from bottom
+```
+
+## init.h:629 -- `#if EMBED`
+
+```c
+    // [PROJECT CHANGED] Upstream's `init` event only ever builds a plain
+    // rectangle here: `solid(cs, fs, intersection(-(y-0.5*Ly), -(-y-0.5*Ly)))`
+    // — note this bounds ONLY y; the x-direction walls are upstream's plain
+    // domain box edges (u.n[left]/u.n[right] boundary conditions below), not
+    // embedded at all. This fork generalized the shape to a parametric
+    // superellipse so bag corner-rounding could be a sweep variable. VERIFIED
+    // (diary.md, 2026-07-28) that this generalization does NOT change the
+    // effective geometry/BCs at Kim's own parameters: `params.geometry_n=8`
+    // hits the `>= 8` branch below, which builds the exact same sharp
+    // rectangle as upstream's intersection() call (a_nd - fabs(x), not a
+    // rounded pow() formula), and because a_nd (=1, by construction) exceeds
+    // the domain box's own half-width (0.5), the x-constraint in that
+    // rectangle is never actually binding inside the box either way — so the
+    // x-walls are, in practice, upstream's plain box edges here too. No
+    // discrepancy vs. upstream survives this check.
+    // Superellipse solid: |x/a|^n + |y/b|^n = 1
+    // n >= 8 → perfect rectangle (avoids pow() singularities at sharp corners)
+```
+
+## init.h:655 -- `if (restart_file)`
+
+```c
+  // [PROJECT ADDED, 2026-09-15] Kept from the bisection that found the
+  // stracers reset (diary.md 2026-09-15 (8)): post_restore vs post_init
+  // brackets everything event init does to the restored state, which is
+  // where the tracer loss actually lived. Cheap, and it is the pair that
+  // would have caught it years earlier.
+```
+
+## init.h:666 -- `event clamp_f (i++)`
+
+```c
+// iforce.h (through tension.h) clamps f to [0,1] in its event acceleration, every step, after the VOF step
+// and the scalar diffusion and before the next VOF step. VOF round-off leaves f ~ -1e-17 or 1+1e-17 in
+// some cells, and the oxygen reset below tests f == 0 exactly, so a replay that skips this clamp resets
+// a different set of gas cells (measured: the pure-gas cell count drifts by 3 per step, and oxy with it).
+// It must run before the other user events of the next step, so it is registered first among them.
+```
+
+## movies.h:9 -- `event movies_output(i++)`
+
+```c
+// [PROJECT CHANGED, 2026-07-30] Basilisk's `t += dt_video` event-repeat
+// syntax requires dt_video to be a compile-time constant (qcc error:
+// "events can only use a single condition" once dt_video became a
+// runtime value driven by params.frames_per_period) -- switched to a
+// plain per-timestep check so the cadence can be runtime-configurable.
+```
+
+## movies.h:20 -- `#if _MPI`
+
+```c
+  // MPI-safe video output:
+  // interpolate() is collective (MPI_Allreduce per point) — ALL ranks must call it.
+  // File I/O is guarded to rank 0 only so no two ranks open the same file.
+  // _vframe increments on all ranks so the counter stays in sync.
+```
+
+## movies.h:68 -- `fwrite(&n,              sizeof(int),    1, fp);`
+
+```c
+      // [PROJECT ADDED, 2026-09-07] w_bio (dimensional rad/s)/_theta_env_deg
+      // appended after xh_nd for the checkpoint-chaining visualization
+      // (diary.md 2026-09-07) -- see render_videos.py's load_frame() for
+      // the matching read order. w_bio is set once per segment in main()
+      // and never interpolated across a restart (unlike the amplitude
+      // envelope) -- deliberately dumped raw so a frequency-changing
+      // checkpoint transition shows its true instantaneous jump, not a
+      // smoothed value.
+```
+
+## movies.h:94 -- `#if VIDEOS`
+
+```c
+// [PROJECT ADDED, 2026-08-05] Shear-stress field video export, requested to
+// visualize where tau_100_max (the pointwise-max KPI) occurs and how it
+// moves over time. No upstream equivalent (Kim et al.'s driver computes no
+// shear stress at all -- see the CAUTION above event normcal).
+//
+// Separate from movies_output (VOF field) rather than folding into it,
+// because the gating condition must differ: movies_output only starts at
+// t_mix (oxygen/tracer injection), but shear stress is present from t=0 and
+// is unrelated to injection timing -- gating this on t_mix would produce zero
+// frames for any run with n_mix_cycles large enough that t_mix > t_end (as
+// happened with l10_kim_seg2, the run this was written to visualize).
+//
+// tau_field[] is declared here rather than reusing a scalar declared inside
+// an event body: the CAUTION comment above event normcal already documents
+// that declaring a new scalar (there, tau_liq[]) inside an event leaks a
+// Basilisk scalar on every call and corrupts the global scalar list,
+// segfaulting at fidelity >= 7. Declaring it once at file scope (like c[],
+// oxy[] above) avoids that hazard entirely -- it's allocated once, not
+// once per event call.
+```
+
+## movies.h:115 -- `scalar ediss_field[];`
+
+```c
+// [PROJECT ADDED, 2026-08-08] ediss_field: same rationale as tau_field --
+// declared once at file scope, not inside the event, to avoid the
+// documented scalar-leak/segfault hazard. Needed for Fig. 8b/c
+// reproduction (normalized histograms of tau and epsilon across the
+// liquid, at the instant each domain-mean peaks) -- shear_stress.dat only
+// carries the scalar mean, not the full spatial distribution.
+```
+
+## movies.h:139 -- `foreach() {`
+
+```c
+  // Same stencils as event normcal's tau/ediss computation, masked to
+  // liquid (f[] > 0.5) -- kept identical on purpose so the video fields
+  // match the tau_100_max/tau_mean_max/ediss_mean KPIs in shear_stress.dat.
+  //
+  // [PROJECT CHANGED, 2026-08-09] tau_field now stores the SIGNED shear
+  // stress, not fabs() -- Kim et al.'s Fig. 8b histogram bins the signed
+  // quantity (their Fig_tau_Ediss.pdf shows it centered near zero and
+  // ranging -15e-3 to +15e-3 Pa), and a fabs()'d field can't be un-signed
+  // in post -- the reverse (taking abs() of a signed field at render/
+  // analysis time, if a magnitude heatmap is wanted) is always possible.
+  // NOTE: this changes the on-disk semantics of frames_tau/*.bin's second
+  // buffer for any run recorded after this commit; older recordings
+  // (l10_kim_tau_video, l10_kim_fig8, etc.) still store fabs()'d values.
+```
+
+## movies.h:181 -- `float *buf_f     = (float *)malloc(n * n * sizeof(float));`
+
+```c
+  // Three buffers per frame: f (for the bag/liquid mask), tau_field, and
+  // ediss_field (2026-08-08 addition, for Fig. 8b/c histograms). All
+  // interpolated on ALL ranks (interpolate() is collective); only rank 0
+  // writes. NOTE: this is a FORMAT CHANGE from the original 2-buffer
+  // (f, tau) frames_tau/*.bin -- older recordings (e.g. l10_kim_tau_video,
+  // l10_kim_strict_mask_test, l10_kim_signed_test) are still 2-buffer and
+  // must be read with the old loader; anything recorded after this commit
+  // is 3-buffer.
+```
+
+## params_read.h:1 -- `#ifndef PARAMS_READ_H`
+
+```c
+// JSON parameter reader for BioReactor.c.
+// Wraps jsmn (MIT, Serge Zaitsev) to parse params.json into a flat C struct.
+// All physics parameters live here; BioReactor.c reads only from BioreactorParams.
+//
+// Canonical params.json schema (see design spec):
+//   fidelity, omega_b, n_harmonics,
+//   theta_max[3], phi_angular[3],
+//   omega_h, amplitude_h[3], phi_horizontal[3],
+//   geometry.{a, b, n}, fill_level
+//
+// phi_angular[0] is forced to 0.0 at read time (time-origin reference, not a free parameter).
+```
+
+## params_read.h:43 -- `double tracer_D_scale;`
+
+```c
+  // Field snapshots (fields/snap_*.bin): u, vorticity, f, tracers and oxygen on
+  // a uniform grid, on the video cadence, between these two ABSOLUTE cycle
+  // counts. Kim's Figs. 3, 6 and 7 are fields at particular instants -- the
+  // phases of one rocking cycle, the instant chi reaches 0.5, the instants
+  // C* reaches 0.10/0.25/0.50 -- and none of those instants is known in
+  // advance. Recording a window and letting the analysis pick the frame keeps
+  // every threshold out of the solver. Both 0 (default) disables the writer.
+```
+
+## params_read.h:54 -- `int    restart_continue;`
+
+```c
+  // Checkpoint restart fields (set by chain.py for restart segments; 0 for fresh runs)
+  // restart_continue distinguishes the TWO things a restart can mean:
+  //   0 (default) NEW EXPERIMENT. The restored state is a warm start for a
+  //               DIFFERENT condition (chain.py's parameter sweeps). Soluble
+  //               tracers are zeroed and re-injected n_mix_cycles later, so
+  //               each segment runs its own tracer/oxygen experiment.
+  //   1           CONTINUATION. The segment continues ONE experiment across a
+  //               walltime boundary: tracers keep their restored values and
+  //               are NOT re-injected. Required for any mixing-time (Fig 9/10)
+  //               or kLa (Fig 11/12) run too long for a single job.
+  // Default 0 preserves the existing sweep behaviour exactly.
+```
+
+## replay.h:11 -- `#define REC_NPC (2*dimension)`
+
+```c
+// Record format, one file per rank (<rec_dir>/flux_rec.<pid>.bin), read by scripts/replay_gate.py:
+//   file header: char magic[8], int pid, int npe
+//   per step   : int i, double t, double dt, long long n, then n*REC_NPC doubles: for each leaf cell and
+//                each axis, the left and the right face value of uf (x: uf.x[], uf.x[1]; y: uf.y[], uf.y[0,1]).
+// The right/top faces are stored too: on the domain edge they live in a ghost cell, which a leaf-only
+// traversal would not reach.
+```
+
+## replay.h:27 -- `#ifndef REC_KIM_MASK`
+
+```c
+// -DREC_KIM_FLUX=1 (with -DRECORD_FLUX; default 0): store ufk = fm*face_value(u) instead of uf. It emulates
+// an offline solver that rebuilds the advecting face velocity from the stored cell-centred velocity (not
+// divergence-free), to measure the error of that approach. Same record format; uf, u and the run are untouched.
+// -DREC_KIM_MASK=1: also set ufk = 0 on faces with fs = 0, as Kim's Field_define does (diary 2026-10-29).
+```
+
+## replay.h:163 -- `static void rec_start (void)`
+
+```c
+// Called from event rec_checkpoint at the START of the step that lands on t_rec0, after the release events
+// of that step (user events run before the vof/diffusion/projection events of the same step). The dump is
+// the state that step starts from, and that step is the first recorded one.
+// restore() ends by marking every event of the restored iteration as done, so a restart resumes at the
+// NEXT iteration. To resume AT this step the dump is written with iter - 1 in its header (same t).
+// p and pf are forced into the dump as in event dump_checkpoint, so that restore() of it is the ordinary
+// restart.
+```
+
+## replay.h:201 -- `foreach_face (x, y, noauto)`
+
+```c
+  // foreach_face() also visits the face on the upper domain edge (it lives in a ghost cell), computed from
+  // the ghost value of u; boundary() then fills the faces that sit in the halos of the other ranks and of
+  // coarser neighbours, so that ufk.x[1] is defined the same way uf.x[1] is.
+  // noauto (hence the explicit 2D order x, y): without it qcc calls boundary() on u first, which refreshes
+  // the ghost and halo cells of u and changes the coupled run (measured: i = 200 on, L6, 2 ranks). With it,
+  // u is only read, as the solver holds it; the faces that reach a ghost or halo cell of u (~0.5 % of them
+  // at the first recorded step) use the value u has there.
+```
+
+## replay.h:247 -- `static void replay_open (void)`
+
+```c
+// Called from event init once the checkpoint is restored: opens the record, indexes it and checks that it
+// starts where the checkpoint is (the dump header carries iter - 1, see rec_start). It also sets the time of
+// the first step, which the restored run does not know (centered.h does this with event("stability")).
+// The records of one pass add up to exactly the window length when its last step landed on the window end.
+```
+
+## replay.h:306 -- `static void rec_prolong (void)`
+
+```c
+// Scalars on a finer grid than the flow: the record holds uf at the flow level; the faces of the finer
+// levels come from Basilisk's own solenoidal face refinement, refine_face_solenoidal() of
+// grid/tree-common.h (Popinet 2009, sec. 3.3: linear interpolation plus a local projection that keeps the
+// divergence of the children equal to that of the parent), applied level by level. That function is written
+// for the moment a cell is refined: it writes the faces shared with a neighbour only when the neighbour is
+// not refined yet (is_refined()). The tree is already refined, so the cells of the level being
+// prolonged are marked as leaves for the duration of the call, which is the state refine_cell() sees.
+```
+
+## replay.h:331 -- `foreach_face()`
+
+```c
+  // The solenoidal refinement knows nothing of the embedded boundary, so it puts flux on faces the wall
+  // closes (fs = 0). vof.h divides by fm (un = uf*dt/(Delta*fm + SEPS)), so such a flux gives un ~ 1e30 and
+  // the scalars diverge in the first step (measured). The coupled run clears them every step in event adapt
+  // of centered.h, and so does this: the same line. It is the only place the prolonged flux is changed
+  // after the canonical routine, and it is what makes the divergence at wall cells nonzero (reported).
+```
+
+## replay.h:339 -- `if (params.replay_project_flux) {`
+
+```c
+  // params.replay_project_flux = 1: make the prolonged flux divergence-free on the fine grid with Basilisk's
+  // own project() (poisson.h), called as centered.h's event projection calls it (alpha = fm, here with
+  // dt = 1: only the divergence-free flux is wanted, and project() scales its tolerance by dt^2). The
+  // tolerance is TOLERANCE/sq(dt) on the divergence residual, so it is set to replay_project_tol for the
+  // call and put back for the scalar solves. fm = 0 on closed faces, so they stay zero.
+```
+
+## replay.h:389 -- `static int rec_sub = 0;         // substeps of the current record already taken`
+
+```c
+// Called from event vof at the start of every step: takes the place of stability + the Navier-Stokes
+// solve. Sets dt and the time of the next step, and loads the flux that step advects with.
+// With scalars on a grid finer than the flow by k levels, the recorded dt violates the CFL limit of the VOF
+// step (it was set for the flow grid: measured, CFL 0.5 -> 0.91 at one level, and the scalar solves blow
+// up). Each recorded step is therefore taken as n = 2^k substeps of dt/n with the same flux, the flux being
+// constant over a recorded step in the coupled run too. Substeps are iterations, so `i` advances n times
+// per record and the i check is dropped (the time check stays).
+```
+
+## replay.h:460 -- `static int out_due (double * t_next, double dt_out)`
+
+```c
+// The Basilisk time events `t += dt_out` are dropped when t steps over their time, and a looped replay
+// does not land on the lattice of output times. So replay outputs at the first step whose time is at or
+// after the next lattice point. In the first pass the steps do land on it, so the times agree with the
+// recorded run.
+```
+
+## replay_events.h:4 -- `#if RECORD_FLUX`
+
+```c
+// ================================================================== //
+//                  FLUX RECORD / REPLAY EVENT                        //
+// ================================================================== //
+// Actions of one event name run in reverse order of registration, so this one runs before the VOF actions
+// of henry_oxy2.h and vof.h/conserving.h: it sees uf and dt exactly as they will be consumed. (A named
+// event is used rather than an ordering flag: this file is compiled by qcc, which has no way to place
+// an event relative to a library event other than by registration order.)
+```
+
+## restart.h:5 -- `static void assert_fs_sane (const char *tag)`
+
+```c
+// [PROJECT ADDED, 2026-09-07] Restart-correctness diagnostic (Test C,
+// diary.md 2026-09-07): field-level summary statistics (Basilisk's
+// statsf(), already used elsewhere in this file, MPI-safe), written to
+// restart_diagnostic.txt. Called BOTH right before dump() (this run's own
+// pre-dump state, in event dump_checkpoint below) and immediately after
+// restore() succeeds on any restart (this run's post-restore state, in
+// event init below) -- BEFORE any of the restart-specific fixups (fs
+// recompute, omega_b rescaling, stracer reset) so it reflects exactly
+// what restore() itself reconstructed, unmodified by anything else.
+// Comparing the two files across a dump-then-restore pair (source run's
+// file vs the restarted run's file) checks whether restore() faithfully
+// reconstructs dump()'s content, independent of what the ramp/forcing
+// does afterward -- the question the missing-dAk/dt-term and Delta_theta
+// investigations couldn't answer on their own.
+// [PROJECT ADDED, 2026-09-14] Invariant guard for the cross-level bug of
+// 2026-09-14 (diary.md): fs does not survive dump/restore -- Basilisk's
+// dump_list() skips face fields outright (output.h:1037) -- and what comes
+// back has ~50% of FULLY OPEN faces at hard zero. Since refine_embed_linear
+// gates its interpolation branches on fs truthiness, that silently degrades
+// half the domain to piecewise-constant injection during a cross-level
+// refine(), costing +30-42% on tau and +126-220% on dissipation with no
+// crash, no warning, and a physically plausible-looking result.
+//
+// The invariant: a face whose BOTH neighbouring cells are entirely fluid
+// cannot have zero open area. Violations mean fs is stale/partial and must
+// not be used. Cheap (one pass), so it runs on every restart rather than
+// behind a debug flag -- this class of bug is silent, which is exactly why
+// it needs an always-on check.
+```
+
+## restart.h:90 -- `stats spf  = statsf (pf);`
+
+```c
+  // [PROJECT ADDED, 2026-09-07] Extended past u.x/u.y/p/f (which all
+  // matched exactly in the first pass) to every OTHER field the su-
+  // rescaling code (event init's restart branch, a few hundred lines
+  // below) itself flags as needing special restart handling: pf (half-
+  // step pressure), g.x/g.y (BCG pressure-gradient/acceleration term),
+  // uf.x/uf.y (face-centered velocity). The kick test (diary.md
+  // 2026-09-07) ruled out the continuous PDE itself as the source of the
+  // escape-to-a-different-branch behavior -- a direct, tiny, non-
+  // checkpoint velocity perturbation causes no drift at all -- so
+  // whatever's wrong must be a field the FIRST diagnostic pass didn't
+  // check.
+```
+
+## restart.h:104 -- `stats sc2  = statsf (c2);`
+
+```c
+  // [PROJECT ADDED, 2026-09-15] The passive tracer and oxygen were NOT
+  // covered here, and that gap is exactly why their loss across a restart
+  // went unnoticed: every field this diagnostic DID track round-tripped to
+  // full double precision, so the restart looked clean. Probe 6410668
+  // measured c2 mass 0.0534 -> 0 and oxy 0.0803 -> 0 across a seam while
+  // u/p/f/g were bit-exact. A guard must cover the fields the experiment
+  // depends on, not only the ones a previous investigation happened to
+  // suspect. Fig 9/10 (mixing) and Fig 11/12 (kLa) all hinge on these.
+```
+
+## scalars.h:4 -- `static void mix_bulk_sums (double * b0, double * b1, double * b2)`
+
+```c
+// Bulk-liquid tracer sums (cells with f >= 0.5), diary 2026-10-29. c2 is the TOTAL amount per cell (henry_oxy2:
+// phi1 = a f alpha, phi2 = a (1-f), a = c/(f alpha + 1 - f)); the liquid concentration phi1/f is bounded only
+// away from f -> 0. c2*f (the old c2_liq_sum) counts c f^2 and moves when the free surface crosses a grid row.
+// tr_oxy.dat columns 13-15 (b0 b1 b2) and mix_release.dat (the same at the release step) carry these sums.
+```
+
+## scalars.h:36 -- `if (!params.restart_continue) {`
+
+```c
+  // On a CONTINUATION the tracer was injected in an earlier segment and has
+  // been mixing ever since; re-injecting would overwrite that partially-mixed
+  // field with a fresh segregated one and restart chi from 0 mid-experiment
+  // (measured: sigma^2 jumping 0.0079 -> 0.2127, probe job 6410668).
+  // An `if` wrapper, NOT an early `return` -- a valueless return in a Basilisk
+  // event compiles to a nonzero int return and silently stops the time loop.
+```
+
+## scalars.h:53 -- `#if EXTRA_TRACERS`
+
+```c
+  // [PROJECT ADDED, 2026-09-16] Kim's Fig. 5 compares the degree of mixing for
+  // FOUR initial tracer configurations, and Fig. 6 shows their fields at
+  // chi = 0 and chi = 0.5. Upstream left the circle and the line commented out
+  // and never initialised c1 or c3 at all, so only the top-half case existed
+  // and neither figure could be drawn.
+  //
+  // One run gives all of them: the four soluble tracers are independent
+  // scalars advected by the same flow, and tr_oxy.dat already logs the first
+  // and second moments of each. Four runs would differ only in noise.
+  //
+  //   c2  top half   (upstream's VERTICAL_MIXUP; left exactly as it was)
+  //   c1  left half
+  //   c3  circle at the centre of the water
+  //   c   line across the middle of the water, same area as the circle
+  //
+  // Kim's fourth panel in Fig. 6 is the BOTTOM half, which needs no tracer of
+  // its own: sigma^2 is invariant under c -> 1 - c, so the bottom half's chi(t)
+  // is identical to the top half's, and its field is 1 - c2 wherever there is
+  // water. Spending a fifth advected scalar on it would buy a copy.
+  //
+  // Gated on EXTRA_TRACERS because advecting them is not free: each costs two
+  // VOF-advected fields and a multigrid diffusion solve per timestep, and
+  // dropping the three idle ones is where the mixing sweeps got 41% of their
+  // speed (fc70305). Production keeps EXTRA_TRACERS=0 and one tracer; the
+  // Fig. 5/6 build turns them on.
+```
+
+## scalars.h:80 -- `foreach() {`
+
+```c
+    // The line spans the water and is thinned to the circle's area, but never
+    // below one cell: at L6 the exact band is 0.23 cells thick and would
+    // initialise NOTHING, giving a tracer that is identically zero and a chi
+    // with the right shape and no meaning. Where the floor binds, the line
+    // and the circle no longer have equal areas -- postprocess reads each
+    // tracer's own sigma^2_max at injection, so chi stays correct, but the
+    // two configurations are then not area-matched and should not be compared
+    // as if they were.
+```
+
+## scalars.h:106 -- `double y_liq_mid = Ly * (params.fill_level - 1.0);`
+
+```c
+    // Midpoint of the actual liquid column — fill-level-aware.
+    // y_fill = Ly*(2*fill-1), y_bot = -Ly → midpoint = Ly*(fill-1).
+    // The old hardcoded -Ly/4 was only correct for fill=0.5 and left
+    // fill<=0.3 with zero tracer coverage.
+```
+
+## scalars.h:125 -- `boundary ({c2});`
+
+```c
+    // Synchronise MPI ghost cells after direct foreach() write.
+    // Without this, ranks that border the upper liquid region see stale c2
+    // values in neighbour halos at the next tracer_diffusion call, producing
+    // a spurious large gradient (c_tracer_alpha=1e30 amplifies beta enormously)
+    // that crashes h_relax under MPI FP trapping.  Same fix as boundary({oxy})
+    // in the oxygen event.
+```
+
+## scalars.h:170 -- `boundary ({oxy});`
+
+```c
+  // Synchronise MPI ghost cells after direct foreach() write.
+  // Without this, ranks that border gas regions see stale oxy=0 in
+  // neighbour halos at the first tracer_diffusion call, producing a
+  // spurious large gradient that crashes h_relax under MPI FP trapping.
+```
+
+## snapshots.h:5 -- `#define SNAP_NPLANES 10`
+
+```c
+// [PROJECT ADDED, 2026-09-16] Velocity field on a uniform grid, written once,
+// at the same instant as the checkpoint. Kim's Fig. A.16(c) is the discrete
+// L2 norm of the velocity error between each resolution and a finer
+// reference, which needs the FIELDS at one common instant across levels --
+// and nothing this code wrote was per-cell velocity: normf.dat carries rms
+// scalars, frames_tau carries (f, tau, eps), and the Basilisk dump stores a
+// tree the analysis scripts cannot read. Written unconditionally rather than
+// under VIDEOS because it is one file per run (8 MB at L10) and a run whose
+// velocity field cannot be compared to anything is a run that has to be
+// repeated to answer a convergence question.
+//
+// The instant is the checkpoint's own, i.e. a period boundary (theta=0), not
+// Kim's t/T_p = 29.77 (maximum rocking angle): t_dump_checkpoint is pinned to
+// a zero-crossing by construction. For a convergence measure the phase only
+// has to be the SAME across levels, which this guarantees and an arbitrary
+// mid-cycle time would not.
+// [PROJECT ADDED, 2026-09-16] Field snapshot on a uniform grid: velocity,
+// vorticity, the interface, the embedded geometry, all four tracer
+// configurations and oxygen. Kim's Figs. 3, 6 and 7 are FIELDS at instants
+// that are not known in advance -- four phases of one rocking cycle, the
+// instant chi reaches 0.5, the instants C* reaches 0.10/0.25/0.50 -- so the
+// solver records a window on the video cadence and the analysis picks the
+// frame it wants from the time series it already has. No threshold logic
+// enters the solver, where getting it wrong costs a rerun.
+//
+// Nine planes, float32, in this order:
+//   ux, uy, omega, f, cs, c (line), c1 (left half), c2 (top half), c3 (circle)
+// followed by oxy. Readers must take the plane count from the header.
+```

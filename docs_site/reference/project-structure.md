@@ -2,11 +2,13 @@
 
 ```
 multi-fidelity-bioreactor/
-├── src/
-│   ├── BioReactor.c          # Basilisk solver (compile-time flags: VIDEOS, DIAGNOSTICS, AMR)
+├── src/                      # Basilisk solver; map, event order, switches: src/README.md
+│   ├── BioReactor.c          # start here: switches, globals, main() (setup), event order
+│   ├── init.h scalars.h forcing.h snapshots.h checkpoint.h diagnostics.h   # one header per concern
+│   ├── restart.h replay.h replay_events.h movies.h
+│   ├── henry_oxy2.h          # two-phase scalars with Henry's law (oxygen, tracers)
+│   ├── utils2.h              # statsf2(): statistics over the liquid
 │   ├── params_read.h         # JSON → BioreactorParams struct (jsmn-based)
-│   ├── henry_oxy2.h          # Henry's law oxygen transport
-│   ├── utils2.h, view3.h     # Basilisk visualization helpers
 │   └── jsmn.h                # Minimal JSON parser (MIT, Serge Zaitsev)
 │
 ├── scripts/

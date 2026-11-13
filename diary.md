@@ -14,6 +14,11 @@ where it conflicts with CURRENT STATE, CURRENT STATE wins, and the known conflic
 - Step 1: BioReactor.c cut into 10 headers at the same places (replay, restart, init, scalars, forcing, snapshots, checkpoint, diagnostics, replay_events, movies) -> 72/72 identical.
 - Step 2: driver rewritten (main() = set_scales, set_run_window, set_physics, open_outputs; unused globals removed; view3.h include removed: no draw/view function is called anywhere, frames are raw binary) -> 72/72 identical. draw3.h/view3.h deleted (2,600 lines). Driver 3,759 -> 510 lines.
 - Long comment blocks (127 of 4+ lines) copied verbatim to docs/history/solver-comment-archive.md before shortening.
+- Step 3: every header rewritten for a cold reader (what + why; history -> archive; lessons -> public docs_site/developer/solver-pitfalls.md, anchors cited in code as pitfall "<name>"). init.h: event init split into named functions (bag_solid x4 copies -> 1, reapply_field_attributes, cross_level_refine, replay_refine, restore_geometry, rescale_to_new_units). diagnostics.h: one merge_bins()/bin_percentile() for tau_95/98 and edr_95. Gate 72/72 identical; new `golden.py compile` mode builds 11 research-switch variants (all build).
+- Removed: KICK_TEST (finished stability probe) and G_RESTART_MODE modes 0/1 (default 2 kept): tag archive/pre-lean-2026-11. REC_CHECKSUM was removed by mistake and restored: scripts/replay_gate_f3 passes it on the build command line, which a grep of source files misses. Lesson: before calling a switch dead, also search for flags passed as arguments ("$@"), not only for the literal name.
+- Bug found: movies.h had two bare `return;` in events (movies_output, movies_output_tau), the undefined-return trap. Now `return 0;`. Video runs produced full frame sets, so the old value happened to be 0; only VIDEOS builds were affected. New tests/test_src_events.py fails on the old headers (finds both) and passes now.
+- Golden power, extra: mutation "statistics before scalar release" -> 0 diffs; correct, t_mix (0.607) is not a multiple of t_out (0.02), so the two never fire on the same step.
+- Size: src/ 7,082 -> 3,683 lines incl. jsmn; BioReactor.c 510; largest header replay.h 410.
 
 ## 2026-11-06 — Stray SLURM submissions from pytest; test guard; shared uv cache
 

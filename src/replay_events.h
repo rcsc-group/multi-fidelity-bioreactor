@@ -1,13 +1,9 @@
-// replay_events.h -- Record/replay hooks on the VOF step (event vof, event rec_checkpoint).
+// replay_events.h -- record/replay hooks on the VOF step (event vof, event rec_checkpoint).
 // Part of BioReactor.c: included at one fixed place; the place sets the event order.
 
-// ================================================================== //
-//                  FLUX RECORD / REPLAY EVENT                        //
-// ================================================================== //
-// Actions of one event name run in reverse order of registration, so this one runs before the VOF actions
-// of henry_oxy2.h and vof.h/conserving.h: it sees uf and dt exactly as they will be consumed. (A named
-// event is used rather than an ordering flag: this file is compiled by qcc, which has no way to place
-// an event relative to a library event other than by registration order.)
+// Actions of one event name run in reverse order of registration, so our `event vof` runs BEFORE the VOF
+// actions of henry_oxy2.h and vof.h: it sees uf and dt exactly as they will be used. (qcc can place an
+// event relative to a library event only by registration order, hence the include at this place.)
 #if RECORD_FLUX
 // End of the step that lands on t_rec0: registered after the release events, so a release at t_rec0 is in
 // the checkpoint.
@@ -18,9 +14,9 @@ event rec_checkpoint (t = t_rec0)
 }
 #endif
 
-// -DPREREG_DIAG=1: per-step sums written at the start of every step from the release on, the SAME code as
-// Kim's side (kim_pipeline/prereg_src/prereg_MK.h, pre_diag), so the two solvers are measured identically
-// (diary 2026-10-29: tr_oxy.dat samples every t_out only, which put our chi = 0 point 0.022 cycle late).
+// -DPREREG_DIAG=1: per-step sums from the release on, with the same code as on the Kim et al. solver side
+// (kim_pipeline/prereg_src/prereg_MK.h), so that both solvers are sampled at the same steps
+// (tr_oxy.dat samples only every t_out).
 #ifndef PREREG_DIAG
 #define PREREG_DIAG 0
 #endif

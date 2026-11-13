@@ -1,35 +1,13 @@
-// snapshots.h -- Uniform-grid field snapshots and the uv field written with the checkpoint.
+// snapshots.h -- fields on a uniform n x n grid (n = 2^level), as raw float32 files for Python.
 // Part of BioReactor.c: included at one fixed place; the place sets the event order.
 
 #if !REPLAY_FLUX
-// [PROJECT ADDED, 2026-09-16] Velocity field on a uniform grid, written once,
-// at the same instant as the checkpoint. Kim's Fig. A.16(c) is the discrete
-// L2 norm of the velocity error between each resolution and a finer
-// reference, which needs the FIELDS at one common instant across levels --
-// and nothing this code wrote was per-cell velocity: normf.dat carries rms
-// scalars, frames_tau carries (f, tau, eps), and the Basilisk dump stores a
-// tree the analysis scripts cannot read. Written unconditionally rather than
-// under VIDEOS because it is one file per run (8 MB at L10) and a run whose
-// velocity field cannot be compared to anything is a run that has to be
-// repeated to answer a convergence question.
-//
-// The instant is the checkpoint's own, i.e. a period boundary (theta=0), not
-// Kim's t/T_p = 29.77 (maximum rocking angle): t_dump_checkpoint is pinned to
-// a zero-crossing by construction. For a convergence measure the phase only
-// has to be the SAME across levels, which this guarantees and an arbitrary
-// mid-cycle time would not.
-// [PROJECT ADDED, 2026-09-16] Field snapshot on a uniform grid: velocity,
-// vorticity, the interface, the embedded geometry, all four tracer
-// configurations and oxygen. Kim's Figs. 3, 6 and 7 are FIELDS at instants
-// that are not known in advance -- four phases of one rocking cycle, the
-// instant chi reaches 0.5, the instants C* reaches 0.10/0.25/0.50 -- so the
-// solver records a window on the video cadence and the analysis picks the
-// frame it wants from the time series it already has. No threshold logic
-// enters the solver, where getting it wrong costs a rerun.
-//
-// Nine planes, float32, in this order:
-//   ux, uy, omega, f, cs, c (line), c1 (left half), c2 (top half), c3 (circle)
-// followed by oxy. Readers must take the plane count from the header.
+// fields/snap_NNNNNN.bin: written on the video cadence between params.snap_start_cycle and snap_end_cycle
+// (off when snap_end_cycle = 0). The analysis picks the frames it needs (a phase, the instant chi = 0.5,
+// ...) afterwards, so no threshold logic is needed in the solver.
+// Format: int n, int nplanes, double t, then nplanes float planes of n*n values, in this order:
+//   ux, uy, omega, f, cs, c (line), c1 (left half), c2 (top half), c3 (circle), oxy.
+// Readers must take the plane count from the header.
 #define SNAP_NPLANES 10
 
 static void write_snapshot (const char *path, double t_nd)
@@ -92,6 +70,9 @@ event field_snapshots (i++)
   }
 }
 
+// uv_field.bin: velocity at the checkpoint instant (a period boundary), for grid-convergence norms across
+// levels (Kim et al., Fig. A.16c). Format: int n, double t, then float planes ux, uy, f, cs of n*n values.
+// interpolate() is collective: every rank calls it for every point.
 static void write_uv_field (double t_nd)
 {
   int    n  = NN;

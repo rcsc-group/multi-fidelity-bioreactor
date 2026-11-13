@@ -59,4 +59,7 @@ nav:
       - "Fidelity guide": reference/fidelity-guide.md
       - "Scripts": reference/scripts.md
       - "Project structure": reference/project-structure.md
+  - Developer:
+      - "Solver source guide": developer/solver-guide.md
+      - "Solver pitfalls": developer/solver-pitfalls.md
   - Test suite: testing.md

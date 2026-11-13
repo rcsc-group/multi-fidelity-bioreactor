@@ -1,5 +1,4 @@
-// [PROJECT NOTE] Byte-identical to Kim et al.'s upstream utils2.h
-// (verified diff, 2026-07-28) — unmodified in this fork.
+// utils2.h -- statsf2(): statistics of a field over the liquid. Unchanged from Kim et al.'s utils2.h.
 /**
 # Various utility functions
 
