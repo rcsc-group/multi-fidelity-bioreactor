@@ -5,6 +5,12 @@ Entries before 2026-10-08 are kept verbatim in diary_archive_to_2026-10-07.md (s
 pre-split file at /oscar/scratch/eaguerov/tmp/diary_backup_20261010.md). The archive is NOT re-audited line by line:
 where it conflicts with CURRENT STATE, CURRENT STATE wins, and the known conflicts are listed under CORRECTIONS.
 
+## 2026-11-13 — Daily check
+
+- Jobs: no bioreactor-mpi job queued, running or failed in the last 24 h; nothing to resubmit. Running jobs of other sessions left alone (m3-mm array 8998361, sc-ctl 8933606, sc-sc3p 8997130/8996525, sup-sc3p 8996524, vllm-qwen). Interactive allocations alive: 8957535 (node2336), 8746011 (node1828); neither is mine to use.
+- Deck: no [TBD] left. Spoken words (tools/count_spoken.py) 1,533 = 11.8 min at 130 wpm, ~230 over the ~1,300 budget (largest: slide 6 three-level extension 316, slide 4 methods 251, slide 2 scaling 225). My earlier "1,271 words" (scratch count_notes.py) disagrees with this tool; the deck tool is the reference. Open: slide-5/2D notes sentence "The bottom row is error on the test set, where" (slides.md:543) is unfinished.
+- Lean repo phase 2 (branch lean/phase2, not merged): diary entry on that branch. On campaign-2d only test fixes landed (e314dfe source-text tests after the src split; campaign source-rule fixtures with build sidecars).
+
 ## 2026-11-12/13 — Lean repo, phase 0-1: golden-run gate; solver split (branch lean/src-split)
 
 - Plan: docs/specs/2026-11-12-lean-repo-spec.md. Tag `archive/pre-lean-2026-11` (= 7f9f3f4) pushed: the old tree is one checkout away.
