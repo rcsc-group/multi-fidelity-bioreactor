@@ -292,6 +292,15 @@ def l9_warm_params(src_params: dict, source_run: str, t_ck: float, rpm: float, t
     p.update(run_id=run_id(9, rpm, theta, tag="c2d"), fidelity=9, t_checkpoint=float(t_ck),
              n_mix_cycles=N_WARM_L9, t_end=round((N_WARM_L9 + N_POST_L9) * T, 6),
              _binary=binary, _source_run=source_run)   # forcing kept exactly as the source (no rpm change)
+    # *_prev = the source's forcing. Without them the solver ramps the rocking again from ZERO after the restart
+    # (pitfall "restart-ramp", diary 2026-11-13): the first 8 c2d_l9 runs had none and were still 8-19 % above
+    # the L8 velocity at the release; the W9 runs that validated this warm start had them.
+    z3 = [0.0, 0.0, 0.0]
+    p.update(omega_b_prev=float(src_params["omega_b"]), theta_max_prev=list(src_params["theta_max"]),
+             phi_angular_prev=list(src_params.get("phi_angular", z3)),
+             amplitude_h_prev=list(src_params.get("amplitude_h", z3)),
+             phi_horizontal_prev=list(src_params.get("phi_horizontal", z3)),
+             omega_h_prev=float(src_params.get("omega_h", 0.0)))
     if abs(float(src_params["omega_b"]) * 60.0 / (2 * math.pi) - rpm) > 0.01 or \
             abs(float(src_params["theta_max"][0]) - theta) > 0.01:
         raise ValueError("source forcing does not match (rpm, theta) of the point")

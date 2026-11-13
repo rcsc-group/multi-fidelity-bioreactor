@@ -5,6 +5,13 @@ Entries before 2026-10-08 are kept verbatim in diary_archive_to_2026-10-07.md (s
 pre-split file at /oscar/scratch/eaguerov/tmp/diary_backup_20261010.md). The archive is NOT re-audited line by line:
 where it conflicts with CURRENT STATE, CURRENT STATE wins, and the known conflicts are listed under CORRECTIONS.
 
+## 2026-11-13 — L9 warm starts ramped the rocking from zero (found by the feature bundle, branch lean/phase2)
+
+- Cause: every restart ramps the forcing from *_prev to the current values over 3 periods (src/BioReactor.c, t_ramp_start = t_checkpoint); with no *_prev the ramp starts from ZERO rocking. campaign.py l9_warm_params wrote no *_prev, so all 8 c2d_l9_* runs had this; the W9 runs that validated the L8 -> L9 warm start had *_prev (submit_l10_from_l8.py). Velocity per period after the warm start, % of the L8 source (lean diary, fig warm_settle.png): c2d_l9 peaks +25..+54 % near period 4 and is still +8..+19 % at the release (period 12) for 5 of 8; W9 flat at -1..-4 %. Also fig9_l9_rpm37.5_ext1 (autoextend, HF dtmix_0.95 point): +49 % in the 3rd period after its seam.
+- User decisions: one-point A/B first; fix campaign.py now. Fix: l9_warm_params sets *_prev = the source forcing (test_l9_warm_params_continue_the_source_forcing, RED -> GREEN; campaign tests 56/56). New L9 points follow the W9 protocol; the 8 existing c2d_l9 runs do not (protocol mix until re-run).
+- A/B (job 9007211): ab9prev_l9_rpm34.81_th4.26 = c2d_l9_rpm34.81_th4.26 with *_prev only (same binary 2ef5b07-xlevel, source, checkpoint t = 140.14, protocol). Not in jobs.jsonl. Read-out: kLa and dtmix of both; decide on the other 7 with the measured difference.
+- 37.5 rpm ext1 A/B (jobs 9004552 old params / 9004553 fixed, rebuilt 4b3a435 binary): in progress.
+
 ## 2026-11-13 — Daily check
 
 - Jobs: no bioreactor-mpi job queued, running or failed in the last 24 h; nothing to resubmit. Running jobs of other sessions left alone (m3-mm array 8998361, sc-ctl 8933606, sc-sc3p 8997130/8996525, sup-sc3p 8996524, vllm-qwen). Interactive allocations alive: 8957535 (node2336), 8746011 (node1828); neither is mine to use.
