@@ -5,6 +5,16 @@ Entries before 2026-10-08 are kept verbatim in diary_archive_to_2026-10-07.md (s
 pre-split file at /oscar/scratch/eaguerov/tmp/diary_backup_20261010.md). The archive is NOT re-audited line by line:
 where it conflicts with CURRENT STATE, CURRENT STATE wins, and the known conflicts are listed under CORRECTIONS.
 
+## 2026-11-12/13 — Lean repo, phase 0-1: golden-run gate; solver split (branch lean/src-split)
+
+- Plan: docs/specs/2026-11-12-lean-repo-spec.md. Tag `archive/pre-lean-2026-11` (= 7f9f3f4) pushed: the old tree is one checkout away.
+- Gate `tools/golden/golden.py` (+ golden.sbatch): builds default, DIAGNOSTICS, EXTRA_TRACERS=0, RECORD_FLUX, REPLAY_FLUX from a source dir; runs 6 cases at level 6, serial, OMP_NUM_THREADS=1 (base 2 periods; restart_continue from base's dump; diag; lean; record 1 period; replay of that record); SHA-256 of every output. About 5 min per source tree on one batch node. Not covered: MPI builds, VIDEOS.
+- Stability: two runs of the same source differ only in logstats.dat (wall clock, 6 files): excluded with `--drop-unstable`. 72 files gated.
+- Power: mutation "swap tracer/oxygen events with the forcing events" -> 0 diffs. Correct, not a weak gate: those events write different fields (c2/oxy vs the acceleration face field), so their order within a step does not matter. Mutation "remove restriction({cs,fs}) after solid() on restart" -> 10 restart files differ: the gate detects a real restart defect.
+- Step 1: BioReactor.c cut into 10 headers at the same places (replay, restart, init, scalars, forcing, snapshots, checkpoint, diagnostics, replay_events, movies) -> 72/72 identical.
+- Step 2: driver rewritten (main() = set_scales, set_run_window, set_physics, open_outputs; unused globals removed; view3.h include removed: no draw/view function is called anywhere, frames are raw binary) -> 72/72 identical. draw3.h/view3.h deleted (2,600 lines). Driver 3,759 -> 510 lines.
+- Long comment blocks (127 of 4+ lines) copied verbatim to docs/history/solver-comment-archive.md before shortening.
+
 ## 2026-11-06 — Stray SLURM submissions from pytest; test guard; shared uv cache
 
 - What happened: `uv run pytest -m "not medium"` overrode addopts (which also excludes hpc) and collected old sbatch-calling scripts in `.claude/worktrees/*/scripts/test_*.py`. About 90 bioreactor-mpi jobs were submitted 09:42-10:02; each failed in ~7 s (missing binaries BioReactor-mpi-fixed-ramp/-slowramp). No campaign data lost.
