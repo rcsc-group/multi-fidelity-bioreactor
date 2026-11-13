@@ -18,7 +18,7 @@ where it conflicts with CURRENT STATE, CURRENT STATE wins, and the known conflic
 - Removed: KICK_TEST (finished stability probe) and G_RESTART_MODE modes 0/1 (default 2 kept): tag archive/pre-lean-2026-11. REC_CHECKSUM was removed by mistake and restored: scripts/replay_gate_f3 passes it on the build command line, which a grep of source files misses. Lesson: before calling a switch dead, also search for flags passed as arguments ("$@"), not only for the literal name.
 - Bug found: movies.h had two bare `return;` in events (movies_output, movies_output_tau), the undefined-return trap. Now `return 0;`. Video runs produced full frame sets, so the old value happened to be 0; only VIDEOS builds were affected. New tests/test_src_events.py fails on the old headers (finds both) and passes now.
 - Golden power, extra: mutation "statistics before scalar release" -> 0 diffs; correct, t_mix (0.607) is not a multiple of t_out (0.02), so the two never fire on the same step.
-- Size: src/ 7,082 -> 3,683 lines incl. jsmn; BioReactor.c 510; largest header replay.h 410.
+- Size: src/*.c,*.h 7,540 -> 3,754 lines (incl. jsmn 476); BioReactor.c 3,759 -> 510; largest header replay.h (~470).
 
 ## 2026-11-06 — Stray SLURM submissions from pytest; test guard; shared uv cache
 
