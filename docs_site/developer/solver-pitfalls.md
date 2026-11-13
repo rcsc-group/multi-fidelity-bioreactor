@@ -93,6 +93,39 @@ link's time already carries the first link's offset, so it would resume off phas
 degrees put the flow on a different quasi-steady state (about +25% on mean shear stress).
 
 An early (wall-clock) dump is not on a period boundary; it writes its phase to `checkpoint.phase`.
+The solver reads that file from its **working directory**, not from the dump's folder. A resume that runs
+in another folder must copy it there first (`scripts/submit_continue.stage_phase`). If the file is not
+found, the solver silently takes the nearest period boundary. Measured 2026-11-13 (feature bundle): a dump
+at 1.84 periods was resumed 0.16 period off phase; velocity +26 %, and the run stopped at 3.84 periods
+instead of 3.
+
+## restart-ramp
+
+**Symptom:** the flow jumps at the seam of a restart. In `fig9_l9_rpm37.5_ext1` the liquid velocity per
+period went 0.64, 0.64 | 0.64, 0.69, **0.96**, 0.69, 0.68: +49 % three periods after the seam.
+
+**Cause:** every restart starts a new forcing ramp (`t_ramp_start = t_checkpoint` in `src/BioReactor.c`):
+over 3 periods the rocking goes from the `*_prev` values (`omega_b_prev`, `theta_max_prev`, ...) to the
+current ones. That is how a sweep changes from one condition to the next smoothly. But when `*_prev` is
+not in `params.json`, it is 0, so a plain continuation ramps from **zero** rocking while the liquid still
+sloshes at full amplitude.
+
+**Rule:** a continuation sets `*_prev` = its own forcing, `restart_continue = 1`, `n_mix_cycles = 0`. Do not
+write these keys by hand: use `scripts/submit_continue.build_params` (`scripts/autoextend.py` uses it since
+2026-11-13; before that it set none of them). To check old runs: a continuation whose `params.json` has
+`restart_continue: 1` and no `theta_max_prev` has this defect.
+
+Corollary for tests: a cold run is inside its own ramp for its first 3 periods. Compare a restarted run
+with a cold run only after the cold run's ramp.
+
+## record-landing
+
+A record build (`-DRECORD_FLUX=1`) has two empty events (`src/replay.h`) whose only job is to make a time
+step end exactly on each end of the record window. Basilisk shortens the step to land on any event time,
+so after the window ends the record build takes other time steps than a default build. Both are correct;
+they are not bitwise equal after the window (≈0.1 % at the next output). Compare a record build with a
+default build only up to the end of its record window; for longer comparisons use two runs of the same
+build.
 
 ## ramp-derivatives
 

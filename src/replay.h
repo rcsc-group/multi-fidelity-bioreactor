@@ -224,6 +224,8 @@ static int rec_state = 0;   // 0 before the window, 1 recording, 2 window closed
 // Empty events: they only make dtnext() land a step exactly on both ends of the window, so that the
 // checkpoint is at t_rec0 and the last recorded step ends at t_rec_end (n_rec_periods periods later; the
 // step that starts at t_rec_end is not run, event dump_checkpoint stops the run first).
+// So a record run that goes on past t_rec_end takes other time steps than a default build from there on:
+// compare a record build with a default build only up to t_rec_end. Pitfall "record-landing".
 event rec_land_start (t = t_rec0) {}
 event rec_land_end   (t = t_rec_end) {}
 #endif // RECORD_FLUX

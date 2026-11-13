@@ -60,6 +60,13 @@ def bundle() -> dict:
     if b.get("src_hash") != now:
         pytest.fail(f"stale bundle: built from src_hash {b.get('src_hash')}, src/ is now {now}. "
                     f"Run the bundle again on this source (tools/bundle/bundle.sbatch).", pytrace=False)
+    mpi = p.with_name("mpi4.json")   # written by the separate MPI job (tools/bundle/bundle_mpi.sbatch)
+    if mpi.is_file():
+        m = json.loads(mpi.read_text())
+        if m.get("src_hash") != now:
+            pytest.fail(f"stale MPI result {mpi}: built from src_hash {m.get('src_hash')}, src/ is now {now}.",
+                        pytrace=False)
+        b["cases"]["mpi4"] = m["case"]
     return b
 
 

@@ -10,8 +10,8 @@ RUNS = Path("/tmp/bundle_runs")
 
 
 def test_case_names_are_the_plan_list():
-    assert set(bc.CASES) == {"cold", "cold2", "half", "cont", "kill", "kill_resume", "replay", "loop", "lean",
-                             "l5", "xl6", "caseB_cold", "caseB_warm", "mpi4"}
+    assert set(bc.CASES) == {"cold", "cold2", "rec", "half", "cont", "kill", "kill_resume", "replay", "loop",
+                             "lean", "l5", "xl6", "caseB_cold", "caseB_warm", "mpi4"}
 
 
 def test_order_puts_parents_first():
@@ -59,9 +59,40 @@ def test_caseB_warm_rescales_from_32p5():
 
 def test_replay_reads_the_cold_record():
     p = bc.params("replay", RUNS)
-    assert p["rec_dir"] == str(RUNS / "cold")
+    assert p["rec_dir"] == str(RUNS / "rec")
+    assert bc.CASES["replay"].parent == "rec"
     assert bc.CASES["replay"].restart == "replay_start.dump"
 
 
 def test_kill_sets_a_wall_clock_limit():
     assert "BIOREACTOR_MAXRUNTIME_S" in bc.CASES["kill"].env
+
+
+# v2 (first bundle, 2026-11-13): the 3-cycle ramp, *_prev, and the record build's extra step landing
+
+def test_references_are_default_builds():
+    """The record build lands a step on the record end (replay.h:228), so after it its step sequence differs
+    from the default and lean builds; the reference runs must be default builds."""
+    for name in ("cold", "cold2", "half", "kill"):
+        assert bc.CASES[name].build == "default", name
+    assert bc.CASES["rec"].build == "record"
+
+
+def test_restarts_start_after_the_ramp():
+    T = bc.period(bc.RPM_A)
+    for name in ("cont", "xl6", "caseB_warm"):
+        assert bc.params(name, RUNS)["t_checkpoint"] >= bc.N_RAMP * T, name
+
+
+def test_restarts_carry_the_current_forcing():
+    """The solver ramps *_prev -> current over 3 cycles after every restart; without *_prev it ramps from 0."""
+    for name in ("cont", "kill_resume", "xl6"):
+        p = bc.params(name, RUNS)
+        assert p["omega_b_prev"] == p["omega_b"] and p["theta_max_prev"] == p["theta_max"], name
+        assert p["amplitude_h_prev"] == p["amplitude_h"] and p["omega_h_prev"] == p["omega_h"], name
+
+
+def test_continuations_keep_the_tracer_and_the_oxygen_event():
+    for name in ("cont", "kill_resume"):
+        p = bc.params(name, RUNS)
+        assert p["restart_continue"] == 1 and p["n_mix_cycles"] == 0, name

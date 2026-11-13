@@ -37,7 +37,8 @@ MPI_SCRATCH = Path("/oscar/scratch/eaguerov/mpi_runs")
 
 def stage_phase(src: Path, stage: Path) -> None:
     """Copy an early dump's phase sidecar next to the staged checkpoint. The solver reads checkpoint.phase from
-    its working directory; without it, a resume from a mid-period dump is up to half a period off phase."""
+    its working directory; without it, a resume from a mid-period dump is up to half a period off phase
+    (pitfall "restart-phase" in docs_site/developer/solver-pitfalls.md)."""
     if (src / "checkpoint.phase").exists():
         stage.mkdir(parents=True, exist_ok=True)
         shutil.copy2(src / "checkpoint.phase", stage / "checkpoint.phase")

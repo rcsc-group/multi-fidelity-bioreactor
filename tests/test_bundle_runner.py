@@ -69,3 +69,56 @@ def test_resume_takes_the_dump_time(tmp_path):
     p = bb.resume_params({"t_checkpoint": 9.9, "t_end": 9.9}, dump, t_end_abs=4.0)
     assert p["t_checkpoint"] == pytest.approx(1.7)
     assert p["t_end"] == pytest.approx(4.0 - 1.7)
+
+
+def test_mpi_writes_its_own_record(tmp_path):
+    src = _fake_src(tmp_path, {"BioReactor.c": "int main;"})
+    seen = {}
+
+    def run_case(case, binary, rd, params, restart, env):
+        seen.update(case=case.name, ranks=case.ranks, level=params["fidelity"])
+        _fake_run()(case, binary, rd, params, restart, env)
+
+    rec = bb.run_mpi(src, tmp_path / "work", run_case=run_case,
+                     build_fn=lambda src, work: work / "mpi", qoi_fn=lambda rd: {})
+    on_disk = json.loads((tmp_path / "work" / "mpi4.json").read_text())
+    assert on_disk == rec and rec["src_hash"] == bb.src_hash(src)
+    assert rec["case"]["status"] == "ok" and rec["case"]["files"]
+    assert seen == {"case": "mpi4", "ranks": 4, "level": 6}
+    assert not (tmp_path / "work" / "bundle.json").exists()   # never touches the serial job's file
+
+
+def test_restart_gets_the_parent_phase_sidecar(tmp_path):
+    """The solver reads checkpoint.phase from its working directory (as submit_continue.stage_phase stages it)."""
+    src = _fake_src(tmp_path, {"BioReactor.c": "int main;"})
+    seen = {}
+
+    def run_case(case, binary, rd, params, restart, env):
+        if case.name == "kill":
+            rd.mkdir(parents=True, exist_ok=True)
+            (rd / "checkpoint.phase").write_text('{"t_phase_offset": 0}')
+        if case.name == "kill_resume":
+            seen["phase"] = (rd / "checkpoint.phase").read_text() if (rd / "checkpoint.phase").exists() else None
+        _fake_run()(case, binary, rd, params, restart, env)
+
+    bb.run_bundle(src, tmp_path / "work", only=["kill_resume"], run_case=run_case,
+                  build_fn=lambda src, work, builds: {b: work / b for b in builds}, qoi_fn=lambda rd: {})
+    assert seen["phase"] == '{"t_phase_offset": 0}'
+
+
+def test_a_rerun_starts_from_an_empty_case_folder(tmp_path):
+    """A file left by an earlier bundle in the same WORK_DIR must not be read as this run's output."""
+    stale = tmp_path / "work" / "runs" / "cold" / "checkpoint.dump"
+    stale.parent.mkdir(parents=True)
+    stale.write_text("old")
+    seen = {}
+
+    def run_case(case, binary, rd, params, restart, env):
+        if case.name == "cold":
+            seen["stale"] = (rd / "checkpoint.dump").exists()
+        _fake_run()(case, binary, rd, params, restart, env)
+
+    src = _fake_src(tmp_path, {"BioReactor.c": "int main;"})
+    bb.run_bundle(src, tmp_path / "work", only=["cold"], run_case=run_case,
+                  build_fn=lambda src, work, builds: {b: work / b for b in builds}, qoi_fn=lambda rd: {})
+    assert seen["stale"] is False

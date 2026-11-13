@@ -28,6 +28,7 @@ def test_c(bundle):
 
 @pytest.fixture
 def guards(pytester):
+    pytester.makeini("[pytest]\n")   # own config: a pyproject.toml in a parent of the temp dir must not apply
     pytester.makeconftest(f"import sys\nsys.path.insert(0, {str(ROOT)!r})\nfrom tests.bundle.conftest import *\n")
     pytester.makepyfile(test_guards=GUARDS)
     return pytester
@@ -70,6 +71,30 @@ def test_failed_case_fails_with_its_error(guards, monkeypatch, tmp_path):
     r = guards.runpytest()
     r.assert_outcomes(passed=2, failed=1)
     assert "exit 134: dump write error" in r.stdout.str()
+
+
+MPI_GUARD = """
+def test_mpi(bundle):
+    assert bundle["cases"]["mpi4"]["status"] == "ok"
+"""
+
+
+def _mpi_sidecar(tmp_path, h):
+    (tmp_path / "mpi4.json").write_text(json.dumps({"src_hash": h, "case": {"status": "ok", "error": ""}}))
+
+
+def test_mpi_sidecar_is_merged(pytester, monkeypatch, tmp_path):
+    pytester.makeini("[pytest]\n")
+    pytester.makeconftest(f"import sys\nsys.path.insert(0, {str(ROOT)!r})\nfrom tests.bundle.conftest import *\n")
+    pytester.makepyfile(test_mpi=MPI_GUARD)
+    h = src_hash(ROOT / "src")
+    monkeypatch.setenv("MFB_BUNDLE", str(_bundle(tmp_path, h)))
+    _mpi_sidecar(tmp_path, h)
+    pytester.runpytest().assert_outcomes(passed=1)
+    _mpi_sidecar(tmp_path, "1" * 64)            # MPI result from other sources: stale, an error
+    r = pytester.runpytest()
+    r.assert_outcomes(errors=1)
+    assert "1" * 64 in r.stdout.str()
 
 
 def test_bars_cover_every_case():

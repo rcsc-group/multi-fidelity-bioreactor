@@ -10,8 +10,9 @@
 #                columns (by header name) are compared, as printed text; with `rows: common`, only the rows
 #                (times) both runs logged
 #       metric   each named metric of the two runs differs by at most its relative tolerance:
-#                  vel_rms    mean of ux_liq_rms, uy_liq_rms (normf.dat) over the window, as
-#                             tests/verification/test_grid_convergence._mean_post_ramp_vel_rms
+#                  vel_rms    mean of sqrt(ux_liq_rms^2 + uy_liq_rms^2) (normf.dat) over the window, the
+#                             quantity of tests/verification/test_grid_convergence._mean_post_ramp_vel_rms
+#                             (the bundle's 3 T lie inside its 3-cycle ramp, so the whole window is used)
 #                  tau_rms    rms of tau_mean (shear_stress.dat) over the window
 #                  ediss_rms  rms of ediss_mean (shear_stress.dat) over the window
 #                  tau_95     mean of tau_95 (shear_stress.dat) over the window
@@ -21,6 +22,12 @@
 #       ledger   no pass bar: the guard checks only that the case ran and its output is finite
 #
 # The noise floor of this bundle is cold vs cold2: bitwise except logstats.dat (wall-clock timings).
+#
+# v2 (2026-11-13, after the first bundle; diary): the TOLERANCES below are the pre-registered ones, unchanged.
+# What changed is where they are measured: v1 compared inside the solver's 3-period forcing ramp, so a
+# restart at full forcing was compared with a cold run still ramping. Restarts now start at 4T (after the
+# ramp) and runs end at 8T; replay compares with the record run `rec` (a record build lands one extra step
+# on the record end, so its step sequence differs from the default builds after it).
 
 cold2:
   ref: cold
@@ -39,41 +46,46 @@ half:
   ref: cold
   kind: bitwise
   rows: common
-  window: [0, 2]
+  window: [0, 4]
   files: [normf.dat, shear_stress.dat, vol_frac_interf.dat, edr_pct.dat, tr_oxy.dat]
-  source: "pre-registered here (spec 2026-11-13 S5): stopping at 2T with a dump must not change the history before 2T"
+  source: "pre-registered here (spec 2026-11-13 S5): stopping at 4T with a dump must not change the history before 4T"
 
 cont:
   ref: cold
   kind: metric
-  window: [2, 3]
+  window: [4, 8]
   tol: {vel_rms: 0.10, oxy_last: 0.10, c2_last: 0.10}
   source: "tests/verification/test_mpi_checkpoint_parity.py:64 (_VEL_RTOL_CKPT = 0.10); tests/verification/test_restart_continue.py:82 (tracer and oxygen tail, rel=0.10)"
 
 kill_resume:
   ref: cold
   kind: metric
-  window: [2, 3]
+  window: [7, 8]
   tol: {vel_rms: 0.10, oxy_last: 0.10, c2_last: 0.10}
   source: "as cont: tests/verification/test_mpi_checkpoint_parity.py:64; tests/verification/test_restart_continue.py:82"
 
 kill:
   ref: cold
   kind: ledger
-  source: "parent of kill_resume; guard: the early dump exists and its time is inside (T, 2T)"
+  source: "parent of kill_resume; guard: the early dump and its phase sidecar exist, and its time is inside (3T, 7T): after the ramp, before kill_resume's window"
 
 replay:
-  ref: cold
+  ref: rec
   kind: metric
   window: [1, 2]
   tol: {oxy_liq_sum_max: 1.0e-6, c2_liq_sum_max: 1.0e-6, c2_liq_sum2_max: 1.0e-6}
   source: "tests/test_replay_gate.py:5-7,107-108 (F1, pre-registered diary 2026-10-16): relative 1e-6 at every logged time"
 
 loop:
-  ref: cold
+  ref: rec
   kind: ledger
   window: [1, 3]
   source: "tests/test_replay_gate.py:8-11 (F2): reported, not asserted; guard = it ran the whole window and C* is finite"
+
+rec:
+  ref: cold
+  kind: ledger
+  source: "record run (record build, 0 -> 2T): parent of replay and loop; no bar"
 
 l5:
   ref: cold
@@ -83,9 +95,9 @@ l5:
 xl6:
   ref: cold
   kind: metric
-  window: [2, 3]
+  window: [6, 8]
   tol: {tau_rms: 0.15, ediss_rms: 0.30}
-  source: "tests/verification/test_cross_level_warmstart.py:72-73 (_RTOL_TAU = 0.15, _RTOL_EDISS = 0.30)"
+  source: "tests/verification/test_cross_level_warmstart.py:72-73 (_RTOL_TAU = 0.15, _RTOL_EDISS = 0.30); window = the last half of the warm run, as that test (_tau_and_ediss)"
 
 caseB_cold:
   ref: cold

@@ -309,7 +309,8 @@ static void set_run_window (int argc, char * argv[])
       params.t_checkpoint = t_ck;
 
       // An emergency dump is not on a boundary; it records its phase in checkpoint.phase. A recorded
-      // phase wins over the inferred one.
+      // phase wins over the inferred one. It is read from the WORKING directory: a resume in another
+      // folder must copy it there (scripts/submit_continue.stage_phase). Pitfall "restart-phase".
       {
         FILE *fp_ph = fopen ("checkpoint.phase", "r");
         if (fp_ph) {
@@ -329,9 +330,12 @@ static void set_run_window (int argc, char * argv[])
         }
       }
     }
-    // The ramp starts at the checkpoint and runs N_RAMP_CYCLES forward.
+    // The ramp starts at the checkpoint: the forcing goes from the *_prev values to the current ones over
+    // N_RAMP_CYCLES. A continuation must therefore set *_prev = its own forcing; without *_prev (all 0) it
+    // ramps again from ZERO amplitude. Pitfall "restart-ramp" in docs_site/developer/solver-pitfalls.md.
     // Known open issue: a run split by restart_continue=1 gets ~8% less oxygen transfer than an unbroken
-    // run (measured at level 4); two explanations were tested and rejected. Not used in production.
+    // run (measured at level 4); two explanations were tested and rejected. Suspect (2026-11-13): those
+    // runs had no *_prev; the feature bundle's `cont` case tests it (tests/bundle/test_restart.py).
     t_ramp_start     = params.t_checkpoint;
     t_mix            = params.t_checkpoint + T_per_st * params.n_mix_cycles;
     {

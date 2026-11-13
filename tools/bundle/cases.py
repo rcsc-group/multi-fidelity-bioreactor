@@ -34,16 +34,22 @@ class Case:
     env: dict = field(default_factory=dict)   # extra environment (e.g. a wall-clock limit)
 
 
+# Timing (v2, after the first bundle): the solver ramps the forcing over N_RAMP periods after every start and
+# restart (forcing.h). A restart therefore starts at R_START = 4 periods, after the cold run's ramp, and carries
+# *_prev = its own forcing (a restart without *_prev ramps again from zero). Runs end at END = 8 periods.
+N_RAMP, R_START, END = 3, 4, 8
+
 CASES = {c.name: c for c in [
-    Case("cold", "record", None, None, 6, 1),            # reference; also records the flux for 1 period
-    Case("cold2", "record", None, None, 6, 1),           # same again: the noise floor
-    Case("half", "record", None, None, 6, 1),            # stops at 2T and dumps; history must equal cold's
+    Case("cold", "default", None, None, 6, 1),           # reference, 0 -> 8T, tracer released at T
+    Case("cold2", "default", None, None, 6, 1),          # same again: the noise floor
+    Case("rec", "record", None, None, 6, 1),             # 0 -> 2T, records the flux of [T, 2T]
+    Case("half", "default", None, None, 6, 1),           # stops at 4T and dumps; history must equal cold's
     Case("cont", "default", "half", "checkpoint.dump", 6, 1),
-    # wall-clock limit set so that the early dump fires near 1.5 T; value from cold's wall time (Task 2)
+    # wall-clock limit set so that the early dump fires near 4T; value from cold's wall time (runner)
     Case("kill", "default", None, None, 6, 1, {"BIOREACTOR_MAXRUNTIME_S": "0"}),
     Case("kill_resume", "default", "kill", "checkpoint.dump", 6, 1),
-    Case("replay", "replay", "cold", "replay_start.dump", 6, 1),
-    Case("loop", "replay", "cold", "replay_start.dump", 6, 1),
+    Case("replay", "replay", "rec", "replay_start.dump", 6, 1),
+    Case("loop", "replay", "rec", "replay_start.dump", 6, 1),
     Case("lean", "lean", None, None, 6, 1),
     Case("l5", "default", None, None, 5, 1),
     Case("xl6", "crosslevel", "l5", "checkpoint.dump", 6, 1),
@@ -85,41 +91,43 @@ def period(rpm: float = RPM_A) -> float:
 
 
 def _prev(rpm: float) -> dict:
-    """Forcing of the run a restart comes from (chain.py keys)."""
+    """Forcing of the run a restart comes from (chain.py and submit_continue.py keys)."""
     return {"omega_b_prev": omega(rpm), "theta_max_prev": [7.0, 0.0, 0.0], "phi_angular_prev": ZERO3,
             "amplitude_h_prev": ZERO3, "phi_horizontal_prev": ZERO3, "omega_h_prev": 0.0}
+
+
+def _continue(t_ck: float, duration: float) -> dict:
+    """A same-condition continuation, as scripts/submit_continue.build_params writes it."""
+    return {"t_checkpoint": t_ck, "t_end": duration, "restart_continue": 1, "n_mix_cycles": 0} | _prev(RPM_A)
 
 
 def params(name: str, runs: Path) -> dict:
     """params.json of a case; `runs` is the folder that holds one sub-folder per case."""
     T = period(RPM_A)
-    rec = {"n_rec_periods": 1, "rec_dir": "."}
-    if name in ("cold", "cold2"):
-        return base(name) | {"t_end": 3 * T} | rec
+    if name in ("cold", "cold2", "kill", "lean"):
+        return base(name) | {"t_end": END * T}
+    if name == "rec":
+        return base(name) | {"t_end": 2 * T, "n_rec_periods": 1, "rec_dir": "."}
     if name == "half":
-        return base(name) | {"t_end": 2 * T} | rec
+        return base(name) | {"t_end": R_START * T}
     if name == "cont":
-        return base(name) | {"t_checkpoint": 2 * T, "restart_continue": 1, "n_mix_cycles": 0, "t_end": T}
-    if name == "kill":
-        return base(name) | {"t_end": 3 * T}
-    if name == "kill_resume":   # estimate; the runner sets t_checkpoint = the dump's time, t_end = 3T - that
-        return base(name) | {"t_checkpoint": 1.5 * T, "restart_continue": 1, "n_mix_cycles": 0, "t_end": 1.5 * T}
+        return base(name) | _continue(R_START * T, (END - R_START) * T)
+    if name == "kill_resume":   # estimate; the runner sets t_checkpoint = the dump's time, t_end = END*T - that
+        return base(name) | _continue(R_START * T, (END - R_START) * T)
     if name == "replay":        # golden's replay keys: the record covers [T, 2T]
         return base(name) | {"t_checkpoint": T, "restart_continue": 1, "n_mix_cycles": 0, "t_end": T,
-                             "rec_dir": str(runs / "cold")}
+                             "n_rec_periods": 1, "rec_dir": str(runs / "rec")}
     if name == "loop":          # the one recorded period, looped for 2 periods: [T, 3T]
         return base(name) | {"t_checkpoint": T, "restart_continue": 1, "n_mix_cycles": 0, "t_end": 2 * T,
-                             "n_rec_periods": 1, "replay_loop": 1, "rec_dir": str(runs / "cold")}
-    if name == "lean":
-        return base(name) | {"t_end": 3 * T}
+                             "n_rec_periods": 1, "replay_loop": 1, "rec_dir": str(runs / "rec")}
     if name == "l5":
-        return base(name, level=5) | {"t_end": 2 * T}
-    if name == "xl6":           # as tests/verification/test_cross_level_warmstart.py
-        return base(name) | {"t_checkpoint": 2 * T, "t_end": T} | _prev(RPM_A)
+        return base(name, level=5) | {"t_end": R_START * T}
+    if name == "xl6":           # as tests/verification/test_cross_level_warmstart.py: new level, same forcing
+        return base(name) | {"t_checkpoint": R_START * T, "t_end": (END - R_START) * T} | _prev(RPM_A)
     if name == "caseB_cold":
-        return base(name, RPM_B) | {"t_end": 3 * period(RPM_B)}
-    if name == "caseB_warm":    # condition A's state at 2T -> condition B, 1 transition cycle, then release
-        return base(name, RPM_B) | {"t_checkpoint": 2 * T, "t_end": 3 * period(RPM_B),
+        return base(name, RPM_B) | {"t_end": END * period(RPM_B)}
+    if name == "caseB_warm":    # condition A's state at 4T -> condition B, 1 transition cycle, then release
+        return base(name, RPM_B) | {"t_checkpoint": R_START * T, "t_end": END * period(RPM_B),
                                     "n_transition_cycles": 1} | _prev(RPM_A)
     if name == "mpi4":
         return base(name) | {"t_end": 3 * T}
