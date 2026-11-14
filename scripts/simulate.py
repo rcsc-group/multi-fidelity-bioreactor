@@ -31,6 +31,18 @@ from pathlib import Path
 import sys  # noqa: E402
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # repo root
 from scripts import paths  # noqa: E402  (machine-specific folders)
+from scripts import run_key as _rk  # noqa: E402
+
+
+class DuplicateRun(Exception):
+    """The index has a run with the same key (same physics, binary and parent): use its results.
+    ``run_dir`` is that run's folder; ``finished`` tells if its results.json exists."""
+
+    def __init__(self, run_id: str, run_dir: Path, finished: bool):
+        self.run_id, self.run_dir, self.finished = run_id, run_dir, finished
+        state = "finished" if finished else "submitted, no results yet (if it failed, resubmit it under its own run_id)"
+        super().__init__(f"same run key as {run_id} ({state}): {run_dir}. "
+                         f"Use its results, or pass allow_duplicate=True for a deliberate repeat.")
 
 _DEFAULT_TEMPLATE = Path(__file__).parents[1] / "config" / "slurm_mpi_template.sh"
 _DEFAULT_MPI_SCRATCH_ROOT = Path(f"{paths.SCRATCH}/mpi_runs")
@@ -201,8 +213,14 @@ def submit_slurm(
     account: str | None = None,
     qos: str | None = None,
     partition: str | None = None,
+    allow_duplicate: bool = False,
+    allow_unknown_binary: bool = False,
 ) -> str:
     """Write params.json and submit a SLURM job via sbatch.
+
+    Before it submits, it computes the run key (scripts/run_key.py: physics, binary, parent run) and refuses
+    (DuplicateRun) a run whose key is already in runs_root/_index.jsonl under another run_id, and (ValueError) a
+    binary that is not on disk, and a run_id whose finished results came from other physics.
 
     Parameters
     ----------
@@ -227,6 +245,8 @@ def submit_slurm(
                    compute nodes can't see project_root); defaults to the
                    real OSCAR scratch path. Overridable so tests exercising
                    the MPI staging branch don't touch the real filesystem.
+    allow_duplicate : submit even if the key is already indexed (a deliberate repeat, e.g. a determinism check)
+    allow_unknown_binary : submit with a binary that is not on disk here; the run gets no usable key
 
     Returns
     -------
@@ -237,6 +257,8 @@ def submit_slurm(
     template     = Path(template) if template else _DEFAULT_TEMPLATE
     _check_restart_forcing(params, checkpoint)
     _check_t_end_vs_t_mix(params)
+    params, key_entry = _keyed(params, runs_root, template, project_root, checkpoint,
+                               allow_duplicate, allow_unknown_binary)
 
     run_dir      = _prepare_run_dir(params, runs_root)
     params_path  = (run_dir / "params.json").resolve()
@@ -323,7 +345,34 @@ def submit_slurm(
     match = re.search(r"(\d+)", result.stdout)
     if not match:
         raise RuntimeError(f"Could not parse job ID from sbatch output: {result.stdout!r}")
+    _rk.append_index(runs_root, key_entry | {"job": match.group(1)})
     return match.group(1)
+
+
+def _keyed(params, runs_root, template, project_root, checkpoint, allow_duplicate, allow_unknown_binary):
+    """The run key checks of submit_slurm. Returns (params with _run_key, index entry); raises on a refusal."""
+    rid = params.get("run_id", "unnamed")
+    binary = params.get("_binary") or _rk.default_binary(template, project_root)
+    bid = _rk.binary_identity(binary)
+    if bid is None and not allow_unknown_binary:
+        raise ValueError(f"{rid}: binary {binary} is not on disk, so the run would have no known code. Build it, "
+                         f"set _binary, or pass allow_unknown_binary=True.")
+    parent_run = Path(checkpoint).parent.name if checkpoint else None
+    known = {e["run_id"]: e for e in _rk.read_index(runs_root)}
+    e = _rk.entry(rid, params, bid, parent_run, known.get(parent_run))
+    finished = Path(runs_root) / rid / "results.json"
+    if finished.exists():
+        old = json.loads((finished.parent / "params.json").read_text()).get("_run_key")
+        if old != e["key"]:
+            raise ValueError(f"{rid}: {finished} exists and came from other params (key {old}); a new run "
+                             f"would mix with it. Use a new run_id.")
+        if not allow_duplicate:
+            raise DuplicateRun(rid, finished.parent, True)
+    dup = None if allow_duplicate else _rk.find_duplicate(runs_root, e)
+    if dup:
+        d = Path(runs_root) / dup["run_id"]
+        raise DuplicateRun(dup["run_id"], d, (d / "results.json").exists())
+    return {**params, "_run_key": e["key"]}, e
 
 
 def get_job_elapsed_seconds(job_id: str) -> float | None:
@@ -441,16 +490,26 @@ if __name__ == "__main__":
     parser.add_argument("--slurm", action="store_true", help="Submit via SLURM instead of running locally")
     parser.add_argument("--walltime", default="04:00:00")
     parser.add_argument("--wait", action="store_true", help="Wait for results.json after SLURM submission")
+    parser.add_argument("--template", default=None, help="SLURM script (default: config/slurm_mpi_template.sh)")
+    parser.add_argument("--runs-root", default=None, help="Folder of run directories (default: runs/)")
+    parser.add_argument("--allow-duplicate", action="store_true",
+                        help="Submit even if a run with the same key exists (a deliberate repeat)")
     args = parser.parse_args()
 
     p = json.loads(Path(args.params).read_text())
     root = Path(__file__).parents[1]
+    runs_root = Path(args.runs_root) if args.runs_root else root / "runs"
 
     if args.slurm:
-        job_id = submit_slurm(p, project_root=root, walltime=args.walltime)
+        try:
+            job_id = submit_slurm(p, project_root=root, runs_root=runs_root, walltime=args.walltime,
+                                  template=args.template, allow_duplicate=args.allow_duplicate)
+        except DuplicateRun as e:
+            print(e)
+            sys.exit(3)
         print(f"Submitted job {job_id}")
         if args.wait:
-            run_dir = root / "runs" / p.get("run_id", "unnamed")
+            run_dir = runs_root / p.get("run_id", "unnamed")
             results = wait_for_result(run_dir)
             print(json.dumps(results, indent=2))
     else:

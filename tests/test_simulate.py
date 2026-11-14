@@ -62,7 +62,7 @@ def test_submit_slurm_calls_sbatch(tmp_path):
 
     with patch("subprocess.run", return_value=fake_result) as mock_run:
         job_id = submit_slurm(SHORT_PARAMS, project_root=PROJECT_ROOT, runs_root=tmp_path,
-                               mpi_scratch_root=tmp_path / "mpi_scratch")
+                               mpi_scratch_root=tmp_path / "mpi_scratch", allow_unknown_binary=True)
 
     assert mock_run.called
     cmd = mock_run.call_args[0][0]
@@ -79,7 +79,8 @@ def test_submit_slurm_passes_walltime(tmp_path):
 
     with patch("subprocess.run", return_value=fake_result) as mock_run:
         submit_slurm(SHORT_PARAMS, project_root=PROJECT_ROOT, runs_root=tmp_path,
-                     walltime="02:30:00", mpi_scratch_root=tmp_path / "mpi_scratch")
+                     walltime="02:30:00", mpi_scratch_root=tmp_path / "mpi_scratch",
+                     allow_unknown_binary=True)
 
     cmd = mock_run.call_args[0][0]
     assert any("02:30:00" in a for a in cmd), f"walltime not in sbatch args: {cmd}"
@@ -96,7 +97,7 @@ def test_submit_slurm_exports_the_machine_folders(tmp_path, monkeypatch):
     fake_result.stdout = "Submitted batch job 42\n"
     with patch("subprocess.run", return_value=fake_result) as mock_run:
         submit_slurm(SHORT_PARAMS, project_root=tmp_path / "repo", runs_root=tmp_path,
-                     mpi_scratch_root=tmp_path / "mpi_scratch")
+                     mpi_scratch_root=tmp_path / "mpi_scratch", allow_unknown_binary=True)
     export = next(a for a in mock_run.call_args[0][0] if a.startswith("--export="))
     items = dict(kv.split("=", 1) for kv in export[len("--export=NONE,"):].split(","))
     assert items["MFB_REPO"] == str(tmp_path / "repo")
@@ -353,7 +354,7 @@ def test_replay_restart_needs_no_prev(tmp_path):
     ok = MagicMock(stdout="Submitted batch job 43\n", returncode=0)
     with patch("subprocess.run", return_value=ok):
         assert submit_slurm(_restart(rec_dir="/x"), project_root=PROJECT_ROOT, runs_root=tmp_path,
-                            mpi_scratch_root=tmp_path / "mpi") == "43"
+                            mpi_scratch_root=tmp_path / "mpi", allow_unknown_binary=True) == "43"
 
 
 def test_submit_slurm_serial_restart_stages_the_label(tmp_path):

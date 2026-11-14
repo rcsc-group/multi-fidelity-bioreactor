@@ -5,6 +5,14 @@ Entries before 2026-10-08 are kept verbatim in diary_archive_to_2026-10-07.md (s
 pre-split file at /oscar/scratch/eaguerov/tmp/diary_backup_20261010.md). The archive is NOT re-audited line by line:
 where it conflicts with CURRENT STATE, CURRENT STATE wins, and the known conflicts are listed under CORRECTIONS.
 
+## 2026-11-14 — Run keys: one key per run, an index, no duplicate submissions (user decision "Own key + index")
+
+- Why: user asked how we keep results organised so we do not pick stale files or redo simulations. Chosen over hydra: own key + index, no new dependency.
+- Done (branch runkey): scripts/run_key.py. Key = sha256(physics params without run_id and `_` keys, floats to 12 digits; binary file sha256; parent run's key for a restart). submit_slurm writes `_run_key` in params.json, appends runs/_index.jsonl, and refuses (DuplicateRun) a key that is finished or still in SLURM; a failed duplicate does not block a retry. Also refuses a binary not on disk, and a run_id whose results.json came from other params. `make submit` now goes through simulate.py (it called sbatch directly and skipped every check). Docs: docs_site/how-to/reuse-a-finished-run.md. Tests: tests/test_run_key.py 21; unit suite 585 pass.
+- Backfill (job 9084496): 3,643 runs indexed; 824 with a usable key. Not usable: 2,714 binary gone or rebuilt after the run (mostly the scratch binaries overwritten under one name), 69 restarts with no recorded parent, 36 restarts whose parent is unusable.
+- Finding (falsification check of the key): 30 groups of same-key runs, 76 extra runs. 27 groups are a run and its renamed failed or slow retries (`.failed-<job>`, `.slow-node2410`): true positives, and the reason a failed duplicate must not block. Real recomputation: bo4 redid bo3's point (15.00 rpm, 6.55 deg) at L7 and L8; 3 extra finished runs in all. No false positive seen in the 25 largest groups (all names match).
+- Power: the check can only see the 824 usable keys (23 %); a duplicate of an old run with an unknown binary is not caught. New runs are all keyed.
+
 ## 2026-11-13 — Restart label + frequency ramp (user decision "Label + freq ramp"; plan internal/docs/plans/2026-11-13-restart-label-plan.md)
 
 - Why: the source forcing of a restart lived in params.json *_prev keys; scripts that forgot them made the solver ramp from zero rocking (fig9 ext1 +49 % seam burst; all 8 c2d_l9 warm starts, dtmix_0.25 +40 % at 34.8 rpm, main diary). User: "silently doing something is not right"; params.json + phase sidecar "smell as duplicate info"; asked why the frequency is not ramped.
