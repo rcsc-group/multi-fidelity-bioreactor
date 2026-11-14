@@ -4,7 +4,7 @@ NEW = fixed production (Kim's seed f == 1, dtmix from bulk-liquid sums with sigm
   build             BioReactor-mixold (-DSEED_KIM=0) and BioReactor-mixnew (defaults), MPI
   smoke             L6 NEW run at 20 rpm theta 7, 3 cycles after release (pipeline check, not the experiment)
   submit            the six L8 runs (3 conditions x OLD/NEW), 200 s of physical time after the release
-  report            dtmix of every run and the ratio NEW/OLD per condition; writes docs/meetings/prereg/mixfix.txt
+  report            dtmix of every run and the ratio NEW/OLD per condition; writes internal/docs/meetings/prereg/mixfix.txt
 Usage: uv run python scripts/mixfix_check.py build | smoke | submit | report
 """
 from __future__ import annotations
@@ -26,7 +26,7 @@ CONDS = [(17.5, 5.5), (25.0, 7.0), (32.5, 7.0)]      # (rpm, theta): span of the
 N_MIX = 20
 T_AFTER_S = 200.0                                    # physical seconds after the release
 NT = 16
-OUT = ROOT / "docs/meetings/prereg"
+OUT = ROOT / "internal/docs/meetings/prereg"
 
 
 def rid(kind: str, rpm: float, theta: float, level: int = 8) -> str:

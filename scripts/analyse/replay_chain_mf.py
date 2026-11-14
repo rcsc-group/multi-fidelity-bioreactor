@@ -1,7 +1,7 @@
 """Pre-registered chain test (diary 2026-10-31): the chained mfbml (L8 KRR -> L9 GP -> L10 GP, fig_mf_grid.py chain)
 trained with the theta-7 L8 DNS points (kmix_l8_rpm*) replaced by their looped replays (rc8_rpm*_rep). PASS if the
 replay-trained L10 mean stays inside the DNS-trained 95 % band at every grid rpm, for each quantity.
-Also prints replay/DNS per rpm for the chain quantities. Figure: docs/meetings/prereg/replay_chain_L8.png
+Also prints replay/DNS per rpm for the chain quantities. Figure: internal/docs/meetings/prereg/replay_chain_L8.png
 Usage: uv run python scripts/analyse/replay_chain_mf.py
 """
 from __future__ import annotations
@@ -21,7 +21,7 @@ from scripts import fig_mf_grid as g  # noqa: E402
 from scripts import replay_gate as rg  # noqa: E402
 from scripts.test_s89_l8_to_l9 import collect  # noqa: E402
 
-OUT = ROOT / "docs/meetings/prereg"
+OUT = ROOT / "internal/docs/meetings/prereg"
 L8_PATS = ["t6_l8_*", "kmix_l8_*", "t5_l8_*", "e8_l8_*", "w_l8_*", "dose_l8_*"]
 
 

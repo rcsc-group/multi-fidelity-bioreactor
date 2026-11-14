@@ -4,7 +4,7 @@
 // A restart is the hard part. Basilisk's dump/restore does not keep everything a fresh start sets up, and
 // each missing piece fails silently (wrong numbers, no crash). The steps below put each piece back. The
 // reasons, with measurements, are in docs_site/developer/solver-pitfalls.md; the full investigation
-// notes are in docs/history/solver-comment-archive.md (internal).
+// notes are in internal/docs/history/solver-comment-archive.md.
 
 // The bag wall as an embedded boundary: superellipse |x/a|^n + |y/b|^n = 1. For n >= 8 we use a sharp
 // rectangle (no pow() at the corners); at Kim et al.'s values (n = 8, a = L_bio) this is their geometry.

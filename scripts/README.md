@@ -34,7 +34,7 @@ The top level of `scripts/` holds only **shared modules**: files that other code
 Eighteen `test_*.py` stay at the top level because other code imports them (`tests/test_test_*.py` test them).
 
 The diary cites scripts by their path before 2026-11-13 (`scripts/NAME.py`). The new path of each one is in
-`docs/history/moved-scripts.md`; `git log --follow` gives a moved file's full history.
+`internal/docs/history/moved-scripts.md`; `git log --follow` gives a moved file's full history.
 
 ## Packages
 
@@ -54,4 +54,4 @@ Each script's first docstring line says what it makes. Shared modules that other
 ## Archived scripts
 
 One-off launchers of finished campaigns were removed in 2026-11 and are kept in the git tag
-`archive/pre-lean-2026-11`. The list, and how to get one back: `docs/history/archived-files.md`.
+`archive/pre-lean-2026-11`. The list, and how to get one back: `internal/docs/history/archived-files.md`.

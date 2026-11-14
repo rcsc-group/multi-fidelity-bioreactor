@@ -126,12 +126,12 @@ mpi4:
 refuse_prev:
   ref: half
   kind: refusal
-  source: "docs/plans/2026-11-13-restart-label-plan.md: a label and *_prev in params are two sources; the solver must stop with ERROR naming _prev"
+  source: "internal/docs/plans/2026-11-13-restart-label-plan.md: a label and *_prev in params are two sources; the solver must stop with ERROR naming _prev"
 
 refuse_nolabel:
   ref: half
   kind: refusal
-  source: "docs/plans/2026-11-13-restart-label-plan.md: a restart with no label has no source forcing; the solver must stop with ERROR naming checkpoint.phase"
+  source: "internal/docs/plans/2026-11-13-restart-label-plan.md: a restart with no label has no source forcing; the solver must stop with ERROR naming checkpoint.phase"
 
 refuse_stale:
   ref: half

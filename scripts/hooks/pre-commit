@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Refuse commits that change code while the lab notebook is stale.
 #
-#   diary.md   (gitignored, local): must be edited since the last commit, or
+#   internal/diary.md (gitignored, local): must be edited since the last commit, or
 #              within DIARY_MAX_AGE_H hours -- whichever is more lenient.
-#   BACKLOG.md (tracked): staged now, or committed within BACKLOG_MAX_AGE_D days.
+#   internal/BACKLOG.md (tracked): staged now, or committed within BACKLOG_MAX_AGE_D days.
 #
 # Only commits touching src/ scripts/ config/ tests/ are checked; docs-only
 # and figure-only commits pass. Deliberate override, one commit at a time:
@@ -46,7 +46,7 @@ fi
 now=$(date +%s)
 fail=0
 
-diary="$root/diary.md"
+diary="$root/internal/diary.md"
 if [ ! -f "$diary" ]; then
     echo "pre-commit: diary.md is missing." >&2
     fail=1
@@ -60,8 +60,8 @@ else
     fi
 fi
 
-if ! git diff --cached --name-only | grep -qx 'BACKLOG.md'; then
-    b_t=$(git log -1 --format=%ct -- BACKLOG.md 2>/dev/null || true)
+if ! git diff --cached --name-only | grep -qx 'internal/BACKLOG.md'; then
+    b_t=$(git log -1 --format=%ct -- internal/BACKLOG.md 2>/dev/null || true)
     if [ -z "$b_t" ] || [ $((now - b_t)) -gt $((BACKLOG_MAX_AGE_D * 86400)) ]; then
         echo "pre-commit: BACKLOG.md not touched in over $BACKLOG_MAX_AGE_D days. Delete what" >&2
         echo "  landed, add what this work surfaced." >&2

@@ -24,7 +24,7 @@ from scripts import postprocess as pp  # noqa: E402
 from scripts import replay_gate as rg  # noqa: E402
 from scripts import replay_lf as rl  # noqa: E402
 
-OUT = ROOT / "docs/meetings/2026-10-29"
+OUT = ROOT / "internal/docs/meetings/2026-10-29"
 KIM_CSV = Path("/oscar/scratch/eaguerov/kim_pipeline/out/kim_off_vs_prod_3cycles.csv")
 RPM, THETA, NCYC = 32.5, 7.0, 3.0
 

@@ -99,7 +99,7 @@ def test_restart_reads_the_label_and_never_guesses():
     """A restart reads the dump's label (checkpoint.phase) and refuses without it.
 
     Until 2026-11-13 a missing sidecar fell back to the nearest period boundary, round(t_ck/T_per_st); that
-    silent guess is gone (docs/plans/2026-11-13-restart-label-plan.md). The refusal itself is run by the
+    silent guess is gone (internal/docs/plans/2026-11-13-restart-label-plan.md). The refusal itself is run by the
     bundle guard test_s13_restart_refuses_an_ambiguous_source.
     """
     src = solver_source()

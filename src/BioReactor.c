@@ -4,7 +4,7 @@
 // Origin: Minki Kim, Radu Cimpeanu and Daniel Harris, driver code of Kim et al. (2025),
 // https://github.com/rcsc-group/BioReactor (DriverCodes). This project extends it: a params.json input,
 // any grid level, checkpoint restart, more outputs (shear stress, dissipation, mixing), and a flux
-// record/replay mode. The history of each change is in docs/history/ (internal).
+// record/replay mode. The history of each change is in internal/docs/history/.
 //
 // How to read this code
 //   1. This file: compile switches, global state, and main(), which only sets up the run.

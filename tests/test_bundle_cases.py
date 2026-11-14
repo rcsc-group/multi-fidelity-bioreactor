@@ -86,7 +86,7 @@ def test_restarts_start_after_the_ramp():
 
 def test_no_case_sets_prev_keys_but_the_refusal_case():
     """The source forcing of a restart comes from the dump's label (checkpoint.phase), never from params.json
-    (plan docs/plans/2026-11-13-restart-label-plan.md). Only refuse_prev sets *_prev, to test the refusal."""
+    (plan internal/docs/plans/2026-11-13-restart-label-plan.md). Only refuse_prev sets *_prev, to test the refusal."""
     for name in bc.CASES:
         keys = [k for k in bc.params(name, RUNS) if k.endswith("_prev")]
         assert bool(keys) == (name == "refuse_prev"), (name, keys)

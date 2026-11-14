@@ -95,7 +95,7 @@ def test_s12_run_stops_on_the_period_boundary(bundle, name, t_request):
     assert abs(t - want) <= 1e-9 * want, f"{name} stopped at t={t!r}, periods.py says {want!r}"
 
 
-# S13 restart label (docs/plans/2026-11-13-restart-label-plan.md): the dump's label carries the forcing that made
+# S13 restart label (internal/docs/plans/2026-11-13-restart-label-plan.md): the dump's label carries the forcing that made
 # the state; the restart ramps from it to params.json. The angle and its rate must not jump at the restart,
 # for a continuation (same forcing), an early dump, a new level, and a new condition (amplitude AND frequency).
 FORCED = ["cont", "kill_resume", "xl6", "caseB_warm"]

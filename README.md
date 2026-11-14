@@ -53,15 +53,13 @@ On a shared cluster, run simulations through SLURM (`make submit PARAMS=...`), n
 | `scripts/` | Python. Top level: shared modules (run, chain, postprocess, surrogate). Folders: `run/`, `analyse/`, `figures/`, `hypotheses/`, and the packages `campaign2d/`, `bo2d/`, `mfbml_local/`. Map: `scripts/README.md`. |
 | `config/` | Parameter spaces, sweep and chain configurations, SLURM templates. |
 | `tests/` | Unit tests (default), `medium`/`hpc` tests (CI or cluster only), `verification/` physics checks. |
-| `tools/` | Repository tools: golden-run gate for solver changes (`tools/golden/`), repository audit. |
-| `experiments/` | Results that figures and the diary use (JSON/CSV), and figures. |
+| `tools/` | Repository tools: golden-run gate for solver changes (`tools/golden/`), feature guardrails (`tools/bundle/`, `tools/ledger/`), repository audit. |
+| `experiments/` | Results that figures use (JSON/CSV), and figures. |
 | `docs_site/` | Public documentation (MkDocs). |
-| `docs/` | Internal notes: specs, literature, meetings, solver history. Not published. |
-| `talks/` | Talk material. |
-| `examples/`, `sandbox/` | A synthetic optimisation demo; a small MPI restart reproducer. |
-| `diary.md` | Lab notebook: what each experiment found (older entries: `diary_archive_to_2026-10-07.md`). |
-| `BACKLOG.md` | Open work. |
-| `runs` | Link to the run data on the OSCAR cluster (not portable). |
+| `examples/` | A synthetic optimisation demo. |
+| `internal/` | The project team's working files, not documentation: lab notebook, open work, specs and plans, meeting notes, talks. You do not need them to use the code. |
+
+Simulations write to `runs/<run_id>/` (created on first use, not tracked).
 
 ## Reference
 

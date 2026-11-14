@@ -21,7 +21,7 @@
 #       $ make submit PARAMS=runs/my_run/params.json DRYRUN=1   # dry-run only
 #
 #  NOTEBOOK HOOK ──────────────────────────────────────────────────────────────
-#       $ make hooks        # install pre-commit check for diary.md / BACKLOG.md
+#       $ make hooks        # install pre-commit check for internal/diary.md and internal/BACKLOG.md
 #
 #  HOUSE-KEEPING ───────────────────────────────────────────────────────────────
 #       $ make clean        # remove build artifacts
@@ -350,4 +350,4 @@ overlay:
 .PHONY: hooks
 hooks:
 	install -m 755 scripts/hooks/pre-commit $$(git rev-parse --git-path hooks)/pre-commit
-	@echo "installed pre-commit (diary.md / BACKLOG.md freshness)"
+	@echo "installed pre-commit (internal/diary.md, internal/BACKLOG.md freshness)"

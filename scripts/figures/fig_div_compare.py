@@ -23,7 +23,7 @@ from scripts import postprocess as pp  # noqa: E402
 from scripts import replay_gate as rg  # noqa: E402
 from scripts import replay_lf as rl  # noqa: E402
 
-OUT = ROOT / "docs/meetings/2026-10-29"
+OUT = ROOT / "internal/docs/meetings/2026-10-29"
 KIM_DIV = Path("/oscar/scratch/eaguerov/kim_pipeline/out/off_real_c1/divdiag.dat")
 KIM_T = 0.6074      # his non-dimensional rocking period (T_CYCLE in TracerTest_test.c)
 RPM, THETA = 32.5, 7.0

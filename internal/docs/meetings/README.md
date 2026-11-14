@@ -1,6 +1,6 @@
 # Weekly meetings
 
-This folder is `docs/meetings/` in the repository.
+This folder is `internal/docs/meetings/` in the repository.
 
 Each Thursday meeting has one folder, named with the date.
 

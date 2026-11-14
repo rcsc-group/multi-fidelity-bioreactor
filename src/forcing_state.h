@@ -8,7 +8,7 @@
 //                (checkpoint.phase). A continuation (same forcing) therefore does not ramp at all.
 // params.json holds the target only. A restart with no label, or with a label AND *_prev keys in params.json,
 // stops with an error: one source of truth, nothing silent. Pitfall "restart-ramp" in
-// docs_site/developer/solver-pitfalls.md; design in docs/plans/2026-11-13-restart-label-plan.md.
+// docs_site/developer/solver-pitfalls.md; design in internal/docs/plans/2026-11-13-restart-label-plan.md.
 //
 // The angle uses an integrated phase, psi(t) = 2 pi cycles0 + (integral of w dt), so a frequency change has
 // no chirp: the rate of the angle is the instantaneous w, and the angle and its rate are continuous at a restart.

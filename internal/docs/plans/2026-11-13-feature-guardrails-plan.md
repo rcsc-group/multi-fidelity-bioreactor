@@ -15,7 +15,7 @@ cost and error, and uses bundles on old and new commits to mark rows current or 
 
 **Tech stack:** Python 3.11 (uv), pytest, Basilisk qcc at /oscar/data/dharri15/eaguerov/basilisk/src, SLURM.
 
-**Spec:** `docs/specs/2026-11-13-feature-guardrails-design.md` (read it first; section numbers below refer to it).
+**Spec:** `internal/docs/specs/2026-11-13-feature-guardrails-design.md` (read it first; section numbers below refer to it).
 
 ## Global constraints
 

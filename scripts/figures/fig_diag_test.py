@@ -18,7 +18,7 @@ from scripts import figstyle as fs  # noqa: E402
 T = 0.607329
 RUNS = {"ours": (Path("/oscar/scratch/eaguerov/replay_gate/runs/pr28_A"), fs.level_colour(8)),
         "Kim": (Path("/oscar/scratch/eaguerov/kim_pipeline/prereg_out/pre_A_N256/off_m1"), fs.KIM)}
-OUT = ROOT / "docs/meetings/prereg"
+OUT = ROOT / "internal/docs/meetings/prereg"
 
 
 def main() -> None:

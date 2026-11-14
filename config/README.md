@@ -17,4 +17,4 @@ One run's parameters are a JSON file with the keys in `sweep_example.json` (with
 solver reads it with `src/params_read.h`; the meaning of each key is in
 [the parameter reference](../docs_site/reference/params.md) of the documentation.
 
-Files that no script used any more were removed; see `docs/history/archived-files.md`.
+Files that no script used any more were removed; see `internal/docs/history/archived-files.md`.

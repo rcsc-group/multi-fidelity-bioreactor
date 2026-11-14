@@ -132,7 +132,7 @@ tutorial (build, run, postprocess one case), how-to (submit a sweep, chain a run
 volume vs wall metrics, ...). Refresh the stale pages against the current code.
 
 Internal (`docs/`, never published): specs, plans, literature reviews, meetings, diary archive, project history
-(dates, costs, who found what). `docs/README.md` says "internal". A CI check fails when a `docs_site/` page links
+(dates, costs, who found what). `internal/docs/README.md` says "internal". A CI check fails when a `docs_site/` page links
 into `docs/` or when `mkdocs.yml` nav names a `docs/` file.
 
 Lesson routing rule: the technical content of a lesson -> public pitfalls page; the story (dates, cost, dead ends)

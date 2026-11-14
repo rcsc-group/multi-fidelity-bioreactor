@@ -25,7 +25,7 @@ Code: `scripts/mfbml_local/`, plots by `scripts/plot_mf_*.py`.
 | `chi_decay_rate_shape.png`, `chi_tail_evidence_l9.png`, `joint_rate_chi075.png` | mixing-time tail and decay-rate studies | CONTEXT |
 | `h_kernel_test_chi50.png`, `h_kernel_test_chi75.png`, `h_kernel_test_chi95.png` | first test of the h-kernel (TWY2) | CONTEXT |
 | `sigma_concepts.png` | the uncertainty terms of the method | CONTEXT |
-| `guide/g1_levels.png` to `guide/g5_transform.png` | figures of `docs/yi_h_guide.md` | CONTEXT |
+| `guide/g1_levels.png` to `guide/g5_transform.png` | figures of `internal/docs/yi_h_guide.md` | CONTEXT |
 
 ## C. gcbml fits on the hydrodynamic data (τ_mean, τ₉₅ against rpm; h → 0 prediction)
 Data: `hydro_dataset_v2.json` (last 3 cycles before release, same for every run). Fits: `scripts/gcbml_hydro_fit_v3.py`.

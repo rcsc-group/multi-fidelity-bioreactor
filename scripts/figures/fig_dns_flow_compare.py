@@ -22,7 +22,7 @@ PANELS = [("vol_frac_interf.dat", "posY_max", "highest free surface"),
           ("vol_frac_interf.dat", "posY_min", "lowest free surface"),
           ("normf.dat", "ux_liq_rms", r"liquid $u_x$ rms"),
           ("normf.dat", "uy_liq_rms", r"liquid $u_y$ rms")]
-OUT = ROOT / "docs/meetings/prereg"
+OUT = ROOT / "internal/docs/meetings/prereg"
 
 
 def col(path: Path, name: str) -> tuple[np.ndarray, np.ndarray]:

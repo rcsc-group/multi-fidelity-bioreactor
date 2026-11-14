@@ -22,7 +22,7 @@ from scripts.autoextend import tip_results  # noqa: E402
 
 RPMS = [15, 17.5, 20, 22.5, 25, 27.5, 30, 32.5, 35, 37.5]
 KIM = ROOT / "experiments/kimetal2024/csv_raw/mixing_kla_vs_frequency.csv"
-OUT = ROOT / "docs/meetings/prereg"
+OUT = ROOT / "internal/docs/meetings/prereg"
 PANELS = [  # (our key, Kim column, marker)
     [("dtmix_0.95", "dtmix_strict_0.95", fs.threshold_marker("chi", 0.95)),
      ("dtmix_0.75", "dtmix_strict_0.75", fs.threshold_marker("chi", 0.75)),

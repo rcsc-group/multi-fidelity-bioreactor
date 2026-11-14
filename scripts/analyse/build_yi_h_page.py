@@ -1,6 +1,6 @@
 """Build the Yi-h artifact page: the guide, then the specification in a closed section.
 
-Renders docs/yi_h_guide.md + docs/mf_problem_definition.md to static HTML on the
+Renders internal/docs/yi_h_guide.md + internal/docs/mf_problem_definition.md to static HTML on the
 server (python-markdown), so the viewer's native Mermaid renderer and MathJax both
 see static content. Math is protected from the markdown pass and restored verbatim.
 Figures are referenced as fig/<path under experiments/multifidelity>.
@@ -17,8 +17,8 @@ OUT = REPO / "build/yi_h_page/yi_h.html"
 
 
 def load():
-    guide = (REPO / "docs/yi_h_guide.md").read_text()
-    spec = (REPO / "docs/mf_problem_definition.md").read_text()
+    guide = (REPO / "internal/docs/yi_h_guide.md").read_text()
+    spec = (REPO / "internal/docs/mf_problem_definition.md").read_text()
     spec = re.sub(r"^(#{2,5}) ", lambda m: "#" + m.group(1) + " ", spec, flags=re.M)   # demote
     spec = re.sub(r"^# .*$", "## Specification", spec, count=1, flags=re.M)
     head, body = spec.split("## Specification", 1)

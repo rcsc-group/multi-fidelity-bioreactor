@@ -3,7 +3,7 @@ cycle N_MIX, 3 recorded cycles.
   build             BioReactor-pr-rec (-DRECORD_FLUX), pr-kimrec (+ -DREC_KIM_FLUX=1), pr-rep (-DREPLAY_FLUX), MPI
   dns  LEVEL        A (record, NT_A ranks), Akim (Kim-style record, NT_A ranks), B (record, NT_B ranks: noise floor)
   replay LEVEL      afterok of the DNS jobs: T1 (A, no loop), H (A, hold 100), W (A, 1 cycle looped), S (Akim, no loop)
-  report LEVEL      metrics M1-M3 of every run against A, written to docs/meetings/prereg/
+  report LEVEL      metrics M1-M3 of every run against A, written to internal/docs/meetings/prereg/
 Run ids: pr{LEVEL}_{tag}. Smoke test (gate G2): LEVEL 6 first.
 Usage: uv run python scripts/prereg_offline.py build | dns 6 | replay 6 | report 6
 """
@@ -37,7 +37,7 @@ FLAGS = {"rec": ["-DRECORD_FLUX", "-DEXTRA_TRACERS=0", "-DPREREG_DIAG=1"],
          "rep": ["-DREPLAY_FLUX", "-DEXTRA_TRACERS=0", "-DPREREG_DIAG=1"],
          "recseed": ["-DRECORD_FLUX", "-DEXTRA_TRACERS=0", "-DPREREG_DIAG=1", "-DSEED_KIM=1"],
          "kimmask": ["-DRECORD_FLUX", "-DEXTRA_TRACERS=0", "-DREC_KIM_FLUX=1", "-DREC_KIM_MASK=1", "-DPREREG_DIAG=1"]}
-OUT = ROOT / "docs/meetings/prereg"
+OUT = ROOT / "internal/docs/meetings/prereg"
 PFX = os.environ.get("PREREG_PFX", "pr")   # run-id prefix: "pr2" = rerun with the per-step diag
 
 

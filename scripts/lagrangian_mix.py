@@ -1,7 +1,7 @@
 """Lagrangian (particle) estimator of mixing from recorded flow snapshots.
 
 Library only; the driver for the real run is scripts/analyse/run_lagrangian_real.py.
-Implements docs/dfd_plan.md section "Estimator": passive particles advected
+Implements internal/docs/dfd_plan.md section "Estimator": passive particles advected
 (RK2 midpoint) in the recorded, time-interpolated velocity field plus a
 Brownian step at prescribed diffusivity D, confined to the liquid; labels give
 a tracer concentration; chi_l(t) is computed from particle counts in boxes of

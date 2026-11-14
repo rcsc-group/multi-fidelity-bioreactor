@@ -222,7 +222,7 @@ smoke runs passed; dry-run lists node2356 excluded and no mbessa-condo; ledger r
 - Modified on or after 2026-10-25 (ok): diary.md (11-02); scripts/replay_chain.py (10-31); scripts/replay_l10.py (10-24);
   scripts/test_t3_learning_curve.py (10-21 17:02); src/BioReactor.c (10-29, commit 61b6e87); scripts/postprocess.py (10-29);
   scripts/fig_mf_grid.py (10-29); logs/slurm_7893240.out (10-25); eec1f15 binary (10-11, ok for L10 warm runs).
-- SUSPECT (before 2026-10-25): docs/mf_problem_definition.md (10-05); scripts/simulate.py, scripts/chain.py,
+- SUSPECT (before 2026-10-25): internal/docs/mf_problem_definition.md (10-05); scripts/simulate.py, scripts/chain.py,
   scripts/mfbml_local/kernel_ridge_regression.py (10-01); scripts/mfbml_local/krr_lr_gpr_fullbayes.py (10-08, reused);
   scripts/test_h1_mfbml.py (10-13; BOUNDS theta 4-9, not reused); scripts/replay_lf.py (10-21); scripts/submit_l10_from_l8.py
   (10-21); scripts/hydro_dataset_v2.py (10-22); experiments/multifidelity/hydro_dataset_v2.json (10-08, not used);

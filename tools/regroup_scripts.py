@@ -173,7 +173,7 @@ def main():
     print(f"bare NAME.py mentions left for review: {len(leftovers)}")
     for x in leftovers[:80]:
         print("  ", x)
-    # input of tools/regroup_import_check.py (scratch file; the kept record is docs/history/moved-scripts.md)
+    # input of tools/regroup_import_check.py (scratch file; the kept record is internal/docs/history/moved-scripts.md)
     json.dump(moves, open(ROOT / "tools" / ".regroup_moves.json", "w"), indent=1, sort_keys=True)
     if not apply:
         return

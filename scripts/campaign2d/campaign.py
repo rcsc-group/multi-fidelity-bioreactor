@@ -52,7 +52,7 @@ BINARY_L9 = "/oscar/data/dharri15/eaguerov/bin/replay-gate/BioReactor-mpi-lean-2
 # Value = (account, cpu cap for this user's QOS). mbessa-condo is never listed here (hard rule).
 PARTITIONS = {"batch": ("default", 312), "batch2": ("batch2", 512)}
 
-# Central estimates (core-h per point) with [low, high]. Sources in docs/campaign2d_plan.md section 4.
+# Central estimates (core-h per point) with [low, high]. Sources in internal/docs/campaign2d_plan.md section 4.
 COST = {
     "L8_cold":        (55.0, 45.0, 70.0),     # sacct 7156006: 3h13m x 16 ranks = 52; diary kmix ~57
     "L9_warm":        (220.0, 190.0, 260.0),  # sacct 7847552 / 7847553: 6.0 h, 7.0 h x 32 ranks

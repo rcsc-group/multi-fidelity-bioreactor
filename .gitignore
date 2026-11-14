@@ -1,3 +1,4 @@
+/runs
 runs/
 surrogate/
 experiments/results.csv
@@ -5,7 +6,7 @@ experiment_data/
 logs/
 
 # Internal lab notebook -- not user-facing, kept local only.
-diary.md
+internal/diary.md
 
 # Stray SLURM logs from sbatch calls run without --output/--error (should
 # go to logs/ instead) -- 16 of these accumulated at the repo root before
@@ -52,4 +53,4 @@ __pycache__/
 !experiments/canonical_case/**/*.mp4
 !docs_site/assets/**
 .claude/worktrees/
-talks/dfd2026/lit_pdfs/
+internal/talks/dfd2026/lit_pdfs/

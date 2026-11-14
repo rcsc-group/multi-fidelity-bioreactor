@@ -1,7 +1,7 @@
 """The cases of the feature bundle: short L6 runs that the guard tests in tests/bundle/ read.
 
 Each case may restart from a file of its parent (a checkpoint, or the record's start dump), so one run's
-output serves several tests and nothing is computed twice. Design: docs/specs/2026-11-13-feature-guardrails-design.md.
+output serves several tests and nothing is computed twice. Design: internal/docs/specs/2026-11-13-feature-guardrails-design.md.
 
 Time: `t_end` of a fresh run is absolute; on a restart it is the time run AFTER the checkpoint (as in the
 solver and tools/golden/golden.py). T is one rocking period in the solver's non-dimensional time.

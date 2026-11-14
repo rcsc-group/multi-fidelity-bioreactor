@@ -21,7 +21,7 @@ from scripts import figstyle as fs  # noqa: E402
 T = 0.607329                                  # T_per_st, same formula in both codes
 OURS = Path("/oscar/scratch/eaguerov/replay_gate/runs")
 KIM = Path("/oscar/scratch/eaguerov/kim_pipeline/prereg_out/pre_A_N256")
-OUT = ROOT / "docs/meetings/prereg"
+OUT = ROOT / "internal/docs/meetings/prereg"
 
 # workflow -> (line width, style); drawn in this order so the thick lines sit under the thin ones
 WORK = [("DNS", 4.0, "-"), ("stored flux", 2.2, "--"), ("flux from u", 1.1, "-")]

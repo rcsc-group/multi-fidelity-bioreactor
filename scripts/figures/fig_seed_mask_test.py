@@ -18,7 +18,7 @@ from scripts import figstyle as fs  # noqa: E402
 T = 0.607329
 OURS = Path("/oscar/scratch/eaguerov/replay_gate/runs")
 KIM = Path("/oscar/scratch/eaguerov/kim_pipeline/prereg_out/pre_A_N256")
-OUT = ROOT / "docs/meetings/prereg"
+OUT = ROOT / "internal/docs/meetings/prereg"
 C_OURS, C_KIM = fs.level_colour(8), fs.KIM
 
 # (dir, label, colour, width, style): thick first

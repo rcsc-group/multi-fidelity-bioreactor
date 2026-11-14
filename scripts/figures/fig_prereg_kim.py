@@ -15,7 +15,7 @@ from scripts import figstyle as fs  # noqa: E402
 
 TAG = sys.argv[1] if len(sys.argv) > 1 else "pre_A_N256"
 SRC = Path("/oscar/scratch/eaguerov/kim_pipeline/prereg_out") / TAG / "series.csv"
-OUT = ROOT / "docs/meetings/prereg"
+OUT = ROOT / "internal/docs/meetings/prereg"
 
 # (column prefix, label, colour, style): the label says which face flux the replay uses and how often it changes
 RUNS = [("A", "DNS", "black", "-"),

@@ -14,7 +14,7 @@ sys.path.insert(0, str(ROOT))
 from scripts import figstyle as fs  # noqa: E402
 from scripts.fig_prereg_loop import KIM, T, load  # noqa: E402
 
-OUT = ROOT / "docs/meetings/prereg"
+OUT = ROOT / "internal/docs/meetings/prereg"
 # thick first
 RUNS = [(KIM / "off_m1", "DNS", "0.55", 4.0, "-"),
         (KIM / "his_loop", "flux from u, looped", fs.KIM, 2.0, "--"),
