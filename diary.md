@@ -5,6 +5,11 @@ Entries before 2026-10-08 are kept verbatim in diary_archive_to_2026-10-07.md (s
 pre-split file at /oscar/scratch/eaguerov/tmp/diary_backup_20261010.md). The archive is NOT re-audited line by line:
 where it conflicts with CURRENT STATE, CURRENT STATE wins, and the known conflicts are listed under CORRECTIONS.
 
+## 2026-11-14 — Daily check
+- Jobs: 49 talk L9 reruns (_fix, jobs 9072812-9072869): 9 running, 40 pending (QOSMaxCpuPerUserLimit), 0 failed; no failed bioreactor-mpi job in the last day, nothing to resubmit. Interactive allocations alive: 9035305 (node1943), 8957535 (node2336). The Slidev server job 9000815 has ended (deck tunnel down until resubmitted).
+- Deck: no [TBD] left. Spoken words 1,548 (tools/count_spoken.py) = 11.9 min at 130 wpm, ~250 over the ~1,300 budget for 10 min; largest: slide 6 (316), slide 4 (251), slide 2 (225). Slides not edited (user edits slides.md).
+- Lean branch: draft PR #2 (lean/phase2 -> campaign-2d) open for CI; Sonnet 5.5 review running. Guards 32/32 on HEAD (lean diary).
+
 ## 2026-11-13 ~21:30 — Do the restart bias reach the talk's L9 data?
 - Talk 2D figures use ns_l9/nsf_l9/nf_l9 (train, 25) and bo1_l9/bo4_l9/fig9_l9 (test A); all ns/nf/bo1/bo4 runs are L8 -> L9 restarts WITHOUT *_prev on binary 2ef5b07-xlevel (ramp from rest, same as c2d). Difference from c2d: n_mix_cycles = 30 (c2d: 12).
 - Zero-compute test (scratchpad seam_gap.py; 6 finished old/fixed pairs; flow is tracer-independent): velocity old/fixed - 1 at period 4: +11..+36 %; period 12: +1..+13 %; period 20: -4..+11 %; period 25: -2..+4 %; period 29: 0..+3 %; period 35: 0..+2 %. After ~period 20 the gap swings both signs (chaotic divergence of two histories), so at the talk's release (period 30) the residual is at the run-to-run noise level.
