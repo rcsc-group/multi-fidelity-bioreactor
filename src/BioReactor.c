@@ -375,7 +375,7 @@ static void set_physics (void)
 {
   Re_w = rho_w*U_bio*L_bio/mu_w;            // Reynolds number, water
   Re_a = rho_a*U_bio*L_bio/mu_a;            // Reynolds number, air
-  We_w = rho_w*U_bio*U_bio*L_bio/sigma;     // Weber number
+  We_w = rho_w*U_bio*U_bio*L_bio/(sigma*params.sigma_scale);   // Weber number (sigma_scale: 1 = water-air)
   Fr   = U_bio/sqrt(grav*L_bio);            // Froude number
   rhor = rho_a/rho_w;                       // density ratio
   mur  = mu_a/mu_w;                         // viscosity ratio
