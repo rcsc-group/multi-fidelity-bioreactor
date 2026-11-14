@@ -6,6 +6,7 @@ S9  cs/fs are recomputed after every restore: the solver prints "fs sanity [post
 S10 tracer and oxygen carry across a restart: the restored fields equal the dumped ones.
 S12 a run stops on the rocking-period boundary that scripts/periods.py predicts.
 """
+import math
 from pathlib import Path
 
 import pytest
@@ -102,12 +103,25 @@ FORCED = ["cont", "kill_resume", "xl6", "caseB_warm"]
 
 @pytest.mark.parametrize("name", FORCED)
 def test_s13_restart_continues_the_angle_and_its_rate(bundle, name):
+    """The parent's angle at the dump, from its label (Th, Th_d, Th_2d at t_forcing, one step before the dump,
+    Taylor-extended), vs the restarted run's angle at its first acceleration step (restart_forcing.json).
+    That step is one short step after the dump: restore() marks the solver events of the restored step as done
+    (src/output.h), so that step moves t with frozen fields (seen with qcc -events, 2026-11-13; pitfall
+    "restore-first-step"). Bar: at most 1e-3 period. Tolerances 1e-6 rad and 1e-3 of the peak rate: the
+    Taylor rest is ~5e-7 rad / ~2e-4 at L6, while a ramp from rest jumps by ~0.1 rad and the full rate."""
     import json
     lab = json.loads((rd(bundle, bc.CASES[name].parent) / "checkpoint.phase").read_text())
     new = json.loads((rd(bundle, name) / "restart_forcing.json").read_text())
-    assert abs(new["Th"] - lab["Th"]) < 1e-9, f"angle jumps: {lab['Th']!r} -> {new['Th']!r} rad"
-    assert abs(new["Th_d"] - lab["Th_d"]) <= 1e-9 * max(1.0, abs(lab["Th_d"])), \
-        f"angular rate jumps: {lab['Th_d']!r} -> {new['Th_d']!r} rad/s"
+    # seconds from t_forcing to the restart's first step: parent units up to the dump, the child's after it
+    # (a new condition has its own time unit T_bio)
+    dt = (lab["t"] - lab["t_forcing"]) * lab["T_bio"] + (new["t"] - lab["t"]) * new["T_bio"]
+    th = lab["Th"] + lab["Th_d"]*dt + 0.5*lab["Th_2d"]*dt*dt
+    th_d = lab["Th_d"] + lab["Th_2d"]*dt
+    peak = abs(lab["omega_b"]) * lab["theta_max"][0] * math.pi / 180
+    lag = new["cycles"] - lab["cycles"]   # phase advance from the dump to the first step, in periods
+    assert 0 <= lag <= 1e-3, f"first forcing step {lag:.2e} periods after the dump (bar 1e-3)"
+    assert abs(new["Th"] - th) < 1e-6, f"angle jumps: {th!r} -> {new['Th']!r} rad"
+    assert abs(new["Th_d"] - th_d) <= 1e-3 * peak, f"angular rate jumps: {th_d!r} -> {new['Th_d']!r} rad/s"
 
 
 @pytest.mark.parametrize("name,msg", [("refuse_prev", "_prev"), ("refuse_nolabel", "checkpoint.phase")])

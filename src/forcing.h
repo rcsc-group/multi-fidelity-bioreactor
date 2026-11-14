@@ -114,8 +114,10 @@ event acceleration(i++)
   ForcingNow F = forcing_now (t);
   _forcing_last = F;  _forcing_last_t = t;   // for the checkpoint label (forcing_state.h)
   Th = F.Th;  Th_d = F.Th_d;  Th_2d = F.Th_2d;
-  if (i == 0 && _restart_kind > 0)
-    write_restart_forcing (F, t, _restart_kind);   // restart record (guard S13), at t = t_checkpoint
+  if (_restart_kind > 0 && !_restart_forcing_written) {   // first step after a restart, t = t_checkpoint
+    write_restart_forcing (F, t, _restart_kind);          // (not i == 0: restore() brings back i)
+    _restart_forcing_written = 1;
+  }
   _theta_env_deg = F.theta_max[0];
   double x_acc = F.x_acc;   // horizontal shaking
 

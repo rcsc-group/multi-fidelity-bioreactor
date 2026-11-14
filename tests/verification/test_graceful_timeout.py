@@ -92,19 +92,18 @@ def test_emergency_dump_records_its_phase():
     assert PHASE_SIDECAR in src, "no phase sidecar written"
 
 
-def test_restart_prefers_a_recorded_phase_over_guessing():
-    """The reader must use the sidecar when present.
+def test_restart_reads_the_label_and_never_guesses():
+    """A restart reads the dump's label (checkpoint.phase) and refuses without it.
 
-    The nearest-boundary form stays as the fallback so every checkpoint
-    written before this feature still restores correctly.
+    Until 2026-11-13 a missing sidecar fell back to the nearest period boundary, round(t_ck/T_per_st); that
+    silent guess is gone (docs/plans/2026-11-13-restart-label-plan.md). The refusal itself is run by the
+    bundle guard test_s13_restart_refuses_an_ambiguous_source.
     """
     src = solver_source()
-    assert "round (t_ck/T_per_st)" in src, \
-        "the legacy inference was removed; old checkpoints would break"
-    i_side = src.index(PHASE_SIDECAR)
-    assert src.count(PHASE_SIDECAR) >= 2, \
-        "sidecar is written but never read back"
-    assert i_side > 0
+    assert src.count(PHASE_SIDECAR) >= 2, "label is written but never read back"
+    assert f'label_read ("{PHASE_SIDECAR}"' in src, "the restart does not read the label"
+    assert "restart_refuse" in src, "a restart without a label no longer stops"
+    assert "round (t_ck/T_per_st)" not in src, "the silent phase guess is back"
 
 
 def test_slurm_template_tells_the_job_its_deadline():

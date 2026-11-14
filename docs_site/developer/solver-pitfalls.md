@@ -159,6 +159,30 @@ In code that `main()` or the events run: bound loops by constants (`N_MAX`) and 
 weights; prefer `fmin`/`fmax` to `if`/`?:`; compute the forcing once per step (the acceleration event) and
 reuse it; never call `exit()` on a path the interpreter can reach (a missing file is such a path): set a
 flag and `return` from `main()`. Then build in two different folders before you trust the result.
+A larger `-maxcalls` does not help (100 M failed like 20 M: the split paths grow too fast), and a cache test on
+`t` (`if (t_cached != t)`) splits the path too, because `t` is undefined there (both seen 2026-11-13).
+
+**Corollary, the forcing cache is one step old at a dump:** the dump events run before the acceleration
+event in a step, and after the last step no acceleration runs. So `_forcing_last` holds `t - dt` when the
+label is written. The label takes the phase at `t` from the light `psi_at()` and writes `Th`, `Th_d`,
+`Th_2d` with their own time `t_forcing`. Before this fix every restart lagged one step in phase and stopped
+one step late (guard S12).
+
+## restore-first-step
+
+**Symptom:** after a restart, the first step that applies the rocking force is not at the dump time
+`t_checkpoint` but one short step later (`restart_forcing.json`: `t` > the label's `t`).
+
+**Cause:** `restore()` (Basilisk `src/output.h`) brings back `t` and the step number `i`, then runs the
+events with `events (false)` to catch them up. Its last call is at the restored step, so it marks every
+`(i++)` event of that step as done. The time loop then goes on after `init` in the same pass: only
+`properties`, `stability` and events with their own condition run; `vof`, advection, `acceleration` and
+`projection` do not. `stability` sets `dt`, the loop moves `t` by it, and the fields stay as dumped. The step
+size starts small after a restore (here 6e-4 of a period at L6, then x1.5 per step), so the phase error is
+small. Seen with `qcc -events` (event trace) on the bundle's `cont` case, 2026-11-13.
+
+**Rule:** do not expect a restarted run to repeat the unbroken run bit for bit. Guard S13 allows the first
+forcing step to come at most 1e-3 period after the dump.
 
 ## record-landing
 

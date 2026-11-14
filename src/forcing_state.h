@@ -144,27 +144,33 @@ static double t_at_psi (double target)
 // fields (U_bio, T_bio, SI), the forcing at that instant (SI and degrees; inside a ramp, the ramped values),
 // the angle and its rate (Th, Th_d in rad/s, for the continuity guard), and t_phase_offset/T_per_st for
 // binaries older than this label (they read only those two).
-// The forcing the acceleration event computed last, and its time. The checkpoint events run after it in the
-// same step (include order), so this is the forcing at the dump time; the label writes this copy instead of
-// calling forcing_now() again, which qcc's dimension check cannot afford (2026-11-13). t_forcing in the label
-// shows the time it belongs to.
+// The forcing the acceleration event computed last, and its time t_forcing (one step before a dump: see
+// label_write).
 static ForcingNow _forcing_last;
 static double     _forcing_last_t = -1.;
+static int        _restart_forcing_written = 0;   // restart_forcing.json written (forcing.h)
 
 static void label_write (FILE * fp, double t_now)
 {
+  // The forcing cache (F) is one step old at a dump: the acceleration event runs after the dump event in a
+  // step, and the last step's never runs (2026-11-13: one-dt phase lag after every restart; guard S12). The
+  // phase is therefore taken AT t_now from psi_at() (light, exact); Th, Th_d, Th_2d stay at t_forcing and are
+  // written with it (guard S13 extrapolates). No forcing_now() call here: qcc's dimension check runs this
+  // event and a second forcing_now() path used up its call budget (exit 2, pitfall "qcc-dimension-check").
   ForcingNow F = _forcing_last;
-  double cycles = F.psi/(2.*pi);
+  double rate;
+  double cycles = psi_at (t_now, &rate)/(2.*pi);
+  double cycles_h = (F.psi_h + F.omega_h*T_bio*(t_now - _forcing_last_t))/(2.*pi);   // exact after the ramp
   fprintf (fp, "{\"t\": %.17g, \"t_forcing\": %.17g, \"cycles\": %.17g, \"cycles_h\": %.17g, \"U_bio\": %.17g, \"T_bio\": %.17g, "
            "\"omega_b\": %.17g, \"omega_h\": %.17g, \"n_harmonics\": %d, ",
-           t_now, _forcing_last_t, cycles, F.psi_h/(2.*pi), U_bio, T_bio, F.omega_b, F.omega_h, params.n_harmonics);
+           t_now, _forcing_last_t, cycles, cycles_h, U_bio, T_bio, F.omega_b, F.omega_h, params.n_harmonics);
   fprintf (fp, "\"theta_max\": [%.17g, %.17g, %.17g], \"phi_angular\": [%.17g, %.17g, %.17g], "
            "\"amplitude_h\": [%.17g, %.17g, %.17g], \"phi_horizontal\": [%.17g, %.17g, %.17g], ",
            F.theta_max[0], F.theta_max[1], F.theta_max[2], F.phi_angular[0], F.phi_angular[1], F.phi_angular[2],
            F.amplitude_h[0], F.amplitude_h[1], F.amplitude_h[2],
            F.phi_horizontal[0], F.phi_horizontal[1], F.phi_horizontal[2]);
-  fprintf (fp, "\"Th\": %.17g, \"Th_d\": %.17g, \"T_per_st\": %.17g, \"t_phase_offset\": %.17g}\n",
-           F.Th, F.Th_d/T_bio, T_per_st, cycles*T_per_st - _forcing_last_t);
+  fprintf (fp, "\"Th\": %.17g, \"Th_d\": %.17g, \"Th_2d\": %.17g, \"T_per_st\": %.17g, \"t_phase_offset\": %.17g}\n",
+           F.Th, F.Th_d/T_bio, F.Th_2d/(T_bio*T_bio), T_per_st, cycles*T_per_st - t_now);
 }
 
 // One value of the label: the number after "key": (0 and *found = 0 if the key is absent). The label is our own
@@ -305,9 +311,9 @@ static void write_restart_forcing (ForcingNow F, double t_now, int kind)
   FILE * fp = fopen ("restart_forcing.json", "w");
   if (!fp)
     return;
-  fprintf (fp, "{\"t\": %.17g, \"Th\": %.17g, \"Th_d\": %.17g, \"cycles\": %.17g, \"omega_b\": %.17g, "
+  fprintf (fp, "{\"t\": %.17g, \"T_bio\": %.17g, \"Th\": %.17g, \"Th_d\": %.17g, \"cycles\": %.17g, \"omega_b\": %.17g, "
            "\"omega_b_source\": %.17g, \"theta_max_source\": %.17g, \"U_bio_source\": %.17g, "
-           "\"source\": \"%s\"}\n", t_now, F.Th, F.Th_d/T_bio, F.psi/(2.*pi), F.omega_b, fsrc.omega_b,
+           "\"source\": \"%s\"}\n", t_now, T_bio, F.Th, F.Th_d/T_bio, F.psi/(2.*pi), F.omega_b, fsrc.omega_b,
            fsrc.theta_max[0], fsrc.U_bio, kind == 1 ? "label" : "old label + *_prev");
   fclose (fp);
 }

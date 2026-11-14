@@ -316,7 +316,7 @@ static void set_run_window (int argc, char * argv[])
                  "theta_max %.6g over %d periods; phase %.6f periods\n", fsrc.omega_b, fsrc.theta_max[0],
                  kind == 1 ? "label" : "old label + *_prev", params.omega_b, params.theta_max[0],
                  N_RAMP_CYCLES, fsrc.cycles);
-      _restart_kind = kind;   // restart_forcing.json is written in event init (init.h)
+      _restart_kind = kind;   // restart_forcing.json: first acceleration step (forcing.h)
     }
 #endif
     // Release n_mix_cycles forcing periods after the restart (0: at the restart).
