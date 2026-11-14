@@ -124,9 +124,12 @@ def test_s13_restart_continues_the_angle_and_its_rate(bundle, name):
     assert abs(new["Th_d"] - th_d) <= 1e-3 * peak, f"angular rate jumps: {th_d!r} -> {new['Th_d']!r} rad/s"
 
 
-@pytest.mark.parametrize("name,msg", [("refuse_prev", "_prev"), ("refuse_nolabel", "checkpoint.phase")])
+@pytest.mark.parametrize("name,msg", [("refuse_prev", "restart refused: params.json sets *_prev keys"),
+                                      ("refuse_nolabel", "restart refused: no checkpoint.phase"),
+                                      ("refuse_stale", "restart refused: checkpoint.phase is the label of t=")])
 def test_s13_restart_refuses_an_ambiguous_source(bundle, name, msg):
-    """*_prev next to a label (two sources) and a restart with no label (no source) must stop the solver."""
+    """*_prev next to a label (two sources), a restart with no label (no source), and a label written at
+    another time than the dump (a stale label: wrong source) must stop the solver."""
     case(bundle, name)   # fails unless the solver stopped (status "refused")
     err = (rd(bundle, name) / "stderr.txt").read_text()
-    assert "ERROR" in err and msg in err, err[-500:]
+    assert "ERROR: " + msg in err, err[-500:]

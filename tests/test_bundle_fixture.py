@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from tools.bundle.bundle import src_hash
+from tools.bundle.bundle import cases_hash, src_hash
 
 pytest_plugins = ["pytester"]
 ROOT = Path(__file__).resolve().parents[1]
@@ -34,10 +34,12 @@ def guards(pytester):
     return pytester
 
 
-def _bundle(tmp_path, h, half_status="ok", half_error=""):
+def _bundle(tmp_path, h, half_status="ok", half_error="", **extra):
     cases = {"cold": {"status": "ok", "error": ""}, "half": {"status": half_status, "error": half_error}}
     p = tmp_path / "bundle.json"
-    p.write_text(json.dumps({"src_hash": h, "git_commit": None, "builds": {}, "cases": cases}))
+    rec = {"src_hash": h, "cases_hash": cases_hash(), "fidelity": None, "git_commit": None, "builds": {},
+           "cases": cases} | extra
+    p.write_text(json.dumps(rec))
     return p
 
 
@@ -65,6 +67,23 @@ def test_stale_bundle_fails(guards, monkeypatch, tmp_path):
     assert "0" * 64 in out and src_hash(ROOT / "src") in out   # both hashes named
 
 
+def test_bundle_from_other_cases_fails(guards, monkeypatch, tmp_path):
+    """The case definitions (tools/bundle/cases.py: params, run lengths, build flags) are evidence too: a bundle
+    built from other ones is stale. Review finding 2026-11-14."""
+    monkeypatch.setenv("MFB_BUNDLE", str(_bundle(tmp_path, src_hash(ROOT / "src"), cases_hash="2" * 64)))
+    r = guards.runpytest()
+    r.assert_outcomes(errors=3)
+    assert "cases.py" in r.stdout.str()
+
+
+def test_level_check_bundle_fails(guards, monkeypatch, tmp_path):
+    """bundle.py --fidelity N builds a level check, not the L6 bundle the bars are written for."""
+    monkeypatch.setenv("MFB_BUNDLE", str(_bundle(tmp_path, src_hash(ROOT / "src"), fidelity=5)))
+    r = guards.runpytest()
+    r.assert_outcomes(errors=3)
+    assert "fidelity" in r.stdout.str()
+
+
 def test_failed_case_fails_with_its_error(guards, monkeypatch, tmp_path):
     p = _bundle(tmp_path, src_hash(ROOT / "src"), "failed", "exit 134: dump write error")
     monkeypatch.setenv("MFB_BUNDLE", str(p))
@@ -80,7 +99,8 @@ def test_mpi(bundle):
 
 
 def _mpi_sidecar(tmp_path, h):
-    (tmp_path / "mpi4.json").write_text(json.dumps({"src_hash": h, "case": {"status": "ok", "error": ""}}))
+    (tmp_path / "mpi4.json").write_text(json.dumps({"src_hash": h, "cases_hash": cases_hash(),
+                                                    "case": {"status": "ok", "error": ""}}))
 
 
 def test_mpi_sidecar_is_merged(pytester, monkeypatch, tmp_path):

@@ -16,7 +16,7 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
-from tools.bundle.bundle import src_hash  # noqa: E402
+from tools.bundle.bundle import cases_hash, src_hash  # noqa: E402
 from tools.bundle import cases as bc  # noqa: E402
 
 BARS = ROOT / "tools" / "bundle" / "bars.yaml"
@@ -62,10 +62,16 @@ def bundle() -> dict:
     if b.get("src_hash") != now:
         pytest.fail(f"stale bundle: built from src_hash {b.get('src_hash')}, src/ is now {now}. "
                     f"Run the bundle again on this source (tools/bundle/bundle.sbatch).", pytrace=False)
+    if b.get("cases_hash") != cases_hash():
+        pytest.fail(f"stale bundle: built from other case definitions (tools/bundle/cases.py hash "
+                    f"{b.get('cases_hash')}, now {cases_hash()}). Run the bundle again.", pytrace=False)
+    if b.get("fidelity") is not None:
+        pytest.fail(f"bundle built with --fidelity {b['fidelity']} (a level check); the guards' bars are for "
+                    f"the L6 bundle.", pytrace=False)
     mpi = p.with_name("mpi4.json")   # written by the separate MPI job (tools/bundle/bundle_mpi.sbatch)
     if mpi.is_file():
         m = json.loads(mpi.read_text())
-        if m.get("src_hash") != now:
+        if m.get("src_hash") != now or m.get("cases_hash") != cases_hash():
             pytest.fail(f"stale MPI result {mpi}: built from src_hash {m.get('src_hash')}, src/ is now {now}.",
                         pytrace=False)
         b["cases"]["mpi4"] = m["case"]

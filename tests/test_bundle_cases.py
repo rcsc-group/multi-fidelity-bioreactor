@@ -11,7 +11,8 @@ RUNS = Path("/tmp/bundle_runs")
 
 def test_case_names_are_the_plan_list():
     assert set(bc.CASES) == {"cold", "cold2", "rec", "half", "cont", "kill", "kill_resume", "replay", "loop",
-                             "lean", "l5", "xl6", "caseB_cold", "caseB_warm", "mpi4", "refuse_prev", "refuse_nolabel"}
+                             "lean", "l5", "xl6", "caseB_cold", "caseB_warm", "mpi4", "refuse_prev", "refuse_nolabel",
+                             "refuse_stale"}
 
 
 def test_order_puts_parents_first():
@@ -92,10 +93,11 @@ def test_no_case_sets_prev_keys_but_the_refusal_case():
 
 
 def test_refusal_cases_expect_the_solver_to_stop():
-    for name in ("refuse_prev", "refuse_nolabel"):
+    for name in ("refuse_prev", "refuse_nolabel", "refuse_stale"):
         c = bc.CASES[name]
         assert c.expect_refusal and c.parent == "half" and c.restart == "checkpoint.dump", name
     assert bc.CASES["refuse_prev"].stage_label and not bc.CASES["refuse_nolabel"].stage_label
+    assert bc.CASES["refuse_stale"].label_from == "cold"   # cold's label (8T) next to half's dump (4T)
     assert not any(c.expect_refusal for n, c in bc.CASES.items() if not n.startswith("refuse_"))
 
 

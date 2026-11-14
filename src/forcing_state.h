@@ -196,6 +196,8 @@ static void label_vector (const char * json, const char * key, double * v)
     sscanf (c + strlen (k), " [%lf , %lf , %lf ]", &v[0], &v[1], &v[2]);
 }
 
+static double _label_t = -1.;    // the time the label was written at (label_read); must be the dump's time
+
 // Read a label. Returns 0 if the file is missing, -1 if it holds no "t", 1 for a label with the forcing, 2 for
 // an old label (only t, t_phase_offset, T_per_st: written before 2026-11-13). Fills s as far as it can.
 static int label_read (const char * path, ForcingSource * s)
@@ -214,6 +216,7 @@ static int label_read (const char * path, ForcingSource * s)
   double t = label_value (json, "t", &has_t);
   if (!has_t)
     return -1;
+  _label_t = t;
   s->omega_b  = label_value (json, "omega_b", &has_forcing);
   s->omega_h  = label_value (json, "omega_h", &found);
   s->cycles   = label_value (json, "cycles", &found);
@@ -265,6 +268,15 @@ static int restart_source (void)
   else if (kind == 2 && !params.has_prev_keys)
     restart_refuse ("checkpoint.phase is an old label (phase only, no forcing) and params.json has no "
                     "*_prev keys, so the source forcing is unknown");
+  // The label must be the dump's own: a label left from another dump (another time) gives the wrong source.
+  // params.t_checkpoint is the dump's exact time here (set_run_window reads it from the dump header); the
+  // label prints its time with %.17g, so the two agree to round-off.
+  else if (fabs (_label_t - params.t_checkpoint) > 1e-9*(fabs (_label_t) + fabs (params.t_checkpoint))) {
+    static char why[256];
+    snprintf (why, sizeof(why), "checkpoint.phase is the label of t=%.17g, but the dump is at t=%.17g "
+              "(a stale label from another dump)", _label_t, params.t_checkpoint);
+    restart_refuse (why);
+  }
   if (_restart_refused)
     return -1;
   if (kind == 2) {

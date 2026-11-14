@@ -34,6 +34,7 @@ class Case:
     env: dict = field(default_factory=dict)   # extra environment (e.g. a wall-clock limit)
     expect_refusal: bool = False   # the solver must stop with an ERROR (runner status "refused")
     stage_label: bool = True       # copy the parent's label (checkpoint.phase) next to the run
+    label_from: str | None = None  # stage THIS case's label instead of the parent's (refuse_stale: a stale label)
 
 
 # Timing (v2, after the first bundle): the solver ramps the forcing over N_RAMP periods after every start and
@@ -65,6 +66,7 @@ CASES = {c.name: c for c in [
     # the solver must refuse two sources of the source forcing (label + *_prev), and no source (no label)
     Case("refuse_prev", "default", "half", "checkpoint.dump", 6, 1, expect_refusal=True),
     Case("refuse_nolabel", "default", "half", "checkpoint.dump", 6, 1, expect_refusal=True, stage_label=False),
+    Case("refuse_stale", "default", "half", "checkpoint.dump", 6, 1, expect_refusal=True, label_from="cold"),
 ]}
 
 
@@ -142,6 +144,6 @@ def params(name: str, runs: Path) -> dict:
         return base(name) | {"t_end": 3 * T}
     if name == "refuse_prev":
         return base(name) | _continue(R_START * T, T) | _prev(RPM_A)
-    if name == "refuse_nolabel":
+    if name in ("refuse_nolabel", "refuse_stale"):
         return base(name) | _continue(R_START * T, T)
     raise KeyError(name)

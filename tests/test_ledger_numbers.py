@@ -105,3 +105,25 @@ def test_build_marks_a_clean_row_stale_when_its_evidence_does_not_carry(tmp_path
     assert rows["m1"]["status"] == "current"
     assert rows["m2"]["status"] == "stale: cont/normf.dat" and rows["m2"]["error"]["q"] == pytest.approx(0.1)
     assert rows["m3"]["status"] == "confounded"
+
+
+def test_carry_ignores_wall_clock_files(tmp_path):
+    """logstats.dat holds wall-clock timings: it differs between any two runs (bars.yaml noise floor), so it can
+    never decide carry-over. Review finding 2026-11-14 (every real row read stale on it)."""
+    f_old = {"xl6": {"tr_oxy.dat": "h1", "logstats.dat": "t1"}, "cold": {"tr_oxy.dat": "h3", "logstats.dat": "t2"}}
+    f_new = {"xl6": {"tr_oxy.dat": "h1", "logstats.dat": "t9"}, "cold": {"tr_oxy.dat": "h3", "logstats.dat": "t8"}}
+    old, new = _bundle(tmp_path, "old", f_old), _bundle(tmp_path, "new", f_new)
+    assert carry.carry(old, new, "cross_level_warmstart") == "current"
+
+
+def test_carry_uses_no_case_whose_dump_time_depends_on_wall_time():
+    """kill dumps when its wall-clock limit fires, so its outputs (and kill_resume's) differ run to run."""
+    for mech, cases in carry.CASES.items():
+        assert not {"kill", "kill_resume"} & set(cases), mech
+
+
+def test_carry_with_no_case_compared_is_not_current(tmp_path):
+    """A HEAD bundle that never ran the mechanism's cases (e.g. --only another case) proves nothing."""
+    old = _bundle(tmp_path, "old", {"xl6": {"tr_oxy.dat": "h1"}, "cold": {"tr_oxy.dat": "h3"}})
+    new = _bundle(tmp_path, "new", {"rec": {"tr_oxy.dat": "h1"}})
+    assert carry.carry(old, new, "cross_level_warmstart").startswith("stale")

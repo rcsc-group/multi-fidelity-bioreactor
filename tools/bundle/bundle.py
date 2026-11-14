@@ -35,6 +35,11 @@ def src_hash(src: Path) -> str:
     return h.hexdigest()
 
 
+def cases_hash() -> str:
+    """SHA-256 of tools/bundle/cases.py: the case definitions (params, run lengths, build flags) are evidence too."""
+    return hashlib.sha256(Path(bc.__file__).read_bytes()).hexdigest()
+
+
 def git_commit(src: Path):
     r = subprocess.run(["git", "-C", str(src), "rev-parse", "HEAD"], capture_output=True, text=True)
     return r.stdout.strip() if r.returncode == 0 else None
@@ -105,6 +110,7 @@ def _with_parents(only, cases) -> dict:
             n = cases[n].parent
     if "kill" in keep:
         keep.add("cold")   # kill's wall-clock limit comes from cold's wall time
+    keep |= {cases[n].label_from for n in list(keep) if cases[n].label_from}   # refuse_stale stages cold's label
     return {n: c for n, c in cases.items() if n in keep}
 
 
@@ -117,7 +123,8 @@ def run_bundle(src: Path, work: Path, only=None, cases=None, run_case=default_ru
     runs = work / "runs"
     serial = {c.build for c in cases.values() if c.build != "mpi"}
     bins = build_fn(src, work, {b: bc.BUILDS[b] for b in sorted(serial)})
-    out = {"src_hash": src_hash(src), "git_commit": git_commit(src), "builds": {}, "cases": {}}
+    out = {"src_hash": src_hash(src), "cases_hash": cases_hash(), "fidelity": fidelity,
+           "git_commit": git_commit(src), "builds": {}, "cases": {}}
     for b, path in bins.items():
         ok = not isinstance(path, Exception)
         sha = hashlib.sha256(Path(path).read_bytes()).hexdigest() if ok and Path(path).exists() else None
@@ -150,8 +157,11 @@ def run_bundle(src: Path, work: Path, only=None, cases=None, run_case=default_ru
             env["BIOREACTOR_MAXRUNTIME_S"] = str(int(MAXRUNTIME_RESERVE_S + frac * cw["wall_s"]))
         restart = runs / c.parent / c.restart if c.restart else None
         shutil.rmtree(rd, ignore_errors=True)   # never read a file an earlier bundle left here
+        if c.label_from and out["cases"].get(c.label_from, {}).get("status") != "ok":
+            rec["error"] = f"needs {c.label_from}'s label ({c.label_from} not ok)"
+            continue
         if restart is not None and c.stage_label:   # the dump's label, read from the working directory
-            stage_phase(restart.parent, rd)
+            stage_phase(runs / c.label_from if c.label_from else restart.parent, rd)
         if name == "kill_resume":
             p = resume_params(p, restart, t_end_abs=bc.END * bc.period(bc.RPM_A))
         _run_and_record(rec, c, bins[c.build], rd, p, restart, env, run_case, qoi_fn)
@@ -162,9 +172,10 @@ def run_bundle(src: Path, work: Path, only=None, cases=None, run_case=default_ru
 
 
 def _grade_refusal(rec, rd) -> None:
-    """A case the solver must refuse: 'refused' if it stopped with ERROR on stderr, else 'failed'."""
+    """A case the solver must refuse: 'refused' if it stopped with the solver's refusal message
+    (src/forcing_state.h restart_refuse), else 'failed' (it ran, or it died of another error)."""
     err = (rd / "stderr.txt").read_text() if (rd / "stderr.txt").exists() else ""
-    if rec["status"] == "failed" and "ERROR" in err:
+    if rec["status"] == "failed" and "ERROR: restart refused" in err:
         rec["status"], rec["qoi"] = "refused", {}
     else:
         rec["status"] = "failed"
@@ -195,7 +206,7 @@ def run_mpi(src: Path, work: Path, run_case=default_run_case, build_fn=default_b
     c = bc.CASES["mpi4"]
     rd = work / "runs" / c.name
     rec = {"status": "not run", "error": "", "wall_s": 0.0, "dir": str(rd), "files": {}, "qoi": {}}
-    out = {"src_hash": src_hash(src), "git_commit": git_commit(src), "case": rec}
+    out = {"src_hash": src_hash(src), "cases_hash": cases_hash(), "git_commit": git_commit(src), "case": rec}
     try:
         binary = build_fn(src, work)
     except Exception as e:  # noqa: BLE001

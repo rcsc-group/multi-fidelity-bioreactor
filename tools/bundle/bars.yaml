@@ -132,3 +132,8 @@ refuse_nolabel:
   ref: half
   kind: refusal
   source: "docs/plans/2026-11-13-restart-label-plan.md: a restart with no label has no source forcing; the solver must stop with ERROR naming checkpoint.phase"
+
+refuse_stale:
+  ref: half
+  kind: refusal
+  source: "review finding 2026-11-14: a label written at another time than the dump (here cold's label, 8T, next to half's dump, 4T) gives the wrong source forcing; the solver must stop with ERROR naming the two times"

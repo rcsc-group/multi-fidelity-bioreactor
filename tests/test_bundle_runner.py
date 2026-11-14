@@ -55,7 +55,8 @@ def test_bundle_json_schema(tmp_path):
     out = _run(tmp_path)
     on_disk = json.loads((tmp_path / "work" / "bundle.json").read_text())
     assert on_disk == out
-    assert {"src_hash", "git_commit", "builds", "cases"} <= set(out)
+    assert {"src_hash", "cases_hash", "fidelity", "git_commit", "builds", "cases"} <= set(out)
+    assert out["cases_hash"] == bb.cases_hash() and out["fidelity"] is None
     for name, c in out["cases"].items():
         assert {"status", "error", "wall_s", "dir", "files", "qoi"} <= set(c), name
     assert out["cases"]["cold"]["qoi"] == {"tau_95": 1.0}
@@ -133,11 +134,16 @@ def _refusal_run(stderr_text, fail):
     return run_case
 
 
-@pytest.mark.parametrize("fail,status", [({"refuse_prev"}, "refused"), (set(), "failed")])
-def test_a_refusal_case_must_stop_with_an_error(tmp_path, fail, status):
-    """A case the solver must refuse is 'refused' when it stops with ERROR on stderr, 'failed' when it runs."""
+REFUSED_PREV = "ERROR: restart refused: params.json sets *_prev keys, but the label already gives the source\n"
+
+
+@pytest.mark.parametrize("fail,text,status", [({"refuse_prev"}, REFUSED_PREV, "refused"), (set(), REFUSED_PREV, "failed"),
+                                              ({"refuse_prev"}, "ERROR [fs sanity]: 12 open faces zero\n", "failed")])
+def test_a_refusal_case_must_stop_with_the_refusal(tmp_path, fail, text, status):
+    """A case the solver must refuse is 'refused' only when it stops with the solver's refusal message; it is
+    'failed' when it runs, or when it dies of another error (review finding 2026-11-14: any "ERROR" passed)."""
     src = _fake_src(tmp_path, {"BioReactor.c": "int main;"})
-    out = bb.run_bundle(src, tmp_path / "work", only=["refuse_prev"], run_case=_refusal_run("ERROR: x\n", fail),
+    out = bb.run_bundle(src, tmp_path / "work", only=["refuse_prev"], run_case=_refusal_run(text, fail),
                         build_fn=lambda src, work, builds: {b: work / b for b in builds}, qoi_fn=lambda rd: {})
     assert out["cases"]["refuse_prev"]["status"] == status
 
@@ -157,3 +163,23 @@ def test_refuse_nolabel_gets_no_label(tmp_path):
     bb.run_bundle(src, tmp_path / "work", only=["refuse_prev", "refuse_nolabel"], run_case=run_case,
                   build_fn=lambda src, work, builds: {b: work / b for b in builds}, qoi_fn=lambda rd: {})
     assert seen == {"refuse_prev": True, "refuse_nolabel": False}
+
+
+def test_refuse_stale_gets_another_cases_label(tmp_path):
+    """refuse_stale restarts half's dump next to cold's label (a label from another time): the solver must
+    refuse it. Review finding 2026-11-14 (the label's time was never compared with the dump's)."""
+    src = _fake_src(tmp_path, {"BioReactor.c": "int main;"})
+    seen = {}
+
+    def run_case(case, binary, rd, params, restart, env):
+        if case.name in ("half", "cold"):
+            rd.mkdir(parents=True, exist_ok=True)
+            (rd / "checkpoint.phase").write_text(case.name)
+        if case.name == "refuse_stale":
+            seen["label"] = (rd / "checkpoint.phase").read_text()
+            seen["dump"] = restart
+        _fake_run()(case, binary, rd, params, restart, env)
+
+    bb.run_bundle(src, tmp_path / "work", only=["refuse_stale"], run_case=run_case,
+                  build_fn=lambda src, work, builds: {b: work / b for b in builds}, qoi_fn=lambda rd: {})
+    assert seen["label"] == "cold" and seen["dump"].parent.name == "half"
