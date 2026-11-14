@@ -5,6 +5,16 @@ Entries before 2026-10-08 are kept verbatim in diary_archive_to_2026-10-07.md (s
 pre-split file at /oscar/scratch/eaguerov/tmp/diary_backup_20261010.md). The archive is NOT re-audited line by line:
 where it conflicts with CURRENT STATE, CURRENT STATE wins, and the known conflicts are listed under CORRECTIONS.
 
+## 2026-11-14 — Speed-up: where does the time go? (user: "Profile+scaling, then sigma test"; sigma test delta = 5 %)
+
+- Never profiled the solver before (only Python: _load_dat). L9 talk run bo1_l9_rpm30.52_th7.00_fix: 32 ranks x 8192 cells (uniform 512^2), dt 1.550e-4 for the whole run, 0.042 s wall per step.
+- Hypothesis H1 "the step is capillary-limited": L9 dt 1.550e-4 vs tension.h limit sqrt(rho_m Delta^3/(pi sigma)) = 1.56e-4 (We = 20.5); L8 dt 4.348e-4, ratio 2.80 vs 2^1.5 = 2.83. FALSIFIED at L6 (job 9088144, serial cold L6, 2 periods, same point): sigma_scale 0.25 gave mean dt 1.613e-3 vs 1.603e-3 at 1.0 (prediction 2x). L6/L8 ratio 3.7 ~ CFL (4): the step there follows u_max ~ 7.8 U_bio (liquid max is 1.6 U_bio, so likely the air). So H1 holds at most at L9+, and the gain from lowering sigma is bounded by that CFL step (~1.3x at L9 if u_max is the same). Test at L8/L9: sig025_l8_n8 (9088274), sig025_l9_n16 (9088273) vs prof_l8_n8 / prof_l9_n16.
+- Solid cells: Kim bag (b = 0.03575, b/a = 0.143): fluid band is 28.6 % of the square domain; 71 % of cells are inside the wall. (0.071 bag: 43 %.)
+- Profile + rank scaling: TRACE=2 build /oscar/data/dharri15/eaguerov/bin/profile/BioReactor-mpi-lean-trace-482871e; prof_l9_n{8,16,32}, prof_l8_n{4,8,16} (jobs 9088076-85): restart from the run's final dump, 2 periods. Run-key guard refused the 2nd rank count (ntasks not in the key): correct; scaling repeats use allow_duplicate.
+- sigma_scale parameter (branch sigma-param, fa19628): We uses sigma*sigma_scale; default 1. Golden gate base vs new: jobs 9088139/40.
+- Hard-coded audit (user: "you have not questioned yourself hard enough what needs to be hardcoded"): pivot L_piv = 0.143 fixed (forcing.h:128-131) = Kim's bottom edge only for b = 0.03575 (Kim: "pivot point, located at the middle of the bottom edge"; L_x = 0.250 m, L_y/L_x = 0.285; our b is a half-height). All current data (bo*, ns, nf, c2d, fig9, scr, pr8) use b = 0.03575: unaffected. b = 0.071 runs (1,973, all <= 2026-08-03 except test_sweep_slurm_seg) and a = 0.2/b = 0.09 (82) had the wrong pivot. Domain is a square of side a: bag ends are the box walls, geometry.n has no effect for n >= 8, n < 8 shapes are clipped at |x| = 0.5, b/a > 0.5 would be clipped silently. Fluid properties are constants. config/chain_config.yaml (b 0.071, n 2) and chain_config_smoke.yaml (a 0.2, b 0.09) still carry non-Kim bags. Unused LL, Ly = 0.286.
+- GPU (read src/grid/gpu/grid.h, install of 2026-07-03): 2D Cartesian/multigrid only (no quadtree), surface tension "will not work yet" (curvature via parabola.h), OpenGL GLSL; CUDA/HIP/OpenCL backends exist, not read yet.
+
 ## 2026-11-14 — Run keys: one key per run, an index, no duplicate submissions (user decision "Own key + index")
 
 - Why: user asked how we keep results organised so we do not pick stale files or redo simulations. Chosen over hydra: own key + index, no new dependency.
