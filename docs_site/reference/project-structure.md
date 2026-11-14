@@ -28,7 +28,7 @@ multi-fidelity-bioreactor/
 │   ├── run/                  # Scripts that submit or watch SLURM jobs (submit_*, *_watchdog)
 │   ├── analyse/              # Analyses that read run data: collect_results.py, check_restart_run.py, ...
 │   ├── figures/              # Figures and videos: plot_heatmaps.py, render_videos.py (called by SLURM), ...
-│   ├── hypotheses/           # test_*.py: one numerical experiment per hypothesis in the lab diary
+│   ├── hypotheses/           # test_*.py: one numerical experiment per hypothesis
 │   │                         # (NOT pytest tests; many submit jobs)
 │   ├── campaign2d/, bo2d/    # The 2D optimisation campaign and its Bayesian optimisation
 │   └── mfbml_local/          # Multi-fidelity surrogate (KRR-LR-GPR) and Bayesian variants

@@ -2196,3 +2196,8 @@ the rectangular bag look like a wedge; smoothing, near-wall fill).
 - CI fix: test_pairs_file_names_existing_runs needed OSCAR run data; split into a structure test (unit) and the on-disk check (skips without run data).
 - MPI smoke through simulate (jobs 9077384, 9082649; L5, 2 periods, 4 ranks): COMPLETED, results.json written, log "Project root : .../mfb-lean" (the submitting checkout, not the main one).
 - The 11 test_*.py libraries -> scripts/hypotheses/ (names kept: diary hypotheses). Tests: test_paths (4), test_submit_slurm_exports_the_machine_folders, test_load_pairs_expands_machine_folders, test_sweep_options_expand_machine_folders, each seen RED first. Import check 159 files, 0 regressions; unit suite: only the shared-hook test; mkdocs --strict ok.
+
+## 2026-11-14 — Cold-reader review of docs and src (user: "are the docs ready? is the source astonishingly friendly?")
+- Verdict before fixes: structure good (strict mkdocs build clean, src/README event table, BioReactor.c reading guide); four blockers: (1) public site + default branch are `main`, 215 commits behind campaign-2d, so a cold reader sees the old repo; (2) 7 public pages cited the diary; (3) `geometry.a` called "half-length/half-width" in params.md and BioReactor.c, but init.h builds the wall at |x| = a/L_bio = 1 in a box of side 1, so a is the FULL length (Kim L_x); (4) scripts/ top level had 3 files that break its own layout rule.
+- Fixed on branch coldreader: (2), (3) words only, (4). Unit suite 585 pass (job 9099876), mkdocs strict clean.
+- Open: geometry code fix (pivot from geometry, refuse bags that do not fit, configs) with golden gate; merge main <-> campaign-2d only after the 49 L9 reruns finish and the slides are green (user condition).

@@ -127,10 +127,10 @@ const double t_out = 0.02;        // statistics output interval (about 30 sample
 // Geometry (non-dimensional, length unit L_bio)
 // ---------------------------------------------------------------------------------------------------
 double LL = 1.0;        // domain width
-double Ly = 0.286;      // bag half-height; overwritten from params.geometry
+double Ly = 0.143;      // bag half-height (non-dimensional); set from params.geometry.b in set_scales()
 double y_init = 0.0;    // initial liquid height
 double L_piv  = 0.143;  // distance from the centre to the rocking axis
-double L_bio  = 0.25;   // bag half-length in metres (the length unit)
+double L_bio  = 0.25;   // bag full length in metres = domain side (the length unit); set from params.geometry.a
 
 // ---------------------------------------------------------------------------------------------------
 // Material properties (SI). Phase 1 = water, phase 2 = air.
@@ -234,7 +234,7 @@ static int next_period_count (double x) {
 // Grid, non-dimensional scales, ramp and release times.
 static void set_scales (void)
 {
-  L_bio = params.geometry_a;                         // bag half-length (m): the length unit
+  L_bio = params.geometry_a;                         // bag full length (m): the length unit
   double ANGLE = params.theta_max[0];                // rocking amplitude (deg)
   double RPM   = params.omega_b * 60. / (2.*M_PI);   // rocking rate (rpm)
   NN    = 1 << params.fidelity;                      // level 7 -> 128 cells, 9 -> 512

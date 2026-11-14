@@ -56,7 +56,7 @@ MFB_BUNDLE=$MFB_SCRATCH/bundle/mywork/bundle.json uv run python -m pytest tests/
 | S12 | stop time | the run stops on the period boundary that `scripts/periods.py` predicts |
 | S13 | restart label | the rocking angle and its rate do not jump at a restart; ambiguous restarts are refused |
 
-Every bar is in `tools/bundle/bars.yaml`, with its `source`: the test or diary entry the number comes from.
+Every bar is in `tools/bundle/bars.yaml`, with its `source`: the test or measurement the number comes from.
 The bars were written before the first bundle ran. A failing guard is a finding to explain, not a reason to
 change its bar. The one bar that changed after a result (S4) records why in `window_source`. That change
 came from an extension run whose pass rule was written before the run.
@@ -79,7 +79,7 @@ sbatch -J ramp_from_rest tools/bundle/mutants.sbatch ramp_from_rest $MFB_SCRATCH
 | `no_phase_sidecar` | dump written without its label | S5, S12 |
 | `prerefine_old` | old pre-refine order at a level change | S3 |
 | `ramp_from_rest` | restart ramps the rocking from zero | S13, S5 |
-| `no_rescale` | no velocity rescale at an rpm change | S4 (see the diary for the latest result) |
+| `no_rescale` | no velocity rescale at an rpm change | S4 |
 
 The patches are exact strings, so a patch that no longer matches the source fails loudly
 (`tests/test_bundle_mutants.py`). A mutant therefore cannot silently test nothing.
