@@ -213,6 +213,7 @@ def submit_slurm(
     account: str | None = None,
     qos: str | None = None,
     partition: str | None = None,
+    constraint: str | None = None,
     allow_duplicate: bool = False,
     allow_unknown_binary: bool = False,
 ) -> str:
@@ -247,6 +248,7 @@ def submit_slurm(
                    the MPI staging branch don't touch the real filesystem.
     allow_duplicate : submit even if the key is already indexed (a deliberate repeat, e.g. a determinism check)
     allow_unknown_binary : submit with a binary that is not on disk here; the run gets no usable key
+    constraint   : SLURM node feature (--constraint), e.g. "genoa"
 
     Returns
     -------
@@ -339,6 +341,9 @@ def submit_slurm(
     # [PROJECT ADDED, 2026-11-04] partition for the Campaign 2D split (batch 312 cpu cap, batch2 512 cpu cap).
     if partition:
         cmd.insert(1, f"--partition={partition}")
+    # Node type (SLURM feature, e.g. "genoa"): per core, OSCAR node types differ ~2.7x for this solver.
+    if constraint:
+        cmd.insert(1, f"--constraint={constraint}")
 
     result = subprocess.run(cmd, capture_output=True, text=True, check=True)
     # sbatch stdout: "Submitted batch job 123456"

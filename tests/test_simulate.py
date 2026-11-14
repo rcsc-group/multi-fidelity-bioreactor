@@ -371,3 +371,12 @@ def test_submit_slurm_serial_restart_stages_the_label(tmp_path):
                      template=PROJECT_ROOT / "config" / "slurm_template.sh", mpi_scratch_root=tmp_path / "mpi")
     staged = tmp_path / "runs" / "serial_restart" / "checkpoint.phase"
     assert staged.is_file() and staged.read_text() == (src / "checkpoint.phase").read_text()
+
+
+def test_submit_slurm_passes_a_node_constraint(tmp_path):
+    """constraint= picks the node type (e.g. "genoa"): per core, node types differ ~2.7x in speed (diary 2026-11-14)."""
+    ok = MagicMock(stdout="Submitted batch job 42\n", returncode=0)
+    with patch("subprocess.run", return_value=ok) as mock_run:
+        submit_slurm(SHORT_PARAMS, project_root=PROJECT_ROOT, runs_root=tmp_path, mpi_scratch_root=tmp_path / "m",
+                     allow_unknown_binary=True, constraint="genoa")
+    assert "--constraint=genoa" in mock_run.call_args[0][0]
