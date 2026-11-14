@@ -1,6 +1,9 @@
 import sys, math, json
 import numpy as np
-sys.path.insert(0, "/oscar/scratch/eaguerov/kp_parity")
+from pathlib import Path  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))  # repo root
+from scripts import paths  # noqa: E402  (machine-specific folders)
+sys.path.insert(0, f"{paths.SCRATCH}/kp_parity")
 import predict as P
 from scripts import kim_convert as kc, chi_scale
 rid = sys.argv[1]

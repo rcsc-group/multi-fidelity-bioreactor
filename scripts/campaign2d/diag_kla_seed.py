@@ -11,7 +11,7 @@ import pandas as pd
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import campaign as c  # noqa: E402
-from scripts.test_t3_learning_curve import CachedLooKRR  # noqa: E402
+from scripts.hypotheses.test_t3_learning_curve import CachedLooKRR  # noqa: E402
 
 kla = pd.read_csv(c.DB_KLA)
 d = kla[["level", "rpm", "theta", "run", "kLa_1T_10"]].rename(columns={"kLa_1T_10": "y"}).dropna()

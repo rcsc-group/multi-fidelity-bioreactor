@@ -18,8 +18,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from scripts.simulate import submit_slurm   # noqa: E402
+from scripts import paths  # noqa: E402  (machine-specific folders)
 
-BINARY = "/oscar/scratch/eaguerov/BioReactor-mpi-lean-f1c11e0"
+BINARY = f"{paths.SCRATCH}/BioReactor-mpi-lean-f1c11e0"
 GEOMETRY = {"a": 0.25, "b": 0.03575, "n": 8.0}
 RPMS = [15, 17.5, 20, 22.5, 25, 27.5, 30, 32.5, 35, 37.5]
 SPINUP, POST, THETA = 80, 150, 7.0

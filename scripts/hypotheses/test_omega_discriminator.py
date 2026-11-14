@@ -33,12 +33,13 @@ import numpy as np
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 import scripts.chain as chain
 from scripts.simulate import submit_slurm
+from scripts import paths  # noqa: E402  (machine-specific folders)
 from scripts.experiments.settling_study_grid import (GEOMETRY, FILL_LEVEL, PROJECT_ROOT,
                                          TEMPLATE, omega_b_of)
 
 chain.validate_params = lambda params: None
 
-BINARY = "/oscar/scratch/eaguerov/BioReactor-mpi-phasefix2"
+BINARY = f"{paths.SCRATCH}/BioReactor-mpi-phasefix2"
 ROOT = Path(PROJECT_ROOT)
 runs_dir = ROOT / "runs"
 T_PER_ND = 0.607329

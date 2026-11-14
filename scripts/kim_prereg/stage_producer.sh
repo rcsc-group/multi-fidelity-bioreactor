@@ -4,10 +4,10 @@
 # Usage: bash stage_producer.sh <case tag> <N> <ranks> <walltime>
 set -eu
 TAG=$1; NG=$2; NR=$3; WALL=$4
-S=/oscar/scratch/eaguerov/kim_pipeline/prereg_src
-cd /oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor
+S=${MFB_SCRATCH:-/oscar/scratch/eaguerov}/kim_pipeline/prereg_src
+cd ${MFB_REPO:-/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor}
 uv run python $S/patch_kim.py 2>&1 | grep -v warning
-cd /oscar/scratch/eaguerov/kim_pipeline/prereg/oscar
+cd ${MFB_SCRATCH:-/oscar/scratch/eaguerov}/kim_pipeline/prereg/oscar
 module load openmpi >/dev/null 2>&1 || true
 rm -rf builds/$TAG ../../prereg_out/$TAG
 bash ./submit_case.sh $S/cases/$TAG.sh --build-only > $S/build_$TAG.log 2>&1

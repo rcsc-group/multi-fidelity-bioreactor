@@ -21,9 +21,10 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from scripts.postprocess import _t_scales  # noqa: E402
+from scripts import paths  # noqa: E402  (machine-specific folders)
 from scripts.simulate import submit_slurm  # noqa: E402
 
-BINARY = "/oscar/data/dharri15/eaguerov/bin/BioReactor-mpi-lean-eec1f15"
+BINARY = f"{paths.DATA}/bin/BioReactor-mpi-lean-eec1f15"
 N_MIX, FRAMES = 1, 13
 MIN_PER_CYCLE = {6: 1.0, 7: 1.0, 8: 2.0, 10: 51.0}  # L6/L7 generous guesses (< L8); measured: x8_l10_rpm32.5 21157 s for 6.9 cycles at 32 ranks; L8 generous
 

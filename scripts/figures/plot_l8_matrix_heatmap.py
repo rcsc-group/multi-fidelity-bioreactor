@@ -19,17 +19,21 @@ import re
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
+import sys  # noqa: E402
+from pathlib import Path  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # repo root
+from scripts import paths  # noqa: E402  (machine-specific folders)
 
 N = 256  # fidelity 8
 B_ND = 0.143
 
 RUNS = [
-    ("fresh, MPI (3.1)", "/oscar/scratch/eaguerov/tmp/l8_matrix/ours_fresh_mpi"),
-    ("fresh, OpenMP (3.3/vanilla)", "/oscar/scratch/eaguerov/tmp/l8_matrix/ours_fresh_openmp"),
-    ("restart-recovered, MPI (3.2)", "/oscar/scratch/eaguerov/tmp/l8_matrix/ours_chain_mpi_seg1"),
-    ("restart-recovered, OpenMP (3.4)", "/oscar/scratch/eaguerov/tmp/l8_matrix/ours_chain_openmp_seg1"),
+    ("fresh, MPI (3.1)", f"{paths.SCRATCH}/tmp/l8_matrix/ours_fresh_mpi"),
+    ("fresh, OpenMP (3.3/vanilla)", f"{paths.SCRATCH}/tmp/l8_matrix/ours_fresh_openmp"),
+    ("restart-recovered, MPI (3.2)", f"{paths.SCRATCH}/tmp/l8_matrix/ours_chain_mpi_seg1"),
+    ("restart-recovered, OpenMP (3.4)", f"{paths.SCRATCH}/tmp/l8_matrix/ours_chain_openmp_seg1"),
 ]
-OUT_PATH = "/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor/experiments/kimetal2024/ours_vs_upstream_study/08_l8_matrix_mpi_vs_openmp_vs_restart.png"
+OUT_PATH = f"{paths.REPO}/experiments/kimetal2024/ours_vs_upstream_study/08_l8_matrix_mpi_vs_openmp_vs_restart.png"
 
 # Same nondimensionalization as the rest of this session's analysis
 # (H_bio corrected 2026-08-20 -- see diary.md, was missing its factor of 2).

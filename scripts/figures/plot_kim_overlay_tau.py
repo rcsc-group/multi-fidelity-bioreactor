@@ -40,6 +40,9 @@ import matplotlib.pyplot as plt
 import matplotlib.lines as mlines
 import numpy as np
 import pandas as pd
+import sys  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # repo root
+from scripts import paths  # noqa: E402  (machine-specific folders)
 
 # ── paths ─────────────────────────────────────────────────────────────────────
 HERE       = Path(__file__).parent.parent.parent          # project root
@@ -47,7 +50,7 @@ KIM_CSV    = HERE / "experiments/kimetal2024/csv_raw/shear_ediss_vs_frequency.cs
 EXP_DIR    = HERE / "experiments/sweep_fb_theta_l8_mpi_ckpt/experiment_data"
 L9_META    = HERE / "experiments/sweep_tau_theta7_l9/_sweep_metadata.json"
 L10_MANIFEST = HERE / "experiments/sweep_tau_theta7_l10/_chain_manifest.json"
-SCRATCH    = Path("/oscar/scratch/eaguerov/mpi_runs")
+SCRATCH    = Path(f"{paths.SCRATCH}/mpi_runs")
 OUT_DIR    = HERE / "experiments/figures"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 

@@ -1,16 +1,19 @@
 """Patch the scratch copy of Kim's code (kim_pipeline/prereg) for the offline-vs-DNS test (diary 2026-10-29).
 Every change is behind a switch that defaults to 0 = his code unchanged. Writes prereg_src/changes.diff.
-Usage: uv run python /oscar/scratch/eaguerov/kim_pipeline/prereg_src/patch_kim.py
+Usage: uv run python $MFB_SCRATCH/kim_pipeline/prereg_src/patch_kim.py
 """
 from __future__ import annotations
 
 import difflib
 import shutil
 from pathlib import Path
+import sys  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # repo root
+from scripts import paths  # noqa: E402  (machine-specific folders)
 
-ROOT = Path("/oscar/scratch/eaguerov/kim_pipeline/prereg")
-REF = Path("/oscar/scratch/eaguerov/kim_pipeline/repo_pristine_ref")
-HDR = '#include "/oscar/scratch/eaguerov/kim_pipeline/prereg_src/prereg_MK.h"'
+ROOT = Path(f"{paths.SCRATCH}/kim_pipeline/prereg")
+REF = Path(f"{paths.SCRATCH}/kim_pipeline/repo_pristine_ref")
+HDR = f'#include "{paths.SCRATCH}/kim_pipeline/prereg_src/prereg_MK.h"'
 
 
 def once(text: str, old: str, new: str) -> str:

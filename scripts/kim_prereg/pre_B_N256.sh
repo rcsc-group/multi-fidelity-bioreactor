@@ -129,9 +129,9 @@ BR_FIGURES=0              # PNGs      (off: unrelated to the import, and slow)
 BR_VIDEOS=0               # MP4s      (off: same)
 
 # ---- where things go -------------------------------------------------------
-OUTROOT="/oscar/scratch/eaguerov/kim_pipeline/prereg_out"
-BASILISK="/oscar/data/dharri15/eaguerov/basilisk/src"
-TPP="/oscar/scratch/eaguerov/kim_pipeline/TPP_headers"
+OUTROOT="${MFB_SCRATCH:-/oscar/scratch/eaguerov}/kim_pipeline/prereg_out"
+BASILISK="${BASILISK:-/oscar/data/dharri15/eaguerov/basilisk/src}"
+TPP="${MFB_SCRATCH:-/oscar/scratch/eaguerov}/kim_pipeline/TPP_headers"
 
 # ---- producer job (A2) -----------------------------------------------------
 # Sizing reference: N=256 on 4 ranks ran at 1.68 it/s with dt~2.8e-4 on a

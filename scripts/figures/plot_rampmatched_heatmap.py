@@ -27,16 +27,20 @@ import math
 
 import numpy as np
 import matplotlib.pyplot as plt
+import sys  # noqa: E402
+from pathlib import Path  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # repo root
+from scripts import paths  # noqa: E402  (machine-specific folders)
 
 N = 1024
 B_ND = 0.143
 T_OURS = 12.7447   # nearest fork snapshot to the old comparison's t=12.7596
 T_UPSTREAM = 12.7447400981  # nearest upstream snapshot to T_OURS (matched within <1e-3)
 
-OURS_GLOB = f"/oscar/scratch/eaguerov/tmp/fork_l10_rampmatch/rundir/DataOurs_1024_{T_OURS:.6g}_*.txt"
-UPSTREAM_GLOB_PATTERN = "/oscar/scratch/eaguerov/tmp/upstream_l10_video/rundir/Data_all/Data_all_1024_{t:.12g}_*.txt"
-OUT_PATH_FIELDS = "/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor/experiments/kimetal2024/ours_vs_upstream_study/05_ours_vs_upstream_rampmatched_heatmap.png"
-OUT_PATH_RELERR = "/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor/experiments/kimetal2024/ours_vs_upstream_study/06_ours_vs_upstream_rampmatched_relerr.png"
+OURS_GLOB = f"{paths.SCRATCH}/tmp/fork_l10_rampmatch/rundir/DataOurs_1024_{T_OURS:.6g}_*.txt"
+UPSTREAM_GLOB_PATTERN = f"{paths.SCRATCH}/tmp/upstream_l10_video/rundir/Data_all/Data_all_1024_{{t:.12g}}_*.txt"
+OUT_PATH_FIELDS = f"{paths.REPO}/experiments/kimetal2024/ours_vs_upstream_study/05_ours_vs_upstream_rampmatched_heatmap.png"
+OUT_PATH_RELERR = f"{paths.REPO}/experiments/kimetal2024/ours_vs_upstream_study/06_ours_vs_upstream_rampmatched_relerr.png"
 
 rho_w, mu_w = 1.0e3, 1.0e-3
 mu_a = 1.81e-5

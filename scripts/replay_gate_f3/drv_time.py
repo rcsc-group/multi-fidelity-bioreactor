@@ -1,8 +1,11 @@
 """Cost of replay on fine scalar grids, driven by the existing 4-rank L6 record mM_coupled. Usage: drv_time.py PERIODS LS:PROJ ..."""
 import sys
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # repo root
+from scripts import paths  # noqa: E402  (machine-specific folders)
 
-sys.path.insert(0, "/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor/.claude/worktrees/agent-a0a362873e179658b")
+sys.path.insert(0, f"{paths.REPO}/.claude/worktrees/agent-a0a362873e179658b")
 from scripts import replay_gate as rg
 
 per = float(sys.argv[1])

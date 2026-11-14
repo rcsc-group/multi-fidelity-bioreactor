@@ -15,10 +15,11 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from scripts.experiments import prereg_offline as po  # noqa: E402
+from scripts import paths  # noqa: E402  (machine-specific folders)
 
 T = 0.607329
 LEVELS = (0.10, 0.15, 0.20)
-RUNS = Path("/oscar/scratch/eaguerov/replay_gate")
+RUNS = Path(f"{paths.SCRATCH}/replay_gate")
 
 
 def from_diag(p: Path) -> tuple[np.ndarray, np.ndarray]:
@@ -39,7 +40,7 @@ def main() -> None:
     cases = {"old": (t_old, chi_old),
              "sums": from_diag(RUNS / "runs/pr28_A/prereg_diag.dat"),
              "seed": from_diag(RUNS / "mpi_runs/pr28_Aseed/prereg_diag.dat"),
-             "Kim": from_diag(Path("/oscar/scratch/eaguerov/kim_pipeline/prereg_out/pre_A_N256/off_m1/prereg_diag.dat"))}
+             "Kim": from_diag(Path(f"{paths.SCRATCH}/kim_pipeline/prereg_out/pre_A_N256/off_m1/prereg_diag.dat"))}
     print("time (cycles) to reach chi =", LEVELS)
     for name, (t, chi) in cases.items():
         print(f"{name:5s}", "  ".join(f"{t_reach(t, chi, lev):6.3f}" for lev in LEVELS))

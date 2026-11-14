@@ -36,6 +36,7 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from scripts.simulate import submit_slurm            # noqa: E402
+from scripts import paths  # noqa: E402  (machine-specific folders)
 from scripts.dump_fields import fields as _dump_fields  # noqa: E402
 from scripts.cost_model import min_per_cycle         # noqa: E402
 
@@ -44,7 +45,7 @@ from scripts.cost_model import min_per_cycle         # noqa: E402
 # prod-4b3a435 (-DEXTRA_TRACERS=0); every commit between the two adds
 # outputs that are gated off in this build, so the solved physics is
 # unchanged and points already computed stay comparable.
-BINARY = "/oscar/scratch/eaguerov/BioReactor-mpi-lean-f1c11e0"
+BINARY = f"{paths.SCRATCH}/BioReactor-mpi-lean-f1c11e0"
 SEED_RUN, SEED_CYCLE = "57f68830", 47.0
 RPM, SPINUP, MARGIN = 32.5, 80, 1.30
 NTASKS = 32

@@ -22,7 +22,7 @@ set -euo pipefail
 # Do NOT load the 'basilisk' module — the cluster's qcc is broken; use the
 # persistent build instead (see docs_site/setup.md).
 module load ffmpeg
-export PATH="/oscar/data/dharri15/eaguerov/basilisk/src:$PATH"
+export PATH="${BASILISK:-/oscar/data/dharri15/eaguerov/basilisk/src}:$PATH"
 
 if [ -z "${PARAMS:-}" ]; then
     echo "ERROR: PARAMS env var not set. Submit with: sbatch --export=PARAMS=<path> $0" >&2

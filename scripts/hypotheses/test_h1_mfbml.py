@@ -7,7 +7,7 @@ RMSE below both baselines (L8 x global ratio; HF-only GP, integrated), AND the 9
 >= 80% of the 13 (>= 11). tau_mean reported."
 PENDING while fewer than 13 HF runs have runs/<id>/results.json.
 
-Usage: uv run python scripts/test_h1_mfbml.py
+Usage: uv run python scripts/hypotheses/test_h1_mfbml.py
 """
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ from pathlib import Path
 
 import numpy as np
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "scripts"))
 
@@ -100,7 +100,7 @@ def load_points(points, run_fn):
 
 def train_lf2d(X, y):
     """Same LF KRR as T2b (train_lf: LooKRR seed 42, restart 10, portion_test 0.2), 2-D inputs."""
-    from scripts.test_t3_learning_curve import CachedLooKRR
+    from scripts.hypotheses.test_t3_learning_curve import CachedLooKRR
     lf = CachedLooKRR(design_space=BOUNDS, params_optimize=True, noise_data=True,
                       optimizer_restart=10, seed=42)
     lf.train(np.asarray(X, float), np.asarray(y, float), portion_test=0.2)

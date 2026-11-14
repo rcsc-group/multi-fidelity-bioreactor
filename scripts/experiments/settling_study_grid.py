@@ -8,6 +8,9 @@ naming convention.
 """
 import math
 from pathlib import Path
+import sys  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # repo root
+from scripts import paths  # noqa: E402  (machine-specific folders)
 
 LEVELS = {6: 8, 7: 8, 8: 8}  # fidelity -> ntasks (uniform 8 ranks per user's request)
 
@@ -52,6 +55,6 @@ T_END = CYCLES_PER_RUN * T_PER_ND
 
 PROJECT_ROOT = str(Path(__file__).resolve().parents[2])
 TEMPLATE = f"{PROJECT_ROOT}/config/slurm_mpi_template.sh"
-MAINLINE_BINARY = "/oscar/scratch/eaguerov/BioReactor-mpi"  # not rampmatched -- see 2026-09-05 (2)
+MAINLINE_BINARY = f"{paths.SCRATCH}/BioReactor-mpi"  # not rampmatched -- see 2026-09-05 (2)
 GEOMETRY = {"a": 0.25, "b": 0.03575, "n": 8.0}
 FILL_LEVEL = 0.5

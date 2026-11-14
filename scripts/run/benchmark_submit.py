@@ -15,11 +15,13 @@ Timing is read from the final logstats.dat Wall clock time entry.
 """
 import json, math, subprocess, re, sys
 from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # repo root
+from scripts import paths  # noqa: E402  (machine-specific folders)
 
 PROJECT_ROOT = Path(__file__).parents[2]
 RUNS_ROOT    = PROJECT_ROOT / "runs"
 LOGS_DIR     = PROJECT_ROOT / "logs"
-SCRATCH_BASE = Path("/oscar/scratch/eaguerov/mpi_runs")
+SCRATCH_BASE = Path(f"{paths.SCRATCH}/mpi_runs")
 SERIAL_TPL   = PROJECT_ROOT / "config" / "slurm_template.sh"
 MPI_TPL      = PROJECT_ROOT / "config" / "slurm_mpi_template.sh"
 

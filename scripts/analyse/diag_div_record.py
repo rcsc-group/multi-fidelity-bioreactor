@@ -15,13 +15,14 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from scripts import replay_gate as rg  # noqa: E402
+from scripts import paths  # noqa: E402  (machine-specific folders)
 from scripts import replay_lf as rl  # noqa: E402
 from scripts import postprocess as pp  # noqa: E402
 
 RPM, THETA = 32.5, 7.0
 CASES = {  # tag -> (record run id, record dir)
-    "true": (f"lfrec_l8_rpm{RPM:g}_th{THETA:g}", Path("/oscar/data/dharri15/eaguerov/replay_records/lf") / f"lf_l8_rpm{RPM:g}_th{THETA:g}"),
-    "kim": (f"kimrec_l8_rpm{RPM:g}_th{THETA:g}", Path("/oscar/data/dharri15/eaguerov/replay_records/kim") / f"kim_l8_rpm{RPM:g}_th{THETA:g}"),
+    "true": (f"lfrec_l8_rpm{RPM:g}_th{THETA:g}", Path(f"{paths.DATA}/replay_records/lf") / f"lf_l8_rpm{RPM:g}_th{THETA:g}"),
+    "kim": (f"kimrec_l8_rpm{RPM:g}_th{THETA:g}", Path(f"{paths.DATA}/replay_records/kim") / f"kim_l8_rpm{RPM:g}_th{THETA:g}"),
 }
 
 

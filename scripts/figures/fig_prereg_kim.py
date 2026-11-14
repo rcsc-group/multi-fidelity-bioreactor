@@ -12,9 +12,10 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from scripts import figstyle as fs  # noqa: E402
+from scripts import paths  # noqa: E402  (machine-specific folders)
 
 TAG = sys.argv[1] if len(sys.argv) > 1 else "pre_A_N256"
-SRC = Path("/oscar/scratch/eaguerov/kim_pipeline/prereg_out") / TAG / "series.csv"
+SRC = Path(f"{paths.SCRATCH}/kim_pipeline/prereg_out") / TAG / "series.csv"
 OUT = ROOT / "internal/docs/meetings/prereg"
 
 # (column prefix, label, colour, style): the label says which face flux the replay uses and how often it changes

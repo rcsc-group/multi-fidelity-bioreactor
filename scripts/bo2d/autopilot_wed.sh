@@ -1,7 +1,7 @@
 #!/bin/bash
 # BO autopilot (2026-11-08): every 30 min advance tasks; when an arm has no running/new task, propose its next round.
 # Stops at the deadline (Wed 2026-11-11 00:00) or when STOP file exists. Runs as its own SLURM job (autopilot.sbatch); the nohup version died with the session 2026-11-08 16:31.
-cd /oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor
+cd ${MFB_REPO:-/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor}
 LOG=logs/bo_autopilot.log
 while [ ! -e scripts/bo2d/state/STOP ] && [ $(date +%s) -lt $(date -d "2026-11-11 00:00" +%s) ]; do
   echo "== $(date -Is)" >> $LOG

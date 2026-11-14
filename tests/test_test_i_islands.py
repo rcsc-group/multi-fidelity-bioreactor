@@ -1,12 +1,9 @@
 """Unit tests for test I (islands): a50 and the verdict rule (pure functions, synthetic data)."""
-import sys
-from pathlib import Path
 
 import numpy as np
 import pytest
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-from test_i_islands import a50, island_rule, jaccard  # noqa: E402
+from scripts.hypotheses.test_i_islands import a50, island_rule, jaccard
 
 
 def test_a50_uniform_magnitude():

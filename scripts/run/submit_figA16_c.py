@@ -34,10 +34,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from scripts.autoextend import walltime_safety     # noqa: E402
+from scripts import paths  # noqa: E402  (machine-specific folders)
 from scripts.cost_model import min_per_cycle       # noqa: E402
 from scripts.simulate import submit_slurm          # noqa: E402
 
-BINARY = "/oscar/scratch/eaguerov/BioReactor-mpi-uvfield-25dbf66"
+BINARY = f"{paths.SCRATCH}/BioReactor-mpi-uvfield-25dbf66"
 RPM = 32.5
 N_CYCLES = 30
 GEOMETRY = {"a": 0.25, "b": 0.03575, "n": 8.0}

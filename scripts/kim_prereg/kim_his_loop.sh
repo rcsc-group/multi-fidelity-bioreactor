@@ -4,7 +4,7 @@
 # Usage: bash kim_his_loop.sh <producer tag> <ranks> <walltime>
 set -eu
 TAG=$1; NR=$2; WALL=$3
-OUT=/oscar/scratch/eaguerov/kim_pipeline/prereg_out/$TAG
+OUT=${MFB_SCRATCH:-/oscar/scratch/eaguerov}/kim_pipeline/prereg_out/$TAG
 BIN=$OUT/producer/Data_dump/Data_bin
 SUB=$OUT/subsets/cycle1all
 rm -rf "$SUB"
@@ -16,12 +16,12 @@ ln -s "$BIN/flowgrid.bin" "$SUB/Data_bin/flowgrid.bin"
 for ((k = 0; k < PER; k++)); do ln -s "${SNAPS[$k]}" "$SUB/Data_bin/"; done
 echo "snapshots: cycle1all $(ls "$SUB"/Data_bin | grep -c tot)"
 
-cd /oscar/scratch/eaguerov/kim_pipeline/prereg/oscar
+cd ${MFB_SCRATCH:-/oscar/scratch/eaguerov}/kim_pipeline/prereg/oscar
 module load openmpi >/dev/null 2>&1 || true
-COMMONENV="OUTROOT=$OUT BASILISK=/oscar/data/dharri15/eaguerov/basilisk/src TPP=/oscar/scratch/eaguerov/kim_pipeline/TPP_headers"
+COMMONENV="OUTROOT=$OUT BASILISK=${BASILISK:-/oscar/data/dharri15/eaguerov/basilisk/src} TPP=${MFB_SCRATCH:-/oscar/scratch/eaguerov}/kim_pipeline/TPP_headers"
 TT="TT_IMPORT_METHOD=2 TT_PREREG_DIAG=1 TT_MOVIES=0 TT_FIGURES=0 TT_OUT_FILES=0 TT_OUT_INTERFACE=0"
 arm=his_loop
-RUNB=/oscar/scratch/eaguerov/kim_pipeline/prereg/oscar/builds_offline/${TAG}_$arm
+RUNB=${MFB_SCRATCH:-/oscar/scratch/eaguerov}/kim_pipeline/prereg/oscar/builds_offline/${TAG}_$arm
 rm -rf "$RUNB" "$OUT/$arm"
 env $COMMONENV $TT PRODUCER="$SUB" OFFTAG=$arm RUN=$RUNB NCYCLE=3 bash B1_build_offline.sh > "$OUT/build_$arm.log" 2>&1
 echo "$arm built in $RUNB: $(grep -E 'snapshots|t_ini|replays' "$OUT/build_$arm.log" | tr -s ' ' | tr '\n' ';')"

@@ -25,10 +25,11 @@ from matplotlib.patches import Patch
 ROOT = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(ROOT), str(ROOT / "scripts")]
 from scripts import figstyle as fs  # noqa: E402
+from scripts import paths  # noqa: E402  (machine-specific folders)
 from scripts.experiments.fig_h3_rpm import cycle_sd  # noqa: E402
 from scripts.experiments.h3_band_check import DELTA, Offset, sd_log  # noqa: E402
-from scripts.test_h1_mfbml import BOUNDS, LF_THETAS, RPMS, hf_points, hf_run, lf_run, load_points, train_lf2d  # noqa: E402
-from scripts.test_h2_mfbml import l9_points, l9_run  # noqa: E402
+from scripts.hypotheses.test_h1_mfbml import BOUNDS, LF_THETAS, RPMS, hf_points, hf_run, lf_run, load_points, train_lf2d  # noqa: E402
+from scripts.hypotheses.test_h2_mfbml import l9_points, l9_run  # noqa: E402
 from scripts.experiments.test_s89_l8_to_l9 import collect  # noqa: E402
 from mfbml_local.krr_lr_gpr_fullbayes import FullBayesKRRLRGP  # noqa: E402
 
@@ -86,7 +87,7 @@ def lf_cached(X, y):
     import hashlib
     import pickle
     key = hashlib.md5(np.ascontiguousarray(np.column_stack([X, np.log(y)])).tobytes()).hexdigest()[:16]
-    f = Path("/oscar/scratch/eaguerov/mfcache") / f"krr_{key}.pkl"
+    f = Path(f"{paths.SCRATCH}/mfcache") / f"krr_{key}.pkl"
     if f.exists():
         return pickle.load(f.open("rb"))
     lf = train_lf2d(X, np.log(y))

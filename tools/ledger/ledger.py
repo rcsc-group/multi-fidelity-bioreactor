@@ -9,8 +9,11 @@ import re
 import json
 import subprocess
 from pathlib import Path
+import sys  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # repo root
+from scripts import paths  # noqa: E402  (machine-specific folders)
 
-DTMIX_CACHE = Path("/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor/experiments/multifidelity/dtmix_cache.json")
+DTMIX_CACHE = Path(f"{paths.REPO}/experiments/multifidelity/dtmix_cache.json")
 _PARAMS = re.compile(r"PARAMS=\S*/([^/,\s]+)/params\.json")
 
 

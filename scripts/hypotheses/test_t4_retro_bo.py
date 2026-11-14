@@ -50,8 +50,8 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "scripts"))
 from scripts import figstyle as fs                                          # noqa: E402
-from scripts.test_mf_l10_holdout import load, col, OUT                      # noqa: E402
-from scripts.test_t3_learning_curve import fit_cached, bayes_view           # noqa: E402
+from scripts.hypotheses.test_mf_l10_holdout import load, col, OUT                      # noqa: E402
+from scripts.hypotheses.test_t3_learning_curve import fit_cached, bayes_view           # noqa: E402
 
 ARMS = ("MF-Bayes L8", "HF-only GP", "MF-Bayes L9", "random")
 

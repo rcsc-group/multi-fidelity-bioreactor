@@ -28,9 +28,12 @@ import subprocess
 import time
 import warnings
 from pathlib import Path
+import sys  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # repo root
+from scripts import paths  # noqa: E402  (machine-specific folders)
 
 _DEFAULT_TEMPLATE = Path(__file__).parents[1] / "config" / "slurm_mpi_template.sh"
-_DEFAULT_MPI_SCRATCH_ROOT = Path("/oscar/scratch/eaguerov/mpi_runs")
+_DEFAULT_MPI_SCRATCH_ROOT = Path(f"{paths.SCRATCH}/mpi_runs")
 _DEFAULT_BINARY   = Path(__file__).parents[1] / "build" / "BioReactor"
 
 
@@ -277,7 +280,9 @@ def submit_slurm(
             if label.exists() and label.resolve() != (run_dir / "checkpoint.phase").resolve():
                 _shutil.copy2(label, run_dir / "checkpoint.phase")
 
-    export_str = f"NONE,PARAMS={effective_params}"
+    # The job sees only these variables (NONE): the submitting checkout and this machine's folders (scripts/paths.py)
+    export_str = (f"NONE,PARAMS={effective_params},MFB_REPO={Path(project_root).resolve()},"
+                  f"MFB_SCRATCH={paths.SCRATCH},BASILISK={paths.BASILISK}")
     if checkpoint:
         export_str += f",DUMP={checkpoint}"
 

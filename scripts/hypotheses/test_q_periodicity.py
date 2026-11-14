@@ -13,8 +13,8 @@ T is the period in the snapshot (nondimensional) time: pp._t_scales(params)
 -> T_per_nd (omega_b alone gives the DIMENSIONAL period in s).
 
 Usage:
-  uv run python scripts/test_q_periodicity.py                    # 10 flow_l8 runs
-  uv run python scripts/test_q_periodicity.py --runs rec_l8_rpm22.4_th7 --periods 4
+  uv run python scripts/hypotheses/test_q_periodicity.py                    # 10 flow_l8 runs
+  uv run python scripts/hypotheses/test_q_periodicity.py --runs rec_l8_rpm22.4_th7 --periods 4
 """
 from __future__ import annotations
 
@@ -25,7 +25,7 @@ from pathlib import Path
 
 import numpy as np
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 OUT = ROOT / "experiments/multifidelity"

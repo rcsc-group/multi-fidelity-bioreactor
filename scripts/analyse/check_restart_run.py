@@ -17,6 +17,8 @@ import json
 import math
 import sys
 from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # repo root
+from scripts import paths  # noqa: E402  (machine-specific folders)
 
 
 def check_run(run_dir: Path) -> tuple[bool, str]:
@@ -40,7 +42,7 @@ def check_run(run_dir: Path) -> tuple[bool, str]:
         issues.append("results.json missing")
 
     # Check tr_oxy.dat (canonical run dir first, then scratch fallback)
-    scratch_run = Path("/oscar/scratch/eaguerov/mpi_runs") / run_dir.name
+    scratch_run = Path(f"{paths.SCRATCH}/mpi_runs") / run_dir.name
     tr_oxy_canonical = run_dir / "tr_oxy.dat"
     tr_oxy_scratch = scratch_run / "tr_oxy.dat"
     oxy_path = tr_oxy_canonical if tr_oxy_canonical.exists() else (

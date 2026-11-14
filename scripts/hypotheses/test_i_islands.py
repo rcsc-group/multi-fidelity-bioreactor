@@ -36,7 +36,7 @@ Implementation choices where the text is silent (all also printed / stored in th
     NaN (target never reached) -> INCONCLUSIVE.
  7. 30 vs 29.9: the pre-registration does not say which is "fast"; ratio A50(29.9)/A50(30) is reported.
 
-Usage: uv run python scripts/test_i_islands.py [--runs ID ...]
+Usage: uv run python scripts/hypotheses/test_i_islands.py [--runs ID ...]
 """
 from __future__ import annotations
 
@@ -49,7 +49,7 @@ from pathlib import Path
 
 import numpy as np
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from scripts import chi_scale as cs_mod                                  # noqa: E402
 from scripts.chi_scale import (read_snapshot, locate, sigma2_native,     # noqa: E402

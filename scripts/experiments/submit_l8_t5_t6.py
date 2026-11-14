@@ -21,8 +21,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from scripts.simulate import submit_slurm  # noqa: E402
+from scripts import paths  # noqa: E402  (machine-specific folders)
 
-BINARY = "/oscar/data/dharri15/eaguerov/bin/BioReactor-mpi-lean-f1c11e0"
+BINARY = f"{paths.DATA}/bin/BioReactor-mpi-lean-f1c11e0"
 GEOMETRY = {"a": 0.25, "b": 0.03575, "n": 8.0}
 SPINUP, POST, LEVEL, NTASKS, WALL = 80, 150, 8, 16, "08:00:00"
 GRID = [15 + 2.5 * i for i in range(10)]

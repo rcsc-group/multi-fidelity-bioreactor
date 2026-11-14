@@ -10,7 +10,7 @@ PENDING while fewer than 13 HF runs have runs/<id>/results.json (same logic as H
 Decisive baselines: HF-only GP, L8 x global ratio. Non-decisive (reported only): L9 x global ratio and
 the plain L9 value as predictor.
 
-Usage: uv run python scripts/test_h2_mfbml.py
+Usage: uv run python scripts/hypotheses/test_h2_mfbml.py
 """
 from __future__ import annotations
 
@@ -21,11 +21,11 @@ from pathlib import Path
 
 import numpy as np
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from scripts.test_h1_mfbml import (  # noqa: E402,F401
+from scripts.hypotheses.test_h1_mfbml import (  # noqa: E402,F401
     BOUNDS, CRITERIA_QOIS, LF_THETAS, N_REQUIRED, QOIS, RPMS, h1_verdict, hf_points, hf_run, lf_run,
     load_points, ratio_baseline, rel_rmse_ratio, train_lf2d,
 )

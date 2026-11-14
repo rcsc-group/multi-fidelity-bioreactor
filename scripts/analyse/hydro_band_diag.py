@@ -4,7 +4,7 @@ For each qoi and rpm (L8-L10 fit, experiments/multifidelity/gcbml_hydro_v3_twy2_
   d98  = |f9 - f8| / f10, d109 = |f10 - f9| / f10   (relative level differences)
   rich = d109 / (2^p - 1)                          Richardson estimate of the remaining error at L10, p = fitted median
   half = (epi_q975 - epi_q025) / 2 / m              half-width of the 95% epistemic band, relative
-Run: uv run --project /oscar/data/dharri15/eaguerov/Github/gcbml python scripts/analyse/hydro_band_diag.py
+Run: uv run --project $MFB_DATA/Github/gcbml python scripts/analyse/hydro_band_diag.py
 """
 import json
 from pathlib import Path

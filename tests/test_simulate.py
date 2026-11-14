@@ -85,6 +85,25 @@ def test_submit_slurm_passes_walltime(tmp_path):
     assert any("02:30:00" in a for a in cmd), f"walltime not in sbatch args: {cmd}"
 
 
+def test_submit_slurm_exports_the_machine_folders(tmp_path, monkeypatch):
+    """The job runs with --export=NONE,...: the template gets the submitting checkout and this machine's
+    folders (scripts/paths.py) from the export list, not from defaults written in the template."""
+    from scripts import paths
+    monkeypatch.setattr(paths, "SCRATCH", tmp_path / "scr")
+    monkeypatch.setattr(paths, "BASILISK", tmp_path / "bas")
+    (tmp_path / "repo").mkdir()
+    fake_result = MagicMock()
+    fake_result.stdout = "Submitted batch job 42\n"
+    with patch("subprocess.run", return_value=fake_result) as mock_run:
+        submit_slurm(SHORT_PARAMS, project_root=tmp_path / "repo", runs_root=tmp_path,
+                     mpi_scratch_root=tmp_path / "mpi_scratch")
+    export = next(a for a in mock_run.call_args[0][0] if a.startswith("--export="))
+    items = dict(kv.split("=", 1) for kv in export[len("--export=NONE,"):].split(","))
+    assert items["MFB_REPO"] == str(tmp_path / "repo")
+    assert items["MFB_SCRATCH"] == str(tmp_path / "scr")
+    assert items["BASILISK"] == str(tmp_path / "bas")
+
+
 # ── wait_for_result ───────────────────────────────────────────────────────────
 
 def test_wait_for_result_returns_when_file_appears(tmp_path):

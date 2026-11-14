@@ -10,13 +10,17 @@ import math
 
 import numpy as np
 import matplotlib.pyplot as plt
+import sys  # noqa: E402
+from pathlib import Path  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # repo root
+from scripts import paths  # noqa: E402  (machine-specific folders)
 
 N = 1024
 T_SNAPSHOT = 12.7596
 
-OURS_GLOB = f"/oscar/scratch/eaguerov/tmp/fork_l10_periodic/rundir/DataOurs_1024_{T_SNAPSHOT:g}_*.txt"
-UPSTREAM_GLOB = f"/oscar/scratch/eaguerov/tmp/upstream_l10/rundir/Data_all/Data_all_1024_{T_SNAPSHOT:g}_*.txt"
-OUT_PATH = "/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor/docs_site/assets/img/us-vs-upstream-heatmap.png"
+OURS_GLOB = f"{paths.SCRATCH}/tmp/fork_l10_periodic/rundir/DataOurs_1024_{T_SNAPSHOT:g}_*.txt"
+UPSTREAM_GLOB = f"{paths.SCRATCH}/tmp/upstream_l10/rundir/Data_all/Data_all_1024_{T_SNAPSHOT:g}_*.txt"
+OUT_PATH = f"{paths.REPO}/docs_site/assets/img/us-vs-upstream-heatmap.png"
 
 rho_w, mu_w = 1.0e3, 1.0e-3
 mu_a = 1.81e-5

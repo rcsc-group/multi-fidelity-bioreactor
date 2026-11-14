@@ -13,13 +13,16 @@ from pathlib import Path
 
 import numpy as np
 import matplotlib.pyplot as plt
+import sys  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # repo root
+from scripts import paths  # noqa: E402  (machine-specific folders)
 
 N = 1024
 TIMES = [0, 1.0633, 2.1266, 3.1899, 4.2532, 5.3165, 6.3798, 7.4431, 8.5064, 9.5697, 10.633, 11.6963, 12.7596]
 
-OURS_DIR = "/oscar/scratch/eaguerov/tmp/fork_l10_periodic/rundir"
-UPSTREAM_DIR = "/oscar/scratch/eaguerov/tmp/upstream_l10/rundir/Data_all"
-OUT_PATH = "/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor/docs_site/assets/img/us-vs-upstream-comparison.mp4"
+OURS_DIR = f"{paths.SCRATCH}/tmp/fork_l10_periodic/rundir"
+UPSTREAM_DIR = f"{paths.SCRATCH}/tmp/upstream_l10/rundir/Data_all"
+OUT_PATH = f"{paths.REPO}/docs_site/assets/img/us-vs-upstream-comparison.mp4"
 
 rho_w, mu_w = 1.0e3, 1.0e-3
 mu_a = 1.81e-5

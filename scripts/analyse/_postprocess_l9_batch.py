@@ -7,12 +7,13 @@ before the job script's postprocess step ran.
 from pathlib import Path
 
 from scripts import postprocess as pp
+from scripts import paths  # noqa: E402  (machine-specific folders)
 
 RUN_IDS = [
     "44133566", "0183ca21", "8994c04a", "b1b72f63", "32c996c6",
     "488db14b", "30fb2321", "77e91d1b", "44b0f74d",
 ]
-SCRATCH_ROOT = Path("/oscar/scratch/eaguerov/mpi_runs")
+SCRATCH_ROOT = Path(f"{paths.SCRATCH}/mpi_runs")
 
 for rid in RUN_IDS:
     run_dir = SCRATCH_ROOT / rid

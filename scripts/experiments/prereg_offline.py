@@ -21,6 +21,7 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from scripts import postprocess as pp  # noqa: E402
+from scripts import paths  # noqa: E402  (machine-specific folders)
 from scripts import replay_gate as rg  # noqa: E402
 from scripts.simulate import submit_slurm  # noqa: E402
 
@@ -28,7 +29,7 @@ RPM, THETA = 20.0, 7.0
 N_MIX, N_REC = 20, 3
 NT_A, NT_B = 16, 8
 EXCLUDE = "node2356"
-REC_ROOT = Path("/oscar/data/dharri15/eaguerov/replay_records/prereg")
+REC_ROOT = Path(f"{paths.DATA}/replay_records/prereg")
 BIN = {"rec": rg.BIN_DIR / "BioReactor-pr4-rec", "kimrec": rg.BIN_DIR / "BioReactor-pr2-kimrec",
        "rep": rg.BIN_DIR / "BioReactor-pr4-rep",   # pr2/pr4: + per-step diag (-DPREREG_DIAG=1)
        "recseed": rg.BIN_DIR / "BioReactor-pr5-recseed", "kimmask": rg.BIN_DIR / "BioReactor-pr5-kimmask"}

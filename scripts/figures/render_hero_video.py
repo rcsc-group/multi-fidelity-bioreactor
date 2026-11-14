@@ -31,9 +31,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 from scipy import ndimage
+import sys  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # repo root
+from scripts import paths  # noqa: E402  (machine-specific folders)
 
 N = 1024
-RUN_DIR = "/oscar/scratch/eaguerov/tmp/l10_matrix/fresh_mpi"
+RUN_DIR = f"{paths.SCRATCH}/tmp/l10_matrix/fresh_mpi"
 OUT_PATH = "docs_site/assets/img/hero-rocking-l10-lab.mp4"
 
 L_bio, ANGLE, RPM = 0.25, 7.0, 32.5

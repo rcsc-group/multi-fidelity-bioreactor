@@ -18,7 +18,7 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(ROOT), str(ROOT / "scripts")]
-from scripts.test_h1_mfbml import BOUNDS, train_lf2d  # noqa: E402
+from scripts.hypotheses.test_h1_mfbml import BOUNDS, train_lf2d  # noqa: E402
 from mfbml_local.krr_lr_gpr_fullbayes import FullBayesKRRLRGP  # noqa: E402
 
 QS = ("kLa_1T_10", "dtmix_0.50")

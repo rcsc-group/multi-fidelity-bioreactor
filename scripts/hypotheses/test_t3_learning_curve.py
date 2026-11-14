@@ -21,7 +21,7 @@ Choices where the spec was silent:
   * Failed fits are counted and skipped for that design in all methods.
   * Coverage for MF-Bayes uses t_{0.975, nu} * scale (noise inside the amplitude, as T2).
   * Figure: one panel per QoI x LF; median as line+marker, IQR as error bar; y log scale.
-Usage: uv run python scripts/test_t3_learning_curve.py
+Usage: uv run python scripts/hypotheses/test_t3_learning_curve.py
 """
 from __future__ import annotations
 
@@ -39,14 +39,14 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy import stats
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "scripts"))
 from scripts import figstyle as fs                                         # noqa: E402
 from scripts.plot_mf_fig13 import LooKRR as _SlowLooKRR                        # noqa: E402
 from scripts.fast_loo_krr import FastLooKRR as LooKRR                      # noqa: E402  closed-form leave-one-out, same fits (diary 2026-10-21)
-from scripts.test_mf_l10_holdout import load, col, rel_rmse, ENDS, DS, LFS, OUT  # noqa: E402
-from scripts.test_t2_bayes_band import as_bayes                            # noqa: E402
+from scripts.hypotheses.test_mf_l10_holdout import load, col, rel_rmse, ENDS, DS, LFS, OUT  # noqa: E402
+from scripts.hypotheses.test_t2_bayes_band import as_bayes                            # noqa: E402
 from mfbml_local.krr_lr_gpr import KernelRidgeLinearGaussianProcess        # noqa: E402
 
 QOIS = ("tau_mean_t", "tau_95_t", "edr_mean_t")
@@ -113,7 +113,7 @@ def main():
     D = load()
     hrpm = np.array(sorted(D[10]))
     # equivalence of cached and uncached training
-    from scripts.test_mf_l10_holdout import fit as fit_ref
+    from scripts.hypotheses.test_mf_l10_holdout import fit as fit_ref
     q0, tr0 = "tau_95_t", [17.5, 27.5, 37.5]
     xl0 = np.array(sorted(D[8])); yl0 = np.array([D[8][r][q0] for r in xl0])
     yh0 = np.array([D[10][r][q0] for r in hrpm]); k0 = np.isin(hrpm, tr0)

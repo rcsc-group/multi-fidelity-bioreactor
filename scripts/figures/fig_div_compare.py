@@ -2,7 +2,7 @@
     max over fully open cells (cs = 1, four open faces) of |(uf.x[1]-uf.x[]) + (uf.y[0,1]-uf.y[])|  /  max |uf|
  - ours, true flux      : the face flux recorded from the Navier-Stokes projection (replay_diag, src/BioReactor.c), L8, 32.5 rpm, theta 7
  - ours, Kim-style      : fm*face_value(u.x,0) of the same coupled run in the same record step (REC_KIM_FLUX), same replay_diag
- - Kim's own solver     : codes/TracerTest_test.c line 815, his producer at N = 128 (divdiag.dat of the agent run in /oscar/scratch/eaguerov/kim_pipeline)
+ - Kim's own solver     : codes/TracerTest_test.c line 815, his producer at N = 128 (divdiag.dat of the agent run in $MFB_SCRATCH/kim_pipeline)
 Colour = whose data (figstyle: Kim black, our L8 blue). Usage: uv run python scripts/figures/fig_div_compare.py
 """
 from __future__ import annotations
@@ -19,12 +19,13 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from scripts import figstyle as fs  # noqa: E402
+from scripts import paths  # noqa: E402  (machine-specific folders)
 from scripts import postprocess as pp  # noqa: E402
 from scripts import replay_gate as rg  # noqa: E402
 from scripts import replay_lf as rl  # noqa: E402
 
 OUT = ROOT / "internal/docs/meetings/2026-10-29"
-KIM_DIV = Path("/oscar/scratch/eaguerov/kim_pipeline/out/off_real_c1/divdiag.dat")
+KIM_DIV = Path(f"{paths.SCRATCH}/kim_pipeline/out/off_real_c1/divdiag.dat")
 KIM_T = 0.6074      # his non-dimensional rocking period (T_CYCLE in TracerTest_test.c)
 RPM, THETA = 32.5, 7.0
 

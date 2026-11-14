@@ -20,13 +20,11 @@ dependencies = [
     "jax[cuda12]>=0.10.2",
 ]
 
-[tool.uv]
-dev-dependencies = [
+[dependency-groups]
+dev = [
     "pytest",
     "pytest-cov",
 ]
-
-[dependency-groups]
 docs = [
     "mkdocs>=1.6",
     "mkdocs-material>=9.5",

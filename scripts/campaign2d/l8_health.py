@@ -11,9 +11,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from scripts import postprocess as pp  # noqa: E402
+from scripts import paths  # noqa: E402  (machine-specific folders)
 
 JOBS = ROOT / "scripts" / "campaign2d" / "state" / "jobs.jsonl"
-SCRATCH = Path("/oscar/scratch/eaguerov/mpi_runs")
+SCRATCH = Path(f"{paths.SCRATCH}/mpi_runs")
 BAD = ("error", "abort", "segmentation", "fatal", "nan")
 BENIGN = ("mca_", "libcuda")
 

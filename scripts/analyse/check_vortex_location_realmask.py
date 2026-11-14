@@ -40,13 +40,17 @@ def to_grid(data):
     return ux,uy,f,cs
 
 import re
-files = glob.glob("/oscar/scratch/eaguerov/tmp/fork_l10_rampmatch/rundir/DataOurs_1024_*_*.txt")
+import sys  # noqa: E402
+from pathlib import Path  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # repo root
+from scripts import paths  # noqa: E402  (machine-specific folders)
+files = glob.glob(f"{paths.SCRATCH}/tmp/fork_l10_rampmatch/rundir/DataOurs_1024_*_*.txt")
 pat = re.compile(r"DataOurs_1024_([^_]+)_\d+\.txt$")
 all_times = sorted({float(pat.search(f).group(1)) for f in files if pat.search(f)})
 targets = [1.19, 3.57, 5.96, 8.34, 10.72, 13.10]
 TIMES = [min(all_times, key=lambda x: abs(x - g)) for g in targets]
 for t in TIMES:
-    data = load(f"/oscar/scratch/eaguerov/tmp/fork_l10_rampmatch/rundir/DataOurs_1024_{t:.6g}_*.txt")
+    data = load(f"{paths.SCRATCH}/tmp/fork_l10_rampmatch/rundir/DataOurs_1024_{t:.6g}_*.txt")
     ux,uy,f,cs = to_grid(data)
     dx=1.0/N
     du_dy=np.full((N,N),np.nan); dv_dx=np.full((N,N),np.nan)

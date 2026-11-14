@@ -44,15 +44,16 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from scripts.simulate import submit_slurm          # noqa: E402
+from scripts import paths  # noqa: E402  (machine-specific folders)
 from scripts.cost_model import min_per_cycle       # noqa: E402
 
 # Built from commit 2736992 at 2026-09-15 12:13 (make build-mpi). Named after
 # the commit so a stale-binary mixup is visible rather than inferred -- see
 # feedback_binary_deployment.
-BINARY = "/oscar/scratch/eaguerov/BioReactor-mpi-fig9-2736992"
+BINARY = f"{paths.SCRATCH}/BioReactor-mpi-fig9-2736992"
 # Same source, built with -DEXTRA_TRACERS=0 (drops the three never-initialised
 # tracer variants c/c1/c3 from stracers).
-LEAN_BINARY = "/oscar/scratch/eaguerov/BioReactor-mpi-lean"
+LEAN_BINARY = f"{paths.SCRATCH}/BioReactor-mpi-lean"
 # Production binary for the Fig 9 sweep, built from 4b3a435 with
 # -DEXTRA_TRACERS=0: lean (1.69x), Kim-exact tau/EDR columns, and the
 # steady-streaming vorticity accumulator.
@@ -61,7 +62,7 @@ LEAN_BINARY = "/oscar/scratch/eaguerov/BioReactor-mpi-lean"
 # prod-4b3a435 (-DEXTRA_TRACERS=0); every commit between the two adds
 # outputs that are gated off in this build, so the solved physics is
 # unchanged and points already computed stay comparable.
-PROD_BINARY = "/oscar/scratch/eaguerov/BioReactor-mpi-lean-f1c11e0"
+PROD_BINARY = f"{paths.SCRATCH}/BioReactor-mpi-lean-f1c11e0"
 
 KIM_CSV = ROOT / "experiments/kimetal2024/csv_raw/mixing_kla_vs_frequency.csv"
 SPINUP_CYCLES = 80     # Kim's tracer release instant, t/T_p = 80
@@ -273,7 +274,7 @@ def main() -> None:
             "omega_b": rpm * 2 * math.pi / 60.0, "omega_h": 0.0,
             "amplitude_h": [0.0, 0.0, 0.0], "phi_horizontal": [0.0, 0.0, 0.0],
             "t_end": round(15 * T_per / T_bio, 4), "n_mix_cycles": 80,
-            "_binary": "/oscar/scratch/eaguerov/BioReactor-mpi-kimexact",
+            "_binary": f"{paths.SCRATCH}/BioReactor-mpi-kimexact",
         }
         print(f"kimcheck: L8 15 cycles, t_end={params['t_end']}")
         if not a.dry_run:
@@ -296,7 +297,7 @@ def main() -> None:
             "omega_b": rpm * 2 * math.pi / 60.0, "omega_h": 0.0,
             "amplitude_h": [0.0, 0.0, 0.0], "phi_horizontal": [0.0, 0.0, 0.0],
             "t_end": round(40 * T_per / T_bio, 4), "n_mix_cycles": 80,
-            "_binary": "/oscar/scratch/eaguerov/BioReactor-mpi-streaming",
+            "_binary": f"{paths.SCRATCH}/BioReactor-mpi-streaming",
         }
         print(f"streamcheck: L6 40 cycles, t_end={params['t_end']}")
         if a.dry_run:

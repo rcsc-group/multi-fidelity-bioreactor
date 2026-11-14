@@ -13,11 +13,12 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(ROOT)]
 from scripts import postprocess as pp  # noqa: E402
+from scripts import paths  # noqa: E402  (machine-specific folders)
 from scripts import replay_gate as rg  # noqa: E402
 from scripts import replay_lf as rl  # noqa: E402
 
 SRC = ROOT / "runs/v_l10_rpm32.5_th7"
-REC_ROOT = Path("/oscar/data/dharri15/eaguerov/replay_records/l10")
+REC_ROOT = Path(f"{paths.DATA}/replay_records/l10")
 RID = "lfrec_l10_rpm32.5_th7"
 
 

@@ -15,10 +15,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from scripts import replay_gate as rg  # noqa: E402
+from scripts import paths  # noqa: E402  (machine-specific folders)
 from scripts import replay_lf as rl  # noqa: E402
 
 rl.REC_BIN = rg.BIN_DIR / "BioReactor-recL-kim"
-rl.REC_ROOT = Path("/oscar/data/dharri15/eaguerov/replay_records/kim")
+rl.REC_ROOT = Path(f"{paths.DATA}/replay_records/kim")
 rl.rec_id = lambda rpm, theta: f"kimrec_l8_rpm{rpm:g}_th{theta:g}"
 rl.lf_id = lambda rpm, theta: f"kim_l8_rpm{rpm:g}_th{theta:g}"
 

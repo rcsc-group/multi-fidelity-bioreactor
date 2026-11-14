@@ -21,6 +21,10 @@ import glob
 import math
 
 import numpy as np
+import sys  # noqa: E402
+from pathlib import Path  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # repo root
+from scripts import paths  # noqa: E402  (machine-specific folders)
 
 N = 1024
 B_ND = 0.143
@@ -32,8 +36,8 @@ RAMP_DONE_T = 11.6132  # upstream's own ramp (t_change=30s literal) completes at
                         # in params.json -> Ak interpolation is a no-op) -- our fork runs at FULL Th_max
                         # amplitude from t=0, zero ramp. Only upstream ramps in this comparison.
 
-OURS_GLOB = "/oscar/scratch/eaguerov/tmp/fork_l10_periodic/rundir/DataOurs_1024_{t:g}_*.txt"
-UPSTREAM_GLOB = "/oscar/scratch/eaguerov/tmp/upstream_l10/rundir/Data_all/Data_all_1024_{t:g}_*.txt"
+OURS_GLOB = f"{paths.SCRATCH}/tmp/fork_l10_periodic/rundir/DataOurs_1024_{{t:g}}_*.txt"
+UPSTREAM_GLOB = f"{paths.SCRATCH}/tmp/upstream_l10/rundir/Data_all/Data_all_1024_{{t:g}}_*.txt"
 
 rho_w, mu_w = 1.0e3, 1.0e-3
 mu_a = 1.81e-5

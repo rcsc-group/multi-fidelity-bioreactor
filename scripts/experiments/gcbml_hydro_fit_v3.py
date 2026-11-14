@@ -18,7 +18,7 @@ Bands at h = 0: epistemic = quantiles of f(x, 0); total = f(x, 0) + e, e ~ N(0, 
 replicate runs, so s is prior-driven. log s^2(x, 0) = m_s + zeta with zeta drawn from its marginal
 N(0, sigma_z^2), without conditioning on the site values: this over-states the aleatoric part.
 
-Run: KERNEL=twy2|lb uv run --project /oscar/data/dharri15/eaguerov/Github/gcbml \
+Run: KERNEL=twy2|lb uv run --project $MFB_DATA/Github/gcbml \
          python scripts/experiments/gcbml_hydro_fit_v3.py N_WARMUP N_SAMPLES LMIN LMAX
 Writes experiments/multifidelity/gcbml_hydro_v3_<kernel>_L<min>_<max>.{json,png}.
 """

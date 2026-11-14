@@ -23,6 +23,7 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from scripts.simulate import submit_slurm
+from scripts import paths  # noqa: E402  (machine-specific folders)
 
 root = Path(__file__).resolve().parents[2]
 src_dir = root / "runs" / "kicktest_L7_th7"
@@ -40,7 +41,7 @@ params = {
     "omega_b_prev": omega, "theta_max_prev": [7.0, 0.0, 0.0],
     "phi_angular_prev": [0.0, 0.0, 0.0], "amplitude_h_prev": [0.0, 0.0, 0.0],
     "phi_horizontal_prev": [0.0, 0.0, 0.0], "omega_h_prev": 0.0,
-    "_binary": "/oscar/scratch/eaguerov/BioReactor-mpi-crosslevel-video",
+    "_binary": f"{paths.SCRATCH}/BioReactor-mpi-crosslevel-video",
 }
 job = submit_slurm(params, project_root=root, runs_root=root / "runs",
                    walltime="02:00:00",

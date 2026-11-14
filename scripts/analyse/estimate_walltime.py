@@ -1,7 +1,7 @@
 """Estimate SLURM --time for a BioReactor job from this project's own job
 history (995 runs/ directories with usable logstats.dat, spanning
 2026-01 to present, filtered to runs that reached >80% of their target
-t_end -- see /oscar/scratch/eaguerov/tmp/walltime_formula/ for the full
+t_end -- see $MFB_SCRATCH/tmp/walltime_formula/ for the full
 data-mining scripts this table was built from, diary.md 2026-08-04).
 
 Methodology

@@ -17,10 +17,11 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from scripts import figstyle as fs  # noqa: E402
+from scripts import paths  # noqa: E402  (machine-specific folders)
 
 T = 0.607329                                  # T_per_st, same formula in both codes
-OURS = Path("/oscar/scratch/eaguerov/replay_gate/runs")
-KIM = Path("/oscar/scratch/eaguerov/kim_pipeline/prereg_out/pre_A_N256")
+OURS = Path(f"{paths.SCRATCH}/replay_gate/runs")
+KIM = Path(f"{paths.SCRATCH}/kim_pipeline/prereg_out/pre_A_N256")
 OUT = ROOT / "internal/docs/meetings/prereg"
 
 # workflow -> (line width, style); drawn in this order so the thick lines sit under the thin ones

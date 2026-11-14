@@ -57,6 +57,10 @@ def fields(pattern, ncols, cols, is_up):
 
 # find nearest matching times
 import re
+import sys  # noqa: E402
+from pathlib import Path  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # repo root
+from scripts import paths  # noqa: E402  (machine-specific folders)
 def nearest(directory, prefix, ncols, ndecpat):
     files = glob.glob(f"{directory}/{prefix}_1024_*_*.txt")
     pat = re.compile(rf"{prefix}_1024_([^_]+)_\d+\.txt$")
@@ -64,12 +68,12 @@ def nearest(directory, prefix, ncols, ndecpat):
     j = min(times, key=lambda x: abs(x-T))
     return j
 
-t_ours = nearest("/oscar/scratch/eaguerov/tmp/fork_l10_rampmatch/rundir", "DataOurs", 6, None)
-t_up = nearest("/oscar/scratch/eaguerov/tmp/upstream_l10_video/rundir/Data_all", "Data_all", 12, None)
+t_ours = nearest(f"{paths.SCRATCH}/tmp/fork_l10_rampmatch/rundir", "DataOurs", 6, None)
+t_up = nearest(f"{paths.SCRATCH}/tmp/upstream_l10_video/rundir/Data_all", "Data_all", 12, None)
 print("t_ours", t_ours, "t_up", t_up)
 
-tau1, m1 = fields(f"/oscar/scratch/eaguerov/tmp/fork_l10_rampmatch/rundir/DataOurs_1024_{t_ours:g}_*.txt", 6, dict(ux=2,uy=3,f=4,cs=5), False)
-tau2, m2 = fields(f"/oscar/scratch/eaguerov/tmp/upstream_l10_video/rundir/Data_all/Data_all_1024_{t_up:.12g}_*.txt", 7, dict(ux=2,uy=3,f=4,cs=6), True)
+tau1, m1 = fields(f"{paths.SCRATCH}/tmp/fork_l10_rampmatch/rundir/DataOurs_1024_{t_ours:g}_*.txt", 6, dict(ux=2,uy=3,f=4,cs=5), False)
+tau2, m2 = fields(f"{paths.SCRATCH}/tmp/upstream_l10_video/rundir/Data_all/Data_all_1024_{t_up:.12g}_*.txt", 7, dict(ux=2,uy=3,f=4,cs=6), True)
 valid = m1 & m2
 a, b = tau1[valid], tau2[valid]
 mag = np.abs(b)

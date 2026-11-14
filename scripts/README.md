@@ -31,9 +31,9 @@ Every other script is in a sub-folder, by what it does:
 | `analyse/` | 130 | Analyses behind diary findings (`analyze_*`, `diag_*`, `check_*`, `probe_*`, `compare_*`, ...). They read run data and print or write a small result. |
 | `figures/` | 74 | Figures and videos (`plot_*`, `fig_*`, `render_*`). `render_videos.py` is called by the video SLURM template. |
 | `experiments/` | 40 | One-off studies that import each other (pre-registered checks, mf-surrogate studies, their figures and launchers). Nothing in the pipeline imports them. |
-| `hypotheses/` | 34 | `test_*.py`: **numerical experiments, not pytest tests**, one per hypothesis in `diary.md` (for example `test_t4_retro_bo.py` writes `experiments/multifidelity/test_t4_retro_bo.json`). Many submit jobs. |
+| `hypotheses/` | 45 | `test_*.py`: **numerical experiments, not pytest tests** (pytest reads only `tests/`), one per pre-registered hypothesis in the lab notebook (for example `test_t4_retro_bo.py` writes `experiments/multifidelity/test_t4_retro_bo.json`). Many submit jobs. |
 
-Eleven `test_*.py` stay at the top level because the pipeline imports them as libraries (`campaign2d/`, and `tests/test_test_*.py` test them).
+Some hypotheses reuse functions of others, and `campaign2d/` imports a few (`from scripts.hypotheses.test_h1_mfbml import ...`).
 
 The diary cites scripts by their path before the moves of 2026-11-13 and 2026-11-14 (`scripts/NAME.py`). The new path of each one is in
 `internal/docs/history/moved-scripts.md`; `git log --follow` gives a moved file's full history.

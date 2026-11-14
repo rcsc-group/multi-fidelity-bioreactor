@@ -15,7 +15,7 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from scripts.hydro_dataset_v2 import qois  # noqa: E402
-from scripts.test_h1_mfbml import hf_run  # noqa: E402
+from scripts.hypotheses.test_h1_mfbml import hf_run  # noqa: E402
 
 Q = "kLa_1T_10"
 

@@ -19,10 +19,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from scripts.simulate import submit_slurm
+from scripts import paths  # noqa: E402  (machine-specific folders)
 
 PROJECT_ROOT = str(Path(__file__).resolve().parents[2])
 TEMPLATE = f"{PROJECT_ROOT}/config/slurm_mpi_template.sh"
-BINARY = "/oscar/scratch/eaguerov/BioReactor-mpi-rampmatch"
+BINARY = f"{paths.SCRATCH}/BioReactor-mpi-rampmatch"
 
 params = {
     "run_id": "rank_check_l6_rpm32.5_8ranks",

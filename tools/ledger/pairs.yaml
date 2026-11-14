@@ -1,5 +1,6 @@
 # Pairs of production runs that measure one feature's effect: `with` uses the feature, `without` does not, at
-# the same condition. Names are run folders under the main repo's runs/ (RUNS in provenance.py) unless absolute.
+# the same condition. Names are run folders under runs/ (RUNS in provenance.py) unless absolute; $MFB_SCRATCH is
+# this machine's scratch folder (scripts/paths.py).
 # Source of each pair: the diary entry named in `diary`. tools/ledger/provenance.py decides per pair whether the
 # two runs share a source (clean) or not (confounded); a confounded pair is reported, never averaged in.
 restart_label:            # restart ramps from the forcing that made the state (label), not from rest
@@ -43,6 +44,6 @@ flux_replay:              # scalar transport on a recorded flow instead of the c
   diary: "F2 (L6, loop one period) and F3b (L8 record, replay at Ls 8)"
   qoi: [kLa_1T_25, dtmix_0.50]
   pairs:
-    - {with: /oscar/scratch/eaguerov/replay_gate/runs/f2_replay, without: /oscar/scratch/eaguerov/replay_gate/runs/f2_coupled}
-    - {with: /oscar/scratch/eaguerov/replay_gate/runs/f3b_ls8, without: /oscar/scratch/eaguerov/replay_gate/runs/f3b_coupled}
-    - {with: /oscar/scratch/eaguerov/replay_gate/runs/f3b_loop1, without: /oscar/scratch/eaguerov/replay_gate/runs/f3b_coupled}
+    - {with: $MFB_SCRATCH/replay_gate/runs/f2_replay, without: $MFB_SCRATCH/replay_gate/runs/f2_coupled}
+    - {with: $MFB_SCRATCH/replay_gate/runs/f3b_ls8, without: $MFB_SCRATCH/replay_gate/runs/f3b_coupled}
+    - {with: $MFB_SCRATCH/replay_gate/runs/f3b_loop1, without: $MFB_SCRATCH/replay_gate/runs/f3b_coupled}

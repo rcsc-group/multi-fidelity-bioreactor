@@ -14,10 +14,11 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from scripts import figstyle as fs  # noqa: E402
+from scripts import paths  # noqa: E402  (machine-specific folders)
 
 T = 0.607329
-RUNS = {"ours": (Path("/oscar/scratch/eaguerov/replay_gate/runs/pr28_A"), fs.level_colour(8)),
-        "Kim": (Path("/oscar/scratch/eaguerov/kim_pipeline/prereg_out/pre_A_N256/off_m1"), fs.KIM)}
+RUNS = {"ours": (Path(f"{paths.SCRATCH}/replay_gate/runs/pr28_A"), fs.level_colour(8)),
+        "Kim": (Path(f"{paths.SCRATCH}/kim_pipeline/prereg_out/pre_A_N256/off_m1"), fs.KIM)}
 OUT = ROOT / "internal/docs/meetings/prereg"
 
 

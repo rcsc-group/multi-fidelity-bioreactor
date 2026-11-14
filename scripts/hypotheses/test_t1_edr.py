@@ -7,7 +7,7 @@ Pre-registration (diary.md, quoted):
    worse than 1.5x the best baseline in the other."
 QoI edr_mean_t = time mean over the window of the domain-mean dissipation (shear_stress.dat column 9,
 scale rho U^3/L, W/m^3), added to scripts/hydro_dataset_v2.py. Designs, methods, metric, coverage:
-identical to scripts/test_mf_l10_holdout.py (run_design is imported, not copied); n_HF = 3 (7 designs)
+identical to scripts/hypotheses/test_mf_l10_holdout.py (run_design is imported, not copied); n_HF = 3 (7 designs)
 and 4 (21 designs).
 
 Choices where the spec was silent:
@@ -36,7 +36,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "scripts"))
 from scripts import figstyle as fs                                   # noqa: E402
-from scripts.test_mf_l10_holdout import (load, run_design, pred, ENDS, LFS, METHODS, OUT)  # noqa: E402
+from scripts.hypotheses.test_mf_l10_holdout import (load, run_design, pred, ENDS, LFS, METHODS, OUT)  # noqa: E402
 
 Q = "edr_mean_t"
 

@@ -9,10 +9,13 @@ Usage:
 """
 import json, shutil, subprocess, time
 from pathlib import Path
+import sys  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # repo root
+from scripts import paths  # noqa: E402  (machine-specific folders)
 
 PROJECT_ROOT = Path(__file__).parents[2]
 RUN_DIR      = PROJECT_ROOT / "runs" / "canonical_kim2024"
-SCRATCH_DIR  = Path("/oscar/scratch/eaguerov/mpi_runs/canonical_kim2024")
+SCRATCH_DIR  = Path(f"{paths.SCRATCH}/mpi_runs/canonical_kim2024")
 DOCS_DIR     = PROJECT_ROOT / "experiments" / "canonical_case"
 DOCS_DIR.mkdir(parents=True, exist_ok=True)
 

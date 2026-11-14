@@ -636,3 +636,16 @@ def test_sweep_slurm_produces_finite_kla(tmp_path):
                 f"Segment {k} ({params['run_id']}): {key}={val} is not finite. "
                 f"Check {run_dir}/logstats.dat and logs/slurm_{job_ids[k]}.err"
             )
+
+
+def test_sweep_options_expand_machine_folders(tmp_path):
+    """A sweep config may name `$MFB_SCRATCH/...` (e.g. the binary); it resolves to this machine's folder."""
+    import json as _json
+    from scripts import paths
+    from scripts.sweep import parse_sweep_config
+    cfg = tmp_path / "s.json"
+    cfg.write_text(_json.dumps({"_sweep": {"binary": "$MFB_SCRATCH/BioReactor-mpi", "mode": "parallel"},
+                                "fidelity": 3, "omega_b": [1.0, 2.0]}))
+    _, options = parse_sweep_config(cfg)
+    assert options["binary"] == f"{paths.SCRATCH}/BioReactor-mpi"
+    assert options["mode"] == "parallel"

@@ -28,16 +28,19 @@ from pathlib import Path
 
 import numpy as np
 import matplotlib.pyplot as plt
+import sys  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # repo root
+from scripts import paths  # noqa: E402  (machine-specific folders)
 
 N = 1024
 B_ND = 0.143
 T_CHANGE_ST = 11.6132  # upstream's real ramp-completion time (30/T_bio); see diary.md 2026-08-19 (4)
 
-OURS_DIR = "/oscar/scratch/eaguerov/tmp/fork_l10_rampmatch/rundir"
-UPSTREAM_DIR = "/oscar/scratch/eaguerov/tmp/upstream_l10_video/rundir/Data_all"
-OUT_VIDEO = "/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor/experiments/kimetal2024/ours_vs_upstream_study/04_ours_vs_upstream_rampmatched_video.mp4"
-OUT_VIDEO_RELERR = "/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor/experiments/kimetal2024/ours_vs_upstream_study/07_ours_vs_upstream_rampmatched_relerr_video.mp4"
-OUT_CSV = "/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor/experiments/docs/rampmatched_comparison_stats.csv"
+OURS_DIR = f"{paths.SCRATCH}/tmp/fork_l10_rampmatch/rundir"
+UPSTREAM_DIR = f"{paths.SCRATCH}/tmp/upstream_l10_video/rundir/Data_all"
+OUT_VIDEO = f"{paths.REPO}/experiments/kimetal2024/ours_vs_upstream_study/04_ours_vs_upstream_rampmatched_video.mp4"
+OUT_VIDEO_RELERR = f"{paths.REPO}/experiments/kimetal2024/ours_vs_upstream_study/07_ours_vs_upstream_rampmatched_relerr_video.mp4"
+OUT_CSV = f"{paths.REPO}/experiments/docs/rampmatched_comparison_stats.csv"
 
 rho_w, mu_w = 1.0e3, 1.0e-3
 mu_a = 1.81e-5

@@ -64,8 +64,8 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "scripts"))
 from scripts import figstyle as fs                                  # noqa: E402
-from scripts.test_mf_l10_holdout import col, rel_rmse, DS, OUT      # noqa: E402
-from scripts.test_t3_learning_curve import CachedLooKRR             # noqa: E402
+from scripts.hypotheses.test_mf_l10_holdout import col, rel_rmse, DS, OUT      # noqa: E402
+from scripts.hypotheses.test_t3_learning_curve import CachedLooKRR             # noqa: E402
 from mfbml_local.krr_lr_gpr_fullbayes import FullBayesKRRLRGP       # noqa: E402
 
 QOIS = ("dtmix_0.50", "dtmix_0.75", "dtmix_0.95", "kLa_1T_10", "kLa_1T_25", "kLa_1T_50")

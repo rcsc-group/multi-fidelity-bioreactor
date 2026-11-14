@@ -34,9 +34,8 @@
 #       PARAMS      path to params.json (required for 'run' and 'submit')
 #
 #  ENVIRONMENT ─────────────────────────────────────────────────────────────────
-#       Uses qcc from $BASILISK/.. or /oscar/data/dharri15/eaguerov/basilisk/src/qcc
-#       as fallback. Set $BASILISK before running, or let the Makefile find the
-#       persistent-storage build.
+#       BASILISK    Basilisk's src/ folder; qcc is $BASILISK/qcc. Default: the
+#                   OSCAR build (scripts/paths.py). Else qcc from PATH.
 #
 #  Maintainer: Elvis Aguero    │   Last update: <2026-05-04>
 # ────────────────────────────────────────────────────────────────────────────────
@@ -54,21 +53,19 @@
 #  silently looked "stale" and got swept. Rebuilt 2026-07-14 under the
 #  persistent /oscar/data/dharri15 allocation instead.
 # ==========================================================
-PERSISTENT_QCC := /oscar/data/dharri15/eaguerov/basilisk/src/qcc
-ifneq ($(wildcard $(PERSISTENT_QCC)),)
-  QCC := $(PERSISTENT_QCC)
+BASILISK ?= /oscar/data/dharri15/eaguerov/basilisk/src
+ifneq ($(wildcard $(BASILISK)/qcc),)
+  QCC := $(BASILISK)/qcc
 else
   QCC := $(shell command -v qcc 2>/dev/null)
   ifeq ($(QCC),)
-    $(error "qcc not found. Build from /oscar/data/dharri15/eaguerov/basilisk/src or add to PATH.")
+    $(error "qcc not found. Set BASILISK to Basilisk's src/ folder, or put qcc on PATH.")
   endif
+  # qcc from PATH: its folder is Basilisk's src/
+  BASILISK := $(patsubst %/,%,$(dir $(QCC)))
 endif
-
-# Derive $BASILISK from qcc location if not already set
-ifeq ($(BASILISK),)
-  BASILISK := $(dir $(QCC))
-  export BASILISK
-endif
+# qcc reads BASILISK to find Basilisk's headers
+export BASILISK
 
 
 # ==========================================================

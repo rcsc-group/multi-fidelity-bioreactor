@@ -13,9 +13,12 @@ import glob
 import sys
 
 import numpy as np
+from pathlib import Path  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # repo root
+from scripts import paths  # noqa: E402  (machine-specific folders)
 
-UPSTREAM_GLOB = "/oscar/scratch/eaguerov/tmp/upstream_l10/rundir/DumpEarly_1024_12.14*_*.txt"
-FORK_GLOB = "/oscar/scratch/eaguerov/tmp/fork_l10_coldstart/rundir/DumpEarlyFork_1024_12.14*_*.txt"
+UPSTREAM_GLOB = f"{paths.SCRATCH}/tmp/upstream_l10/rundir/DumpEarly_1024_12.14*_*.txt"
+FORK_GLOB = f"{paths.SCRATCH}/tmp/fork_l10_coldstart/rundir/DumpEarlyFork_1024_12.14*_*.txt"
 
 
 def load_dump(glob_pattern):

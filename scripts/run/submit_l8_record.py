@@ -20,6 +20,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from scripts.simulate import submit_slurm  # noqa: E402
+from scripts import paths  # noqa: E402  (machine-specific folders)
 from scripts.experiments.submit_l8_t5_t6 import NTASKS, POST, SPINUP, WALL, params  # noqa: E402
 
 FRAMES, SNAP_FROM, SNAP_TO = 100, SPINUP - 2, SPINUP + 10  # 2 periods before release, 10 after
@@ -51,7 +52,7 @@ def main() -> None:
               f"{a.frames}/period, {ntasks} ranks, {wall}")
         if a.dry_run:
             continue
-        live = Path("/oscar/scratch/eaguerov/mpi_runs") / p["run_id"] / "logstats.dat"
+        live = Path(f"{paths.SCRATCH}/mpi_runs") / p["run_id"] / "logstats.dat"
         if live.exists() and time.time() - live.stat().st_mtime < 1800:   # a running job writes here: a second job truncates its files
             print(f"    SKIPPED {p['run_id']}: its scratch logstats.dat changed in the last 30 min (job running)")
             continue

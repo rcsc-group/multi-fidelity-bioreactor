@@ -15,7 +15,7 @@ sys.path.insert(0, str(ROOT))
 from scripts import postprocess as pp  # noqa: E402
 from scripts import replay_gate as rg  # noqa: E402
 from scripts.experiments.replay_chain import DB, rid  # noqa: E402
-from scripts.test_h1_mfbml import RPMS  # noqa: E402
+from scripts.hypotheses.test_h1_mfbml import RPMS  # noqa: E402
 
 
 def window_mean(run: Path, fname: str, col: int, T: float) -> float:

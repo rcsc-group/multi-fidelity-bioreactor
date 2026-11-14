@@ -21,8 +21,8 @@ quantities of every case.
 
 ```bash
 # from the repository root, on the login node (the jobs run on compute nodes)
-sbatch tools/bundle/bundle.sbatch     $PWD/src /oscar/scratch/$USER/bundle/mywork
-sbatch tools/bundle/bundle_mpi.sbatch $PWD/src /oscar/scratch/$USER/bundle/mywork   # the 4-rank case
+sbatch tools/bundle/bundle.sbatch     $PWD/src $MFB_SCRATCH/bundle/mywork
+sbatch tools/bundle/bundle_mpi.sbatch $PWD/src $MFB_SCRATCH/bundle/mywork   # the 4-rank case
 ```
 
 The serial job takes about one hour. The MPI case runs in its own job, because MPI is not available on
@@ -36,7 +36,7 @@ failed)". The other cases still run.
 The guards are ordinary pytest tests that **only read** `bundle.json`. They never start a run:
 
 ```bash
-MFB_BUNDLE=/oscar/scratch/$USER/bundle/mywork/bundle.json uv run python -m pytest tests/bundle
+MFB_BUNDLE=$MFB_SCRATCH/bundle/mywork/bundle.json uv run python -m pytest tests/bundle
 ```
 
 - Without `MFB_BUNDLE`, every guard is skipped with one reason, so the default unit run stays green.
@@ -68,7 +68,7 @@ defect in a copy of `src/` (never in `src/` itself), runs only the cases that th
 checks that the named guards fail:
 
 ```bash
-sbatch -J ramp_from_rest tools/bundle/mutants.sbatch ramp_from_rest /oscar/scratch/$USER/bundle/mut
+sbatch -J ramp_from_rest tools/bundle/mutants.sbatch ramp_from_rest $MFB_SCRATCH/bundle/mut
 ```
 
 | Mutant | Defect | Caught by |
@@ -109,7 +109,7 @@ Each row (one mechanism) has:
       measured on code that behaves differently now; measure it again before you rely on it.
 
 To build the old-source bundle, check out the production commit in a worktree and run the bundle on its
-`src/` (for example `git worktree add /oscar/scratch/$USER/tmp/wt_2ef5b07 2ef5b07`). Cases that the old
+`src/` (for example `git worktree add $MFB_SCRATCH/tmp/wt_2ef5b07 2ef5b07`). Cases that the old
 source cannot run are recorded as "not run", and rows that need them stay stale.
 
 The figure `scripts/figures/fig_feature_ledger.py` plots the rows.

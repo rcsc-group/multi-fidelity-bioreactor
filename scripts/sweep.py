@@ -52,6 +52,7 @@ from uuid import uuid4
 _PROJECT_ROOT = Path(__file__).parents[1]
 sys.path.insert(0, str(_PROJECT_ROOT))
 from scripts.periods import next_period_boundary  # noqa: E402
+from scripts import paths  # noqa: E402  (machine-specific folders)
 
 
 # ── walltime estimation ───────────────────────────────────────────────────────
@@ -68,7 +69,7 @@ def _collect_timing_data(runs_root: Path) -> list[tuple[int, int, float]]:
     finished.  Deduplicates by resolved logstats path so scratch-mirrored
     files are not double-counted.
     """
-    scratch = Path("/oscar/scratch/eaguerov/mpi_runs")
+    scratch = Path(f"{paths.SCRATCH}/mpi_runs")
     search_dirs = [runs_root, scratch] if scratch.exists() else [runs_root]
 
     seen: set[str] = set()
@@ -358,7 +359,8 @@ def parse_sweep_config(path: str | Path) -> tuple[list[dict], dict]:
     options     : sweep control settings from the '_sweep' key
     """
     raw = json.loads(Path(path).read_text())
-    options = dict(raw.pop("_sweep", {}))
+    # $MFB_SCRATCH etc. in an option (e.g. the binary) -> this machine's folder (scripts/paths.py)
+    options = {k: paths.expand(v) if isinstance(v, str) else v for k, v in raw.pop("_sweep", {}).items()}
     # Remove remaining metadata keys (_comment, etc.) — they are not sim params
     for k in [k for k in list(raw) if k.startswith("_")]:
         raw.pop(k)

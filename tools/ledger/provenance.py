@@ -10,8 +10,9 @@ import json
 from pathlib import Path
 
 from scripts.campaign2d.campaign import build_info
+from scripts import paths  # noqa: E402  (machine-specific folders)
 
-BIN_DIR = Path("/oscar/data/dharri15/eaguerov/bin")
+BIN_DIR = Path(f"{paths.DATA}/bin")
 
 
 def _sha256(p: Path) -> str:
@@ -71,16 +72,18 @@ def pair_status(a: dict, b: dict, mechanism_flag: str | None) -> str:
     return "same-source" if diff <= ({mechanism_flag} if mechanism_flag else set()) else "confounded"
 
 
-RUNS = Path("/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor/runs")
+RUNS = Path(f"{paths.REPO}/runs")
 PAIRS = Path(__file__).with_name("pairs.yaml")
 
 
 def load_pairs(path: Path = PAIRS, runs: Path = RUNS) -> dict:
-    """pairs.yaml with every run name resolved to a folder (absolute names kept, others under `runs`)."""
+    """pairs.yaml with every run name resolved to a folder: $MFB_SCRATCH etc. expanded (scripts/paths.py),
+    absolute names kept, others under `runs`."""
     import yaml
     out = yaml.safe_load(Path(path).read_text())
     for mech in out.values():
         for p in mech["pairs"]:
             for k in ("with", "without"):
-                p[k] = Path(p[k]) if Path(p[k]).is_absolute() else Path(runs) / p[k]
+                v = Path(paths.expand(str(p[k])))
+                p[k] = v if v.is_absolute() else Path(runs) / v
     return out

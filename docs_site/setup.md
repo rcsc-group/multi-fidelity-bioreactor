@@ -63,6 +63,21 @@ uv sync
 Run all scripts via `uv run python scripts/foo.py ...` or `uv run pytest`.
 `uv` manages the virtual environment automatically — no manual activation needed.
 
+## 4. Tell the code where your folders are
+
+The code finds its large folders through environment variables. The defaults are the folders on Brown's
+OSCAR cluster, so on any other machine set them once, for example in `~/.bashrc`:
+
+```bash
+export BASILISK=/path/to/basilisk/src   # step 1
+export MFB_SCRATCH=/big/fast/disk/me    # run folders, staged MPI runs, binaries for jobs
+export MFB_DATA=/kept/disk/me           # kept data: flux records, shared binaries
+```
+
+The list, and what reads each folder, is in `scripts/paths.py`. Python code uses `paths.SCRATCH` and so on;
+shell and SLURM scripts use `${MFB_SCRATCH:-<OSCAR default>}`; `simulate.py` passes the values to every job it
+submits.
+
 ## Building this documentation site
 
 ```bash

@@ -16,11 +16,12 @@ import numpy as np
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 import scripts.chain as chain
 from scripts.experiments.settling_study_grid import PROJECT_ROOT, GEOMETRY, FILL_LEVEL, omega_b_of
+from scripts import paths  # noqa: E402  (machine-specific folders)
 
 chain.validate_params = lambda params: None
 
 RUNS_DIR = Path(PROJECT_ROOT) / "runs"
-FIXED_BINARY = "/oscar/scratch/eaguerov/BioReactor-mpi-testc"  # now has BOTH the dAk/dt ramp fix and the p.nodump restore fix
+FIXED_BINARY = f"{paths.SCRATCH}/BioReactor-mpi-testc"  # now has BOTH the dAk/dt ramp fix and the p.nodump restore fix
 
 src_dir = RUNS_DIR / "dtheta_src_L6_th4.1"
 d = np.loadtxt(src_dir / "shear_stress.dat", skiprows=1)

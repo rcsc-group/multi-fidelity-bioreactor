@@ -2,9 +2,9 @@
 # usage: run_kp.sh TAG RUN_ID N DT_PY FIN [edit_dt_line(0/1) DT_M]
 set -e
 TAG=$1; RUN=$2; N=$3; DTPY=$4; FIN=$5; EDITDT=${6:-0}; DTM=${7:-}
-KP=/oscar/scratch/eaguerov/kp_parity
-REPO=/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor
-SRC=/oscar/data/dharri15/eaguerov/Github/BioReactor3D/dev/postprocessing/bio_mix_elvis.m
+KP=${MFB_SCRATCH:-/oscar/scratch/eaguerov}/kp_parity
+REPO=${MFB_REPO:-/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor}
+SRC=${MFB_DATA:-/oscar/data/dharri15/eaguerov}/Github/BioReactor3D/dev/postprocessing/bio_mix_elvis.m
 D=$KP/wd/D:/1_bioreactor/Data_save/bio_rec_new6_save/$TAG
 mkdir -p $D/${TAG}_save
 cp $SRC $KP/bio_mix_$TAG.m

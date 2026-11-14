@@ -325,3 +325,21 @@ Rule: a top-level module stays only if the pipeline reaches it (Makefile, config
 | `scripts/test_s89_l8_to_l9.py` | `scripts/experiments/test_s89_l8_to_l9.py` |
 | `scripts/test_s_estimator.py` | `scripts/experiments/test_s_estimator.py` |
 | `scripts/test_warmstart_x8.py` | `scripts/experiments/test_warmstart_x8.py` |
+
+## Third move, 2026-11-14: the last 11 test_*.py -> scripts/hypotheses/
+
+They are pre-registered hypothesis experiments that other code imports; names kept so the diary names stay true.
+
+| Old path | New path |
+|---|---|
+| `scripts/test_h1_mfbml.py` | `scripts/hypotheses/test_h1_mfbml.py` |
+| `scripts/test_h2_mfbml.py` | `scripts/hypotheses/test_h2_mfbml.py` |
+| `scripts/test_h3_mfbml.py` | `scripts/hypotheses/test_h3_mfbml.py` |
+| `scripts/test_i_islands.py` | `scripts/hypotheses/test_i_islands.py` |
+| `scripts/test_k_diffusivity.py` | `scripts/hypotheses/test_k_diffusivity.py` |
+| `scripts/test_mf_l10_holdout.py` | `scripts/hypotheses/test_mf_l10_holdout.py` |
+| `scripts/test_q_periodicity.py` | `scripts/hypotheses/test_q_periodicity.py` |
+| `scripts/test_t2_bayes_band.py` | `scripts/hypotheses/test_t2_bayes_band.py` |
+| `scripts/test_t3_learning_curve.py` | `scripts/hypotheses/test_t3_learning_curve.py` |
+| `scripts/test_v_l10.py` | `scripts/hypotheses/test_v_l10.py` |
+| `scripts/test_v_variance_budget.py` | `scripts/hypotheses/test_v_variance_budget.py` |

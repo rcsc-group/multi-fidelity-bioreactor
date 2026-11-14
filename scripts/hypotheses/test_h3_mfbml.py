@@ -9,7 +9,7 @@ EDR on the 5 points no model has seen yet."
 PENDING while fewer than 13 HF points exist (same as H1/H2). The L8 x ratio baseline and the
 non-decisive L9 columns stay on the raw scale. Implementation: loo_h2(..., log=True) in test_h2_mfbml.
 
-Usage: uv run python scripts/test_h3_mfbml.py
+Usage: uv run python scripts/hypotheses/test_h3_mfbml.py
 """
 from __future__ import annotations
 
@@ -20,15 +20,15 @@ from pathlib import Path
 
 import numpy as np
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from scripts.test_h1_mfbml import (  # noqa: E402
+from scripts.hypotheses.test_h1_mfbml import (  # noqa: E402
     CRITERIA_QOIS, LF_THETAS, N_REQUIRED, QOIS, RMSE_MAX, RPMS, h1_verdict, hf_points, hf_run, lf_run,
     load_points, rel_rmse_ratio, train_lf2d,
 )
-from scripts.test_h2_mfbml import l9_points, l9_run, loo_h2  # noqa: E402
+from scripts.hypotheses.test_h2_mfbml import l9_points, l9_run, loo_h2  # noqa: E402
 
 OUT = ROOT / "experiments" / "multifidelity" / "test_h3_mfbml.json"
 # HF points no model had seen when the log transform was chosen (after the 8-point H2 interim)

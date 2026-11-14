@@ -6,5 +6,5 @@
 #SBATCH -t 08:00:00
 #SBATCH --exclude=node2356
 #SBATCH -o /oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor/logs/bo_autopilot_%j.out
-cd /oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor
+cd ${MFB_REPO:-/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor}
 scripts/bo2d/autopilot_wed.sh

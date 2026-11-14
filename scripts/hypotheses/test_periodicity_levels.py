@@ -9,8 +9,8 @@ import numpy as np
 
 sys.path[:0] = [".", "scripts"]
 from scripts.experiments.fig_h3_rpm import cycle_sd  # noqa: E402
-from scripts.test_h1_mfbml import hf_points, hf_run, lf_run, has_results, RPMS, LF_THETAS  # noqa: E402
-from scripts.test_h2_mfbml import l9_points, l9_run  # noqa: E402
+from scripts.hypotheses.test_h1_mfbml import hf_points, hf_run, lf_run, has_results, RPMS, LF_THETAS  # noqa: E402
+from scripts.hypotheses.test_h2_mfbml import l9_points, l9_run  # noqa: E402
 
 LEVELS = {"L8": [lf_run(r, t) for r in RPMS for t in LF_THETAS],
           "L9": [l9_run(r, t) for r, t in l9_points()],

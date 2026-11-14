@@ -43,6 +43,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from scripts.simulate import submit_slurm, _t_mix_nd
+from scripts import paths  # noqa: E402  (machine-specific folders)
 import scripts.chain as chain
 
 # chain.py's submit_chain() calls validate_params(), which enforces
@@ -59,7 +60,7 @@ submit_chain = chain.submit_chain
 
 PROJECT_ROOT = str(Path(__file__).resolve().parents[2])
 TEMPLATE = f"{PROJECT_ROOT}/config/slurm_mpi_template.sh"
-BINARY = "/oscar/scratch/eaguerov/BioReactor-mpi-rampmatch"
+BINARY = f"{paths.SCRATCH}/BioReactor-mpi-rampmatch"
 
 OMEGA_B = 32.5 * 2 * math.pi / 60.0   # Kim's baseline condition, matches Fig 8
 THETA_MAX = [7.0, 0.0, 0.0]

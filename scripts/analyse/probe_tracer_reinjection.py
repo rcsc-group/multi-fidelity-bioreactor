@@ -35,6 +35,7 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
+from scripts import paths  # noqa: E402  (machine-specific folders)
 
 BINARY = ROOT / "build" / "BioReactor-mpi"
 # mpirun is not on PATH until `module load openmpi`; resolve it once rather
@@ -42,7 +43,7 @@ BINARY = ROOT / "build" / "BioReactor-mpi"
 MPIRUN = (shutil.which("mpirun")
           or "/oscar/rt/9.6/25/spack/x86_64_v3/openmpi-5.0.8-"
              "q6ygsavgbbzcuxp2sog73dhpke6ttgfd/bin/mpirun")
-WORK = Path("/oscar/scratch/eaguerov/tracer_reinject_probe")
+WORK = Path(f"{paths.SCRATCH}/tracer_reinject_probe")
 RPM = 32.5
 LEVEL = 5
 N_MIX = 2          # inject after 2 cycles

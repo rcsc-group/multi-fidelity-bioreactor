@@ -14,17 +14,18 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from scripts import figstyle as fs  # noqa: E402
+from scripts import paths  # noqa: E402  (machine-specific folders)
 
 T = 0.607329
-OURS = Path("/oscar/scratch/eaguerov/replay_gate/runs")
-KIM = Path("/oscar/scratch/eaguerov/kim_pipeline/prereg_out/pre_A_N256")
+OURS = Path(f"{paths.SCRATCH}/replay_gate/runs")
+KIM = Path(f"{paths.SCRATCH}/kim_pipeline/prereg_out/pre_A_N256")
 OUT = ROOT / "internal/docs/meetings/prereg"
 C_OURS, C_KIM = fs.level_colour(8), fs.KIM
 
 # (dir, label, colour, width, style): thick first
 LEFT = [(KIM / "off_m1", "Kim", C_KIM, 3.5, "-"),
         (OURS / "pr28_A", "ours, seed f > 0.5", C_OURS, 2.0, "-"),
-        (Path("/oscar/scratch/eaguerov/replay_gate/mpi_runs/pr28_Aseed"), "ours, seed f = 1", C_OURS, 1.2, "--")]
+        (Path(f"{paths.SCRATCH}/replay_gate/mpi_runs/pr28_Aseed"), "ours, seed f = 1", C_OURS, 1.2, "--")]
 RIGHT = [(KIM / "his_loop", "Kim", C_KIM, 3.5, "-"),
          (OURS / "pr28_repWS", "ours", C_OURS, 2.0, "-"),
          (OURS / "pr28_repWSm", "ours, solid faces zeroed", C_OURS, 1.2, "--")]

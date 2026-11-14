@@ -35,12 +35,13 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from scripts.simulate import submit_slurm
+from scripts import paths  # noqa: E402  (machine-specific folders)
 from scripts.experiments.settling_study_grid import T_END, GEOMETRY, FILL_LEVEL, PROJECT_ROOT, TEMPLATE, omega_b_of
 import scripts.chain as chain
 
 chain.validate_params = lambda params: None
 
-TESTC_BINARY = "/oscar/scratch/eaguerov/BioReactor-mpi-testc"
+TESTC_BINARY = f"{paths.SCRATCH}/BioReactor-mpi-testc"
 RPM = 32.5
 FIDELITY = 6
 NTASKS = 8

@@ -19,13 +19,14 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from scripts import postprocess as pp  # noqa: E402
+from scripts import paths  # noqa: E402  (machine-specific folders)
 from scripts.experiments import prereg_offline as po  # noqa: E402
 from scripts import replay_gate as rg  # noqa: E402
-from scripts.test_h1_mfbml import RPMS  # noqa: E402
+from scripts.hypotheses.test_h1_mfbml import RPMS  # noqa: E402
 
 THETA = 7.0
 DB = {8: "kmix_l8_rpm{:g}", 9: "fig9_l9_rpm{:g}"}
-REC_ROOT = Path("/oscar/scratch/eaguerov/replay_records/chain")   # ~4 GB/cycle at L8, ~17 at L9
+REC_ROOT = Path(f"{paths.SCRATCH}/replay_records/chain")   # ~4 GB/cycle at L8, ~17 at L9
 REPLAY_KEYS = {"run_id", "_binary", "n_rec_periods", "rec_dir", "t_end", "n_mix_cycles", "t_checkpoint",
                "restart_continue", "replay_scalar_level", "replay_diag", "replay_project_flux", "replay_loop"}
 

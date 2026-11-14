@@ -17,7 +17,7 @@ Pre-registration (diary.md, quoted):
 Model, derivation and the l <-> RBF theta conversion: scripts/mfbml_local/krr_lr_gpr_fullbayes.py.
   theta = log10(1/(2 l^2)) because RBF is exp(-10^theta d^2) on inputs scaled to [0,1].
 
-Protocol = test A (scripts/test_mf_l10_holdout.py) for tau_mean_t, tau_95_t, LF L8/L9, n_HF = 3 (the
+Protocol = test A (scripts/hypotheses/test_mf_l10_holdout.py) for tau_mean_t, tau_95_t, LF L8/L9, n_HF = 3 (the
 two end rpm + one interior = 7 designs), held-out L10 rpm scored. Metric: relative RMSE of the
 predictive mean (weighted mean of node locations); coverage: hit if the observation lies in the
 central 95% interval of the mixture (quantiles 0.025/0.975 by brentq CDF inversion).
@@ -26,7 +26,7 @@ PASS reference value = MF "median" in experiments/multifidelity/test_mf_l10_hold
 
 Reported, not criteria: HF-only full-Bayes GP and LF x ratio (same designs); T1 (edr_mean_t, LF L8/L9,
 n_HF = 3); T3 learning curve n_HF = 2..6 for tau_mean_t, tau_95_t, edr_mean_t with designs_for() of
-scripts/test_t3_learning_curve.py (all subsets containing both endpoints; <= 35 per n).
+scripts/hypotheses/test_t3_learning_curve.py (all subsets containing both endpoints; <= 35 per n).
 
 Choices where the spec was silent (closest to the spec):
   * LF KRR: LooKRR (seed 42, optimizer_restart 10, portion_test 0.2 = reference lf_portion) trained
@@ -65,8 +65,8 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "scripts"))
 from scripts import figstyle as fs                                            # noqa: E402
-from scripts.test_mf_l10_holdout import load, col, rel_rmse, ENDS, DS, LFS, OUT  # noqa: E402
-from scripts.test_t3_learning_curve import CachedLooKRR, designs_for          # noqa: E402
+from scripts.hypotheses.test_mf_l10_holdout import load, col, rel_rmse, ENDS, DS, LFS, OUT  # noqa: E402
+from scripts.hypotheses.test_t3_learning_curve import CachedLooKRR, designs_for          # noqa: E402
 from mfbml_local.krr_lr_gpr_fullbayes import FullBayesKRRLRGP                 # noqa: E402
 
 QOIS_A = ("tau_mean_t", "tau_95_t")

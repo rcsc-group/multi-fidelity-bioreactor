@@ -27,16 +27,20 @@ import re
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
+import sys  # noqa: E402
+from pathlib import Path  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # repo root
+from scripts import paths  # noqa: E402  (machine-specific folders)
 
 N = 256
 B_ND = 0.143
 T_PER_ND = 0.6073  # theta=7, 32.5rpm, corrected H_bio (diary.md 2026-08-20 (6))
 
-FRESH_MPI = "/oscar/scratch/eaguerov/tmp/l8_matrix/ours_fresh_mpi"
-FRESH_OPENMP = "/oscar/scratch/eaguerov/tmp/l8_matrix/ours_fresh_openmp"
-RESTART_MPI = "/oscar/scratch/eaguerov/tmp/l8_matrix/ours_chain_mpi_seg1"
-RESTART_OPENMP = "/oscar/scratch/eaguerov/tmp/l8_matrix/ours_chain_openmp_seg1"
-OUT_PATH = "/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor/experiments/kimetal2024/ours_vs_upstream_study/09_l8_matrix_relerr_heatmap.png"
+FRESH_MPI = f"{paths.SCRATCH}/tmp/l8_matrix/ours_fresh_mpi"
+FRESH_OPENMP = f"{paths.SCRATCH}/tmp/l8_matrix/ours_fresh_openmp"
+RESTART_MPI = f"{paths.SCRATCH}/tmp/l8_matrix/ours_chain_mpi_seg1"
+RESTART_OPENMP = f"{paths.SCRATCH}/tmp/l8_matrix/ours_chain_openmp_seg1"
+OUT_PATH = f"{paths.REPO}/experiments/kimetal2024/ours_vs_upstream_study/09_l8_matrix_relerr_heatmap.png"
 
 rho_w, mu_w = 1.0e3, 1.0e-3
 mu_a = 1.81e-5

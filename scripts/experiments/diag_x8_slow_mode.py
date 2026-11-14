@@ -20,6 +20,7 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from scripts.experiments.test_warmstart_x8 import load  # noqa: E402
+from scripts import paths  # noqa: E402  (machine-specific folders)
 from scripts.postprocess import _load_dat  # noqa: E402
 
 COLS = {"tau_mean": 5, "tau_mean_signed": 10, "ediss": 9}
@@ -44,7 +45,7 @@ def normf_cycles(run, r, c0, n):
     of the liquid / liquid area, by Stokes' theorem; the oscillatory part averages out over one period)."""
     f = ROOT / "runs" / run / "normf.dat"
     if not f.exists():  # running job: read the live file in scratch
-        f = Path("/oscar/scratch/eaguerov/mpi_runs") / run / "normf.dat"
+        f = Path(f"{paths.SCRATCH}/mpi_runs") / run / "normf.dat"
     a = _load_dat(f)
     if a is None or len(a) == 0:
         return []

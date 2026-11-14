@@ -6,7 +6,7 @@ Prior scales (log units, estimates): S_mu = 0.8 (tau varies ~5x over rpm), S_c =
 S_noise = 0.02 (replicates at L6-L8 agree within ~1%).
 Outputs experiments/multifidelity/gcbml_hydro_<qoi>.json and gcbml_hydro_fit.png.
 
-Run: uv run --project /oscar/data/dharri15/eaguerov/Github/gcbml python scripts/analyse/gcbml_hydro_fit.py
+Run: uv run --project $MFB_DATA/Github/gcbml python scripts/analyse/gcbml_hydro_fit.py
 """
 import json
 import sys

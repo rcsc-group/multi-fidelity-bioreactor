@@ -13,11 +13,12 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from scripts import figstyle as fs  # noqa: E402
+from scripts import paths  # noqa: E402  (machine-specific folders)
 
 T = 0.607329          # T_per_st, same formula in both codes (20 rpm, theta 7, L_bio 0.25)
 T_REL = 20 * T
-RUNS = {"ours": (Path("/oscar/scratch/eaguerov/replay_gate/runs/pr8_A"), fs.level_colour(8), 3.5),
-        "Kim": (Path("/oscar/scratch/eaguerov/kim_pipeline/prereg_out/pre_A_N256/producer"), fs.KIM, 1.2)}
+RUNS = {"ours": (Path(f"{paths.SCRATCH}/replay_gate/runs/pr8_A"), fs.level_colour(8), 3.5),
+        "Kim": (Path(f"{paths.SCRATCH}/kim_pipeline/prereg_out/pre_A_N256/producer"), fs.KIM, 1.2)}
 PANELS = [("vol_frac_interf.dat", "posY_max", "highest free surface"),
           ("vol_frac_interf.dat", "posY_min", "lowest free surface"),
           ("normf.dat", "ux_liq_rms", r"liquid $u_x$ rms"),

@@ -5,10 +5,13 @@ Extrapolates wall-clock time to fidelity 10 assuming O(8^delta_f) scaling (2D CF
 """
 import json, math
 from pathlib import Path
+import sys  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # repo root
+from scripts import paths  # noqa: E402  (machine-specific folders)
 
 PROJECT_ROOT = Path(__file__).parents[2]
 RUNS_ROOT    = PROJECT_ROOT / "runs"
-SCRATCH_BASE = Path("/oscar/scratch/eaguerov/mpi_runs")
+SCRATCH_BASE = Path(f"{paths.SCRATCH}/mpi_runs")
 FIDELITIES   = [4, 5, 6]
 OMEGA_B      = [1.5708, 1.8326]
 

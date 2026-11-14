@@ -13,11 +13,13 @@ Safe to run multiple times — it never double-submits a queued job.
 from __future__ import annotations
 import json, math, os, subprocess, sys
 from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # repo root
+from scripts import paths  # noqa: E402  (machine-specific folders)
 
 # ── paths ──────────────────────────────────────────────────────────────────
 ROOT     = Path(__file__).parents[2]           # rocking-bioreactor-2d/
 RUNS     = ROOT / "runs"
-SCRATCH  = Path("/oscar/scratch/eaguerov/mpi_runs")
+SCRATCH  = Path(f"{paths.SCRATCH}/mpi_runs")
 TEMPLATE = ROOT / "config" / "slurm_mpi_template.sh"
 EXP_TAG  = "theta_l7_mpi_ckpt"
 TOTAL    = 60   # 6 theta × 10 omega

@@ -12,10 +12,11 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from scripts.simulate import submit_slurm
+from scripts import paths  # noqa: E402  (machine-specific folders)
 
 root = Path(__file__).resolve().parents[2]
 src_dir = root / "runs" / "testc2_source_th4.1"
-TESTC_BINARY = "/oscar/scratch/eaguerov/BioReactor-mpi-testc"
+TESTC_BINARY = f"{paths.SCRATCH}/BioReactor-mpi-testc"
 
 d = np.loadtxt(src_dir / "shear_stress.dat", skiprows=1)
 t_dump = float(d[-1, 1])

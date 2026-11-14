@@ -30,6 +30,7 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from scripts.simulate import submit_slurm
+from scripts import paths  # noqa: E402  (machine-specific folders)
 
 root = Path(__file__).resolve().parents[2]
 DRY = "--dry-run" in sys.argv
@@ -79,7 +80,7 @@ for rpm, src in sorted(L9_SOURCES.items()):
         "omega_b_prev": omega, "theta_max_prev": [7.0, 0.0, 0.0],
         "phi_angular_prev": [0.0, 0.0, 0.0], "amplitude_h_prev": [0.0, 0.0, 0.0],
         "phi_horizontal_prev": [0.0, 0.0, 0.0], "omega_h_prev": 0.0,
-        "_binary": "/oscar/scratch/eaguerov/BioReactor-mpi-xlevel-chain",
+        "_binary": f"{paths.SCRATCH}/BioReactor-mpi-xlevel-chain",
     }
     if DRY:
         job = "DRY"

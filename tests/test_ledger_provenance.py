@@ -60,12 +60,30 @@ def test_cross_level_flag_only_is_same_source():
     assert pv.pair_status(a, dict(a), None) == "same-source"
 
 
-def test_pairs_file_names_existing_runs():
-    """Every run in pairs.yaml is on disk with a params.json."""
+def test_pairs_file_names_four_mechanisms_with_quantities():
     pairs = pv.load_pairs()
     assert set(pairs) == {"restart_label", "cross_level_warmstart", "chaining", "flux_replay"}
     for mech, m in pairs.items():
-        assert m["qoi"], mech
+        assert m["qoi"] and m["pairs"], mech
+
+
+def test_load_pairs_expands_machine_folders(tmp_path, monkeypatch):
+    """pairs.yaml may name `$MFB_SCRATCH/...`; it resolves to this machine's folder (scripts/paths.py)."""
+    from scripts import paths
+    monkeypatch.setitem(paths.VARS, "MFB_SCRATCH", tmp_path / "scr")
+    f = tmp_path / "pairs.yaml"
+    f.write_text("m:\n  pairs:\n    - {with: $MFB_SCRATCH/a, without: b}\n")
+    p = pv.load_pairs(f, runs=tmp_path / "runs")["m"]["pairs"][0]
+    assert p["with"] == tmp_path / "scr" / "a"
+    assert p["without"] == tmp_path / "runs" / "b"
+
+
+def test_pairs_file_names_existing_runs():
+    """Every run in pairs.yaml is on disk with a params.json (needs the project's run data: OSCAR only)."""
+    import pytest
+    if not pv.RUNS.is_dir():
+        pytest.skip(f"run data not on this machine ({pv.RUNS})")
+    for mech, m in pv.load_pairs().items():
         for p in m["pairs"]:
             for k in ("with", "without"):
                 assert (p[k] / "params.json").is_file(), f"{mech}: {p[k]} has no params.json"

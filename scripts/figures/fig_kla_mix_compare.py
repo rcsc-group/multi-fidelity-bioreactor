@@ -20,12 +20,13 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from scripts import figstyle as fs  # noqa: E402
+from scripts import paths  # noqa: E402  (machine-specific folders)
 from scripts import postprocess as pp  # noqa: E402
 from scripts import replay_gate as rg  # noqa: E402
 from scripts import replay_lf as rl  # noqa: E402
 
 OUT = ROOT / "internal/docs/meetings/2026-10-29"
-KIM_CSV = Path("/oscar/scratch/eaguerov/kim_pipeline/out/kim_off_vs_prod_3cycles.csv")
+KIM_CSV = Path(f"{paths.SCRATCH}/kim_pipeline/out/kim_off_vs_prod_3cycles.csv")
 RPM, THETA, NCYC = 32.5, 7.0, 3.0
 
 

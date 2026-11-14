@@ -3,7 +3,7 @@
 Left:  tau_mean against rpm, one series per level (figstyle: colour = level, hollow = time mean, dotted = ours).
 Right: relative change between successive levels, |f(L) - f(L-1)| / f(L), per rpm (grey), median over rpm (colour of
        the finer level, joined by a dotted line). A power law with order p predicts a fall by 2^-p per level.
-Run: uv run --project /oscar/data/dharri15/eaguerov/Github/gcbml python scripts/figures/plot_hydro_convergence_v2.py [LMAX]
+Run: uv run --project $MFB_DATA/Github/gcbml python scripts/figures/plot_hydro_convergence_v2.py [LMAX]
 """
 import json
 import sys

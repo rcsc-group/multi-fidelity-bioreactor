@@ -22,8 +22,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from scripts.simulate import submit_slurm    # noqa: E402
+from scripts import paths  # noqa: E402  (machine-specific folders)
 
-BINARY = "/oscar/scratch/eaguerov/BioReactor-mpi-lean-f1c11e0"
+BINARY = f"{paths.SCRATCH}/BioReactor-mpi-lean-f1c11e0"
 RPM, CYCLES = 32.5, 80
 # level -> (ranks, walltime). L8 was added for Fig 13(b) <tau>, where L7 is an
 # uninformative LF (diary 2026-09-30).

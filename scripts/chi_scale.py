@@ -192,11 +192,12 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+from scripts import paths  # noqa: E402  (machine-specific folders)
 
 PLANE_NAMES = ["ux", "uy", "omega", "f", "cs", "c", "c1", "c2", "c3", "oxy"]
 SCALE_DIVISORS = (16, 32, 64)           # l = L0 / divisor
 THRESHOLDS = (0.50, 0.75, 0.95)
-SCRATCH = Path("/oscar/scratch/eaguerov/mpi_runs")
+SCRATCH = Path(f"{paths.SCRATCH}/mpi_runs")
 OUT_DIR = ROOT / "experiments" / "multifidelity"
 _HEADER = struct.Struct("<iid")
 

@@ -16,11 +16,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from scripts.simulate import submit_slurm
+from scripts import paths  # noqa: E402  (machine-specific folders)
 
 PROJECT_ROOT = str(Path(__file__).resolve().parents[2])
 TEMPLATE = f"{PROJECT_ROOT}/config/slurm_mpi_template.sh"
-BINARY = "/oscar/scratch/eaguerov/BioReactor-mpi-rampmatch"
-SCRATCH_RUNS = "/oscar/scratch/eaguerov/mpi_runs"
+BINARY = f"{paths.SCRATCH}/BioReactor-mpi-rampmatch"
+SCRATCH_RUNS = f"{paths.SCRATCH}/mpi_runs"
 
 import os
 RPMS = [32.5] if os.environ.get("SMOKE_TEST") else [17.5, 20.0, 22.5, 25.0, 27.5, 30.0, 32.5, 35.0, 37.5]

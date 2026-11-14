@@ -22,9 +22,13 @@ Usage:
     uv run python scripts/analyse/check_restart_recovery_phase_lag.py
 """
 import numpy as np
+import sys  # noqa: E402
+from pathlib import Path  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # repo root
+from scripts import paths  # noqa: E402  (machine-specific folders)
 
-RESTART_DIR = "/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor/runs/c7e9eca7"
-BASELINE_DIR = "/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor/runs/d054ff02"
+RESTART_DIR = f"{paths.REPO}/runs/c7e9eca7"
+BASELINE_DIR = f"{paths.REPO}/runs/d054ff02"
 T_PER_ND = 0.6073  # theta=7deg, 32.5rpm (corrected H_bio -- diary.md 2026-08-20 (6))
 N_BINS = 16
 

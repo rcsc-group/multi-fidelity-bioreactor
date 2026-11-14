@@ -23,7 +23,7 @@ Choices made where the spec was silent: representative figure design = the n_HF=
 rel RMSE is the median (7 designs, so the 4th ranked), chosen per panel (it can differ per case; the
 rpm is stated in the output JSON). Failed fits (Cholesky errors) are recorded and skipped, counted.
 
-Usage: uv run python scripts/test_mf_l10_holdout.py
+Usage: uv run python scripts/hypotheses/test_mf_l10_holdout.py
 """
 from __future__ import annotations
 
@@ -39,7 +39,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "scripts"))
 from scripts import figstyle as fs                                      # noqa: E402

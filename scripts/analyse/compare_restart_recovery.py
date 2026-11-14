@@ -13,10 +13,14 @@ import math
 
 import numpy as np
 import matplotlib.pyplot as plt
+import sys  # noqa: E402
+from pathlib import Path  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # repo root
+from scripts import paths  # noqa: E402  (machine-specific folders)
 
-RESTART_DIR = "/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor/runs/c7e9eca7"
-BASELINE_DIR = "/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor/runs/d054ff02"
-OUT_PATH = "/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor/experiments/figures/restart_recovery_comparison.png"
+RESTART_DIR = f"{paths.REPO}/runs/c7e9eca7"
+BASELINE_DIR = f"{paths.REPO}/runs/d054ff02"
+OUT_PATH = f"{paths.REPO}/experiments/figures/restart_recovery_comparison.png"
 
 L_bio, ANGLE, RPM = 0.25, 7.0, 32.5
 Th_max = math.radians(ANGLE)

@@ -10,7 +10,7 @@ the rule needs (i) at L9 and the original design had no L9 s = 10 run).
 Verdict precedence implemented: REJECTED (decidable from L8 s=1, s=10 alone) > PENDING (a needed
 value missing or null) > NOT WELL-POSED AT PHYSICAL D > INCONCLUSIVE.
 
-Usage: uv run python scripts/test_k_diffusivity.py
+Usage: uv run python scripts/hypotheses/test_k_diffusivity.py
 """
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ import math
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "experiments/multifidelity"
 
 THRESH = ("dtmix_0.50", "dtmix_0.75", "dtmix_0.95")

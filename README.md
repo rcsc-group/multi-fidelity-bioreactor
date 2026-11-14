@@ -26,6 +26,7 @@ level, checkpoint restart, more outputs, flux record/replay).
 
 ```bash
 pip install uv && uv sync              # Python dependencies
+export BASILISK=/path/to/basilisk/src  # and MFB_SCRATCH, MFB_DATA: see scripts/paths.py (defaults: OSCAR)
 make build                             # build/BioReactor (needs Basilisk's qcc)
 uv run python -m pytest tests/         # fast unit tests, no binary or SLURM needed
 ```

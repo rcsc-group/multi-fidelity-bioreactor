@@ -1,4 +1,4 @@
-"""Unit tests for scripts/test_h3_mfbml.py (synthetic data, no runs)."""
+"""Unit tests for scripts/hypotheses/test_h3_mfbml.py (synthetic data, no runs)."""
 import sys
 from pathlib import Path
 
@@ -6,9 +6,9 @@ import numpy as np
 import pytest
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
-from scripts.test_h1_mfbml import h1_verdict  # noqa: E402
-from scripts.test_h2_mfbml import loo_h2  # noqa: E402
-from scripts.test_h3_mfbml import UNSEEN, h3_verdict, unseen_stats  # noqa: E402
+from scripts.hypotheses.test_h1_mfbml import h1_verdict  # noqa: E402
+from scripts.hypotheses.test_h2_mfbml import loo_h2  # noqa: E402
+from scripts.hypotheses.test_h3_mfbml import UNSEEN, h3_verdict, unseen_stats  # noqa: E402
 
 BASE = dict(mf_rmse=0.05, hf_rmse=0.20, ratio_rmse=0.25, mf_cover=12, n=13)
 UNS = dict(mf_rmse=0.05, n=5)
@@ -116,8 +116,8 @@ def test_unseen_stats_subset():
 def test_h2_default_matches_direct_fullbayes_calls():
     """Reference built straight from FullBayesKRRLRGP (raw scale), independent of _fit_predict."""
     from mfbml_local.krr_lr_gpr_fullbayes import FullBayesKRRLRGP
-    from scripts.test_h1_mfbml import BOUNDS
-    from scripts.test_h2_mfbml import MeanAdapter
+    from scripts.hypotheses.test_h1_mfbml import BOUNDS
+    from scripts.hypotheses.test_h2_mfbml import MeanAdapter
     q, l9, lf, hf = _synthetic()
     k9 = sorted(l9, key=lambda k: (k[1], k[0]))
     m1 = FullBayesKRRLRGP(BOUNDS, lf_model=StubLF(), basis="linear").train(

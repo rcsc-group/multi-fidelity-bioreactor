@@ -14,9 +14,13 @@ linear transfer has nothing to transfer.
 import glob, json, math, os
 import numpy as np, pandas as pd
 from scipy.stats import spearmanr, pearsonr
+import sys  # noqa: E402
+from pathlib import Path  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # repo root
+from scripts import paths  # noqa: E402  (machine-specific folders)
 
-R = "/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor/runs/"
-KIM = "/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor/experiments/kimetal2024/csv_raw/"
+R = f"{paths.REPO}/runs/"
+KIM = f"{paths.REPO}/experiments/kimetal2024/csv_raw/"
 kim_f = pd.read_csv(KIM + "mixing_kla_vs_frequency.csv").set_index("RPM")
 kim_a = pd.read_csv(KIM + "mixing_kla_vs_angle.csv").set_index("Angle_deg")
 kcol = "kLa_exp5pts_25"

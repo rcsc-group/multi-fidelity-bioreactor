@@ -1,4 +1,3 @@
-# Shared uv cache on /oscar/data, so venvs hard-link packages (one inode per file across all venvs).
-# The data+dharri15 inode quota was at 95% on 2026-11-06.
-cache-dir = "/oscar/data/dharri15/eaguerov/.uv-cache"
+# Packages are hard-linked from the uv cache into .venv (saves inodes when the cache is on the same file system).
+# Set the cache folder per machine, not here: UV_CACHE_DIR, or cache-dir in ~/.config/uv/uv.toml.
 link-mode = "hardlink"

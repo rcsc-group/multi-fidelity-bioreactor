@@ -10,5 +10,5 @@
 #SBATCH --output=/oscar/data/dharri15/eaguerov/Github/BioReactor3D/dev/rocking-bioreactor-2d/logs/pp_l9_batch_%j.out
 #SBATCH --error=/oscar/data/dharri15/eaguerov/Github/BioReactor3D/dev/rocking-bioreactor-2d/logs/pp_l9_batch_%j.err
 
-cd /oscar/data/dharri15/eaguerov/Github/BioReactor3D/dev/rocking-bioreactor-2d
+cd ${MFB_LEGACY_2D:-/oscar/data/dharri15/eaguerov/Github/BioReactor3D/dev/rocking-bioreactor-2d}
 uv run python -m scripts.analyse._postprocess_l9_batch

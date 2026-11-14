@@ -46,13 +46,14 @@ import numpy as np
 
 ROOT = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(ROOT))
+from scripts import paths  # noqa: E402  (machine-specific folders)
 RUNS = ROOT / "runs"
 
 KNOWN_GOOD_BINARIES = {
-    "/oscar/scratch/eaguerov/BioReactor-mpi-phasefix2",
-    "/oscar/scratch/eaguerov/BioReactor-mpi-video-fixed",
-    "/oscar/scratch/eaguerov/BioReactor-mpi-crosslevel",
-    "/oscar/scratch/eaguerov/BioReactor-mpi-crosslevel-video",
+    f"{paths.SCRATCH}/BioReactor-mpi-phasefix2",
+    f"{paths.SCRATCH}/BioReactor-mpi-video-fixed",
+    f"{paths.SCRATCH}/BioReactor-mpi-crosslevel",
+    f"{paths.SCRATCH}/BioReactor-mpi-crosslevel-video",
 }
 
 

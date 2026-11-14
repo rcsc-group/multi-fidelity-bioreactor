@@ -20,6 +20,6 @@
     "submit": true,
     "mpi": true,
     "ntasks": 16,
-    "binary": "/oscar/scratch/eaguerov/BioReactor-mpi-stripped"
+    "binary": "$MFB_SCRATCH/BioReactor-mpi-stripped"
   }
 }

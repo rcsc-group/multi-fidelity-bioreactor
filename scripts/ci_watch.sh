@@ -9,7 +9,7 @@
 #   CI_WATCH_INTERVAL  seconds between checks (default 86400)
 #   CI_WATCH_STATE     state directory (default ~/.cache/ci_watch)
 set -u
-REPO_DIR=/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor
+REPO_DIR=${MFB_REPO:-/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor}
 INTERVAL=${CI_WATCH_INTERVAL:-86400}
 STATE=${CI_WATCH_STATE:-$HOME/.cache/ci_watch}
 mkdir -p "$STATE"

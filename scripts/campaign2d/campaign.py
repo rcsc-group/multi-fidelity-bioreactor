@@ -35,6 +35,7 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(ROOT), str(ROOT / "scripts")]
+from scripts import paths  # noqa: E402  (machine-specific folders)
 STATE = Path(__file__).resolve().parent / "state"
 JOBS = STATE / "jobs.jsonl"                       # written ONLY by a real (--go) submission
 
@@ -45,9 +46,9 @@ FORBIDDEN_PARTITION = "mbessa-condo"              # hard rule: never planned or 
 KIM_CORE_H_PER_CASE = 120.0                       # Kim 2025 p.6. PENDING AUDIT (another agent). Do not cite as final.
 SEED = 20261104
 # Persistent binary (scratch copy of lean-f1c11e0 was purged; kmix params still point there). Pre-flight: see plan.
-BINARY_L8 = "/oscar/data/dharri15/eaguerov/bin/BioReactor-mpi-lean-2ef5b07"
+BINARY_L8 = f"{paths.DATA}/bin/BioReactor-mpi-lean-2ef5b07"
 # L9 warm restarts: the same source (2ef5b07) built with -DCROSS_LEVEL_WARMSTART=1 (lead 2026-11-05).
-BINARY_L9 = "/oscar/data/dharri15/eaguerov/bin/replay-gate/BioReactor-mpi-lean-2ef5b07-xlevel"   # amended 2026-11-04: edr_95 build
+BINARY_L9 = f"{paths.DATA}/bin/replay-gate/BioReactor-mpi-lean-2ef5b07-xlevel"   # amended 2026-11-04: edr_95 build
 # Partitions (sacctmgr 2026-11-04, user eaguerov): batch under account default, batch2 under account batch2.
 # Value = (account, cpu cap for this user's QOS). mbessa-condo is never listed here (hard rule).
 PARTITIONS = {"batch": ("default", 312), "batch2": ("batch2", 512)}
@@ -536,7 +537,7 @@ def cmd_check_grid(_args) -> None:
     """Hard guard (lead 2026-11-05): every L9/L10 job in jobs.jsonl whose first logstats line is not the uniform level
     grid (total cells = 4**level, per-rank #Cells x ranks) is cancelled, and the cancellation is printed."""
     jobs = [json.loads(x) for x in JOBS.read_text().splitlines()] if JOBS.exists() else []
-    scratch = Path("/oscar/scratch/eaguerov/mpi_runs")
+    scratch = Path(f"{paths.SCRATCH}/mpi_runs")
     for j in jobs:
         if j["level"] not in ("L9", "L10"):
             continue

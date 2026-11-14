@@ -18,7 +18,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from scripts.hydro_dataset_v2 import COL_EDISS, RHO, qois  # noqa: E402
 from scripts.postprocess import _load_dat, _t_scales  # noqa: E402
-from scripts.test_h1_mfbml import hf_run  # noqa: E402
+from scripts.hypotheses.test_h1_mfbml import hf_run  # noqa: E402
 
 POINTS = [(r, 7.0) for r in (17.5, 20, 22.5, 25, 27.5, 30, 32.5)] + [(r, t) for t in (4.0, 9.0) for r in (17.5, 25, 32.5)] + [(r, 5.5) for r in (17.5, 20, 22.5, 27.5, 30, 32.5)]
 

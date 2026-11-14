@@ -10,17 +10,21 @@ import glob
 
 import numpy as np
 import matplotlib.pyplot as plt
+import sys  # noqa: E402
+from pathlib import Path  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # repo root
+from scripts import paths  # noqa: E402  (machine-specific folders)
 
 N = 1024
 PERCENTILES = [99.0, 99.9, 100.0]
 PERCENTILE_LABELS = ["99th", "99.9th", "100th"]
 
 UPSTREAM_SNAPSHOTS = {
-    10.633: "/oscar/scratch/eaguerov/tmp/upstream_l10/rundir/Data_all/Data_all_1024_10.633_*.txt",
-    11.6963: "/oscar/scratch/eaguerov/tmp/upstream_l10/rundir/Data_all/Data_all_1024_11.6963_*.txt",
-    12.7596: "/oscar/scratch/eaguerov/tmp/upstream_l10/rundir/Data_all/Data_all_1024_12.7596_*.txt",
+    10.633: f"{paths.SCRATCH}/tmp/upstream_l10/rundir/Data_all/Data_all_1024_10.633_*.txt",
+    11.6963: f"{paths.SCRATCH}/tmp/upstream_l10/rundir/Data_all/Data_all_1024_11.6963_*.txt",
+    12.7596: f"{paths.SCRATCH}/tmp/upstream_l10/rundir/Data_all/Data_all_1024_12.7596_*.txt",
 }
-OUT_PATH = "/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor/docs_site/assets/img/tau-percentile-sensitivity.png"
+OUT_PATH = f"{paths.REPO}/docs_site/assets/img/tau-percentile-sensitivity.png"
 
 # Ordinal blue ramp (dataviz skill palette.md), light->dark for 99th->100th.
 COLORS = {"99th": "#86b6ef", "99.9th": "#2a78d6", "100th": "#104281"}

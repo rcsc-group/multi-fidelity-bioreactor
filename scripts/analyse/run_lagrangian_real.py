@@ -16,6 +16,7 @@ import jax
 
 sys.path.insert(0, str(Path(__file__).parents[2]))
 from scripts import lagrangian_mix as lm  # noqa: E402
+from scripts import paths  # noqa: E402  (machine-specific folders)
 
 
 def main():
@@ -32,7 +33,7 @@ def main():
     params = json.load(open(run / "params.json"))
     cu = lm.code_units(params)
     T = cu["T_nd"]
-    out = Path(args.out or f"/oscar/scratch/eaguerov/lagrangian/{run.name}")
+    out = Path(args.out or f"{paths.SCRATCH}/lagrangian/{run.name}")
     out.mkdir(parents=True, exist_ok=True)
     t_mix = params["n_mix_cycles"] * T
     print("code units", cu, flush=True)

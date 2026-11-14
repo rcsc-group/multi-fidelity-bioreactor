@@ -20,8 +20,8 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(ROOT), str(ROOT / "scripts")]
 from scripts.experiments.h3_band_check import DELTA, Offset, sd_log  # noqa: E402
 from scripts.hydro_dataset_v2 import qois  # noqa: E402
-from scripts.test_h1_mfbml import BOUNDS, LF_THETAS, RPMS, hf_points, hf_run, lf_run, load_points, train_lf2d  # noqa: E402
-from scripts.test_h2_mfbml import l9_points, l9_run  # noqa: E402
+from scripts.hypotheses.test_h1_mfbml import BOUNDS, LF_THETAS, RPMS, hf_points, hf_run, lf_run, load_points, train_lf2d  # noqa: E402
+from scripts.hypotheses.test_h2_mfbml import l9_points, l9_run  # noqa: E402
 from mfbml_local.krr_lr_gpr_fullbayes import FullBayesKRRLRGP  # noqa: E402
 
 QS = tuple(sys.argv[1].split(",")) if len(sys.argv) > 1 else ("tau_95_t", "tau_mean_t", "edr_mean_t")   # e.g. tau_amp_t,edr_max_t (Kim statistics)

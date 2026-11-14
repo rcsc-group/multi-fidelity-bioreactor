@@ -9,7 +9,7 @@ Task spec: transfer coefficients flat prior; GP amplitude IG(a0=2, b0=0.1); pred
 nu = n - p + 2 a0, location = reference universal-kriging mean. Derivation in
 scripts/mfbml_local/krr_lr_gpr_bayes.py. Tests: tests/test_krr_lr_gpr_bayes.py.
 
-Protocol = test A (scripts/test_mf_l10_holdout.py): tau_mean_t, tau_95_t; LF L8, L9; n_HF = 3
+Protocol = test A (scripts/hypotheses/test_mf_l10_holdout.py): tau_mean_t, tau_95_t; LF L8, L9; n_HF = 3
 (endpoints 17.5, 37.5 + one interior rpm, 7 designs); held-out L10 rpm scored. Data, LooKRR, fit(),
 metric functions are imported from test A.
 
@@ -24,7 +24,7 @@ Choices where the spec was silent (closest to the spec):
 Reuse helper for T3/T4: as_bayes(model) re-labels a trained reference model (same trained state; the
 T2 run asserts that an independently trained subclass gives identical hyperparameters and mean).
 
-Usage: uv run python scripts/test_t2_bayes_band.py
+Usage: uv run python scripts/hypotheses/test_t2_bayes_band.py
 """
 from __future__ import annotations
 
@@ -41,12 +41,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy import stats
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "scripts"))
 from scripts import figstyle as fs                                              # noqa: E402
 from scripts.plot_mf_fig13 import LooKRR                                        # noqa: E402
-from scripts.test_mf_l10_holdout import (load, col, fit, pred, rel_rmse, ENDS, DS,  # noqa: E402
+from scripts.hypotheses.test_mf_l10_holdout import (load, col, fit, pred, rel_rmse, ENDS, DS,  # noqa: E402
                                           QOIS, LFS, OUT)
 from mfbml_local.krr_lr_gpr_bayes import KernelRidgeLinearGaussianProcessBayes as Bayes  # noqa: E402
 

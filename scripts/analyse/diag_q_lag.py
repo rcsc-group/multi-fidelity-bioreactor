@@ -19,9 +19,7 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "scripts"))
-import sys as _sys; from pathlib import Path as _SP  # noqa: E402
-_sys.path.insert(0, str(_SP(__file__).resolve().parents[1]))  # scripts/: shared modules
-from test_q_periodicity import load_run, periodicity_error  # noqa: E402
+from scripts.hypotheses.test_q_periodicity import load_run, periodicity_error  # noqa: E402
 
 
 

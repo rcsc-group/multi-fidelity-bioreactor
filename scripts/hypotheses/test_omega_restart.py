@@ -31,6 +31,7 @@ import numpy as np
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 import scripts.chain as chain
 from scripts.experiments.settling_study_grid import GEOMETRY, FILL_LEVEL, PROJECT_ROOT, omega_b_of
+from scripts import paths  # noqa: E402  (machine-specific folders)
 
 chain.validate_params = lambda params: None
 
@@ -51,7 +52,7 @@ for src_rpm in (17.5, 37.5):
             "checkpoint_path": str(src_dir / "checkpoint.dump"),
         },
         "mpi": True, "ntasks": 8, "mem_per_cpu": "4G", "walltime": "06:00:00",
-        "binary": "/oscar/scratch/eaguerov/BioReactor-mpi-phasefix2",
+        "binary": f"{paths.SCRATCH}/BioReactor-mpi-phasefix2",
         "submit": True, "exclude": "node2336",
     }
     su = src_rpm / TARGET_RPM

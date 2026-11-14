@@ -22,7 +22,7 @@ from scripts import figstyle as fs  # noqa: E402
 from scripts import replay_gate as rg  # noqa: E402
 from scripts.experiments import test_chain_l10_theta7 as tc  # noqa: E402
 from scripts.experiments import test_s89_l8_to_l9 as s89  # noqa: E402
-from scripts.test_h1_mfbml import RPMS  # noqa: E402
+from scripts.hypotheses.test_h1_mfbml import RPMS  # noqa: E402
 
 EXP = ROOT / "experiments/multifidelity"
 OUT = ROOT / "internal/docs/meetings/prereg"

@@ -44,8 +44,12 @@ import struct
 
 import numpy as np
 from scipy.optimize import least_squares
+import sys  # noqa: E402
+from pathlib import Path  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # repo root
+from scripts import paths  # noqa: E402  (machine-specific folders)
 
-FRAMES_DIR = "/oscar/scratch/eaguerov/tmp/dmd_experiment/rundir/frames_dmd"
+FRAMES_DIR = f"{paths.SCRATCH}/tmp/dmd_experiment/rundir/frames_dmd"
 
 
 def load_frame(fpath):

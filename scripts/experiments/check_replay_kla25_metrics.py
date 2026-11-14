@@ -20,7 +20,7 @@ sys.path.insert(0, str(ROOT))
 from scripts import postprocess as pp  # noqa: E402
 from scripts import replay_gate as rg  # noqa: E402
 from scripts.experiments.replay_chain import DB, rid  # noqa: E402
-from scripts.test_h1_mfbml import RPMS  # noqa: E402
+from scripts.hypotheses.test_h1_mfbml import RPMS  # noqa: E402
 
 THRESH = {"kLa_1T_10": 0.10, "kLa_1T_25": 0.25, "kLa_1T_50": 0.50}
 QOIS = ("kLa_1T_10", "kLa_1T_25", "kLa_1T_50", "dtmix_0.50")

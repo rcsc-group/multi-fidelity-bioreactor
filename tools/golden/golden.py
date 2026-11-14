@@ -31,9 +31,11 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # repo root
+from scripts import paths  # noqa: E402  (machine-specific folders)
 
-QCC = "/oscar/data/dharri15/eaguerov/basilisk/src/qcc"
-BASILISK = "/oscar/data/dharri15/eaguerov/basilisk/src"
+QCC = f"{paths.BASILISK}/qcc"
+BASILISK = f"{paths.BASILISK}"
 CFLAGS = ["-O2", "-w", "-fopenmp", "-Wall", "-autolink"]  # as `make build`
 LDFLAGS = [f"-L{BASILISK}/gl", "-lglutils", "-lfb_tiny", "-lGL", "-lm"]
 BUILDS = {"default": [], "diag": ["-DDIAGNOSTICS=1"], "lean": ["-DEXTRA_TRACERS=0"],

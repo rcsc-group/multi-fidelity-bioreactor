@@ -22,9 +22,10 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from scripts.simulate import submit_slurm  # noqa: E402
+from scripts import paths  # noqa: E402  (machine-specific folders)
 from scripts.experiments.submit_l8_t5_t6 import params as l8_params  # noqa: E402
 
-BINARY = "/oscar/data/dharri15/eaguerov/bin/BioReactor-mpi-xlevel-chain"
+BINARY = f"{paths.DATA}/bin/BioReactor-mpi-xlevel-chain"
 N_CYCLES, NTASKS, MARGIN, SPINUP_POST = 12, 32, 1.2, 230
 # BINARY predates f1c11e0 (deadline checkpoint): a job killed at walltime leaves NO dump.
 _RATE_32 = {17.5: 194.0, 25: 162.0, 32.5: 51.0, 37.5: 42.0}  # min per L10 cycle, 32 ranks; 17.5-32.5 measured on x8_l10 (2026-10-12)

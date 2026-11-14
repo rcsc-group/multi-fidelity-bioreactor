@@ -11,7 +11,7 @@ sigma^2: the solver's liquid variance (chi_scale.sigma2_native, same as chi). <|
 differences (dc * n)^2 over x-faces plus over y-faces, each over faces whose two cells are pure liquid
 (f, cs >= 0.999). d sigma^2/dt: linear fit of sigma^2 over one period centred on each snapshot.
 Rule: NUMERICAL-DOMINATED if median r (chi 0.5-0.95) >= 10 in every scal run; PHYSICAL if <= 2 in every scal run;
-else MIXED. Usage: uv run python scripts/test_v_variance_budget.py
+else MIXED. Usage: uv run python scripts/hypotheses/test_v_variance_budget.py
 """
 from __future__ import annotations
 
@@ -21,7 +21,7 @@ from pathlib import Path
 
 import numpy as np
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from scripts.chi_scale import G_LIQ, _solver_reference, iter_snapshots, locate, sigma2_native  # noqa: E402
 

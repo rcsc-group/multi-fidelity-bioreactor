@@ -5,7 +5,7 @@ Rows: tau_95, mean tau, EDR. Columns: theta = 4, 7, 9 deg. x: rocking speed (rpm
   dashed lines: L8 fit (KRR) and L9 fit (GP).
   grey line + band: three-level prediction trained on all 13 L10 runs, with 95% interval incl. the L9 uncertainty.
   grey bars: the same model trained on the 12 other L10 runs, predicting that run (each L10 run is left out once).
-Method: scripts/test_h3_mfbml.py (log QoI, FullBayesKRRLRGP), band propagation: scripts/experiments/h3_band_check.py (variant B).
+Method: scripts/hypotheses/test_h3_mfbml.py (log QoI, FullBayesKRRLRGP), band propagation: scripts/experiments/h3_band_check.py (variant B).
 Usage: uv run python scripts/experiments/fig_h3_rpm.py
 """
 from __future__ import annotations
@@ -27,9 +27,9 @@ from scripts import figstyle as fs  # noqa: E402
 from scripts.experiments.h3_band_check import DELTA, Offset, sd_log  # noqa: E402
 from scripts.hydro_dataset_v2 import COL_EDISS, RHO, qois  # noqa: E402
 from scripts.postprocess import _load_dat, _t_scales  # noqa: E402
-from scripts.test_h1_mfbml import (BOUNDS, LF_THETAS, RPMS, hf_points, hf_run, lf_run,  # noqa: E402
+from scripts.hypotheses.test_h1_mfbml import (BOUNDS, LF_THETAS, RPMS, hf_points, hf_run, lf_run,  # noqa: E402
                                    load_points, train_lf2d)
-from scripts.test_h2_mfbml import l9_points, l9_run  # noqa: E402
+from scripts.hypotheses.test_h2_mfbml import l9_points, l9_run  # noqa: E402
 
 MF = ROOT / "experiments/multifidelity"
 THETAS = (4.0, 7.0, 9.0)

@@ -4,7 +4,7 @@ Starts from L{LMIN}-L{LMAX}; while G4 fails and at least 3 levels remain, remove
 Uses gcbml.gates.g4_coarsest_level (campaign branch w6d; run with PYTHONPATH=<worktree>/src ahead of the installed
 package). Same model and priors as gcbml_hydro_fit_v3.py (TWY2, scheme order prior).
 
-Run: PYTHONPATH=/oscar/data/dharri15/eaguerov/Github/gcbml-wt/w6b/src uv run --project /oscar/data/dharri15/eaguerov/Github/gcbml \
+Run: PYTHONPATH=$MFB_DATA/Github/gcbml-wt/w6b/src uv run --project $MFB_DATA/Github/gcbml \
          python scripts/analyse/gcbml_hydro_g4.py [LMIN] [LMAX]
 """
 import json

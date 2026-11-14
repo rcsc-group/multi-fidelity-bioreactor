@@ -13,8 +13,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
-from scripts.test_h1_mfbml import LF_THETAS, RPMS, hf_points, hf_run, lf_run  # noqa: E402
-from scripts.test_h2_mfbml import l9_points, l9_run  # noqa: E402
+from scripts.hypotheses.test_h1_mfbml import LF_THETAS, RPMS, hf_points, hf_run, lf_run  # noqa: E402
+from scripts.hypotheses.test_h2_mfbml import l9_points, l9_run  # noqa: E402
 
 COLS = ("kLa_1T_10", "kLa_1T_25", "kLa_1T_50", "kLa_10", "kLa_25", "kLa_50", "dtmix_0.50", "dtmix_0.75", "dtmix_0.95")
 

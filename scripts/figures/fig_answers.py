@@ -18,7 +18,7 @@ sys.path.insert(0, str(ROOT))
 from scripts import figstyle as fs  # noqa: E402
 from scripts.experiments.check_settled_t10 import POINTS, late  # noqa: E402
 from scripts.hydro_dataset_v2 import qois  # noqa: E402
-from scripts.test_h1_mfbml import hf_run  # noqa: E402
+from scripts.hypotheses.test_h1_mfbml import hf_run  # noqa: E402
 
 MF = ROOT / "experiments/multifidelity"
 

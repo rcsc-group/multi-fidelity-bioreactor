@@ -5,7 +5,7 @@ not decisive: the dx^1.5 hypothesis predicts r(L10)/r(L9) ~ 0.35 at equal chi (3
 -> L10 ~ 60-85)." Run: v_l10_rpm32.5_th7 (restart from settled L10, tracer released 1 cycle later).
 L8 and L9 (scal_l{8,9}_rpm32.5_th7, from test_v_variance_budget.json) are binned in the same chi window, so all
 three levels are compared at equal chi.
-Usage: uv run python scripts/test_v_l10.py
+Usage: uv run python scripts/hypotheses/test_v_l10.py
 """
 from __future__ import annotations
 
@@ -15,9 +15,9 @@ from pathlib import Path
 
 import numpy as np
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
-from scripts.test_v_variance_budget import series  # noqa: E402
+from scripts.hypotheses.test_v_variance_budget import series  # noqa: E402
 
 RUN = "v_l10_rpm32.5_th7"
 REF = {8: "scal_l8_rpm32.5_th7", 9: "scal_l9_rpm32.5_th7"}  # binned from test_v_variance_budget.json

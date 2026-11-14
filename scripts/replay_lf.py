@@ -23,14 +23,15 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from scripts import replay_gate as rg  # noqa: E402
+from scripts import paths  # noqa: E402  (machine-specific folders)
 from scripts import postprocess as pp  # noqa: E402
 from scripts.simulate import submit_slurm  # noqa: E402
 
-SRC_RUNS = Path("/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor/runs")
-REC_ROOT = Path("/oscar/data/dharri15/eaguerov/replay_records/lf")
+SRC_RUNS = Path(f"{paths.REPO}/runs")
+REC_ROOT = Path(f"{paths.DATA}/replay_records/lf")
 REC_BIN = rg.BIN_DIR / "BioReactor-recL"
 REP_BIN = rg.BIN_DIR / "BioReactor-replayL16"
-SRC_TREE = Path("/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor/src")  # sources the binaries were built from
+SRC_TREE = Path(f"{paths.REPO}/src")  # sources the binaries were built from
 RPMS = [15 + 2.5 * i for i in range(10)]
 THETAS = [7.0, 4.0, 5.5, 9.0]
 N_REPLAY_CYCLES = 22

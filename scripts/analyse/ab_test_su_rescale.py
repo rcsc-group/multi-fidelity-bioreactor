@@ -39,10 +39,11 @@ import numpy as np
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 import scripts.chain as chain
 from scripts.experiments.settling_study_grid import GEOMETRY, FILL_LEVEL, PROJECT_ROOT, omega_b_of
+from scripts import paths  # noqa: E402  (machine-specific folders)
 
 chain.validate_params = lambda params: None
 
-BINARY = "/oscar/scratch/eaguerov/BioReactor-mpi-phasefix-legacysu"
+BINARY = f"{paths.SCRATCH}/BioReactor-mpi-phasefix-legacysu"
 RPM, TARGET, FIDELITY, CYCLES = 32.5, 7.0, 7, 120
 runs_dir = Path(PROJECT_ROOT) / "runs"
 

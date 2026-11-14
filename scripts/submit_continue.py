@@ -31,9 +31,10 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from scripts.postprocess import _t_scales  # noqa: E402
+from scripts import paths  # noqa: E402  (machine-specific folders)
 from scripts.simulate import source_forcing_keys, submit_slurm  # noqa: E402
 
-MPI_SCRATCH = Path("/oscar/scratch/eaguerov/mpi_runs")
+MPI_SCRATCH = Path(f"{paths.SCRATCH}/mpi_runs")
 
 
 def stage_phase(src: Path, stage: Path) -> None:

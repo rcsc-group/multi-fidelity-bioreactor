@@ -13,9 +13,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from scripts.simulate import submit_slurm
+from scripts import paths  # noqa: E402  (machine-specific folders)
 
 root = Path(__file__).resolve().parents[2]
-TESTC_BINARY = "/oscar/scratch/eaguerov/BioReactor-mpi-testc"
+TESTC_BINARY = f"{paths.SCRATCH}/BioReactor-mpi-testc"
 
 src_params = {
     "run_id": "testc2_source_th4.1", "fidelity": 6,
