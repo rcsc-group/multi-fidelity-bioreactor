@@ -54,3 +54,4 @@ __pycache__/
 !docs_site/assets/**
 .claude/worktrees/
 internal/talks/dfd2026/lit_pdfs/
+tools/.regroup_moves.json
