@@ -328,12 +328,16 @@ def build_segment_list(
 
         if k > 0 and prev is not None:
             p["t_checkpoint"]        = t_checkpoint
-            p["omega_b_prev"]        = float(prev.get("omega_b", 3.93))
-            p["theta_max_prev"]      = list(prev.get("theta_max", [7.0, 0.0, 0.0]))
-            p["phi_angular_prev"]    = list(prev.get("phi_angular", [0.0, 0.0, 0.0]))
-            p["amplitude_h_prev"]    = list(prev.get("amplitude_h", [0.0, 0.0, 0.0]))
-            p["phi_horizontal_prev"] = list(prev.get("phi_horizontal", [0.0, 0.0, 0.0]))
-            p["omega_h_prev"]        = float(prev.get("omega_h", 0.0))
+            # the source forcing: from the dump's label for a binary that reads it (which refuses *_prev),
+            # as *_prev keys for an older binary (simulate.source_forcing_keys; pitfall "restart-ramp")
+            from scripts.simulate import source_forcing_keys
+            z3 = [0.0, 0.0, 0.0]
+            p.update(source_forcing_keys(
+                {"omega_b": float(prev.get("omega_b", 3.93)),
+                 "theta_max": list(prev.get("theta_max", [7.0, 0.0, 0.0])),
+                 "phi_angular": list(prev.get("phi_angular", z3)), "amplitude_h": list(prev.get("amplitude_h", z3)),
+                 "phi_horizontal": list(prev.get("phi_horizontal", z3)), "omega_h": float(prev.get("omega_h", 0.0))},
+                options.get("binary") or options.get("_binary")))
 
         segments.append(p)
 

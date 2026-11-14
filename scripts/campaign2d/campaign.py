@@ -285,7 +285,7 @@ def l9_warm_params(src_params: dict, source_run: str, t_ck: float, rpm: float, t
     """L9 warm start (plan 1.3, W9 type): the completed L8 source at the same (rpm, theta), fidelity 9, the same binary,
     t_checkpoint = the source's last logged time, N_WARM_L9 warm-up cycles, release, N_POST_L9 post cycles."""
     from scripts.postprocess import _t_scales
-    p = dict(src_params)
+    p = {k: v for k, v in src_params.items() if not k.endswith("_prev")}   # the source's own restart keys
     for k in ("_canonical_run_dir", "next_run_id", "_err_file", "_source_run"):
         p.pop(k, None)
     _, T = _t_scales(p)

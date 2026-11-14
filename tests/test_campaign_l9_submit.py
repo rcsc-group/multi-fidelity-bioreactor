@@ -65,3 +65,13 @@ def test_l9_warm_params_leave_the_source_to_the_label(tmp_path):
     new.write_bytes(b"\x7fELF ... restart refused ...")
     p = c.l9_warm_params(_src(new), "c2d_l8_rpm20.00_th4.00", t_ck=140.0, rpm=20.0, theta=4.0, binary=str(new))
     assert not [k for k in p if k.endswith("_prev")]
+
+
+def test_l9_warm_params_drop_the_sources_own_prev_keys(tmp_path):
+    """An L8 source that was itself a restart carries its own *_prev keys. With a label binary they must not
+    reach the L9 params (the solver refuses *_prev next to a label). Review finding 2026-11-14."""
+    new = tmp_path / "BioReactor-label"
+    new.write_bytes(b"\x7fELF ... restart refused ...")
+    src = _src(new) | {"omega_b_prev": 1.0, "theta_max_prev": [2.0, 0.0, 0.0], "t_checkpoint": 50.0}
+    p = c.l9_warm_params(src, "c2d_l8_rpm20.00_th4.00", t_ck=140.0, rpm=20.0, theta=4.0, binary=str(new))
+    assert not [k for k in p if k.endswith("_prev")]

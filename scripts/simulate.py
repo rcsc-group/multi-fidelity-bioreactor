@@ -271,6 +271,11 @@ def submit_slurm(
             checkpoint = str(scratch_ck)
     else:
         effective_params = params_path
+        if checkpoint:   # the solver runs in run_dir and reads the dump's label there
+            import shutil as _shutil
+            label = Path(checkpoint).parent / "checkpoint.phase"
+            if label.exists() and label.resolve() != (run_dir / "checkpoint.phase").resolve():
+                _shutil.copy2(label, run_dir / "checkpoint.phase")
 
     export_str = f"NONE,PARAMS={effective_params}"
     if checkpoint:

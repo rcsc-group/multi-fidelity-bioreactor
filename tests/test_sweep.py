@@ -298,11 +298,23 @@ def test_segment_has_t_end():
         assert s.get("t_end", 0.0) > 0.0
 
 
-def test_restart_has_omega_b_prev():
-    """Restart segment records the previous omega_b for smooth ramp in C."""
-    segs = build_segment_list(_group_of_two(), _OPTIONS)
+def test_restart_has_omega_b_prev(tmp_path):
+    """With an older binary (no label reader) the restart segment records the previous forcing as *_prev."""
+    old = tmp_path / "BioReactor-old"
+    old.write_bytes(b"\x7fELF old solver")
+    segs = build_segment_list(_group_of_two(), _OPTIONS | {"binary": str(old)})
     assert "omega_b_prev" in segs[1]
     assert segs[1]["omega_b_prev"] == pytest.approx(3.14159)
+
+
+def test_restart_leaves_the_source_to_the_label(tmp_path):
+    """A binary that reads the dump's label refuses *_prev next to it (two sources): no *_prev in any segment.
+    Review finding 2026-11-14 (sweep chains were refused at segment 2)."""
+    new = tmp_path / "BioReactor-label"
+    new.write_bytes(b"\x7fELF ... restart refused ...")
+    segs = build_segment_list(_group_of_two(), _OPTIONS | {"binary": str(new)})
+    assert segs[1]["t_checkpoint"] > 0
+    assert not [k for s in segs for k in s if k.endswith("_prev")]
 
 
 def test_explicit_n_mix_cycles_respected():

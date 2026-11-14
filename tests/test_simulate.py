@@ -335,3 +335,19 @@ def test_replay_restart_needs_no_prev(tmp_path):
     with patch("subprocess.run", return_value=ok):
         assert submit_slurm(_restart(rec_dir="/x"), project_root=PROJECT_ROOT, runs_root=tmp_path,
                             mpi_scratch_root=tmp_path / "mpi") == "43"
+
+
+def test_submit_slurm_serial_restart_stages_the_label(tmp_path):
+    """Non-MPI restart: the solver runs in runs/<id>/ and reads checkpoint.phase there, so the dump's label must
+    be copied next to params.json (the MPI branch copies it to scratch). Review finding 2026-11-14."""
+    src = tmp_path / "src_run"
+    src.mkdir()
+    (src / "checkpoint.dump").write_bytes(b"\0" * 16)
+    (src / "checkpoint.phase").write_text('{"t": 5.0, "omega_b": 3.0}')
+    fake = MagicMock(stdout="Submitted batch job 1\n", returncode=0)
+    p = {**SHORT_PARAMS, "run_id": "serial_restart", "t_checkpoint": 5.0}
+    with patch("subprocess.run", return_value=fake):
+        submit_slurm(p, project_root=PROJECT_ROOT, runs_root=tmp_path / "runs", checkpoint=str(src / "checkpoint.dump"),
+                     template=PROJECT_ROOT / "config" / "slurm_template.sh", mpi_scratch_root=tmp_path / "mpi")
+    staged = tmp_path / "runs" / "serial_restart" / "checkpoint.phase"
+    assert staged.is_file() and staged.read_text() == (src / "checkpoint.phase").read_text()
