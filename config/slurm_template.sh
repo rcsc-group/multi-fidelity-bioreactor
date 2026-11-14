@@ -83,6 +83,9 @@ if [ -n "$NEXT_RUN" ]; then
         echo "ERROR: checkpoint.dump missing for $RUN_DIR — cannot start next segment" >&2
         exit 1
     fi
+    # The dump's label goes with the dump: the next segment runs in its own folder, and a binary that reads
+    # the label refuses a restart without it (src/forcing_state.h; pitfall restart-ramp).
+    cp "$RUN_DIR/checkpoint.phase" "$(dirname "$NEXT_PARAMS")/checkpoint.phase" 2>/dev/null || true
     WALLTIME=$(python3 -c "
 import json, sys
 try:
