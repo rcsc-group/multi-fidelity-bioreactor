@@ -49,6 +49,9 @@ def main(src: Path, out: Path) -> None:
             q = list(r["error"])[j]
             pts = [(k, 100 * p["error"][q], level(p["with"])) for k, p in enumerate(clean)
                    if p["error"][q] is not None and math.isfinite(p["error"][q])]
+            if not pts:   # no clean pair measured this quantity: nothing to draw
+                ax.set_axis_off()
+                continue
             for k, y, lv in pts:
                 ax.plot(k, y, ls="none", marker=fs.LEVEL_MARKER.get(lv, "h"), color=fs.level_colour(lv), ms=6)
             if r["error"][q] is not None:

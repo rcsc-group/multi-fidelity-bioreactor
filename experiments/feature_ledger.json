@@ -1,0 +1,331 @@
+{
+ "restart_label": {
+  "status": "stale: half/checkpoint.phase",
+  "n_clean": 12,
+  "error": {
+   "dtmix_0.25": 0.15761702565322544,
+   "dtmix_0.50": 0.07748141830773592,
+   "edr_95": -0.1573474773389677,
+   "tau_95_qss": -0.0500341730489256
+  },
+  "saves_core_h": 21.78666666666666,
+  "runs": [
+   {
+    "with": "ab9prev_l9_rpm34.81_th4.26",
+    "without": "c2d_l9_rpm34.81_th4.26",
+    "pair": "same-source",
+    "cost_with": 61.16444444444444,
+    "cost_without": 56.684444444444445,
+    "error": {
+     "dtmix_0.25": 0.4046112716567376,
+     "dtmix_0.50": 0.02247791253295217,
+     "edr_95": -0.43530383643283543,
+     "tau_95_qss": -0.16765387059088765
+    }
+   },
+   {
+    "with": "c2d_l9_rpm16.35_th2.33_fix",
+    "without": "c2d_l9_rpm16.35_th2.33",
+    "pair": "same-source",
+    "cost_with": 132.85333333333332,
+    "cost_without": 240.38222222222223,
+    "error": {
+     "dtmix_0.25": 0.22522397928373183,
+     "dtmix_0.50": 0.2370964337776844,
+     "edr_95": 0.050375446082092656,
+     "tau_95_qss": 0.021770579066003215
+    }
+   },
+   {
+    "with": "c2d_l9_rpm19.14_th2.89_fix",
+    "without": "c2d_l9_rpm19.14_th2.89",
+    "pair": "same-source",
+    "cost_with": 189.42222222222222,
+    "cost_without": 273.3511111111111,
+    "error": {
+     "dtmix_0.25": 0.7097777165700394,
+     "dtmix_0.50": NaN,
+     "edr_95": 0.04911055236508255,
+     "tau_95_qss": 0.03146357607826111
+    }
+   },
+   {
+    "with": "c2d_l9_rpm23.14_th2.13_fix",
+    "without": "c2d_l9_rpm23.14_th2.13",
+    "pair": "same-source",
+    "cost_with": 88.93333333333334,
+    "cost_without": 227.21777777777777,
+    "error": {
+     "dtmix_0.25": 0.11689497557391415,
+     "dtmix_0.50": 0.13177649405214775,
+     "edr_95": 0.022790645351996153,
+     "tau_95_qss": -0.01752887905374112
+    }
+   },
+   {
+    "with": "c2d_l9_rpm32.19_th4.51_fix",
+    "without": "c2d_l9_rpm32.19_th4.51",
+    "pair": "same-source",
+    "cost_with": 58.43555555555555,
+    "cost_without": 57.92888888888889,
+    "error": {
+     "dtmix_0.25": 0.00642807495129416,
+     "dtmix_0.50": -0.08758512634054982,
+     "edr_95": -0.28505581585353645,
+     "tau_95_qss": -0.09176107568865732
+    }
+   },
+   {
+    "with": "c2d_l9_rpm33.70_th5.35_fix",
+    "without": "c2d_l9_rpm33.70_th5.35",
+    "pair": "same-source",
+    "cost_with": 59.37777777777778,
+    "cost_without": 56.995555555555555,
+    "error": {
+     "dtmix_0.25": 0.686154993310079,
+     "dtmix_0.50": 0.379271725234946,
+     "edr_95": -0.5734473813432799,
+     "tau_95_qss": -0.24073174032290945
+    }
+   },
+   {
+    "with": "c2d_l9_rpm34.38_th2.66_fix",
+    "without": "c2d_l9_rpm34.38_th2.66",
+    "pair": "same-source",
+    "cost_with": 149.29777777777778,
+    "cost_without": 159.24444444444444,
+    "error": {
+     "dtmix_0.25": 0.19025997479873147,
+     "dtmix_0.50": NaN,
+     "edr_95": 0.2408191379684359,
+     "tau_95_qss": 0.15570589238884014
+    }
+   },
+   {
+    "with": "c2d_l9_rpm36.35_th5.24_fix",
+    "without": "c2d_l9_rpm36.35_th5.24",
+    "pair": "same-source",
+    "cost_with": 83.77777777777777,
+    "cost_without": 57.306666666666665,
+    "error": {
+     "dtmix_0.25": 0.9993680498946951,
+     "dtmix_0.50": 0.8440764180888225,
+     "edr_95": -0.575931516436682,
+     "tau_95_qss": -0.2789632555568867
+    }
+   },
+   {
+    "with": "fig9_l9_rpm37.5_ext1fix",
+    "without": "fig9_l9_rpm37.5_ext1",
+    "pair": "confounded",
+    "cost_with": 64.46222222222222,
+    "cost_without": 45.53777777777778,
+    "error": {
+     "dtmix_0.25": 0.0,
+     "dtmix_0.50": 0.0,
+     "edr_95": NaN,
+     "tau_95_qss": NaN
+    }
+   },
+   {
+    "with": "bo1_l9_rpm30.52_th7.00_fix",
+    "without": "bo1_l9_rpm30.52_th7.00",
+    "pair": "same-source",
+    "cost_with": 108.65777777777778,
+    "cost_without": 213.54666666666665,
+    "error": {
+     "dtmix_0.25": 0.11231243242372213,
+     "dtmix_0.50": 0.22094646865287282,
+     "edr_95": -0.1973123175125977,
+     "tau_95_qss": -0.08063570561071842
+    }
+   },
+   {
+    "with": "bo1_l9_rpm27.38_th6.35_fix",
+    "without": "bo1_l9_rpm27.38_th6.35",
+    "pair": "same-source",
+    "cost_with": 189.4311111111111,
+    "cost_without": 223.05777777777777,
+    "error": {
+     "dtmix_0.25": -0.32905478437705826,
+     "dtmix_0.50": -0.33918297634046457,
+     "edr_95": -0.1173826371653377,
+     "tau_95_qss": -0.01943264048713278
+    }
+   },
+   {
+    "with": "bo1_l9_rpm29.18_th6.20_fix",
+    "without": "bo1_l9_rpm29.18_th6.20",
+    "pair": "same-source",
+    "cost_with": 174.76444444444445,
+    "cost_without": 213.32444444444445,
+    "error": {
+     "dtmix_0.25": -0.18947689711452942,
+     "dtmix_0.50": -0.27999882461575243,
+     "edr_95": -0.05894771362397255,
+     "tau_95_qss": -0.008978433663736296
+    }
+   },
+   {
+    "with": "bo1_l9_rpm35.92_th4.85_fix",
+    "without": "bo1_l9_rpm35.92_th4.85",
+    "pair": "same-source",
+    "cost_with": 189.44,
+    "cost_without": 198.1688888888889,
+    "error": {
+     "dtmix_0.25": 0.12497407650771941,
+     "dtmix_0.50": 0.02318634256332408,
+     "edr_95": -0.2608411259237283,
+     "tau_95_qss": -0.085998497526099
+    }
+   }
+  ]
+ },
+ "cross_level_warmstart": {
+  "status": "confounded",
+  "n_clean": 0,
+  "error": {},
+  "saves_core_h": null,
+  "runs": [
+   {
+    "with": "l10_fig13a_xlevel_rpm32.5",
+    "without": "l10c_rpm32.5_seg1",
+    "pair": "confounded",
+    "cost_with": 386.1688888888889,
+    "cost_without": 4522.08,
+    "error": {
+     "tau_95_qss": 0.008589431747560328,
+     "edr_95": NaN,
+     "kLa_1T_10": NaN,
+     "dtmix_0.50": NaN
+    }
+   },
+   {
+    "with": "x8_l10_rpm32.5_th7",
+    "without": "l10c_rpm32.5_seg1",
+    "pair": "confounded",
+    "cost_with": 189.89333333333335,
+    "cost_without": 4522.08,
+    "error": {
+     "tau_95_qss": -0.016170521004391425,
+     "edr_95": NaN,
+     "kLa_1T_10": NaN,
+     "dtmix_0.50": NaN
+    }
+   },
+   {
+    "with": "w9_l9_rpm17.5_th7",
+    "without": "fig9_l9_rpm17.5",
+    "pair": "confounded",
+    "cost_with": 410.19555555555553,
+    "cost_without": 1112.56,
+    "error": {
+     "tau_95_qss": 0.008493806878631549,
+     "edr_95": NaN,
+     "kLa_1T_10": 0.04306823875599397,
+     "dtmix_0.50": -0.21866295264623958
+    }
+   },
+   {
+    "with": "w9_l9_rpm25_th7",
+    "without": "fig9_l9_rpm25",
+    "pair": "confounded",
+    "cost_with": 290.4,
+    "cost_without": 968.9511111111111,
+    "error": {
+     "tau_95_qss": 0.004964661317916841,
+     "edr_95": NaN,
+     "kLa_1T_10": 0.06170166440859148,
+     "dtmix_0.50": 0.002352941176471779
+    }
+   },
+   {
+    "with": "w9_l9_rpm32.5_th7",
+    "without": "fig9_l9_rpm32.5",
+    "pair": "confounded",
+    "cost_with": 69.58222222222223,
+    "cost_without": 581.5466666666666,
+    "error": {
+     "tau_95_qss": 0.020311705289784543,
+     "edr_95": NaN,
+     "kLa_1T_10": -0.0804896826321887,
+     "dtmix_0.50": -0.45692307692307677
+    }
+   }
+  ]
+ },
+ "chaining": {
+  "status": "stale: half/checkpoint.phase",
+  "n_clean": 2,
+  "error": {
+   "tau_95_qss": 0.00135451743285947,
+   "edr_95": null
+  },
+  "saves_core_h": 26.28444444444446,
+  "runs": [
+   {
+    "with": "x8e_l10_rpm17.5_th7",
+    "without": "l10_fig13a_xlevel_rpm17.5",
+    "pair": "same-source",
+    "cost_with": 767.7955555555556,
+    "cost_without": 541.6711111111111,
+    "error": {
+     "tau_95_qss": -0.0033885889150137016,
+     "edr_95": NaN
+    }
+   },
+   {
+    "with": "x8e_l10_rpm25_th7",
+    "without": "l10_fig13a_xlevel_rpm25",
+    "pair": "same-source",
+    "cost_with": 251.68,
+    "cost_without": 530.3733333333333,
+    "error": {
+     "tau_95_qss": 0.006097623780732642,
+     "edr_95": NaN
+    }
+   }
+  ]
+ },
+ "flux_replay": {
+  "status": "confounded",
+  "n_clean": 0,
+  "error": {},
+  "saves_core_h": null,
+  "runs": [
+   {
+    "with": "f2_replay",
+    "without": "f2_coupled",
+    "pair": "confounded",
+    "cost_with": 0.058055555555555555,
+    "cost_without": 0.21,
+    "error": {
+     "kLa_1T_25": -0.018797201323237922,
+     "dtmix_0.50": 0.05486486486486419
+    }
+   },
+   {
+    "with": "f3b_ls8",
+    "without": "f3b_coupled",
+    "pair": "confounded",
+    "cost_with": 1.1155555555555556,
+    "cost_without": 14.862222222222222,
+    "error": {
+     "kLa_1T_25": 0.0001038374472563941,
+     "dtmix_0.50": 0.0
+    }
+   },
+   {
+    "with": "f3b_loop1",
+    "without": "f3b_coupled",
+    "pair": "confounded",
+    "cost_with": 1.3377777777777777,
+    "cost_without": 14.862222222222222,
+    "error": {
+     "kLa_1T_25": 0.5127276208078269,
+     "dtmix_0.50": 2.5773195877265564e-05
+    }
+   }
+  ]
+ }
+}
