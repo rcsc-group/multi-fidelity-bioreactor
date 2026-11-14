@@ -150,13 +150,25 @@ def run_bundle(src: Path, work: Path, only=None, cases=None, run_case=default_ru
             env["BIOREACTOR_MAXRUNTIME_S"] = str(int(MAXRUNTIME_RESERVE_S + frac * cw["wall_s"]))
         restart = runs / c.parent / c.restart if c.restart else None
         shutil.rmtree(rd, ignore_errors=True)   # never read a file an earlier bundle left here
-        if restart is not None:   # an early dump's phase, read by the solver from its working directory
+        if restart is not None and c.stage_label:   # the dump's label, read from the working directory
             stage_phase(restart.parent, rd)
         if name == "kill_resume":
             p = resume_params(p, restart, t_end_abs=bc.END * bc.period(bc.RPM_A))
         _run_and_record(rec, c, bins[c.build], rd, p, restart, env, run_case, qoi_fn)
+        if c.expect_refusal:
+            _grade_refusal(rec, rd)
     (work / "bundle.json").write_text(json.dumps(out, indent=1))
     return out
+
+
+def _grade_refusal(rec, rd) -> None:
+    """A case the solver must refuse: 'refused' if it stopped with ERROR on stderr, else 'failed'."""
+    err = (rd / "stderr.txt").read_text() if (rd / "stderr.txt").exists() else ""
+    if rec["status"] == "failed" and "ERROR" in err:
+        rec["status"], rec["qoi"] = "refused", {}
+    else:
+        rec["status"] = "failed"
+        rec["error"] = (rec["error"] or "the solver ran; it must refuse this restart") + f" | stderr: {err[-300:]}"
 
 
 def _run_and_record(rec, c, binary, rd, p, restart, env, run_case, qoi_fn) -> None:
@@ -212,7 +224,7 @@ def main():
     out = run_bundle(a.src.resolve(), a.work.resolve(), a.only, fidelity=a.fidelity)
     for n, c in out["cases"].items():
         print(f"{n:12s} {c['status']:8s} {c['wall_s']:7.1f} s  {c['error'][:100]}")
-    sys.exit(0 if all(c["status"] == "ok" or "MPI" in c["error"] for c in out["cases"].values()) else 1)
+    sys.exit(0 if all(c["status"] in ("ok", "refused") or "MPI" in c["error"] for c in out["cases"].values()) else 1)
 
 
 if __name__ == "__main__":

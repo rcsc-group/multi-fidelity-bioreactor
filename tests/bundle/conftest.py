@@ -17,6 +17,7 @@ import yaml
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from tools.bundle.bundle import src_hash  # noqa: E402
+from tools.bundle import cases as bc  # noqa: E402
 
 BARS = ROOT / "tools" / "bundle" / "bars.yaml"
 
@@ -30,8 +31,9 @@ def case(bundle: dict, name: str) -> dict:
     c = bundle["cases"].get(name)
     if c is None:
         pytest.fail(f"case {name} is not in the bundle")
-    if c["status"] != "ok":
-        pytest.fail(f"case {name} {c['status']}: {c['error']}")
+    expected = "refused" if getattr(bc.CASES.get(name), "expect_refusal", False) else "ok"
+    if c["status"] != expected:
+        pytest.fail(f"case {name} {c['status']} (expected {expected}): {c['error']}")
     return c
 
 

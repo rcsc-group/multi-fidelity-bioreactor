@@ -232,9 +232,9 @@ def plan_extension(runs_root: Path, base_run_id: str,
 
 
 def extension_params(plan: dict, t_ck: float) -> dict:
-    """Params of an extension: the continuation rule of submit_continue.build_params (restart_continue=1,
-    *_prev = the current forcing so the solver does not ramp it again from zero, n_mix_cycles=0 so the oxygen
-    event runs from the first step), with this plan's run id. The old version set none of the *_prev keys and
+    """Params of an extension: the continuation rule of submit_continue.build_params (restart_continue=1, the
+    forcing continues without a ramp: from the dump's label, or *_prev for a binary older than the label;
+    n_mix_cycles=0 so the oxygen event runs from the first step), with this plan's run id. The old version set none of the *_prev keys and
     n_mix_cycles=1 (fig9_l9_rpm37.5_ext1: velocity +49 % in the 3rd period after the seam; diary 2026-11-13).
     Pitfall "restart-ramp" in docs_site/developer/solver-pitfalls.md."""
     from scripts.submit_continue import build_params

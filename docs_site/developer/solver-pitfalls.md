@@ -84,18 +84,21 @@ condition) keep the loop going for ever. The coupled run ends with `return 1` fr
 
 The time unit `T_bio` depends on `omega_b` **and** `theta_max`. A checkpoint written at a whole number
 of periods of one run is not at a whole number of periods of a run with other parameter values. The
-restored fields are at phase 0, so the forcing must also be at phase 0: add an offset to `t` in the
-forcing (`t_phase_offset`). Do not change `t` itself (the scheduler then fails in `dtnext()`).
+restored fields are at phase 0, so the forcing must also be at phase 0. Since 2026-11-13 the dump's label
+(`checkpoint.phase`, see restart-ramp) carries the forcing phase in periods (`cycles`), and the forcing uses
+the integrated phase `psi(t)` from there (`src/forcing_state.h`). Do not change `t` itself (the scheduler
+then fails in `dtnext()`).
 
 Compute the offset from the restored time alone (the nearest period boundary), not from the ratio of
 the old and new periods. The ratio is 1 for the second link of a chain that changes nothing, but that
 link's time already carries the first link's offset, so it would resume off phase. Errors of tens of
 degrees put the flow on a different quasi-steady state (about +25% on mean shear stress).
 
-An early (wall-clock) dump is not on a period boundary; it writes its phase to `checkpoint.phase`.
-The solver reads that file from its **working directory**, not from the dump's folder. A resume that runs
-in another folder must copy it there first (`scripts/submit_continue.stage_phase`). If the file is not
-found, the solver silently takes the nearest period boundary. Measured 2026-11-13 (feature bundle): a dump
+An early (wall-clock) dump is not on a period boundary; its label holds its phase. The solver reads the
+label from its **working directory**, not from the dump's folder. A resume that runs in another folder must
+copy it there first (`scripts/submit_continue.stage_phase`; `simulate.submit_slurm` copies it for MPI
+jobs). Since 2026-11-13 a missing label stops the restart; before, the solver silently took the nearest
+period boundary. Measured 2026-11-13 (feature bundle): a dump
 at 1.84 periods was resumed 0.16 period off phase; velocity +26 %, and the run stopped at 3.84 periods
 instead of 3.
 
@@ -110,13 +113,52 @@ current ones. That is how a sweep changes from one condition to the next smoothl
 not in `params.json`, it is 0, so a plain continuation ramps from **zero** rocking while the liquid still
 sloshes at full amplitude.
 
-**Rule:** a continuation sets `*_prev` = its own forcing, `restart_continue = 1`, `n_mix_cycles = 0`. Do not
-write these keys by hand: use `scripts/submit_continue.build_params` (`scripts/autoextend.py` uses it since
-2026-11-13; before that it set none of them). To check old runs: a continuation whose `params.json` has
-`restart_continue: 1` and no `theta_max_prev` has this defect.
+Found again on 2026-11-13 in all 8 L8 -> L9 campaign warm starts (`campaign.py` wrote no `*_prev`): the
+L9 velocity peaked +40 % and was still +10..+17 % at the tracer release; the BO objective dtmix_0.25 came
+out 14.2 instead of 19.9 periods at 34.8 rpm (diary 2026-11-13).
+
+**Rule since 2026-11-13 (binaries built from this `src/`):** the dump carries its source. Every dump writes
+a label, `checkpoint.phase`: the forcing at that instant (`omega_b`, `theta_max`, ... ; inside a ramp, the
+ramped values), its phase in periods, and the velocity unit of the fields (`U_bio`). A restart ramps from
+the label to `params.json`, in amplitude, phase **and frequency** (`src/forcing_state.h`). Same forcing
+(continuation, cross-level warm start) = no ramp, with nothing to set. `params.json` holds the target only:
+
+- no label next to the run -> the solver stops (ERROR, exit code 1);
+- a label with the forcing **and** `*_prev` keys -> stops (two sources);
+- an old label (phase only, written before 2026-11-13) -> needs `*_prev` (allowed, with a WARNING);
+- `restart_forcing.json` records the angle and its rate at the restart; the bundle guard S13 checks that
+  they equal the label's (no jump).
+
+**Older binaries** (all production binaries before the lean branch is merged) still need `*_prev` = the
+source forcing; without it they ramp from zero. `scripts/simulate.binary_reads_label` tells the two apart,
+`simulate.source_forcing_keys` writes `*_prev` only for an old binary, and `submit_slurm` refuses a restart
+that breaks either rule. Use `scripts/submit_continue.build_params` or `scripts/chain.py`; never write these
+keys by hand. To check old runs: a restart whose `params.json` has no `theta_max_prev` and that ran on an
+old binary has this defect.
 
 Corollary for tests: a cold run is inside its own ramp for its first 3 periods. Compare a restarted run
 with a cold run only after the cold run's ramp.
+
+## qcc-dimension-check
+
+**Symptom:** `qcc` fails with exit code 2 and prints nothing but the usual `stencils` warnings. The same
+source can build in one folder and fail in another.
+
+**Cause:** with dimensional analysis on (the default), `qcc` runs `main()` and the events in an interpreter
+before it accepts the build (`ast/interpreter/`). There `params.json` is never read, `fopen` returns no file
+and `fread` an undefined value (`ast/interpreter/overload.h`). Every condition on an undefined value splits
+the interpreter's run, and when the run uses up its call budget (`-maxcalls`, default 20 M) the build fails
+(`qcc.c`: "status = 2; // dimensional error"), with no message unless you pass `-run=2`. What costs the
+budget: loops bounded by a parameter (`k <= params.n_harmonics`), loops over parsed tokens, iterative solves,
+and any branch-heavy function called from `main()` or called again from a late event. Found 2026-11-13 with
+the first version of `src/forcing_state.h` (a 200-step bisection over the forcing; a jsmn token loop; the
+forcing recomputed in the checkpoint event).
+
+**Rule:** to see why a build fails, add `-run=2` and look for "reached maximum number of interpreter calls".
+In code that `main()` or the events run: bound loops by constants (`N_MAX`) and switch terms off with 0/1
+weights; prefer `fmin`/`fmax` to `if`/`?:`; compute the forcing once per step (the acceleration event) and
+reuse it; never call `exit()` on a path the interpreter can reach (a missing file is such a path): set a
+flag and `return` from `main()`. Then build in two different folders before you trust the result.
 
 ## record-landing
 
@@ -133,6 +175,8 @@ When a restart ramps the amplitude from an old value to a new one, the angle is
 `Th = A(t) sin(...)` with `A` changing in time. The angular velocity and acceleration in the body force
 must include the `A'(t)` and `A''(t)` terms. Without them the forcing does not match the angle during
 the ramp, and the restarted run settles in a different state from a cold start.
+Since 2026-11-13 the frequency ramps too: the phase is the integral of `w(t)`, never `w(t) t` (that gives
+a chirp, a rate `w + w' t`), and the angular acceleration has the extra term `A k w'(t) cos(...)`.
 
 ## scalar-continuation
 

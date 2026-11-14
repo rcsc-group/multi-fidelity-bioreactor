@@ -202,15 +202,12 @@ def build_chain(cfg: dict) -> list[dict]:
         if cfg.get("binary"):
             params["_binary"] = cfg["binary"]
         if is_restart:
-            # Restart segment: checkpoint time, omega_b rescaling, and full
-            # prev-motion params for smooth-step parameter interpolation in C.
-            params["t_checkpoint"]        = t_checkpoint
-            params["omega_b_prev"]        = prev_omega_b
-            params["theta_max_prev"]      = list(prev_motion["theta_max"])
-            params["phi_angular_prev"]    = list(prev_motion["phi_angular"])
-            params["amplitude_h_prev"]    = list(prev_motion["amplitude_h"])
-            params["phi_horizontal_prev"] = list(prev_motion["phi_horizontal"])
-            params["omega_h_prev"]        = float(prev_motion["omega_h"])
+            # Restart segment. The solver ramps from the forcing that made the checkpoint to this segment's
+            # forcing. A binary that reads the checkpoint label takes that source from the dump; an older
+            # binary needs it as *_prev keys (simulate.source_forcing_keys; pitfall "restart-ramp").
+            params["t_checkpoint"] = t_checkpoint
+            params.update(simulate.source_forcing_keys(
+                {**prev_motion, "omega_b": prev_omega_b}, cfg.get("binary")))
 
         chain.append(params)
 

@@ -122,3 +122,38 @@ def test_a_rerun_starts_from_an_empty_case_folder(tmp_path):
     bb.run_bundle(src, tmp_path / "work", only=["cold"], run_case=run_case,
                   build_fn=lambda src, work, builds: {b: work / b for b in builds}, qoi_fn=lambda rd: {})
     assert seen["stale"] is False
+
+
+def _refusal_run(stderr_text, fail):
+    def run_case(case, binary, rd, params, restart, env):
+        _fake_run()(case, binary, rd, params, restart, env)
+        if case.name in fail:
+            (rd / "stderr.txt").write_text(stderr_text)
+            raise RuntimeError(f"{case.name}: exit 1")
+    return run_case
+
+
+@pytest.mark.parametrize("fail,status", [({"refuse_prev"}, "refused"), (set(), "failed")])
+def test_a_refusal_case_must_stop_with_an_error(tmp_path, fail, status):
+    """A case the solver must refuse is 'refused' when it stops with ERROR on stderr, 'failed' when it runs."""
+    src = _fake_src(tmp_path, {"BioReactor.c": "int main;"})
+    out = bb.run_bundle(src, tmp_path / "work", only=["refuse_prev"], run_case=_refusal_run("ERROR: x\n", fail),
+                        build_fn=lambda src, work, builds: {b: work / b for b in builds}, qoi_fn=lambda rd: {})
+    assert out["cases"]["refuse_prev"]["status"] == status
+
+
+def test_refuse_nolabel_gets_no_label(tmp_path):
+    src = _fake_src(tmp_path, {"BioReactor.c": "int main;"})
+    seen = {}
+
+    def run_case(case, binary, rd, params, restart, env):
+        if case.name == "half":
+            rd.mkdir(parents=True, exist_ok=True)
+            (rd / "checkpoint.phase").write_text("{}")
+        if case.name.startswith("refuse_"):
+            seen[case.name] = (rd / "checkpoint.phase").exists()
+        _fake_run()(case, binary, rd, params, restart, env)
+
+    bb.run_bundle(src, tmp_path / "work", only=["refuse_prev", "refuse_nolabel"], run_case=run_case,
+                  build_fn=lambda src, work, builds: {b: work / b for b in builds}, qoi_fn=lambda rd: {})
+    assert seen == {"refuse_prev": True, "refuse_nolabel": False}

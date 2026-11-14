@@ -73,6 +73,7 @@ typedef struct {
   double amplitude_h_prev[N_MAX];
   double phi_horizontal_prev[N_MAX];
   double omega_h_prev;
+  int    has_prev_keys;   // 1 if params.json sets any *_prev key (only allowed with an old label; forcing_state.h)
   // Flux record/replay (compile-time -DRECORD_FLUX / -DREPLAY_FLUX; see BioReactor.c). Ignored by the
   // default build. t_rec0 < 0 means "unset": the record starts at the release time t_mix.
   double t_rec0;                     // absolute non-dim time at which recording starts
@@ -227,26 +228,34 @@ static BioreactorParams params_read(const char *path) {
       p.restart_continue = tok_int(json, &tokens[++i]);
     else if (jsoneq(json, &tokens[i], "t_checkpoint"))
       p.t_checkpoint = tok_double(json, &tokens[++i]);
-    else if (jsoneq(json, &tokens[i], "omega_b_prev"))
+    else if (jsoneq(json, &tokens[i], "omega_b_prev")) {
       p.omega_b_prev = tok_double(json, &tokens[++i]);
+      p.has_prev_keys = 1;
+    }
     else if (jsoneq(json, &tokens[i], "theta_max_prev")) {
       tok_array(json, tokens, ++i, p.theta_max_prev, N_MAX);
       i += tokens[i].size;
+      p.has_prev_keys = 1;
     }
     else if (jsoneq(json, &tokens[i], "phi_angular_prev")) {
       tok_array(json, tokens, ++i, p.phi_angular_prev, N_MAX);
       i += tokens[i].size;
+      p.has_prev_keys = 1;
     }
     else if (jsoneq(json, &tokens[i], "amplitude_h_prev")) {
       tok_array(json, tokens, ++i, p.amplitude_h_prev, N_MAX);
       i += tokens[i].size;
+      p.has_prev_keys = 1;
     }
     else if (jsoneq(json, &tokens[i], "phi_horizontal_prev")) {
       tok_array(json, tokens, ++i, p.phi_horizontal_prev, N_MAX);
       i += tokens[i].size;
+      p.has_prev_keys = 1;
     }
-    else if (jsoneq(json, &tokens[i], "omega_h_prev"))
+    else if (jsoneq(json, &tokens[i], "omega_h_prev")) {
       p.omega_h_prev = tok_double(json, &tokens[++i]);
+      p.has_prev_keys = 1;
+    }
     else if (jsoneq(json, &tokens[i], "geometry")) {
       // geometry is a nested object; walk its key-value pairs
       i++;  // move to the object token

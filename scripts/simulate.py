@@ -54,23 +54,64 @@ def _t_mix_nd(params: dict) -> float:
 
 
 RESTART_PREV_KEYS = ("omega_b_prev", "theta_max_prev")
+# Binaries built from src/ since 2026-11-13 take a restart's source forcing from the dump's label
+# (checkpoint.phase, src/forcing_state.h) and refuse *_prev keys. Older binaries need *_prev. The new solver
+# prints "restart refused", so the string marks a binary that reads the label.
+LABEL_MARKER = b"restart refused"
 
 
-def _check_restart_forcing(params: dict) -> None:
-    """Refuse a restart that does not say which forcing it continues.
+def binary_reads_label(binary) -> bool:
+    """True if `binary` takes the source forcing from the checkpoint label. None or a missing file means the
+    binary built from this src/, which does."""
+    if binary is None or not Path(binary).is_file():
+        return True
+    return LABEL_MARKER in Path(binary).read_bytes()
 
-    Every restart ramps the forcing from the *_prev values to the current ones over 3 periods; without *_prev
-    the solver takes 0 and ramps from zero rocking while the liquid still sloshes (fig9_l9_rpm37.5_ext1:
-    velocity +49 % after the seam). Use scripts/submit_continue.build_params or chain.py, which set them.
-    A replay run (rec_dir set) solves scalars on a recorded flow and is not driven by the forcing.
+
+def source_forcing_keys(src: dict, binary) -> dict:
+    """The *_prev keys a restart from a dump of run `src` needs with `binary`: none for a binary that reads the
+    label, src's forcing for an older binary."""
+    if binary_reads_label(binary):
+        return {}
+    return {"omega_b_prev": src["omega_b"], "theta_max_prev": list(src["theta_max"]),
+            "phi_angular_prev": list(src["phi_angular"]), "amplitude_h_prev": list(src["amplitude_h"]),
+            "phi_horizontal_prev": list(src["phi_horizontal"]), "omega_h_prev": src["omega_h"]}
+
+
+def _check_restart_forcing(params: dict, checkpoint=None) -> None:
+    """Refuse a restart that does not say, in exactly one place, which forcing it continues.
+
+    Every restart ramps the forcing from its source to params.json over 3 periods. A binary that reads the
+    label takes the source from checkpoint.phase next to the dump; *_prev keys next to such a label are a second
+    source and are refused; an old label (phase only) still needs *_prev. An older binary needs *_prev: with
+    none it ramps from zero rocking while the liquid still sloshes (fig9_l9_rpm37.5_ext1: velocity +49 % after
+    the seam). A replay run (rec_dir set) is not driven by the forcing.
     Pitfall "restart-ramp" in docs_site/developer/solver-pitfalls.md.
     """
-    if params.get("t_checkpoint", 0) > 0 and "rec_dir" not in params:
+    if params.get("t_checkpoint", 0) <= 0 or "rec_dir" in params:
+        return
+    rid = params.get("run_id")
+    prev = sorted(k for k in params if k.endswith("_prev"))
+    if not binary_reads_label(params.get("_binary")):
         missing = [k for k in RESTART_PREV_KEYS if k not in params]
         if missing:
-            raise ValueError(f"{params.get('run_id')}: restart without {missing}: the solver would ramp the "
-                             f"forcing again from zero (pitfall restart-ramp, docs_site/developer/"
-                             f"solver-pitfalls.md). Build the params with scripts/submit_continue.build_params.")
+            raise ValueError(f"{rid}: restart without {missing}: this binary would ramp the forcing again from "
+                             f"zero (pitfall restart-ramp, docs_site/developer/solver-pitfalls.md). Build the "
+                             f"params with scripts/submit_continue.build_params.")
+        return
+    if not checkpoint or not Path(checkpoint).exists():
+        return   # a dump that a chained job has yet to write: the solver checks its label
+    label = Path(checkpoint).parent / "checkpoint.phase"
+    if not label.exists():
+        raise ValueError(f"{rid}: no checkpoint.phase (the dump's label) next to {checkpoint}: the solver would "
+                         f"refuse the restart (pitfall restart-ramp). Stage it with submit_continue.stage_phase.")
+    has_forcing = "omega_b" in json.loads(label.read_text())
+    if has_forcing and prev:
+        raise ValueError(f"{rid}: {prev} in params AND a label with the forcing next to the dump: two sources "
+                         f"(pitfall restart-ramp). Remove the *_prev keys.")
+    if not has_forcing and not prev:
+        raise ValueError(f"{rid}: old label (phase only) next to the dump and no *_prev keys: the source "
+                         f"forcing is unknown (pitfall restart-ramp).")
 
 
 def _check_t_end_vs_t_mix(params: dict) -> None:
@@ -191,7 +232,7 @@ def submit_slurm(
     project_root = Path(project_root) if project_root else Path(__file__).parents[1]
     runs_root    = Path(runs_root) if runs_root else project_root / "runs"
     template     = Path(template) if template else _DEFAULT_TEMPLATE
-    _check_restart_forcing(params)
+    _check_restart_forcing(params, checkpoint)
     _check_t_end_vs_t_mix(params)
 
     run_dir      = _prepare_run_dir(params, runs_root)
@@ -224,6 +265,9 @@ def submit_slurm(
         if checkpoint:
             scratch_ck = scratch_base / "checkpoint.dump"
             _shutil.copy2(checkpoint, scratch_ck)
+            label = Path(checkpoint).parent / "checkpoint.phase"   # the dump's label travels with it
+            if label.exists() and label.resolve() != (scratch_base / "checkpoint.phase").resolve():
+                _shutil.copy2(label, scratch_base / "checkpoint.phase")
             checkpoint = str(scratch_ck)
     else:
         effective_params = params_path

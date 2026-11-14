@@ -11,7 +11,7 @@ RUNS = Path("/tmp/bundle_runs")
 
 def test_case_names_are_the_plan_list():
     assert set(bc.CASES) == {"cold", "cold2", "rec", "half", "cont", "kill", "kill_resume", "replay", "loop",
-                             "lean", "l5", "xl6", "caseB_cold", "caseB_warm", "mpi4"}
+                             "lean", "l5", "xl6", "caseB_cold", "caseB_warm", "mpi4", "refuse_prev", "refuse_nolabel"}
 
 
 def test_order_puts_parents_first():
@@ -45,7 +45,6 @@ def test_restart_cases_set_t_checkpoint():
         p = bc.params(name, RUNS)
         if c.restart:
             assert p.get("t_checkpoint", 0) > 0, name   # the solver restarts only when t_checkpoint > 0
-            assert p.get("restart_continue") == 1 or "omega_b_prev" in p, name
         else:
             assert "t_checkpoint" not in p, name
 
@@ -53,7 +52,7 @@ def test_restart_cases_set_t_checkpoint():
 def test_caseB_warm_rescales_from_32p5():
     p = bc.params("caseB_warm", RUNS)
     assert p["omega_b"] == pytest.approx(25.0 * 2 * math.pi / 60)
-    assert p["omega_b_prev"] == pytest.approx(32.5 * 2 * math.pi / 60)
+    assert bc.CASES["caseB_warm"].parent == "half"   # the source forcing (32.5 rpm) comes from half's label
     assert p["n_transition_cycles"] == 1
 
 
@@ -84,12 +83,20 @@ def test_restarts_start_after_the_ramp():
         assert bc.params(name, RUNS)["t_checkpoint"] >= bc.N_RAMP * T, name
 
 
-def test_restarts_carry_the_current_forcing():
-    """The solver ramps *_prev -> current over 3 cycles after every restart; without *_prev it ramps from 0."""
-    for name in ("cont", "kill_resume", "xl6"):
-        p = bc.params(name, RUNS)
-        assert p["omega_b_prev"] == p["omega_b"] and p["theta_max_prev"] == p["theta_max"], name
-        assert p["amplitude_h_prev"] == p["amplitude_h"] and p["omega_h_prev"] == p["omega_h"], name
+def test_no_case_sets_prev_keys_but_the_refusal_case():
+    """The source forcing of a restart comes from the dump's label (checkpoint.phase), never from params.json
+    (plan docs/plans/2026-11-13-restart-label-plan.md). Only refuse_prev sets *_prev, to test the refusal."""
+    for name in bc.CASES:
+        keys = [k for k in bc.params(name, RUNS) if k.endswith("_prev")]
+        assert bool(keys) == (name == "refuse_prev"), (name, keys)
+
+
+def test_refusal_cases_expect_the_solver_to_stop():
+    for name in ("refuse_prev", "refuse_nolabel"):
+        c = bc.CASES[name]
+        assert c.expect_refusal and c.parent == "half" and c.restart == "checkpoint.dump", name
+    assert bc.CASES["refuse_prev"].stage_label and not bc.CASES["refuse_nolabel"].stage_label
+    assert not any(c.expect_refusal for n, c in bc.CASES.items() if not n.startswith("refuse_"))
 
 
 def test_continuations_keep_the_tracer_and_the_oxygen_event():

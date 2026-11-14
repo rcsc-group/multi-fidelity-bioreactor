@@ -202,9 +202,10 @@ def test_a_lower_target_asks_for_less_compute():
 
 
 # ── an extension continues the run it extends ────────────────────────────────
-# Found by the feature bundle (2026-11-13): an extension without *_prev keys restarts the forcing ramp from
-# zero amplitude (the solver ramps *_prev -> current over 3 cycles after every restart). fig9_l9_rpm37.5_ext1
-# had none: liquid velocity +49 % in its 3rd period after the seam. submit_continue.build_params is the rule.
+# Found by the feature bundle (2026-11-13): with a binary older than the checkpoint label, an extension without
+# *_prev keys restarts the forcing ramp from zero amplitude. fig9_l9_rpm37.5_ext1 had none: liquid velocity
+# +49 % in its 3rd period after the seam. A binary that reads the label takes the forcing from the dump and
+# refuses *_prev. submit_continue.build_params is the rule for both.
 
 def _plan():
     from tools.bundle.cases import base
@@ -212,12 +213,24 @@ def _plan():
     return {"parent": "fig9_l9_rpm37.5", "run_id": "fig9_l9_rpm37.5_ext1", "cycles": 22.0, "params": p}
 
 
-def test_extension_keeps_the_forcing_and_the_tracer():
+def test_extension_keeps_the_tracer_and_takes_the_forcing_from_the_label():
     from scripts.autoextend import extension_params
-    q = extension_params(_plan(), t_ck=65.5915)
-    p = _plan()["params"]
+    plan = _plan()
+    plan["params"]["omega_b_prev"] = 1.0          # left over from the parent's own restart: must go
+    q = extension_params(plan, t_ck=65.5915)
     assert q["run_id"] == "fig9_l9_rpm37.5_ext1" and q["t_checkpoint"] == 65.5915
     assert q["restart_continue"] == 1 and q["n_mix_cycles"] == 0   # oxygen event live from the first step
+    assert not [k for k in q if k.endswith("_prev")]
+
+
+def test_extension_with_an_old_binary_carries_the_forcing(tmp_path):
+    from scripts.autoextend import extension_params
+    old = tmp_path / "BioReactor-old"
+    old.write_bytes(b"\x7fELF no label")
+    plan = _plan()
+    plan["params"]["_binary"] = str(old)
+    q = extension_params(plan, t_ck=65.5915)
+    p = plan["params"]
     assert q["omega_b_prev"] == p["omega_b"] and q["theta_max_prev"] == p["theta_max"]
     assert q["amplitude_h_prev"] == p["amplitude_h"] and q["omega_h_prev"] == p["omega_h"]
 

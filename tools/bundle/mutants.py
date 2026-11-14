@@ -65,6 +65,10 @@ MUTANTS = {
     # 2026-09-14: refine before solid() on a cross-level restart (pitfall fs-after-restore)
     "prerefine_old": Mutant([], ["xl6", "cold"], ["test_s3_cross_level_warm_start_matches_cold"],
                             flags={"crosslevel": ["-DCROSS_LEVEL_PREREFINE_SOLID=0"]}),
+    # 2026-11-13: a restart that ramps the rocking from rest although the liquid sloshes (all 8 c2d_l9 runs)
+    "ramp_from_rest": Mutant([("forcing_state.h", "  fsrc = s;\n  return kind;", "  s.theta_max[0] = 0.;\n  fsrc = s;\n  return kind;")],
+                             ["cont", "cold"], ["test_s13_restart_continues_the_angle_and_its_rate[cont]",
+                                                "test_s5_continuation_reproduces_the_unbroken_run[cont]"]),
     # cross-case restart without the velocity rescale to the new units
     "no_rescale": Mutant([("init.h", "#if !REPLAY_FLUX\n    rescale_to_new_units ();\n#endif",
                            "#if !REPLAY_FLUX\n    // (mutant: no rescale)\n#endif")],

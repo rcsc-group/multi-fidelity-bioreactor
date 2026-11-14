@@ -92,3 +92,27 @@ def test_s12_run_stops_on_the_period_boundary(bundle, name, t_request):
     t = s.dump_time(rd(bundle, name) / "checkpoint.dump")
     want = s.stop_time(t_request)
     assert abs(t - want) <= 1e-9 * want, f"{name} stopped at t={t!r}, periods.py says {want!r}"
+
+
+# S13 restart label (docs/plans/2026-11-13-restart-label-plan.md): the dump's label carries the forcing that made
+# the state; the restart ramps from it to params.json. The angle and its rate must not jump at the restart,
+# for a continuation (same forcing), an early dump, a new level, and a new condition (amplitude AND frequency).
+FORCED = ["cont", "kill_resume", "xl6", "caseB_warm"]
+
+
+@pytest.mark.parametrize("name", FORCED)
+def test_s13_restart_continues_the_angle_and_its_rate(bundle, name):
+    import json
+    lab = json.loads((rd(bundle, bc.CASES[name].parent) / "checkpoint.phase").read_text())
+    new = json.loads((rd(bundle, name) / "restart_forcing.json").read_text())
+    assert abs(new["Th"] - lab["Th"]) < 1e-9, f"angle jumps: {lab['Th']!r} -> {new['Th']!r} rad"
+    assert abs(new["Th_d"] - lab["Th_d"]) <= 1e-9 * max(1.0, abs(lab["Th_d"])), \
+        f"angular rate jumps: {lab['Th_d']!r} -> {new['Th_d']!r} rad/s"
+
+
+@pytest.mark.parametrize("name,msg", [("refuse_prev", "_prev"), ("refuse_nolabel", "checkpoint.phase")])
+def test_s13_restart_refuses_an_ambiguous_source(bundle, name, msg):
+    """*_prev next to a label (two sources) and a restart with no label (no source) must stop the solver."""
+    case(bundle, name)   # fails unless the solver stopped (status "refused")
+    err = (rd(bundle, name) / "stderr.txt").read_text()
+    assert "ERROR" in err and msg in err, err[-500:]

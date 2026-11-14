@@ -32,11 +32,14 @@ class Case:
     level: int
     ranks: int
     env: dict = field(default_factory=dict)   # extra environment (e.g. a wall-clock limit)
+    expect_refusal: bool = False   # the solver must stop with an ERROR (runner status "refused")
+    stage_label: bool = True       # copy the parent's label (checkpoint.phase) next to the run
 
 
 # Timing (v2, after the first bundle): the solver ramps the forcing over N_RAMP periods after every start and
-# restart (forcing.h). A restart therefore starts at R_START = 4 periods, after the cold run's ramp, and carries
-# *_prev = its own forcing (a restart without *_prev ramps again from zero). Runs end at END = 8 periods.
+# restart (forcing.h). A restart therefore starts at R_START = 4 periods, after the cold run's ramp. It ramps
+# from the forcing in the dump's label (checkpoint.phase) to its params.json; a continuation therefore does not
+# ramp at all. Runs end at END = 8 periods.
 N_RAMP, R_START, END = 3, 4, 8
 
 CASES = {c.name: c for c in [
@@ -56,6 +59,9 @@ CASES = {c.name: c for c in [
     Case("caseB_cold", "default", None, None, 6, 1),
     Case("caseB_warm", "default", "half", "checkpoint.dump", 6, 1),
     Case("mpi4", "mpi", None, None, 6, 4),
+    # the solver must refuse two sources of the source forcing (label + *_prev), and no source (no label)
+    Case("refuse_prev", "default", "half", "checkpoint.dump", 6, 1, expect_refusal=True),
+    Case("refuse_nolabel", "default", "half", "checkpoint.dump", 6, 1, expect_refusal=True, stage_label=False),
 ]}
 
 
@@ -91,14 +97,14 @@ def period(rpm: float = RPM_A) -> float:
 
 
 def _prev(rpm: float) -> dict:
-    """Forcing of the run a restart comes from (chain.py and submit_continue.py keys)."""
+    """The old way to give the source forcing; only refuse_prev uses it (the solver must refuse it)."""
     return {"omega_b_prev": omega(rpm), "theta_max_prev": [7.0, 0.0, 0.0], "phi_angular_prev": ZERO3,
             "amplitude_h_prev": ZERO3, "phi_horizontal_prev": ZERO3, "omega_h_prev": 0.0}
 
 
 def _continue(t_ck: float, duration: float) -> dict:
     """A same-condition continuation, as scripts/submit_continue.build_params writes it."""
-    return {"t_checkpoint": t_ck, "t_end": duration, "restart_continue": 1, "n_mix_cycles": 0} | _prev(RPM_A)
+    return {"t_checkpoint": t_ck, "t_end": duration, "restart_continue": 1, "n_mix_cycles": 0}
 
 
 def params(name: str, runs: Path) -> dict:
@@ -123,12 +129,16 @@ def params(name: str, runs: Path) -> dict:
     if name == "l5":
         return base(name, level=5) | {"t_end": R_START * T}
     if name == "xl6":           # as tests/verification/test_cross_level_warmstart.py: new level, same forcing
-        return base(name) | {"t_checkpoint": R_START * T, "t_end": (END - R_START) * T} | _prev(RPM_A)
+        return base(name) | {"t_checkpoint": R_START * T, "t_end": (END - R_START) * T}
     if name == "caseB_cold":
         return base(name, RPM_B) | {"t_end": END * period(RPM_B)}
     if name == "caseB_warm":    # condition A's state at 4T -> condition B, 1 transition cycle, then release
         return base(name, RPM_B) | {"t_checkpoint": R_START * T, "t_end": END * period(RPM_B),
-                                    "n_transition_cycles": 1} | _prev(RPM_A)
+                                    "n_transition_cycles": 1}
     if name == "mpi4":
         return base(name) | {"t_end": 3 * T}
+    if name == "refuse_prev":
+        return base(name) | _continue(R_START * T, T) | _prev(RPM_A)
+    if name == "refuse_nolabel":
+        return base(name) | _continue(R_START * T, T)
     raise KeyError(name)

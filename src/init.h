@@ -165,26 +165,21 @@ static void restore_geometry (void)
 
 #if !REPLAY_FLUX
 // A restart may change omega_b or theta_max, which changes the velocity unit U_bio. Convert the stored
-// u, uf, p, pf to the new unit: u scales with su = U_bio_prev/U_bio, pressure with su^2. (Tests show the
-// effect is below the cycle-to-cycle spread even for a 14% change; it is kept because it is the correct
-// conversion. -DLEGACY_SU=1 uses the old omega_b-only ratio, for A/B tests.)
+// u, uf, p, pf to the new unit: u scales with su = U_bio(dump)/U_bio, pressure with su^2. U_bio(dump) comes
+// from the dump's label (fsrc.U_bio, forcing_state.h). (Tests show the effect is below the cycle-to-cycle
+// spread even for a 14% change; it is kept because it is the correct conversion. -DLEGACY_SU=1 uses the
+// old omega_b-only ratio, for A/B tests.)
 // g (pressure gradient + acceleration) has terms with different scalings, so no single factor is right.
 // It only feeds the first predictor half-step, and a cold start runs that step with g = 0, so we set
 // g = 0, as a cold start does. (Tested: scaling g by su^2, or keeping it, gives the same result.)
 static void rescale_to_new_units (void)
 {
-  if (params.omega_b_prev > 0.) {
-    double H_bio_here  = 2.*L_bio*Ly;
-    double T_per_prev  = 2.*pi/params.omega_b_prev;
-    double Th_max_prev = params.theta_max_prev[0] * pi / 180.;
-    double V_bio_prev  = L_bio/4*(H_bio_here + 0.5*L_bio*tan(Th_max_prev));
-    double U_bio_prev  = V_bio_prev/(H_bio_here*0.5)/T_per_prev;
+  if (fsrc.U_bio > 0.) {
 #if LEGACY_SU
-    double su = params.omega_b_prev / params.omega_b;
+    double su = fsrc.omega_b / params.omega_b;
 #else
-    double su = U_bio_prev / U_bio;
+    double su = fsrc.U_bio / U_bio;
 #endif
-    (void) U_bio_prev;
     foreach() {
       u.x[] *= su;
       u.y[] *= su;
