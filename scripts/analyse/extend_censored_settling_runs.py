@@ -29,13 +29,13 @@ import json
 import sys
 from pathlib import Path
 
-sys.path.insert(0, "/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor")
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 import scripts.chain as chain
-from scripts.settling_study_grid import GEOMETRY, FILL_LEVEL, MAINLINE_BINARY, omega_b_of
+from scripts.experiments.settling_study_grid import GEOMETRY, FILL_LEVEL, MAINLINE_BINARY, omega_b_of
 
 chain.validate_params = lambda params: None
 
-PROJECT_ROOT = Path("/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor")
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 RUNS = PROJECT_ROOT / "runs"
 
 # (level, run_id, rpm, theta, walltime) -- walltime from each run's own

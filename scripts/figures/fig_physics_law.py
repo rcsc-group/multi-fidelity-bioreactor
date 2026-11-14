@@ -1,5 +1,5 @@
 """Figure: hydrodynamics-informed laws. (A) kLa(C* = 0.10) against EDR at L9 and L10; (B) 50 % mixing time against EDR at L8 and L9; (C) leave-one-out error for kLa at L10 (13 runs) by method.
-Data: scripts/physics_law_kla_edr.py (table), physics_law_more.py. Usage: uv run python scripts/figures/fig_physics_law.py
+Data: scripts/experiments/physics_law_kla_edr.py (table), physics_law_more.py. Usage: uv run python scripts/figures/fig_physics_law.py
 """
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from scripts import figstyle as fs  # noqa: E402
-from scripts.physics_law_kla_edr import table  # noqa: E402
+from scripts.experiments.physics_law_kla_edr import table  # noqa: E402
 
 
 def dtmix_table(level):

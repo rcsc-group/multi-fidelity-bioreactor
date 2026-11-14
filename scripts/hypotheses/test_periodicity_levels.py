@@ -8,7 +8,7 @@ import sys
 import numpy as np
 
 sys.path[:0] = [".", "scripts"]
-from scripts.fig_h3_rpm import cycle_sd  # noqa: E402
+from scripts.experiments.fig_h3_rpm import cycle_sd  # noqa: E402
 from scripts.test_h1_mfbml import hf_points, hf_run, lf_run, has_results, RPMS, LF_THETAS  # noqa: E402
 from scripts.test_h2_mfbml import l9_points, l9_run  # noqa: E402
 

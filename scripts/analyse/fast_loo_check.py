@@ -1,7 +1,8 @@
 """Check FastLooKRR against LooKRR on the 40 L8 tau_95 runs: objective values at random parameters, then the fitted predictions and the time. Usage: uv run python scripts/analyse/fast_loo_check.py"""
 import sys, time
 import numpy as np
-sys.path.insert(0, "/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor")
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from scripts.fast_loo_krr import FastLooKRR
 from scripts.plot_mf_fig13 import LooKRR
 from scripts.test_h1_mfbml import BOUNDS, LF_THETAS, RPMS, lf_run, load_points

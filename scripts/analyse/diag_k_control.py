@@ -18,7 +18,7 @@ sys.path.insert(0, str(ROOT))
 from scripts import figstyle as fs  # noqa: E402
 from scripts import postprocess as pp  # noqa: E402
 from scripts.chi_scale import locate  # noqa: E402
-from scripts.diag_chi_slope import chi_of  # noqa: E402
+from scripts.experiments.diag_chi_slope import chi_of  # noqa: E402
 
 RUNS = {7: "k_l7_s1e5", 8: "k_l8_s1e5", 9: "k_l9_s1e5"}
 

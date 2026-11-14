@@ -13,7 +13,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-ROOT = Path("/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor")
+ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from scripts import simulate  # noqa: E402
 from scripts.submit_continue import build_params  # noqa: E402

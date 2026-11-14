@@ -22,7 +22,7 @@ from gcbml import inference, model, predict, transforms
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
-from scripts.gcbml_hydro_fit_v3 import RPM_HI, RPM_LO, SCALES, padded  # noqa: E402
+from scripts.experiments.gcbml_hydro_fit_v3 import RPM_HI, RPM_LO, SCALES, padded  # noqa: E402
 
 ALL = json.load(open(ROOT / "experiments/multifidelity/hydro_dataset_v2.json"))
 KEYS = ("tau_mean_t", "tau_95_t")

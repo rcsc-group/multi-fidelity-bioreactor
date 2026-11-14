@@ -26,7 +26,7 @@ from pathlib import Path
 
 import numpy as np
 
-ROOT = Path("/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor")
+ROOT = Path(__file__).resolve().parents[2]
 _COL_T, _COL_C2_SUM, _COL_C2_SUM2 = 1, 8, 9
 _COL_F_LIQ = 2
 

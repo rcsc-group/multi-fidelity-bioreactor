@@ -16,7 +16,7 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[2]
 sys.argv.append("--rate")
 sys.path.insert(0, str(ROOT))
-import scripts.joint_grid_model as jm   # noqa: E402
+import scripts.experiments.joint_grid_model as jm   # noqa: E402
 from scripts import figstyle as fs     # noqa: E402
 
 thr, lv = 0.75, (6, 7, 8, 9)

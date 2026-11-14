@@ -13,8 +13,8 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from scripts.hydro_dataset_v2 import qois  # noqa: E402
-from scripts.outliers_l8 import runs_for  # noqa: E402
-from scripts.test_e8_theta_scatter import GRID, val  # noqa: E402
+from scripts.experiments.outliers_l8 import runs_for  # noqa: E402
+from scripts.experiments.test_e8_theta_scatter import GRID, val  # noqa: E402
 
 NEW = (21.75, 22.0, 22.25, 22.75, 23.0, 23.25)
 

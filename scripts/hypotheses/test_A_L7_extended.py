@@ -16,9 +16,9 @@ from pathlib import Path
 
 import numpy as np
 
-sys.path.insert(0, "/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor")
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 import scripts.chain as chain
-from scripts.settling_study_grid import GEOMETRY, FILL_LEVEL, omega_b_of, PROJECT_ROOT
+from scripts.experiments.settling_study_grid import GEOMETRY, FILL_LEVEL, omega_b_of, PROJECT_ROOT
 
 chain.validate_params = lambda params: None
 

@@ -16,7 +16,7 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from scripts.hydro_dataset_v2 import qois  # noqa: E402
-from scripts.physics_law_kla_edr import table  # noqa: E402
+from scripts.experiments.physics_law_kla_edr import table  # noqa: E402
 
 
 def poly(rpm, th, deg2=True):

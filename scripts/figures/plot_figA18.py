@@ -33,7 +33,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
-ROOT = Path("/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor")
+ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "experiments/kimetal2024/figure_replicas/replicated_FigA18.png"
 sys.path.insert(0, str(ROOT))
 from scripts.postprocess import _t_scales  # noqa: E402

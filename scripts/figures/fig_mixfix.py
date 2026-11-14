@@ -15,7 +15,7 @@ sys.path.insert(0, str(ROOT))
 from scripts import figstyle as fs  # noqa: E402
 from scripts import postprocess as pp  # noqa: E402
 from scripts import replay_gate as rg  # noqa: E402
-from scripts.mixfix_check import CONDS, OUT, rid  # noqa: E402
+from scripts.experiments.mixfix_check import CONDS, OUT, rid  # noqa: E402
 
 TH = ("0.50", "0.75", "0.95")
 

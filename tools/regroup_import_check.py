@@ -6,7 +6,8 @@ twice in a fresh interpreter: the old text (git show REV:scripts/NAME.py) as if 
 file at scripts/<dir>/NAME.py. sys.path[0] is the script's own folder, as for `python scripts/.../NAME.py`.
 A regression is "imports worked at the old place, fail at the new place".
 
-Usage: python tools/regroup_import_check.py MOVES_JSON REV [N_WORKERS]   (from the repo root, on a compute node)
+Usage: python tools/regroup_import_check.py MOVES_JSON REV [N_WORKERS] [--also FILE ...]   (repo root, compute node)
+  --also: files that did not move but whose imports were rewritten; checked old text vs new text in place.
 """
 import ast
 import json
@@ -75,13 +76,26 @@ def check(item, rev, tmp):
     return name, d, ok_old, ok_new, e_old, e_new
 
 
+def check_in_place(path, rev, tmp):
+    """A file that did not move but whose imports were rewritten (--also): old text vs new text, same place."""
+    p = Path(path)
+    old = subprocess.run(["git", "show", f"{rev}:{path}"], capture_output=True, text=True, check=True).stdout
+    tag = p.with_suffix("").as_posix().replace("/", "__")
+    ok_old, e_old = run(old, ROOT / p, "old", tag, tmp)
+    ok_new, e_new = run((ROOT / p).read_text(), ROOT / p, "new", tag, tmp)
+    return p.stem, str(p.parent), ok_old, ok_new, e_old, e_new
+
+
 def main():
     moves = json.loads(Path(sys.argv[1]).read_text())
     rev = sys.argv[2]
-    workers = int(sys.argv[3]) if len(sys.argv) > 3 else 4
+    also = sys.argv[sys.argv.index("--also") + 1:] if "--also" in sys.argv else []
+    argv = sys.argv[:sys.argv.index("--also")] if also else sys.argv
+    workers = int(argv[3]) if len(argv) > 3 else 4
     tmp = Path(subprocess.run(["mktemp", "-d"], capture_output=True, text=True).stdout.strip())
     with ThreadPoolExecutor(workers) as ex:
         res = list(ex.map(lambda it: check(it, rev, tmp), sorted(moves.items())))
+        res += list(ex.map(lambda f: check_in_place(f, rev, tmp), also))
     reg = [r for r in res if r[2] and not r[3]]
     both_bad = [r for r in res if not r[2] and not r[3]]
     fixed = [r for r in res if not r[2] and r[3]]

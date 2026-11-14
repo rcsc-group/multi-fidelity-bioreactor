@@ -13,10 +13,10 @@ import argparse
 import sys
 from pathlib import Path
 
-ROOT = Path("/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor")
+ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from scripts.simulate import submit_slurm  # noqa: E402
-from scripts.submit_l8_t5_t6 import NTASKS, WALL, params  # noqa: E402
+from scripts.experiments.submit_l8_t5_t6 import NTASKS, WALL, params  # noqa: E402
 
 BASES = (22.5, 30.0)
 OFFSETS = {"1e-2": 1e-2, "1e-3": 1e-3, "1e-6": 1e-6}

@@ -12,8 +12,8 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
-import scripts.diag_mf_early_late as m                       # noqa: E402
-from scripts.pilot_truncated_chi import chi_curve, RPMS      # noqa: E402
+import scripts.experiments.diag_mf_early_late as m                       # noqa: E402
+from scripts.experiments.pilot_truncated_chi import chi_curve, RPMS      # noqa: E402
 
 m.REL_NOISE = 1e-3
 rows = []

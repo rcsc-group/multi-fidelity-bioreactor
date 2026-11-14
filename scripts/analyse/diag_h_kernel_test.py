@@ -30,7 +30,7 @@ from scipy.stats import norm
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from scripts import figstyle as fs                       # noqa: E402
-from scripts.pilot_truncated_chi import RPMS             # noqa: E402
+from scripts.experiments.pilot_truncated_chi import RPMS             # noqa: E402
 
 FAM = {6: "kmix_l6_rpm{:g}", 7: "kmix_l7_rpm{:g}", 8: "kmix_l8_rpm{:g}", 9: "fig9_l9_rpm{:g}"}
 H = {6: 16.0, 7: 8.0, 8: 4.0, 9: 2.0, 10: 1.0}

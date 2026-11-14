@@ -13,7 +13,7 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from scripts import figstyle as fs                       # noqa: E402
-from scripts.diag_dtmix_extrapolation import table, KIM   # noqa: E402
+from scripts.experiments.diag_dtmix_extrapolation import table, KIM   # noqa: E402
 
 ENC = {0.95: ("#1f5fa8", "o"), 0.75: ("#d62728", "^"), 0.50: ("#2ca02c", "v")}
 t = table()

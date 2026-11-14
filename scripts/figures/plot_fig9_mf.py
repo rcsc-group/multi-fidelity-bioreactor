@@ -21,7 +21,7 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from scripts import figstyle as fs                    # noqa: E402
-from scripts.plot_mf_h1_h2 import fit, REL_NOISE      # noqa: E402
+from scripts.experiments.plot_mf_h1_h2 import fit, REL_NOISE      # noqa: E402
 
 RPMS = [15, 17.5, 20, 22.5, 25, 27.5, 30, 32.5, 35, 37.5]
 ENC = {0.95: ("#1f5fa8", "o"), 0.75: ("#d62728", "^"), 0.50: ("#2ca02c", "v")}

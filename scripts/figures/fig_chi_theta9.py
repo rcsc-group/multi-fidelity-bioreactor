@@ -12,9 +12,9 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from scripts import figstyle as fs  # noqa: E402
-from scripts.outliers_l8 import QS, runs_for, zscores  # noqa: E402
-from scripts.test_e8_theta_scatter import GRID, val  # noqa: E402
-from scripts.test_s_estimator import curves  # noqa: E402
+from scripts.experiments.outliers_l8 import QS, runs_for, zscores  # noqa: E402
+from scripts.experiments.test_e8_theta_scatter import GRID, val  # noqa: E402
+from scripts.experiments.test_s_estimator import curves  # noqa: E402
 
 
 def main():

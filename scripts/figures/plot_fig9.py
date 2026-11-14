@@ -53,7 +53,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-ROOT = Path("/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor")
+ROOT = Path(__file__).resolve().parents[2]
 KIM_CSV = ROOT / "experiments/kimetal2024/csv_raw/mixing_kla_vs_frequency.csv"
 OUT = ROOT / "experiments/kimetal2024/figure_replicas/replicated_Fig09.png"
 RUNS = ROOT / "runs"

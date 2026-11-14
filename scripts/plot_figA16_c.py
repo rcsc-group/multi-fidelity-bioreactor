@@ -49,7 +49,7 @@ from pathlib import Path as _Path
 sys.path.insert(0, str(_Path(__file__).resolve().parents[1]))
 from scripts import figstyle as fs  # noqa: E402
 
-ROOT = Path("/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor")
+ROOT = Path(__file__).resolve().parents[1]
 RUNS = ROOT / "runs"
 OUT = ROOT / "experiments/kimetal2024/figure_replicas/replicated_FigA16_c.png"
 

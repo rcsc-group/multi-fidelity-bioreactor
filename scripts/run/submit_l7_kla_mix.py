@@ -26,7 +26,7 @@ import math
 import sys
 from pathlib import Path
 
-ROOT = Path("/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor")
+ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from scripts.simulate import submit_slurm               # noqa: E402
 from scripts.dump_fields import fields as _dump_fields  # noqa: E402

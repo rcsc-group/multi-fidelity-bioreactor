@@ -24,7 +24,7 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from scripts import figstyle as fs                                   # noqa: E402
-from scripts.pilot_truncated_chi import chi_curve, RPMS              # noqa: E402
+from scripts.experiments.pilot_truncated_chi import chi_curve, RPMS              # noqa: E402
 from scripts.postprocess import (_joined_cols, _COL_C2_LIQ_SUM,      # noqa: E402
                                  _COL_F_LIQ)
 

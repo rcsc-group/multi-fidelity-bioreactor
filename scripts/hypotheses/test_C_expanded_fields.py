@@ -11,10 +11,10 @@ Usage:
 import sys
 from pathlib import Path
 
-sys.path.insert(0, "/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor")
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from scripts.simulate import submit_slurm
 
-root = Path("/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor")
+root = Path(__file__).resolve().parents[2]
 TESTC_BINARY = "/oscar/scratch/eaguerov/BioReactor-mpi-testc"
 
 src_params = {

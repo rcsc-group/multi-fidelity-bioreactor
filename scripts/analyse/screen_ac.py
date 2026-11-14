@@ -16,9 +16,9 @@ from scipy.stats import spearmanr
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
-from scripts.diag_x8_slow_mode import normf_cycles  # noqa: E402
+from scripts.experiments.diag_x8_slow_mode import normf_cycles  # noqa: E402
 from scripts.hydro_dataset_v2 import qois  # noqa: E402
-from scripts.test_warmstart_x8 import load  # noqa: E402
+from scripts.experiments.test_warmstart_x8 import load  # noqa: E402
 
 RPMS = [17.5, 20, 22.5, 25, 27.5, 30, 32.5, 35, 37.5]
 QS = ("tau_mean_t", "tau_95_t", "edr_mean_t")

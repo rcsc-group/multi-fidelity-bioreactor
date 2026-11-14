@@ -16,7 +16,7 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from scripts import figstyle as fs                     # noqa: E402
-from scripts.pilot_truncated_chi import chi_curve, RPMS  # noqa: E402
+from scripts.experiments.pilot_truncated_chi import chi_curve, RPMS  # noqa: E402
 
 plt.rcParams.update(fs.rcparams())
 fig, axes = plt.subplots(2, 5, figsize=(14, 5.4), sharey=True)

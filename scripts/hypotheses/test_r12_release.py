@@ -16,7 +16,7 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from scripts.hydro_dataset_v2 import qois  # noqa: E402
-from scripts.submit_r12 import RPMS  # noqa: E402
+from scripts.experiments.submit_r12 import RPMS  # noqa: E402
 
 PRIMARY = {"kLa_1T_10": 0.095, "dtmix_0.50": 0.104}
 REPORTED = ("kLa_1T_25", "dtmix_0.95", "tau_95_t", "edr_mean_t")

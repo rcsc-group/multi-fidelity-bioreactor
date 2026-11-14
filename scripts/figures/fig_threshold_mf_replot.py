@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from scripts import figstyle as fs  # noqa: E402
 from scripts import postprocess as pp  # noqa: E402
-from scripts.fig_threshold_mf import PAIRS, SIZES  # noqa: E402
+from scripts.experiments.fig_threshold_mf import PAIRS, SIZES  # noqa: E402
 
 
 def main():

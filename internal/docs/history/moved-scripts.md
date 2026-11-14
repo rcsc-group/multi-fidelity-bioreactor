@@ -278,3 +278,50 @@ shows the whole history.
 | `scripts/validate_run.py` | `scripts/analyse/validate_run.py` |
 | `scripts/verify_phase_fix.py` | `scripts/analyse/verify_phase_fix.py` |
 | `scripts/verify_phase_fix_v2.py` | `scripts/analyse/verify_phase_fix_v2.py` |
+
+## Second move, 2026-11-14: one-off studies -> scripts/experiments/
+
+Rule: a top-level module stays only if the pipeline reaches it (Makefile, config/, docs_site/, tests/, tools/, the packages, and what those import). The 40 others moved; imports were rewritten by `tools/regroup_scripts.py --names ... --to experiments`.
+
+| Old path | New path |
+|---|---|
+| `scripts/check_replay_kla25_metrics.py` | `scripts/experiments/check_replay_kla25_metrics.py` |
+| `scripts/check_settled_t10.py` | `scripts/experiments/check_settled_t10.py` |
+| `scripts/diag_chi_slope.py` | `scripts/experiments/diag_chi_slope.py` |
+| `scripts/diag_dtmix_extrapolation.py` | `scripts/experiments/diag_dtmix_extrapolation.py` |
+| `scripts/diag_early_late_transfer.py` | `scripts/experiments/diag_early_late_transfer.py` |
+| `scripts/diag_mf_early_late.py` | `scripts/experiments/diag_mf_early_late.py` |
+| `scripts/diag_mf_l7_l9_kim.py` | `scripts/experiments/diag_mf_l7_l9_kim.py` |
+| `scripts/diag_num_uncertainty.py` | `scripts/experiments/diag_num_uncertainty.py` |
+| `scripts/diag_richardson_means.py` | `scripts/experiments/diag_richardson_means.py` |
+| `scripts/diag_x8_slow_mode.py` | `scripts/experiments/diag_x8_slow_mode.py` |
+| `scripts/fig_definitions.py` | `scripts/experiments/fig_definitions.py` |
+| `scripts/fig_h3_rpm.py` | `scripts/experiments/fig_h3_rpm.py` |
+| `scripts/fig_l9_restart_fix.py` | `scripts/experiments/fig_l9_restart_fix.py` |
+| `scripts/fig_mf_grid.py` | `scripts/experiments/fig_mf_grid.py` |
+| `scripts/fig_prereg_loop.py` | `scripts/experiments/fig_prereg_loop.py` |
+| `scripts/fig_threshold_mf.py` | `scripts/experiments/fig_threshold_mf.py` |
+| `scripts/gcbml_hydro_fit_v3.py` | `scripts/experiments/gcbml_hydro_fit_v3.py` |
+| `scripts/h3_band_check.py` | `scripts/experiments/h3_band_check.py` |
+| `scripts/h3_baselines_learning_curve.py` | `scripts/experiments/h3_baselines_learning_curve.py` |
+| `scripts/joint_grid_model.py` | `scripts/experiments/joint_grid_model.py` |
+| `scripts/mixfix_check.py` | `scripts/experiments/mixfix_check.py` |
+| `scripts/outliers_l8.py` | `scripts/experiments/outliers_l8.py` |
+| `scripts/physics_law_kla_edr.py` | `scripts/experiments/physics_law_kla_edr.py` |
+| `scripts/pilot_truncated_chi.py` | `scripts/experiments/pilot_truncated_chi.py` |
+| `scripts/plot_mf_fig13_unc.py` | `scripts/experiments/plot_mf_fig13_unc.py` |
+| `scripts/plot_mf_h1_h2.py` | `scripts/experiments/plot_mf_h1_h2.py` |
+| `scripts/prereg_offline.py` | `scripts/experiments/prereg_offline.py` |
+| `scripts/replay_chain.py` | `scripts/experiments/replay_chain.py` |
+| `scripts/settling_study_grid.py` | `scripts/experiments/settling_study_grid.py` |
+| `scripts/submit_l10_fig13a_xlevel.py` | `scripts/experiments/submit_l10_fig13a_xlevel.py` |
+| `scripts/submit_l10_from_l8.py` | `scripts/experiments/submit_l10_from_l8.py` |
+| `scripts/submit_l8_t5_t6.py` | `scripts/experiments/submit_l8_t5_t6.py` |
+| `scripts/submit_r12.py` | `scripts/experiments/submit_r12.py` |
+| `scripts/test_chain_l10_theta7.py` | `scripts/experiments/test_chain_l10_theta7.py` |
+| `scripts/test_e0_scatter.py` | `scripts/experiments/test_e0_scatter.py` |
+| `scripts/test_e8_theta_scatter.py` | `scripts/experiments/test_e8_theta_scatter.py` |
+| `scripts/test_h4_testset.py` | `scripts/experiments/test_h4_testset.py` |
+| `scripts/test_s89_l8_to_l9.py` | `scripts/experiments/test_s89_l8_to_l9.py` |
+| `scripts/test_s_estimator.py` | `scripts/experiments/test_s_estimator.py` |
+| `scripts/test_warmstart_x8.py` | `scripts/experiments/test_warmstart_x8.py` |

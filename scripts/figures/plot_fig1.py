@@ -25,7 +25,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.patches import Arc, FancyArrow, Rectangle
 
-ROOT = Path("/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor")
+ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "experiments/kimetal2024/figure_replicas/replicated_Fig01.png"
 
 plt.rcParams.update({

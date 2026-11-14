@@ -20,7 +20,7 @@ from gcbml import gates, inference, transforms
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
-from scripts.gcbml_hydro_fit_v3 import CFG, SCALES, padded  # noqa: E402
+from scripts.experiments.gcbml_hydro_fit_v3 import CFG, SCALES, padded  # noqa: E402
 
 LMIN = int(sys.argv[1]) if len(sys.argv) > 1 else 6
 LMAX = int(sys.argv[2]) if len(sys.argv) > 2 else 10

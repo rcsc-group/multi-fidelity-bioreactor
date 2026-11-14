@@ -21,10 +21,10 @@ from pathlib import Path
 
 import numpy as np
 
-sys.path.insert(0, "/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor")
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from scripts.simulate import submit_slurm
 
-root = Path("/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor")
+root = Path(__file__).resolve().parents[2]
 src_dir = root / "runs" / "kicktest_L7_th7"
 t_dump = float(np.loadtxt(src_dir / "shear_stress.dat", skiprows=1)[-1, 1])
 omega = 32.5 * 2 * 3.141592653589793 / 60.0

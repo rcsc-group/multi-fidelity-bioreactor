@@ -15,7 +15,7 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from scripts.eca_hoekstra import numerical_uncertainty          # noqa: E402
-from scripts.plot_mf_fig13_unc import stat, CONV_RPMS          # noqa: E402
+from scripts.experiments.plot_mf_fig13_unc import stat, CONV_RPMS          # noqa: E402
 
 RUNS = {10: ("l10_fig13a_xlevel_rpm{:g}", 0.0), 9: ("fig9_l9_rpm{:g}", 0.6),
         8: ("fig13a_rm_mf_rpm{:g}", 0.6), 7: ("mf_l7_rpm{:g}", 0.6),

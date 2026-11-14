@@ -21,19 +21,21 @@ Most scripts that run the solver submit SLURM jobs. Do not run them on a login n
 
 ## Layout
 
-The top level of `scripts/` holds only **shared modules**: files that other code imports (`from scripts.X import
-...`). Every runnable script that nothing imports is in a sub-folder, by what it does:
+The top level of `scripts/` holds only the **pipeline and the modules it imports**: everything that the
+Makefile, `config/`, `docs_site/`, `tests/` or the packages below use, and what those import in turn.
+Every other script is in a sub-folder, by what it does:
 
 | Folder | Files | What is in it |
 |---|---|---|
 | `run/` | 33 | Scripts that submit or watch SLURM jobs (`submit_*`, `*_watchdog`). |
 | `analyse/` | 130 | Analyses behind diary findings (`analyze_*`, `diag_*`, `check_*`, `probe_*`, `compare_*`, ...). They read run data and print or write a small result. |
 | `figures/` | 74 | Figures and videos (`plot_*`, `fig_*`, `render_*`). `render_videos.py` is called by the video SLURM template. |
+| `experiments/` | 40 | One-off studies that import each other (pre-registered checks, mf-surrogate studies, their figures and launchers). Nothing in the pipeline imports them. |
 | `hypotheses/` | 34 | `test_*.py`: **numerical experiments, not pytest tests**, one per hypothesis in `diary.md` (for example `test_t4_retro_bo.py` writes `experiments/multifidelity/test_t4_retro_bo.json`). Many submit jobs. |
 
-Eighteen `test_*.py` stay at the top level because other code imports them (`tests/test_test_*.py` test them).
+Eleven `test_*.py` stay at the top level because the pipeline imports them as libraries (`campaign2d/`, and `tests/test_test_*.py` test them).
 
-The diary cites scripts by their path before 2026-11-13 (`scripts/NAME.py`). The new path of each one is in
+The diary cites scripts by their path before the moves of 2026-11-13 and 2026-11-14 (`scripts/NAME.py`). The new path of each one is in
 `internal/docs/history/moved-scripts.md`; `git log --follow` gives a moved file's full history.
 
 ## Packages
@@ -48,7 +50,7 @@ The diary cites scripts by their path before 2026-11-13 (`scripts/NAME.py`). The
 | `hooks/` | Git pre-commit hook (`make hooks` installs it). |
 
 Each script's first docstring line says what it makes. Shared modules that other code imports most: `postprocess`, `figstyle`, `simulate`, `chain`,
-`settling_study_grid`, `replay_gate`, `hydro_dataset_v2`, `loop`, `dump_fields`, `cost_model`,
+`replay_gate`, `hydro_dataset_v2`, `loop`, `dump_fields`, `cost_model`,
 `autoextend`, `chi_scale`, `fields`, `eca_hoekstra`, `periods`, `lagrangian_mix`.
 
 ## Archived scripts

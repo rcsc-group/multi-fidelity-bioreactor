@@ -23,6 +23,9 @@ A third check (imports resolve from the new location) runs separately: tools/reg
 
 Usage:
   python tools/regroup_scripts.py SCRIPTS_TSV LIBS_TXT [--apply]   (from the repo root; dry run by default)
+  python tools/regroup_scripts.py --names NAMES_TXT --to DIR [--apply]
+      second pass (2026-11-14): move exactly the modules in NAMES_TXT (one per line) to scripts/DIR/, also
+      when other moved modules import them; every module not moved counts as a shared module.
 """
 import ast
 import csv
@@ -34,7 +37,7 @@ from pathlib import Path
 
 ROOT = Path.cwd()
 SCRIPTS = ROOT / "scripts"
-HISTORY = ("diary", "docs/", "experiments/", "tools/regroup_scripts.py")
+HISTORY = ("diary", "docs/", "internal/", "experiments/", "tools/regroup_scripts.py")
 TEXT = (".py", ".sh", ".sbatch", ".toml", ".yml", ".yaml", ".json", ".cfg", ".txt", ".md", "Makefile")
 
 
@@ -96,12 +99,19 @@ def evaluate(expr: str, file: Path):
 
 
 def main():
-    tsv, libs_txt = Path(sys.argv[1]), Path(sys.argv[2])
     apply = "--apply" in sys.argv
-    libs = set(Path(libs_txt).read_text().split())
-    rows = {r["name"]: r for r in csv.DictReader(open(tsv), delimiter="\t")}
     moves = {}
-    for p in sorted(SCRIPTS.glob("*.py")):
+    if "--names" in sys.argv:
+        names = set(Path(sys.argv[sys.argv.index("--names") + 1]).read_text().split())
+        to = sys.argv[sys.argv.index("--to") + 1]
+        moves = {n: to for n in sorted(names) if (SCRIPTS / f"{n}.py").exists()}
+        libs = {p.stem for p in SCRIPTS.glob("*.py") if p.stem not in moves and p.stem != "__init__"}
+        rows = {}
+    else:
+        tsv, libs_txt = Path(sys.argv[1]), Path(sys.argv[2])
+        libs = set(Path(libs_txt).read_text().split())
+        rows = {r["name"]: r for r in csv.DictReader(open(tsv), delimiter="\t")}
+    for p in ([] if rows == {} and moves else sorted(SCRIPTS.glob("*.py"))):
         n = p.stem
         if n == "__init__" or n in libs:
             continue
@@ -141,6 +151,7 @@ def main():
     path_re = re.compile(rf"scripts/({name_alt})\.py\b")
     mod_re = re.compile(rf"\bscripts\.({name_alt})\b")
     join_re = re.compile(rf"""(["']scripts["'])\s*/\s*(["'])({name_alt})\.py["']""")
+    from_re = re.compile(rf"\bfrom scripts import ({name_alt})\b(?!\s*,)")
     edits, leftovers = {}, []
     for f in texts:
         p = ROOT / f
@@ -153,6 +164,7 @@ def main():
         t2 = path_re.sub(lambda m: f"scripts/{moves[m.group(1)]}/{m.group(1)}.py", t)
         t2 = mod_re.sub(lambda m: f"scripts.{moves[m.group(1)]}.{m.group(1)}", t2)
         t2 = join_re.sub(lambda m: f'{m.group(1)} / "{moves[m.group(3)]}" / {m.group(2)}{m.group(3)}.py{m.group(2)}', t2)
+        t2 = from_re.sub(lambda m: f"from scripts.{moves[m.group(1)]} import {m.group(1)}", t2)
         if t2 != t or Path(f).stem in moves and Path(f).parent == Path("scripts") and f.endswith(".py"):
             edits[f] = t2
         shell = f.endswith((".sh", ".sbatch")) or f == "Makefile"

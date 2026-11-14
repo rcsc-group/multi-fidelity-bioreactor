@@ -7,7 +7,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from scripts import replay_gate as rg  # noqa: E402
-from scripts.check_replay_kla25_metrics import current, QOIS  # noqa: E402
+from scripts.experiments.check_replay_kla25_metrics import current, QOIS  # noqa: E402
 
 ref_dir = rg.run_dir("f3b_coupled")
 ref = current(ref_dir)

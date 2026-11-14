@@ -25,7 +25,7 @@ import math
 import sys
 from pathlib import Path
 
-ROOT = Path("/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor")
+ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from scripts.autoextend import walltime_safety    # noqa: E402
 from scripts.cost_model import min_per_cycle      # noqa: E402

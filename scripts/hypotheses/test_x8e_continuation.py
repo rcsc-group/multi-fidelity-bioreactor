@@ -16,7 +16,7 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
-from scripts.test_warmstart_x8 import QS, XL, cyc_vals, load, window_info  # noqa: E402
+from scripts.experiments.test_warmstart_x8 import QS, XL, cyc_vals, load, window_info  # noqa: E402
 
 RPMS = ["17.5", "25"]
 TOL, SETTLE = 0.05, 0.005

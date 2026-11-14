@@ -17,9 +17,9 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from scripts import figstyle as fs  # noqa: E402
-from scripts import fig_mf_grid as g  # noqa: E402
+from scripts.experiments import fig_mf_grid as g  # noqa: E402
 from scripts import replay_gate as rg  # noqa: E402
-from scripts.test_s89_l8_to_l9 import collect  # noqa: E402
+from scripts.experiments.test_s89_l8_to_l9 import collect  # noqa: E402
 
 OUT = ROOT / "internal/docs/meetings/prereg"
 L8_PATS = ["t6_l8_*", "kmix_l8_*", "t5_l8_*", "e8_l8_*", "w_l8_*", "dose_l8_*"]

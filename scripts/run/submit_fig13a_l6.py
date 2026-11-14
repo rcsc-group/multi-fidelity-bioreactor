@@ -12,11 +12,12 @@ MPI ranks would mostly add domain-decomposition overhead, not speed.
 import math
 import subprocess
 import sys
+from pathlib import Path
 
-sys.path.insert(0, "/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor")
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from scripts.simulate import submit_slurm
 
-PROJECT_ROOT = "/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor"
+PROJECT_ROOT = str(Path(__file__).resolve().parents[2])
 TEMPLATE = f"{PROJECT_ROOT}/config/slurm_mpi_template.sh"
 BINARY = "/oscar/scratch/eaguerov/BioReactor-mpi-rampmatch"
 SCRATCH_RUNS = "/oscar/scratch/eaguerov/mpi_runs"

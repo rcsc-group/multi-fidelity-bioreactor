@@ -13,7 +13,7 @@ Priors on log r:
   P1 physics      N(0, 0.6^2): the late rate is within a factor ~3 of the early rate.
   P2 population   N(m, s^2 (1 + 1/n)): m, s from the full L6-L8 curves, all rpm (cheap runs).
   P3 grid MF      N(log r_L8(rpm), s3^2), s3 = sd over rpm of log r_L8 - log r_L7.
-Reference: the deterministic single exponential (r = 1), scripts/pilot_truncated_chi.py.
+Reference: the deterministic single exponential (r = 1), scripts/experiments/pilot_truncated_chi.py.
 PASS per prior: 95% coverage >= 8/10 AND median |rel err| of the median < 20% AND median (hi - lo)/median <= 0.6.
 
 Writes experiments/multifidelity/test_truncated_chi_bayes.{json,png} and ..._summary.png.
@@ -32,7 +32,7 @@ import numpy as np  # noqa: E402
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from scripts import figstyle as fs  # noqa: E402
-from scripts.pilot_truncated_chi import chi_curve  # noqa: E402
+from scripts.experiments.pilot_truncated_chi import chi_curve  # noqa: E402
 
 RPMS = [15, 17.5, 20, 22.5, 25, 27.5, 30, 32.5, 35, 37.5]
 RUN = {6: "kmix_l6_rpm{:g}", 7: "kmix_l7_rpm{:g}", 8: "kmix_l8_rpm{:g}", 9: "fig9_l9_rpm{:g}"}

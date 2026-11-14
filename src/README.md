@@ -18,6 +18,7 @@ change restart code, face fields, or events.
 | `init.h` | `event init`: the bag geometry and initial fields, or restore from a checkpoint (with every repair a restore needs). |
 | `scalars.h` | Release of the tracer (`event tracer`) and the oxygen reservoir (`event oxygen`). |
 | `forcing.h` | The rocking motion as body forces (`event acceleration`), steady-streaming vorticity, droplet removal. |
+| `forcing_state.h` | The forcing at any time, the ramp after a start or restart, and the checkpoint label (`checkpoint.phase`) that tells a restart which forcing made the dump. Functions only, no events. |
 | `snapshots.h` | Fields on a uniform grid for Python: snapshot windows and the velocity at the checkpoint. |
 | `checkpoint.h` | `checkpoint.dump` at the end, and an early dump before the wall-clock limit. |
 | `diagnostics.h` | Time series: `logstats.dat`, `normf.dat`, `vol_frac_interf.dat`, `tr_oxy.dat`, `shear_stress.dat`, `edr_pct.dat`. |
@@ -60,10 +61,10 @@ Set with `-DNAME=value` (the `Makefile` targets do this). Defaults in **bold**.
 | `CROSS_LEVEL_PREREFINE_SOLID` | **1** | 0 = old, wrong order (A/B tests only) | — |
 | `N_RAMP_CYCLES` | **3** | length of the forcing ramp, in periods | slow-ramp tests |
 | `STREAMING_VORTICITY` | **1** | steady-streaming vorticity output | — |
-| `SEED_KIM` | **1** | tracer seeded in full liquid cells only (0: also f > 0.5) | `scripts/mixfix_check.py` |
+| `SEED_KIM` | **1** | tracer seeded in full liquid cells only (0: also f > 0.5) | `scripts/experiments/mixfix_check.py` |
 | `LEGACY_SU` | **0** | old restart velocity rescale (A/B only) | `scripts/analyse/ab_test_su_rescale.py` |
 | `REC_KIM_FLUX`, `REC_KIM_MASK` | **0** | record a rebuilt flux, to measure that approach's error | `scripts/analyse/replay_kim.py` |
-| `PREREG_DIAG` | **0** | per-step sums, same code as on the Kim et al. side | `scripts/prereg_offline.py`, `scripts/kim_prereg/` |
+| `PREREG_DIAG` | **0** | per-step sums, same code as on the Kim et al. side | `scripts/experiments/prereg_offline.py`, `scripts/kim_prereg/` |
 | `REC_CHECKSUM` | **0** | per-step weighted sums in record and replay, to find where they part | `scripts/replay_gate_f3/` (flags on the build command line) |
 
 Removed switches (finished experiments; in git tag `archive/pre-lean-2026-11`): `KICK_TEST` (velocity-kick

@@ -32,7 +32,7 @@ from pathlib import Path
 
 import numpy as np
 
-ROOT = Path("/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor")
+ROOT = Path(__file__).resolve().parents[2]
 _COL_T = 1
 _COL_OMEGA_AVG = 2
 

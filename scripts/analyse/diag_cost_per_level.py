@@ -20,7 +20,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from scripts import figstyle as fs                       # noqa: E402
 from scripts.postprocess import _t_scales                # noqa: E402
-from scripts.pilot_truncated_chi import RPMS             # noqa: E402
+from scripts.experiments.pilot_truncated_chi import RPMS             # noqa: E402
 
 FAMILIES = {6: ("kmix_l6_rpm{:g}", 4), 7: ("kmix_l7_rpm{:g}", 8),
             8: ("kmix_l8_rpm{:g}", 16), 9: ("fig9_l9_rpm{:g}", 32)}

@@ -26,9 +26,9 @@ Usage:
 import sys
 from pathlib import Path
 
-sys.path.insert(0, "/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor")
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from scripts.simulate import submit_slurm
-from scripts.settling_study_grid import (
+from scripts.experiments.settling_study_grid import (
     T_END, GEOMETRY, FILL_LEVEL, PROJECT_ROOT, TEMPLATE, MAINLINE_BINARY, omega_b_of,
 )
 

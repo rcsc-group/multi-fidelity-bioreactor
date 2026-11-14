@@ -1,6 +1,6 @@
 """Answer figures for the 2026-10-21 questions: (1) is kLa / mixing time well defined, (2) does warm starting work, (3) the two ideas.
 Data: diary 2026-10-15/17/20 numbers (definition checks), experiments/settling_model_fit.json, test_warmstart_x8.json, h3 settled check
-(scripts/check_settled_t10.py), kla_threshold_extrapolation.json, replay loop runs (when present).
+(scripts/experiments/check_settled_t10.py), kla_threshold_extrapolation.json, replay loop runs (when present).
 Usage: uv run python scripts/figures/fig_answers.py
 """
 from __future__ import annotations
@@ -16,7 +16,7 @@ from matplotlib.lines import Line2D
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from scripts import figstyle as fs  # noqa: E402
-from scripts.check_settled_t10 import POINTS, late  # noqa: E402
+from scripts.experiments.check_settled_t10 import POINTS, late  # noqa: E402
 from scripts.hydro_dataset_v2 import qois  # noqa: E402
 from scripts.test_h1_mfbml import hf_run  # noqa: E402
 

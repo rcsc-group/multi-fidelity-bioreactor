@@ -11,8 +11,8 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
-import scripts.diag_mf_early_late as m              # noqa: E402
-from scripts.diag_mf_l7_l9_kim import val, RPMS, TARGETS  # noqa: E402
+import scripts.experiments.diag_mf_early_late as m              # noqa: E402
+from scripts.experiments.diag_mf_l7_l9_kim import val, RPMS, TARGETS  # noqa: E402
 
 for key in TARGETS:
     a = np.array([q for q in ((r, val(f"kmix_l7_rpm{r:g}", key), val(f"fig9_l9_rpm{r:g}", key))

@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from scripts import figstyle as fs  # noqa: E402
-from scripts.fig_prereg_loop import KIM, T, load  # noqa: E402
+from scripts.experiments.fig_prereg_loop import KIM, T, load  # noqa: E402
 
 OUT = ROOT / "internal/docs/meetings/prereg"
 # thick first

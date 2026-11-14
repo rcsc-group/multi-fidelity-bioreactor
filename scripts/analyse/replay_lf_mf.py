@@ -18,7 +18,7 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(ROOT), str(ROOT / "scripts")]
-from scripts.fig_threshold_mf import gpr_good_prior, gpr_lf_prior, quad  # noqa: E402
+from scripts.experiments.fig_threshold_mf import gpr_good_prior, gpr_lf_prior, quad  # noqa: E402
 from scripts.test_h1_mfbml import BOUNDS, train_lf2d  # noqa: E402
 from mfbml_local.krr_lr_gpr_fullbayes import FullBayesKRRLRGP  # noqa: E402
 

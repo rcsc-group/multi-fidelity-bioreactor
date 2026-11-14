@@ -41,7 +41,7 @@ from pathlib import Path
 
 import numpy as np
 
-ROOT = Path("/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor")
+ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from scripts.postprocess import (           # noqa: E402
     _COL_C2_LIQ_SUM, _COL_C2_LIQ_SUM2, _COL_F_LIQ,

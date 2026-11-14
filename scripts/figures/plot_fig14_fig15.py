@@ -39,7 +39,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
-ROOT = Path("/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor")
+ROOT = Path(__file__).resolve().parents[2]
 RUNS = ROOT / "runs"
 OUT_DIR = ROOT / "experiments/kimetal2024/figure_replicas"
 sys.path.insert(0, str(ROOT))

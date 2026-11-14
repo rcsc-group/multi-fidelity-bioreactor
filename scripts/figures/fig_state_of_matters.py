@@ -22,8 +22,8 @@ from matplotlib.lines import Line2D
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from scripts import figstyle as fs  # noqa: E402
-from scripts.outliers_l8 import zscores  # noqa: E402
-from scripts.test_e8_theta_scatter import GRID, run_id  # noqa: E402
+from scripts.experiments.outliers_l8 import zscores  # noqa: E402
+from scripts.experiments.test_e8_theta_scatter import GRID, run_id  # noqa: E402
 
 MF = ROOT / "experiments/multifidelity"
 QL = {"kLa_1T_10": (fs.MK["cstar_10"], r"$k_La$, $C^*\!=\!0.10$"),
@@ -141,7 +141,7 @@ def dose():
 
 
 def r12():
-    from scripts.submit_r12 import RPMS
+    from scripts.experiments.submit_r12 import RPMS
     ids = json.loads((MF / "test_t5_roughness.json").read_text())["run_ids"]
     names = ("kLa_1T_10", "dtmix_0.50", "kLa_1T_25", "dtmix_0.95")
     fig, ax = plt.subplots(figsize=(7.2, 4.0))

@@ -33,7 +33,7 @@ from pathlib import Path
 
 import numpy as np
 
-ROOT = Path("/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor")
+ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 BINARY = ROOT / "build" / "BioReactor-mpi"

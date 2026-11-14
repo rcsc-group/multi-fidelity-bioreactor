@@ -39,8 +39,9 @@ Usage:
 import math
 import os
 import sys
+from pathlib import Path
 
-sys.path.insert(0, "/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor")
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from scripts.simulate import submit_slurm, _t_mix_nd
 import scripts.chain as chain
 
@@ -56,7 +57,7 @@ import scripts.chain as chain
 chain.validate_params = lambda params: None
 submit_chain = chain.submit_chain
 
-PROJECT_ROOT = "/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor"
+PROJECT_ROOT = str(Path(__file__).resolve().parents[2])
 TEMPLATE = f"{PROJECT_ROOT}/config/slurm_mpi_template.sh"
 BINARY = "/oscar/scratch/eaguerov/BioReactor-mpi-rampmatch"
 

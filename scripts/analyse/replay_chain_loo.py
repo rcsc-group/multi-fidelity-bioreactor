@@ -1,7 +1,7 @@
 """The established mfbml protocols, run twice: L8 from the database DNS, and L8 (kmix_l8_rpm*, theta 7) from the
 looped replays rc8_rpm*_rep (diary 2026-10-31). Nothing else changes (L9, L10, models, leave-out rules, baselines).
-  step L8 -> L9   scripts/test_s89_l8_to_l9.py: leave-one-rpm-group-out over the theta-7 L9 runs; kLa_1T_10, dtmix_0.50
-  chain L8 -> L9 -> L10   scripts/test_chain_l10_theta7.py: leave-one-out over the 7 L10 theta-7 runs; kLa_1T_10
+  step L8 -> L9   scripts/experiments/test_s89_l8_to_l9.py: leave-one-rpm-group-out over the theta-7 L9 runs; kLa_1T_10, dtmix_0.50
+  chain L8 -> L9 -> L10   scripts/experiments/test_chain_l10_theta7.py: leave-one-out over the 7 L10 theta-7 runs; kLa_1T_10
      (variant A: L9 at the held-out rpm; C: L9 within 0.25 rpm removed). L10 mixing time exists at 3 runs only: no chain test.
 Figure: internal/docs/meetings/prereg/replay_chain_loo.png. JSON: experiments/multifidelity/replay_chain_loo.json
 Usage: uv run python scripts/analyse/replay_chain_loo.py
@@ -20,8 +20,8 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(ROOT), str(ROOT / "scripts")]
 from scripts import figstyle as fs  # noqa: E402
 from scripts import replay_gate as rg  # noqa: E402
-from scripts import test_chain_l10_theta7 as tc  # noqa: E402
-from scripts import test_s89_l8_to_l9 as s89  # noqa: E402
+from scripts.experiments import test_chain_l10_theta7 as tc  # noqa: E402
+from scripts.experiments import test_s89_l8_to_l9 as s89  # noqa: E402
 from scripts.test_h1_mfbml import RPMS  # noqa: E402
 
 EXP = ROOT / "experiments/multifidelity"

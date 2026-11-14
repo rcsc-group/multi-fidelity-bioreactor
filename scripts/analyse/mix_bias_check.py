@@ -14,7 +14,7 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
-from scripts import prereg_offline as po  # noqa: E402
+from scripts.experiments import prereg_offline as po  # noqa: E402
 
 T = 0.607329
 LEVELS = (0.10, 0.15, 0.20)
