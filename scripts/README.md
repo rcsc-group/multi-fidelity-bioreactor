@@ -12,7 +12,7 @@ Most scripts that run the solver submit SLURM jobs. Do not run them on a login n
 
 | Step | Script | What it does |
 |---|---|---|
-| 1. One run | `launch.py`, `simulate.py` | Make a run directory with `params.json` and a SLURM script; run it locally or submit it. |
+| 1. One run | `launch.py`, `simulate.py`, `run_key.py` | Make a run directory with `params.json` and a SLURM script; run it locally or submit it. A submission stops if the same run (same key) is already finished or queued. |
 | 2. Many runs | `sample.py`, `sweep.py`, `chain.py` | A batch from `config/param_space.yaml`; a one-parameter sweep; a sweep where each run restarts from the previous checkpoint. |
 | 3. Finish a run | `autoextend.py`, `stage_segment.py`, `periods.py` | Extend a run that hit its time limit; stage a restart segment; where a run stops (same rule as the solver). |
 | 4. Results | `postprocess.py`, `hydro_dataset_v2.py`, `health_report.py` | Quantities of interest from one run (kLa, shear stress, mixing time, energy dissipation); the hydrodynamic data set; numerical health checks. |

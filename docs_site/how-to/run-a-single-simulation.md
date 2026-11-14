@@ -26,11 +26,14 @@ Or, with Python — which also waits for `results.json` and returns it:
 uv run python scripts/simulate.py runs/my_run/params.json --slurm --wait --walltime 04:00:00
 ```
 
-Preview the `sbatch` command without submitting anything:
+Preview the submit command without submitting anything:
 
 ```bash
 make submit PARAMS=runs/my_run/params.json DRYRUN=1
 ```
+
+If the same run (same physics, same binary, same start) is already finished or queued, the submission
+stops and names that run: see [Reuse a finished run](reuse-a-finished-run.md).
 
 ## Set up the run directory without running or submitting anything
 

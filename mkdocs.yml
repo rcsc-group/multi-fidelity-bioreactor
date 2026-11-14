@@ -40,6 +40,7 @@ nav:
       - "Your first optimization loop": tutorials/first-optimization-loop.md
   - How-to guides:
       - "Run a single simulation": how-to/run-a-single-simulation.md
+      - "Reuse a finished run": how-to/reuse-a-finished-run.md
       - "Sweep one parameter": how-to/sweep-one-parameter.md
       - "Sweep any parameter combination (JSON)": how-to/sweep-json-multi-param.md
       - "Run a batch DoE": how-to/batch-sampling.md

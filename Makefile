@@ -233,14 +233,12 @@ submit:
 ifndef PARAMS
 	$(error PARAMS is not set. Usage: make submit PARAMS=runs/my_run/params.json)
 endif
-	@RUN_DIR=$$(dirname $(PARAMS)); \
-	mkdir -p $$RUN_DIR logs; \
+	@# Through simulate.py: it refuses a run that already exists with the same key (scripts/run_key.py).
+	@RUNS_ROOT=$$(dirname $$(dirname $(PARAMS))); \
 	if [ "$(DRYRUN)" = "1" ]; then \
-	    echo "[DRYRUN] sbatch --job-name=BioReactor --export=PARAMS=$(PARAMS) config/slurm_template.sh"; \
+	    echo "[DRYRUN] uv run python scripts/simulate.py $(PARAMS) --slurm --template config/slurm_template.sh --runs-root $$RUNS_ROOT"; \
 	else \
-	    sbatch --job-name=BioReactor \
-	           --export=PARAMS=$(PARAMS) \
-	           config/slurm_template.sh; \
+	    uv run python scripts/simulate.py $(PARAMS) --slurm --template config/slurm_template.sh --runs-root $$RUNS_ROOT; \
 	fi
 
 
