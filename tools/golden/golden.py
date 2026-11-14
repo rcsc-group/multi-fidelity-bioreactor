@@ -79,6 +79,9 @@ def run(binary: Path, rd: Path, params: dict, restart: Path | None = None) -> No
     shutil.rmtree(rd, ignore_errors=True)
     rd.mkdir(parents=True)
     (rd / "params.json").write_text(json.dumps(params, indent=1))
+    label = restart.parent / "checkpoint.phase" if restart else None
+    if label and label.exists():   # the solver reads the dump's label in its working directory (restart label)
+        shutil.copy2(label, rd / "checkpoint.phase")
     env = {**os.environ, "OMP_NUM_THREADS": "1"}
     cmd = [str(binary), "params.json"] + ([str(restart)] if restart else [])
     with open(rd / "stdout.txt", "w") as o, open(rd / "stderr.txt", "w") as e:
