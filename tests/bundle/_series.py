@@ -93,8 +93,18 @@ def compare(bar: dict, rd_ref, rd, rpm: float = bc.RPM_A) -> dict:
             out[m] = (math.nan, math.nan, d, tol)
         else:
             a, b = metric(m, rd_ref, w_ref), metric(m, rd, w)
+            if bar.get("sd_periods"):
+                tol = max(tol, 2 * period_sd(m, rd_ref, w_ref, bar["sd_periods"], rpm))
             out[m] = (a, b, rel(a, b), tol)
     return out
+
+
+def period_sd(m: str, rd, w, n: int, rpm: float) -> float:
+    """Relative period-to-period scatter of metric m in run rd: sample sd / |mean| of its value over the n
+    periods that end at w[1] (the x8 bar's "2 sd": a single period of an unsteady flow scatters by this much)."""
+    T = bc.period(rpm)
+    v = np.array([metric(m, rd, (w[1] - (k + 1) * T, w[1] - k * T)) for k in range(n)])
+    return float(np.std(v, ddof=1) / abs(np.mean(v)))
 
 
 def failures(result: dict) -> list:

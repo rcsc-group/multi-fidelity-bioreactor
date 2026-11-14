@@ -19,6 +19,8 @@
 #                  edr_mean   mean of edr_95 (edr_pct.dat) over the window
 #                  oxy_last, c2_last  oxy_liq_sum, c2_liq_sum (tr_oxy.dat) on the last row of the window
 #                  <col>_max  max over rows of |a - b| / max(|a|) for that tr_oxy.dat column
+#                with `sd_periods: n`, each tolerance becomes max(tol, 2 sd), sd = the reference's relative
+#                period-to-period scatter of that metric over its last n periods (tests/bundle/_series.period_sd)
 #       ledger   no pass bar: the guard checks only that the case ran and its output is finite
 #
 # The noise floor of this bundle is cold vs cold2: bitwise except logstats.dat (wall-clock timings).
@@ -109,7 +111,8 @@ caseB_warm:
   kind: metric
   window: last
   tol: {tau_95: 0.05, edr_mean: 0.05}
-  source: "diary.md 2026-10 x8 warm-start validation (lines 340, 388): every QoI within max(5%, 2 sd); the bundle has no cycle sd, so 5%"
+  sd_periods: 4
+  source: "diary.md 2026-10 x8 warm-start validation (lines 340, 388): every QoI within max(5%, 2 sd). sd = period-to-period scatter of caseB_cold over its last 4 periods (2026-11-14; before that the bar was a flat 5%, below the 2-4% L6 period scatter, and the guard passed or failed by chance between bundles)"
 
 mpi4:
   ref: lean

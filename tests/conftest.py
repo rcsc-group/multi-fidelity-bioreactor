@@ -113,6 +113,11 @@ def run_bioreactor(params: dict, tmp_path: pathlib.Path, timeout: int = 300,
     if restart_from is not None:
         shutil.copy(restart_from, run_dir / "restart.dump")
         cmd.append("restart.dump")
+        # the dump's label, as production stages it (scripts/submit_continue.stage_phase); without it the
+        # solver refuses the restart (src/forcing_state.h restart_source)
+        label = pathlib.Path(restart_from).parent / "checkpoint.phase"
+        if label.exists():
+            shutil.copy(label, run_dir / "checkpoint.phase")
     for extra in (extra_files or []):
         if pathlib.Path(extra).exists():
             shutil.copy(extra, run_dir / pathlib.Path(extra).name)

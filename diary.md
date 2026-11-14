@@ -2114,3 +2114,7 @@ the rectangular bag look like a wedge; smoothing, near-wall fill).
   centre over the rocking. Rendered from existing L9 frames (scal_l9_rpm32.5_th7, 13.6 frames/cycle, real time,
   cycles 80-90): public/title_v3_faithful.mp4, kla_strip_faithful.mp4. User: keep the old videos (not in the deck).
   Finding: on a linear scale the oxygen at cycles 80-90 is a thin layer under the surface; the bulk is faint.
+
+## 2026-11-14 — S4 (warm start to a new condition): restored bar, then a pre-registered extension
+- The S4 bar's source (x8) says max(5 %, 2 sd); the bundle had dropped the 2 sd term. Restored as `sd_periods: 4` (sd of caseB_cold over its last 4 periods; tests/test_bundle_series.py RED -> GREEN). Effect on existing bundles: none (2 sd of caseB_cold < 5 %): head3 PASS (tau +1.4 %, edr +1.8 %), head4/head5 FAIL (tau +3.8 %, edr +5.9 %). So the failure is not period scatter of the reference: it appeared with the label fix (head3 -> head4), which changed what caseB_warm does after the switch (forcing ramps from A to B over 3 periods).
+- PRE-REGISTERED (before the run): extend caseB_cold and caseB_warm of head5 by 12 periods at B (same binary, continuation rule; scratchpad s4_extend12.py). Last 3 periods, warm vs cold, tau_95 AND edr_mean within max(5 %, 2 sd) -> TRANSIENT (guard window moves later, to after the transient); otherwise -> BIAS (warm-start defect; investigate before merge).

@@ -101,20 +101,20 @@ def _coarse_checkpoint(tmp_path):
 
 
 def _run_warmstart(binary, tmp_path, dump, t_checkpoint, run_id):
-    """Restart `dump` (coarse) at the FINE fidelity -> triggers refine()."""
+    """Restart `dump` (coarse) at the FINE fidelity -> triggers refine(). The forcing source of the restart is
+    the dump's label (checkpoint.phase, staged next to it); *_prev keys next to a label are refused."""
     params = {
         **CANONICAL_PARAMS,
         "run_id": run_id,
         "fidelity": _FINE_FIDELITY,
         "t_end": _COMPARE_T,
         "t_checkpoint": t_checkpoint,
-        "omega_b_prev": CANONICAL_PARAMS["omega_b"],
-        "theta_max_prev": CANONICAL_PARAMS["theta_max"],
     }
     run_dir = tmp_path / run_id
     run_dir.mkdir(parents=True, exist_ok=True)
     (run_dir / "params.json").write_text(json.dumps(params))
     shutil.copy(dump, run_dir / "checkpoint.dump")
+    shutil.copy(Path(dump).parent / "checkpoint.phase", run_dir / "checkpoint.phase")
     proc = subprocess.run(
         [str(binary.resolve()), "params.json", "checkpoint.dump"],
         cwd=run_dir, capture_output=True, text=True, timeout=_TIMEOUT,
