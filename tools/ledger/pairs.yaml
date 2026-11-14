@@ -16,6 +16,11 @@ restart_label:            # restart ramps from the forcing that made the state (
     - {with: c2d_l9_rpm34.38_th2.66_fix, without: c2d_l9_rpm34.38_th2.66}
     - {with: c2d_l9_rpm36.35_th5.24_fix, without: c2d_l9_rpm36.35_th5.24}
     - {with: fig9_l9_rpm37.5_ext1fix, without: fig9_l9_rpm37.5_ext1}
+    # talk test points, release 30 periods after the restart (main diary 2026-11-14)
+    - {with: bo1_l9_rpm30.52_th7.00_fix, without: bo1_l9_rpm30.52_th7.00}
+    - {with: bo1_l9_rpm27.38_th6.35_fix, without: bo1_l9_rpm27.38_th6.35}
+    - {with: bo1_l9_rpm29.18_th6.20_fix, without: bo1_l9_rpm29.18_th6.20}
+    - {with: bo1_l9_rpm35.92_th4.85_fix, without: bo1_l9_rpm35.92_th4.85}
 cross_level_warmstart:    # start a fine level from a coarse level's dump instead of from rest
   flag: "-DCROSS_LEVEL_WARMSTART=1"
   diary: "2026-10-10 x8 vs xlevel vs cold l10c; 2026-10-21 W9 (w9_l9 vs cold fig9_l9)"

@@ -19,6 +19,7 @@
 #                  edr_mean   mean of edr_95 (edr_pct.dat) over the window
 #                  oxy_last, c2_last  oxy_liq_sum, c2_liq_sum (tr_oxy.dat) on the last row of the window
 #                  <col>_max  max over rows of |a - b| / max(|a|) for that tr_oxy.dat column
+#                window "lastN" = the N periods before the run's own final dump ("last" = 1).
 #                with `sd_periods: n`, each tolerance becomes max(tol, 2 sd), sd = the reference's relative
 #                period-to-period scatter of that metric over its last n periods (tests/bundle/_series.period_sd)
 #       ledger   no pass bar: the guard checks only that the case ran and its output is finite
@@ -109,9 +110,10 @@ caseB_cold:
 caseB_warm:
   ref: caseB_cold
   kind: metric
-  window: last
+  window: last3
   tol: {tau_95: 0.05, edr_mean: 0.05}
   sd_periods: 4
+  window_source: "pre-registered S4 extension (lean diary 2026-11-14), verdict TRANSIENT: last-3 warm vs cold +1.9 % tau_95, +3.1 % edr after 12 more periods; single periods scatter up to +4.3 %. So the runs end at CASEB_END = 14 T_B and the window is their last 3 periods (was: last 1 period at 8 T_B). Tolerances unchanged."
   source: "diary.md 2026-10 x8 warm-start validation (lines 340, 388): every QoI within max(5%, 2 sd). sd = period-to-period scatter of caseB_cold over its last 4 periods (2026-11-14; before that the bar was a flat 5%, below the 2-4% L6 period scatter, and the guard passed or failed by chance between bundles)"
 
 mpi4:

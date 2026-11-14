@@ -103,3 +103,13 @@ def test_continuations_keep_the_tracer_and_the_oxygen_event():
     for name in ("cont", "kill_resume"):
         p = bc.params(name, RUNS)
         assert p["restart_continue"] == 1 and p["n_mix_cycles"] == 0, name
+
+
+def test_caseB_runs_end_after_the_warm_start_transient():
+    """S4 extension (lean diary 2026-11-14, pre-registered, TRANSIENT): warm vs cold settles within the bar
+    after ~10 periods at B, so both caseB runs end at CASEB_END = 14 periods of B (8 before)."""
+    TB = bc.period(bc.RPM_B)
+    assert bc.CASEB_END == 14
+    assert abs(bc.params("caseB_cold", RUNS)["t_end"] - 14 * TB) < 1e-12
+    w = bc.params("caseB_warm", RUNS)
+    assert abs(w["t_end"] - 14 * TB) < 1e-12

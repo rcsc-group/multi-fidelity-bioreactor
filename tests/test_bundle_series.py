@@ -50,3 +50,12 @@ def test_sd_periods_never_narrows_the_fixed_tolerance(tmp_path):
     (_, _, _, tol), = r.values()
     assert tol == 0.05
     assert s.failures(r)
+
+
+def test_window_last_n_averages_the_last_n_periods(tmp_path):
+    """window "last3" = the 3 periods before the run's own final dump (S4: one period of an unsteady flow
+    scatters by up to ~4 % at L6, close to the 5 % bar; the mean of 3 does not)."""
+    ref = _run(tmp_path / "ref", [1.0, 1.0, 1.0, 1.0])
+    case = _run(tmp_path / "case", [9.0, 1.0, 1.0, 1.09])   # last-3 mean 1.03: within 5 %; last period 1.09: not
+    assert not s.failures(s.compare({"window": "last3", "tol": {"edr_mean": 0.05}}, ref, case, rpm=bc.RPM_B))
+    assert s.failures(s.compare(BAR, ref, case, rpm=bc.RPM_B))

@@ -29,12 +29,13 @@ def dump_time(path) -> float:
 
 
 def window(spec, rpm: float = bc.RPM_A, rd=None) -> tuple[float, float]:
-    """bars.yaml window as absolute times: [a, b] in periods, or "last" = the period before the run's own
-    final dump (a warm start begins at another absolute time than its cold reference)."""
+    """bars.yaml window as absolute times: [a, b] in periods, or "last" / "lastN" = the 1 / N periods before
+    the run's own final dump (a warm start begins at another absolute time than its cold reference)."""
     T = bc.period(rpm)
-    if spec == "last":
+    if isinstance(spec, str) and spec.startswith("last"):
+        n = int(spec[4:] or 1)
         t1 = dump_time(Path(rd) / "checkpoint.dump")
-        return t1 - T, t1
+        return t1 - n * T, t1
     return spec[0] * T, spec[1] * T
 
 

@@ -41,6 +41,9 @@ class Case:
 # from the forcing in the dump's label (checkpoint.phase) to its params.json; a continuation therefore does not
 # ramp at all. Runs end at END = 8 periods.
 N_RAMP, R_START, END = 3, 4, 8
+# The two caseB runs (S4) end later, at CASEB_END periods of rpm B: a warm start to a new condition settles
+# within the S4 bar only ~10 periods after the switch (pre-registered extension, lean diary 2026-11-14).
+CASEB_END = 14
 
 CASES = {c.name: c for c in [
     Case("cold", "default", None, None, 6, 1),           # reference, 0 -> 8T, tracer released at T
@@ -131,9 +134,9 @@ def params(name: str, runs: Path) -> dict:
     if name == "xl6":           # as tests/verification/test_cross_level_warmstart.py: new level, same forcing
         return base(name) | {"t_checkpoint": R_START * T, "t_end": (END - R_START) * T}
     if name == "caseB_cold":
-        return base(name, RPM_B) | {"t_end": END * period(RPM_B)}
+        return base(name, RPM_B) | {"t_end": CASEB_END * period(RPM_B)}
     if name == "caseB_warm":    # condition A's state at 4T -> condition B, 1 transition cycle, then release
-        return base(name, RPM_B) | {"t_checkpoint": R_START * T, "t_end": END * period(RPM_B),
+        return base(name, RPM_B) | {"t_checkpoint": R_START * T, "t_end": CASEB_END * period(RPM_B),
                                     "n_transition_cycles": 1}
     if name == "mpi4":
         return base(name) | {"t_end": 3 * T}

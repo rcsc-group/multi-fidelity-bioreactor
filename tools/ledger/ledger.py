@@ -64,10 +64,12 @@ def _median(xs: list) -> float | None:
     return xs[n // 2] if n % 2 else 0.5 * (xs[n // 2 - 1] + xs[n // 2])
 
 
-def build(pairs: dict, status_of, jobs: dict) -> dict:
+def build(pairs: dict, status_of, jobs: dict, carry_of=None) -> dict:
     """One row per mechanism. status_of(with_dir, without_dir, flag) -> "same-source"|"confounded".
     error[qoi] = median signed relative error (with / without - 1) over clean pairs;
-    saves_core_h = median (cost without - cost with) over clean pairs with both costs known."""
+    saves_core_h = median (cost without - cost with) over clean pairs with both costs known.
+    carry_of(mechanism) -> "current"|"stale: ..." (carry.py: old-source bundle vs HEAD bundle) sets the status
+    of a row with clean pairs; without it such a row is "current"."""
     rows = {}
     for mech, m in pairs.items():
         runs, clean = [], []
@@ -82,7 +84,8 @@ def build(pairs: dict, status_of, jobs: dict) -> dict:
         err = {q: _median([r["error"][q] for r in clean]) for q in m["qoi"]} if clean else {}
         saves = _median([r["cost_without"] - r["cost_with"] for r in clean
                          if r["cost_with"] is not None and r["cost_without"] is not None])
-        rows[mech] = {"status": "current" if clean else "confounded", "n_clean": len(clean), "error": err,
+        status = "confounded" if not clean else (carry_of(mech) if carry_of else "current")
+        rows[mech] = {"status": status, "n_clean": len(clean), "error": err,
                       "saves_core_h": saves, "runs": runs}
     return rows
 
@@ -98,9 +101,24 @@ if __name__ == "__main__":   # python -m tools.ledger.ledger [OUT.json]   (in a 
             cache[d] = pv.provenance(d, known)
         return cache[d]
 
-    rows = build(pv.load_pairs(), lambda w, wo, flag: pv.pair_status(prov(w), prov(wo), flag), sacct_jobs())
-    out = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(__file__).resolve().parents[2] / "experiments" / "feature_ledger.json"
+    import argparse
+    from tools.ledger.carry import carry
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--old", type=Path, help="bundle.json built from the production source (e.g. 2ef5b07)")
+    ap.add_argument("--new", type=Path, help="bundle.json built from HEAD's source")
+    ap.add_argument("out", type=Path, nargs="?",
+                    default=Path(__file__).resolve().parents[2] / "experiments" / "feature_ledger.json")
+    a = ap.parse_args()
+
+    def carry_of(mech):
+        if not (a.old and a.new and a.old.is_file() and a.new.is_file()):
+            return "stale: no old bundle"
+        return carry(a.old, a.new, mech)
+
+    rows = build(pv.load_pairs(), lambda w, wo, flag: pv.pair_status(prov(w), prov(wo), flag), sacct_jobs(),
+                 carry_of=carry_of)
+    out = a.out
     out.write_text(json.dumps(rows, indent=1, default=str) + "\n")
     for k, r in rows.items():
-        print(f"{k:22s} {r['status']:11s} clean {r['n_clean']}/{len(r['runs'])}  saves {r['saves_core_h']}  "
+        print(f"{k:22s} {r['status'][:40]:40s} clean {r['n_clean']}/{len(r['runs'])}  saves {r['saves_core_h']}  "
               + "  ".join(f"{q} {v:+.3f}" if v is not None else f"{q} -" for q, v in r["error"].items()))

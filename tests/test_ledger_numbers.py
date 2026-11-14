@@ -87,3 +87,21 @@ def test_rel_error_reads_the_dtmix_cache(tmp_path, monkeypatch):
     cache.write_text(json.dumps({"a": {"dtmix_0.25": 15.0}}))
     monkeypatch.setattr(ledger, "DTMIX_CACHE", cache)
     assert ledger.rel_error(a, b, "dtmix_0.25") == pytest.approx(0.5)
+
+
+def test_build_marks_a_clean_row_stale_when_its_evidence_does_not_carry(tmp_path):
+    """A clean production number measured on an old source holds for HEAD only if the mechanism's bundle outputs
+    are equal on both sources (carry.py); otherwise the row is "stale: <first difference>" and keeps its number.
+    A confounded row stays confounded whatever the carry says."""
+    a, b = _res(tmp_path / "w1", {"q": 11.0}), _res(tmp_path / "c1", {"q": 10.0})
+    pairs = {"m1": {"flag": None, "qoi": ["q"], "pairs": [{"with": a, "without": b}]},
+             "m2": {"flag": None, "qoi": ["q"], "pairs": [{"with": a, "without": b}]},
+             "m3": {"flag": None, "qoi": ["q"], "pairs": [{"with": a, "without": b}]}}
+    status = {"m1": "same-source", "m2": "same-source", "m3": "confounded"}
+    carried = {"m1": "current", "m2": "stale: cont/normf.dat", "m3": "stale: x"}
+    rows = {}
+    for m in pairs:
+        rows |= ledger.build({m: pairs[m]}, lambda w, wo, flag, m=m: status[m], {}, carry_of=carried.get)
+    assert rows["m1"]["status"] == "current"
+    assert rows["m2"]["status"] == "stale: cont/normf.dat" and rows["m2"]["error"]["q"] == pytest.approx(0.1)
+    assert rows["m3"]["status"] == "confounded"
