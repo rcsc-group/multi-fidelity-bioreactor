@@ -1,0 +1,43 @@
+# Pairs of production runs that measure one feature's effect: `with` uses the feature, `without` does not, at
+# the same condition. Names are run folders under the main repo's runs/ (RUNS in provenance.py) unless absolute.
+# Source of each pair: the diary entry named in `diary`. tools/ledger/provenance.py decides per pair whether the
+# two runs share a source (clean) or not (confounded); a confounded pair is reported, never averaged in.
+restart_label:            # restart ramps from the forcing that made the state (label), not from rest
+  flag: null
+  diary: "2026-11-13 L9 A/B (job 9007211) and the 7 reruns *_fix; fig9 37.5 rpm ext1 A/B (job 9004553)"
+  qoi: [dtmix_0.25, dtmix_0.50, edr_95, tau_95_qss]
+  pairs:
+    - {with: ab9prev_l9_rpm34.81_th4.26, without: c2d_l9_rpm34.81_th4.26}
+    - {with: c2d_l9_rpm16.35_th2.33_fix, without: c2d_l9_rpm16.35_th2.33}
+    - {with: c2d_l9_rpm19.14_th2.89_fix, without: c2d_l9_rpm19.14_th2.89}
+    - {with: c2d_l9_rpm23.14_th2.13_fix, without: c2d_l9_rpm23.14_th2.13}
+    - {with: c2d_l9_rpm32.19_th4.51_fix, without: c2d_l9_rpm32.19_th4.51}
+    - {with: c2d_l9_rpm33.70_th5.35_fix, without: c2d_l9_rpm33.70_th5.35}
+    - {with: c2d_l9_rpm34.38_th2.66_fix, without: c2d_l9_rpm34.38_th2.66}
+    - {with: c2d_l9_rpm36.35_th5.24_fix, without: c2d_l9_rpm36.35_th5.24}
+    - {with: fig9_l9_rpm37.5_ext1fix, without: fig9_l9_rpm37.5_ext1}
+cross_level_warmstart:    # start a fine level from a coarse level's dump instead of from rest
+  flag: "-DCROSS_LEVEL_WARMSTART=1"
+  diary: "2026-10-10 x8 vs xlevel vs cold l10c; 2026-10-21 W9 (w9_l9 vs cold fig9_l9)"
+  qoi: [tau_95_qss, edr_95, kLa_1T_10, dtmix_0.50]
+  pairs:
+    - {with: l10_fig13a_xlevel_rpm32.5, without: l10c_rpm32.5_seg1}
+    - {with: x8_l10_rpm32.5_th7, without: l10c_rpm32.5_seg1}
+    - {with: w9_l9_rpm17.5_th7, without: fig9_l9_rpm17.5}
+    - {with: w9_l9_rpm25_th7, without: fig9_l9_rpm25}
+    - {with: w9_l9_rpm32.5_th7, without: fig9_l9_rpm32.5}
+chaining:                 # same-condition continuation from a dump
+  flag: null
+  diary: "2026-10-12 x8 continuation (x8e) vs the xlevel reference"
+  qoi: [tau_95_qss, edr_95]
+  pairs:
+    - {with: x8e_l10_rpm17.5_th7, without: l10_fig13a_xlevel_rpm17.5}
+    - {with: x8e_l10_rpm25_th7, without: l10_fig13a_xlevel_rpm25}
+flux_replay:              # scalar transport on a recorded flow instead of the coupled solve
+  flag: null
+  diary: "F2 (L6, loop one period) and F3b (L8 record, replay at Ls 8)"
+  qoi: [kLa_1T_25, dtmix_0.50]
+  pairs:
+    - {with: /oscar/scratch/eaguerov/replay_gate/runs/f2_replay, without: /oscar/scratch/eaguerov/replay_gate/runs/f2_coupled}
+    - {with: /oscar/scratch/eaguerov/replay_gate/runs/f3b_ls8, without: /oscar/scratch/eaguerov/replay_gate/runs/f3b_coupled}
+    - {with: /oscar/scratch/eaguerov/replay_gate/runs/f3b_loop1, without: /oscar/scratch/eaguerov/replay_gate/runs/f3b_coupled}
