@@ -5,6 +5,11 @@ Entries before 2026-10-08 are kept verbatim in diary_archive_to_2026-10-07.md (s
 pre-split file at /oscar/scratch/eaguerov/tmp/diary_backup_20261010.md). The archive is NOT re-audited line by line:
 where it conflicts with CURRENT STATE, CURRENT STATE wins, and the known conflicts are listed under CORRECTIONS.
 
+## 2026-11-13 ~21:30 — Do the restart bias reach the talk's L9 data?
+- Talk 2D figures use ns_l9/nsf_l9/nf_l9 (train, 25) and bo1_l9/bo4_l9/fig9_l9 (test A); all ns/nf/bo1/bo4 runs are L8 -> L9 restarts WITHOUT *_prev on binary 2ef5b07-xlevel (ramp from rest, same as c2d). Difference from c2d: n_mix_cycles = 30 (c2d: 12).
+- Zero-compute test (scratchpad seam_gap.py; 6 finished old/fixed pairs; flow is tracer-independent): velocity old/fixed - 1 at period 4: +11..+36 %; period 12: +1..+13 %; period 20: -4..+11 %; period 25: -2..+4 %; period 29: 0..+3 %; period 35: 0..+2 %. After ~period 20 the gap swings both signs (chaotic divergence of two histories), so at the talk's release (period 30) the residual is at the run-to-run noise level.
+- Reading: the talk's L9 data carry at most a few % velocity bias at release, not the +40..+100 % dtmix bias of the 12-period c2d runs. NOT shown: dtmix_0.25 bias directly (dtmix amplifies velocity differences unevenly). Decisive test, if wanted: rerun 3-4 talk L9 test points with the label fix (~60 core-h each) and compare dtmix_0.25.
+
 ## 2026-11-13 — L9 warm starts ramped the rocking from zero (found by the feature bundle, branch lean/phase2)
 
 - Cause: every restart ramps the forcing from *_prev to the current values over 3 periods (src/BioReactor.c, t_ramp_start = t_checkpoint); with no *_prev the ramp starts from ZERO rocking. campaign.py l9_warm_params wrote no *_prev, so all 8 c2d_l9_* runs had this; the W9 runs that validated the L8 -> L9 warm start had *_prev (submit_l10_from_l8.py). Velocity per period after the warm start, % of the L8 source (lean diary, fig warm_settle.png): c2d_l9 peaks +25..+54 % near period 4 and is still +8..+19 % at the release (period 12) for 5 of 8; W9 flat at -1..-4 %. Also fig9_l9_rpm37.5_ext1 (autoextend, HF dtmix_0.95 point): +49 % in the 3rd period after its seam.
