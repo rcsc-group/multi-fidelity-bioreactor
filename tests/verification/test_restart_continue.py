@@ -12,6 +12,9 @@ same physics once unbroken, and once as two segments joined by a continuation
 restart, then require the two to agree at the end. That catches field loss,
 re-injection, and anything that silently stops a source term at the seam --
 without needing to know which of those went wrong.
+
+L6 counterpart: bundle guards S5 and S10 (tests/bundle/test_restart.py), with shown power (mutants
+no_phase_sidecar, drop_tracer_dump). The tests here stay the CI check.
 """
 from __future__ import annotations
 

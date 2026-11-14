@@ -28,6 +28,9 @@ the bag at a different angle than the one it stopped at -- the "escape"
 failure documented at BioReactor.c:470 and measured on a theta 2 -> 7 -> 7
 chain. So the writer must RECORD its phase instead of letting the reader
 guess. Both halves are pinned below.
+
+L6 counterpart: bundle guards S5 (kill -> kill_resume) and S12 (tests/bundle/test_restart.py), with shown
+power (mutant no_phase_sidecar). The run tests here stay the CI check.
 """
 from __future__ import annotations
 

@@ -1,9 +1,10 @@
 """Guards of the warm starts, read from the feature bundle (bars: tools/bundle/bars.yaml).
 
-S3, S15 cross-level warm start: l5 (L5, 2T) restarted at L6 (xl6, with the pre-refine order of
-        CROSS_LEVEL_WARMSTART) must match the cold L6 run over [2T, 3T] (test_cross_level_warmstart bars).
-S4      cross-case warm start: condition A's state at 2T, restarted at condition B (caseB_warm), must match a
-        cold run at B (caseB_cold) over each run's last period (x8 bar, 5 %).
+S3, S15 cross-level warm start: l5 (L5, to 4T) restarted at L6 (xl6, with the pre-refine order of
+        CROSS_LEVEL_WARMSTART) must match the cold L6 run over [6T, 8T] (test_cross_level_warmstart bars).
+S4      cross-case warm start: condition A's state at 4T, restarted at condition B (caseB_warm), must match a
+        cold run at B (caseB_cold) over each run's last 3 periods, both ending at 14 periods of B (x8 bar,
+        max(5 %, 2 sd); the warm start settles ~10 periods after the switch: lean diary 2026-11-14).
 S8      early tracer release after a warm start: caseB_warm releases its tracer after 1 transition cycle.
 """
 from pathlib import Path

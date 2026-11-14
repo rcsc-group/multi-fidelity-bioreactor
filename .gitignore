@@ -12,6 +12,9 @@ diary.md
 # being cleaned up 2026-08-17.
 /slurm_*.out
 /slurm_*.err
+# logs of the feature bundle and its mutants (tools/bundle/*.sbatch write to the submit directory)
+/feature-bundle-*.out
+/bundle-mutant-*.out
 
 # Scratch dirs some tests write into the real experiments/ dir instead of tmp_path
 experiments/sweep_test/

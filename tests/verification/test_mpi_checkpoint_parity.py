@@ -34,6 +34,9 @@ raises.
 
 All tests here are real CFD runs at fidelity 5 (32x32 cells) or fidelity 6
 where a checkpoint fixture is reused from another test.
+
+L6 counterpart: bundle guards S5 (restart, tests/bundle/test_restart.py; power shown by ramp_from_rest) and S7
+(MPI, tests/bundle/test_builds.py; no mutant yet, so no shown power). The tests here stay the CI check.
 """
 from __future__ import annotations
 

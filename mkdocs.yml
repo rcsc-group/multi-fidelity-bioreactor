@@ -62,4 +62,5 @@ nav:
   - Developer:
       - "Solver source guide": developer/solver-guide.md
       - "Solver pitfalls": developer/solver-pitfalls.md
+      - "Feature guardrails and ledger": developer/guardrails.md
   - Test suite: testing.md

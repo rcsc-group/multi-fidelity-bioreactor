@@ -40,6 +40,10 @@ guard the two independent things that went wrong:
       noise that wall metrics miss. Never drop it from this comparison.
 
 CI status: marked `medium`, serial, fidelity 4->5, no MPI or SLURM needed.
+
+L6 counterpart: the feature bundle guards S3/S15 and S9 (tests/bundle/test_warm.py, test_restart.py), with
+shown power (mutants prerefine_old, no_fs_recompute; docs_site/developer/guardrails.md). This file stays the
+check that CI runs on every pull request; the bundle runs on demand.
 """
 from __future__ import annotations
 
