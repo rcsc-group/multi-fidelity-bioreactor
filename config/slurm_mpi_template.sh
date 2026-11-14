@@ -125,16 +125,11 @@ fi
 
 echo "Simulation complete. Syncing results..."
 
-# PROJECT_ROOT is hardcoded rather than derived from CANON_RUN/SCRATCH_RUN path
-# arithmetic (2026-08-05, diary.md): that derivation silently resolved to
-# /oscar/scratch whenever _canonical_run_dir was absent from the staged
-# params.json (e.g. a raw sbatch submission that bypassed
-# scripts.simulate._prepare_run_dir) -- hit twice this session (jobs 4645673,
-# 4631100), both times the simulation completed fine but this postprocessing
-# step failed with "can't open file '/oscar/scratch/scripts/postprocess.py'".
-# This repo lives at a single fixed OSCAR path (see CLAUDE.md); no derivation
-# needed.
+# The checkout whose postprocess runs: scripts/simulate.py exports MFB_REPO (the submitting checkout). It is not
+# derived from the run paths: that derivation pointed at the scratch folder when a raw sbatch submission skipped
+# simulate.py, and the postprocess failed. The default is the main checkout on OSCAR.
 PROJECT_ROOT="${MFB_REPO:-/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor}"
+echo "Project root : $PROJECT_ROOT"
 
 # Copy output files to canonical Lustre path for postprocessing
 if [ -n "$CANON_RUN" ] && [ "$CANON_RUN" != "$SCRATCH_RUN" ]; then
