@@ -14,7 +14,7 @@ where it conflicts with CURRENT STATE, CURRENT STATE wins, and the known conflic
 - Fix tries for (b): forcing_now() in the label, a t-keyed cache, an iter-keyed cache -> all failed the build (qcc call budget; -maxcalls=1e8 no help). Kept: label phase from the light psi_at() at the dump time (exact); Th/Th_d/Th_2d written with t_forcing; guard S13 Taylor-extends them. Fix (a): first-call flag.
 - Bundle run 2 (head4): S12 passes (half's label cycles 4.000000). S13 then showed the first forcing step 0.00038 after the dump: qcc -events trace of `cont` shows restore() marks every (i++) solver event of the restored step done; only properties/stability/oxygen run, so that step moves t with frozen fields (Basilisk behaviour, 6e-4 period at L6; pitfall restore-first-step). S13 bar: <= 1e-3 period. caseB_warm needed the child's T_bio in the guard (new condition = new time unit) -> restart_forcing.json writes T_bio.
 - Bundle run 3 (head5, jobs 9044583/4): 31/32 guards pass. S13 diffs <= 4.5e-7 rad on all four restarts. Only S4 fails: EDR +5.95 % vs 5 % (passed at +<5 % in run 1; pre-registered verdict UNSETTLED, L6 period scatter 2-4 %). Unit suite all pass except test_installed_copy_matches_tracked_hook (fails before these changes too: local hook copy). Stale static test rewritten: test_restart_reads_the_label_and_never_guesses.
-- Next: mutant ramp_from_rest; the 7 L9 reruns (old binary, unaffected by these fixes).
+- Mutant ramp_from_rest (job 9046880): CAUGHT by S13[cont] and S5[cont]. Next: the 7 L9 reruns (old binary, unaffected by these fixes).
 
 ## 2026-11-13 — Feature guardrails: L6 bundle (spec docs/specs/2026-11-13-feature-guardrails-design.md, plan docs/plans/...-plan.md)
 
