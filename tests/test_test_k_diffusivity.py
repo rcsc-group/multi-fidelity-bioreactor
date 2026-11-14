@@ -1,9 +1,6 @@
 """Unit tests for the pre-registered test K rule (pure function, synthetic data)."""
-import sys
-from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-from test_k_diffusivity import evaluate_rule  # noqa: E402
+from scripts.hypotheses.test_k_diffusivity import evaluate_rule
 
 TH = ("dtmix_0.50", "dtmix_0.75", "dtmix_0.95")
 

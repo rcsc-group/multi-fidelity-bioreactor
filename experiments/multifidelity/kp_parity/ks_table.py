@@ -1,5 +1,9 @@
 import json, math
-R = "/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor/runs/ks_l8_rpm%s_th7/results.json"
+import sys  # noqa: E402
+from pathlib import Path  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))  # repo root
+from scripts import paths  # noqa: E402  (machine-specific folders)
+R = f"{paths.REPO}/runs/ks_l8_rpm%s_th7/results.json"
 S = {  # script seconds (RPM=32.5 in script): k1 plain, k1 strict, k2 plain, k2 strict
  "22.4": (74.3277, 71.0961, 75.3604, 71.6810),
  "22.6": (64.6328, 61.4011, 64.5946, 61.0515),

@@ -1,3 +1,4 @@
+/runs
 runs/
 surrogate/
 experiments/results.csv
@@ -5,13 +6,16 @@ experiment_data/
 logs/
 
 # Internal lab notebook -- not user-facing, kept local only.
-diary.md
+internal/diary.md
 
 # Stray SLURM logs from sbatch calls run without --output/--error (should
 # go to logs/ instead) -- 16 of these accumulated at the repo root before
 # being cleaned up 2026-08-17.
 /slurm_*.out
 /slurm_*.err
+# logs of the feature bundle and its mutants (tools/bundle/*.sbatch write to the submit directory)
+/feature-bundle-*.out
+/bundle-mutant-*.out
 
 # Scratch dirs some tests write into the real experiments/ dir instead of tmp_path
 experiments/sweep_test/
@@ -49,4 +53,5 @@ __pycache__/
 !experiments/canonical_case/**/*.mp4
 !docs_site/assets/**
 .claude/worktrees/
-talks/dfd2026/lit_pdfs/
+internal/talks/dfd2026/lit_pdfs/
+tools/.regroup_moves.json

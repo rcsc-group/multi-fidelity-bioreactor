@@ -1,6 +1,6 @@
 import numpy as np
 
-from scripts.test_v_l10 import binned, verdict
+from scripts.hypotheses.test_v_l10 import binned, verdict
 
 
 def test_verdict_thresholds():

@@ -104,62 +104,22 @@ event streaming_vorticity (i++)
 // ---------------------------------------------------------------------------------------------------
 // event acceleration: body force of the rocking motion, every step.
 //
-// Angle: Th(t) = sum_k Ak sin(k w (t + t_phase_offset) + phk), k = 1..n_harmonics (1 = Kim et al.).
-// Ramp: amplitude Ak and phase phk go from their *_prev values (0 on a fresh start) to the target values
-// with a smooth step alpha = 3x^2 - 2x^3, x = (t - t_ramp_start)/(N_RAMP_CYCLES T). Th_d and Th_2d are
-// the exact first and second time derivatives, including the alpha' and alpha'' terms of the ramp. (Leaving
-// those out makes the forcing inconsistent with the angle during the ramp, and a restart then settles in
-// a different state.) The frequency is not ramped.
-// Optional horizontal shaking (omega_h > 0), off by default.
+// Angle Th(t), its rate Th_d and acceleration Th_2d from forcing_now() (forcing_state.h): the forcing ramps
+// from its source (rest on a fresh start; the dump's label on a restart) to params.json over N_RAMP_CYCLES,
+// in amplitude, phase and frequency. Th_d and Th_2d are the exact time derivatives, ramp terms included
+// (pitfall "ramp-derivatives"). Optional horizontal shaking (omega_h > 0), off by default.
 // ---------------------------------------------------------------------------------------------------
 event acceleration(i++)
 {
-  double elapsed  = t - t_ramp_start;
-  double ramp_dur = N_RAMP_CYCLES * T_per_st;
-  int    in_ramp  = elapsed < ramp_dur;
-  double x_ss     = in_ramp ? elapsed / ramp_dur : 1.0;
-  double alpha    = 3.*x_ss*x_ss - 2.*x_ss*x_ss*x_ss;   // 0 -> 1
-  double dalpha_dt   = in_ramp ? 6.*x_ss*(1.-x_ss)/ramp_dur : 0.0;
-  double d2alpha_dt2 = in_ramp ? 6.*(1.-2.*x_ss)/(ramp_dur*ramp_dur) : 0.0;
-
-  Th = 0;  Th_d = 0;  Th_2d = 0;
-  for (int k = 1; k <= params.n_harmonics; k++) {
-    double wk   = k * w_bio_st;
-    double dAk  = params.theta_max[k-1]   - params.theta_max_prev[k-1];    // deg
-    double dphk = params.phi_angular[k-1] - params.phi_angular_prev[k-1];  // rad
-    double Ak   = (params.theta_max_prev[k-1]   + alpha*dAk)  * pi / 180.;
-    double phk  =  params.phi_angular_prev[k-1] + alpha*dphk;
-    double Ak_d   = dalpha_dt   * dAk * pi / 180.;
-    double Ak_2d  = d2alpha_dt2 * dAk * pi / 180.;
-    double phk_d  = dalpha_dt   * dphk;
-    double phk_2d = d2alpha_dt2 * dphk;
-    if (k == 1)
-      _theta_env_deg = Ak * 180. / pi;
-
-    double theta_arg = wk*(t + t_phase_offset) + phk;
-    double theta_d    = wk + phk_d;
-    double s = sin(theta_arg), c = cos(theta_arg);
-
-    Th    += Ak * s;
-    Th_d  += Ak_d*s + Ak*theta_d*c;
-    Th_2d += Ak_2d*s + 2.*Ak_d*theta_d*c + Ak*phk_2d*c - Ak*theta_d*theta_d*s;
+  ForcingNow F = forcing_now (t);
+  _forcing_last = F;  _forcing_last_t = t;   // for the checkpoint label (forcing_state.h)
+  Th = F.Th;  Th_d = F.Th_d;  Th_2d = F.Th_2d;
+  if (_restart_kind > 0 && !_restart_forcing_written) {   // first step after a restart, t = t_checkpoint
+    write_restart_forcing (F, t, _restart_kind);          // (not i == 0: restore() brings back i)
+    _restart_forcing_written = 1;
   }
-
-  double x_acc = 0.;   // horizontal shaking
-  {
-    double omega_h_now = (1.-alpha)*params.omega_h_prev + alpha*params.omega_h;
-    if (omega_h_now > 0.) {
-      double w_h_st = omega_h_now * T_bio;
-      for (int k = 1; k <= params.n_harmonics; k++) {
-        double wk_h = k * w_h_st;
-        double Ah   = (1.-alpha)*params.amplitude_h_prev[k-1]
-                    +     alpha *params.amplitude_h[k-1];
-        double phh  = (1.-alpha)*params.phi_horizontal_prev[k-1]
-                    +     alpha *params.phi_horizontal[k-1];
-        x_acc += (Ah / L_bio) * sq(wk_h) * sin(wk_h*(t + t_phase_offset) + phh);
-      }
-    }
-  }
+  _theta_env_deg = F.theta_max[0];
+  double x_acc = F.x_acc;   // horizontal shaking
 
   // a = gravity + Coriolis + centrifugal + Euler (+ horizontal shaking, x only)
   face vector av = a;

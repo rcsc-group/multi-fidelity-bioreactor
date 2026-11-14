@@ -1,0 +1,242 @@
+"""Feature bundle: build every solver variant once, run the L6 cases of cases.py, write bundle.json.
+
+    bundle.py run SRC_DIR WORK_DIR [--only CASE ...]     (on a compute node: tools/bundle/bundle.sbatch)
+    bundle.py mpi SRC_DIR WORK_DIR                       (the MPI case: tools/bundle/bundle_mpi.sbatch)
+
+SRC_DIR is a solver source folder (src/). The tests in tests/bundle/ read WORK_DIR/bundle.json; they never
+run anything. A case that fails is recorded with its error, its children are recorded as "not run", and the
+other cases still run. The MPI case is run by its own job (MPI is not available on every partition); it
+writes WORK_DIR/mpi4.json, and the guard fixture merges it into the bundle.
+"""
+import argparse
+import hashlib
+import json
+import os
+import shutil
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT))
+from tools.bundle import cases as bc  # noqa: E402
+from tools.golden import golden  # noqa: E402
+from scripts.submit_continue import stage_phase  # noqa: E402  (the production staging rule)
+
+MAXRUNTIME_RESERVE_S = 300   # src/BioReactor.c: the early dump fires this many seconds before the limit
+
+
+def src_hash(src: Path) -> str:
+    """SHA-256 over the solver sources (name + content, sorted): identity of a source tree without git."""
+    h = hashlib.sha256()
+    for f in sorted(list(src.glob("*.c")) + list(src.glob("*.h"))):
+        h.update(f.name.encode() + b"\0" + f.read_bytes() + b"\0")
+    return h.hexdigest()
+
+
+def cases_hash() -> str:
+    """SHA-256 of tools/bundle/cases.py: the case definitions (params, run lengths, build flags) are evidence too."""
+    return hashlib.sha256(Path(bc.__file__).read_bytes()).hexdigest()
+
+
+def git_commit(src: Path):
+    r = subprocess.run(["git", "-C", str(src), "rev-parse", "HEAD"], capture_output=True, text=True)
+    return r.stdout.strip() if r.returncode == 0 else None
+
+
+def dump_time(dump: Path) -> float:
+    """Absolute time stored in the first 8 bytes of a Basilisk dump (what the solver reads on restart)."""
+    import struct
+    return struct.unpack("<d", dump.read_bytes()[:8])[0]
+
+
+def resume_params(p: dict, dump: Path, t_end_abs: float) -> dict:
+    """A continuation from `dump` that runs to the absolute time t_end_abs (t_end is a duration on restart)."""
+    t_ck = dump_time(dump)
+    return p | {"t_checkpoint": t_ck, "t_end": t_end_abs - t_ck}
+
+
+def default_run_case(case, binary: Path, rd: Path, params: dict, restart, env: dict) -> None:
+    rd.mkdir(parents=True, exist_ok=True)
+    (rd / "params.json").write_text(json.dumps(params, indent=1))
+    cmd = [str(binary), "params.json"] + ([str(restart)] if restart else [])
+    if case.ranks > 1:
+        cmd = ["srun", "--mpi=pmix", "-n", str(case.ranks)] + cmd
+    with open(rd / "stdout.txt", "w") as o, open(rd / "stderr.txt", "w") as e:
+        r = subprocess.run(cmd, cwd=rd, env={**os.environ, "OMP_NUM_THREADS": "1", **env}, stdout=o, stderr=e)
+    if r.returncode != 0:
+        tail = (rd / "stderr.txt").read_text()[-500:]
+        raise RuntimeError(f"exit {r.returncode}: {tail}")
+
+
+def default_build(src: Path, work: Path, builds: dict) -> dict:
+    """One golden.build call per variant, so one failing variant does not stop the others."""
+    out = {}
+    for name, flags in builds.items():
+        try:
+            out.update(golden.build(src, work, {name: flags}))
+        except SystemExit as e:
+            out[name] = RuntimeError(f"build {name} failed: {str(e)[-500:]}")
+    return out
+
+
+def default_build_mpi(src: Path, work: Path) -> Path:
+    """The MPI variant, as `make build-mpi-lean`: qcc with mpicc as the C backend (needs `module load openmpi`)."""
+    d = work / "build" / "mpi"
+    shutil.rmtree(d, ignore_errors=True)
+    shutil.copytree(src, d)
+    env = {**os.environ, "BASILISK": golden.BASILISK, "PATH": f"{golden.BASILISK}:{os.environ['PATH']}",
+           "CC99": "mpicc -std=c99 -D_XOPEN_SOURCE=700 -D_GNU_SOURCE=1"}
+    ld = [f for f in golden.LDFLAGS if f != "-lGL"]
+    r = subprocess.run([golden.QCC, *golden.CFLAGS, *bc.BUILDS["mpi"], "BioReactor.c", "-o", "BioReactor", *ld],
+                       cwd=d, env=env, capture_output=True, text=True)
+    if r.returncode != 0:
+        raise RuntimeError(f"build mpi failed: {r.stderr[-500:]}")
+    return d / "BioReactor"
+
+
+def default_qoi(rd: Path) -> dict:
+    from scripts import postprocess
+    res = postprocess.main(str(rd))
+    return {k: float(v) for k, v in res.items() if isinstance(v, (int, float)) and not isinstance(v, bool)}
+
+
+def _with_parents(only, cases) -> dict:
+    keep = set()
+    for n in only:
+        while n is not None:
+            keep.add(n)
+            n = cases[n].parent
+    if "kill" in keep:
+        keep.add("cold")   # kill's wall-clock limit comes from cold's wall time
+    keep |= {cases[n].label_from for n in list(keep) if cases[n].label_from}   # refuse_stale stages cold's label
+    return {n: c for n, c in cases.items() if n in keep}
+
+
+def run_bundle(src: Path, work: Path, only=None, cases=None, run_case=default_run_case,
+               build_fn=default_build, qoi_fn=default_qoi, fidelity=None) -> dict:
+    cases = cases or bc.CASES
+    if only:
+        cases = _with_parents(only, cases)
+    work.mkdir(parents=True, exist_ok=True)
+    runs = work / "runs"
+    serial = {c.build for c in cases.values() if c.build != "mpi"}
+    bins = build_fn(src, work, {b: bc.BUILDS[b] for b in sorted(serial)})
+    out = {"src_hash": src_hash(src), "cases_hash": cases_hash(), "fidelity": fidelity,
+           "git_commit": git_commit(src), "builds": {}, "cases": {}}
+    for b, path in bins.items():
+        ok = not isinstance(path, Exception)
+        sha = hashlib.sha256(Path(path).read_bytes()).hexdigest() if ok and Path(path).exists() else None
+        out["builds"][b] = {"flags": bc.BUILDS[b], "sha256": sha, "error": "" if ok else str(path)}
+
+    for name in bc.order(cases):
+        c = cases[name]
+        rd = runs / name
+        rec = {"status": "not run", "error": "", "wall_s": 0.0, "dir": str(rd), "files": {}, "qoi": {}}
+        out["cases"][name] = rec
+        if c.build == "mpi":
+            rec["error"] = "MPI case: runs in its own MPI job (tools/bundle/bundle_mpi.sbatch)"
+            continue
+        if c.parent and out["cases"][c.parent]["status"] != "ok":
+            rec["error"] = f"parent {c.parent} failed"
+            continue
+        if isinstance(bins.get(c.build), Exception):
+            rec["error"] = str(bins[c.build])
+            continue
+        p = bc.params(name, runs)
+        if fidelity is not None:   # level check only (plan Task 2 step 6); the bundle itself is L6
+            p["fidelity"] = fidelity
+        env = dict(c.env)
+        if env.get("BIOREACTOR_MAXRUNTIME_S") == "0":   # dump near R_START/END of cold's wall time
+            cw = out["cases"].get("cold", {})
+            if cw.get("status") != "ok":
+                rec["error"] = "needs cold's wall time (cold not ok)"
+                continue
+            frac = bc.R_START / bc.END
+            env["BIOREACTOR_MAXRUNTIME_S"] = str(int(MAXRUNTIME_RESERVE_S + frac * cw["wall_s"]))
+        restart = runs / c.parent / c.restart if c.restart else None
+        shutil.rmtree(rd, ignore_errors=True)   # never read a file an earlier bundle left here
+        if c.label_from and out["cases"].get(c.label_from, {}).get("status") != "ok":
+            rec["error"] = f"needs {c.label_from}'s label ({c.label_from} not ok)"
+            continue
+        if restart is not None and c.stage_label:   # the dump's label, read from the working directory
+            stage_phase(runs / c.label_from if c.label_from else restart.parent, rd)
+        if name == "kill_resume":
+            p = resume_params(p, restart, t_end_abs=bc.END * bc.period(bc.RPM_A))
+        _run_and_record(rec, c, bins[c.build], rd, p, restart, env, run_case, qoi_fn)
+        if c.expect_refusal:
+            _grade_refusal(rec, rd)
+    (work / "bundle.json").write_text(json.dumps(out, indent=1))
+    return out
+
+
+def _grade_refusal(rec, rd) -> None:
+    """A case the solver must refuse: 'refused' if it stopped with the solver's refusal message
+    (src/forcing_state.h restart_refuse), else 'failed' (it ran, or it died of another error)."""
+    err = (rd / "stderr.txt").read_text() if (rd / "stderr.txt").exists() else ""
+    if rec["status"] == "failed" and "ERROR: restart refused" in err:
+        rec["status"], rec["qoi"] = "refused", {}
+    else:
+        rec["status"] = "failed"
+        rec["error"] = (rec["error"] or "the solver ran; it must refuse this restart") + f" | stderr: {err[-300:]}"
+
+
+def _run_and_record(rec, c, binary, rd, p, restart, env, run_case, qoi_fn) -> None:
+    """Run one case and fill its record: status, error, wall time, file digests, QoIs."""
+    t0 = time.time()
+    try:
+        run_case(c, binary, rd, p, restart, env)
+        rec["status"] = "ok"
+    except Exception as e:  # noqa: BLE001 - recorded, not hidden
+        rec["status"], rec["error"] = "failed", str(e)
+    rec["wall_s"] = time.time() - t0
+    if rd.exists():
+        rec["files"] = golden.digest(rd)
+    if rec["status"] == "ok":
+        try:
+            rec["qoi"] = qoi_fn(rd)
+        except Exception as e:  # noqa: BLE001
+            rec["qoi_error"] = f"{type(e).__name__}: {e}"
+
+
+def run_mpi(src: Path, work: Path, run_case=default_run_case, build_fn=default_build_mpi,
+            qoi_fn=default_qoi) -> dict:
+    """The MPI case, in its own job: writes WORK/mpi4.json (never bundle.json; the fixture merges the two)."""
+    c = bc.CASES["mpi4"]
+    rd = work / "runs" / c.name
+    rec = {"status": "not run", "error": "", "wall_s": 0.0, "dir": str(rd), "files": {}, "qoi": {}}
+    out = {"src_hash": src_hash(src), "cases_hash": cases_hash(), "git_commit": git_commit(src), "case": rec}
+    try:
+        binary = build_fn(src, work)
+    except Exception as e:  # noqa: BLE001
+        rec["status"], rec["error"] = "failed", str(e)
+        binary = None
+    if binary is not None:
+        out["sha256"] = hashlib.sha256(Path(binary).read_bytes()).hexdigest() if Path(binary).exists() else None
+        _run_and_record(rec, c, binary, rd, bc.params(c.name, work / "runs"), None, dict(c.env), run_case, qoi_fn)
+    work.mkdir(parents=True, exist_ok=True)
+    (work / "mpi4.json").write_text(json.dumps(out, indent=1))
+    return out
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("cmd", choices=["run", "mpi"])
+    ap.add_argument("src", type=Path)
+    ap.add_argument("work", type=Path)
+    ap.add_argument("--only", nargs="*")
+    ap.add_argument("--fidelity", type=int, help="override the level of every case (level check only)")
+    a = ap.parse_args()
+    if a.cmd == "mpi":
+        m = run_mpi(a.src.resolve(), a.work.resolve())
+        print(f"mpi4 {m['case']['status']} {m['case']['wall_s']:.1f} s {m['case']['error'][:200]}")
+        sys.exit(0 if m["case"]["status"] == "ok" else 1)
+    out = run_bundle(a.src.resolve(), a.work.resolve(), a.only, fidelity=a.fidelity)
+    for n, c in out["cases"].items():
+        print(f"{n:12s} {c['status']:8s} {c['wall_s']:7.1f} s  {c['error'][:100]}")
+    sys.exit(0 if all(c["status"] in ("ok", "refused") or "MPI" in c["error"] for c in out["cases"].values()) else 1)
+
+
+if __name__ == "__main__":
+    main()

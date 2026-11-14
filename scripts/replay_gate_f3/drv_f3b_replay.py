@@ -6,10 +6,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from scripts import replay_gate as rg
+from scripts import paths  # noqa: E402  (machine-specific folders)
 
 ls, periods, rid, wall = int(sys.argv[1]), float(sys.argv[2]), sys.argv[3], sys.argv[4]
 nt = int(sys.argv[5]) if len(sys.argv) > 5 else 16
-REC = Path("/oscar/data/dharri15/eaguerov/replay_records/f3b_l8_rpm32.5")
+REC = Path(f"{paths.DATA}/replay_records/f3b_l8_rpm32.5")
 cp = json.loads((rg.run_dir("f3b_coupled") / "params.json").read_text())
 t_per = rg.t_period(cp)
 p = rg.make_params(rid, rg.BIN_DIR / "BioReactor-replayL16", fidelity=8, n_mix_cycles=0, post_cycles=0,

@@ -1,6 +1,6 @@
 """LooKRR with the closed-form leave-one-out error (one matrix inverse per evaluation instead of n Cholesky solves).
 For a kernel ridge / GP mean with K = k(X, X) + noise I, the leave-one-out prediction is mu_{-i} = y_i - [K^-1 y]_i / [K^-1]_ii (exact).
-Same objective as scripts/plot_mf_fig13.LooKRR; test: scripts/fast_loo_check.py (values agree to 1e-8, fits agree). Usage: from scripts.fast_loo_krr import FastLooKRR
+Same objective as scripts/plot_mf_fig13.LooKRR; test: scripts/analyse/fast_loo_check.py (values agree to 1e-8, fits agree). Usage: from scripts.fast_loo_krr import FastLooKRR
 """
 from __future__ import annotations
 

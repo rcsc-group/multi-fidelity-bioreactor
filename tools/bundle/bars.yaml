@@ -1,0 +1,139 @@
+# Pass bars of the guard tests in tests/bundle/. Written BEFORE the first full bundle run (plan Task 3,
+# commit "bundle: pre-registered bars and fixture"): each number is copied from the test or diary entry
+# named in `source`, never tuned to a bundle result. A guard that fails is a finding to explain, not a
+# reason to loosen its bar.
+#
+# Every entry compares one case with its reference case `ref` (cases.py); `cold` is the reference of most.
+# T is one rocking period (cases.period()). Windows are in units of T, absolute time.
+#
+# kind: bitwise  the listed files (or all files but `exclude`) are byte-identical; with `columns`, only those
+#                columns (by header name) are compared, as printed text; with `rows: common`, only the rows
+#                (times) both runs logged
+#       metric   each named metric of the two runs differs by at most its relative tolerance:
+#                  vel_rms    mean of sqrt(ux_liq_rms^2 + uy_liq_rms^2) (normf.dat) over the window, the
+#                             quantity of tests/verification/test_grid_convergence._mean_post_ramp_vel_rms
+#                             (the bundle's 3 T lie inside its 3-cycle ramp, so the whole window is used)
+#                  tau_rms    rms of tau_mean (shear_stress.dat) over the window
+#                  ediss_rms  rms of ediss_mean (shear_stress.dat) over the window
+#                  tau_95     mean of tau_95 (shear_stress.dat) over the window
+#                  edr_mean   mean of edr_95 (edr_pct.dat) over the window
+#                  oxy_last, c2_last  oxy_liq_sum, c2_liq_sum (tr_oxy.dat) on the last row of the window
+#                  <col>_max  max over rows of |a - b| / max(|a|) for that tr_oxy.dat column
+#                window "lastN" = the N periods before the run's own final dump ("last" = 1).
+#                with `sd_periods: n`, each tolerance becomes max(tol, 2 sd), sd = the reference's relative
+#                period-to-period scatter of that metric over its last n periods (tests/bundle/_series.period_sd)
+#       ledger   no pass bar: the guard checks only that the case ran and its output is finite
+#
+# The noise floor of this bundle is cold vs cold2: bitwise except logstats.dat (wall-clock timings).
+#
+# v2 (2026-11-13, after the first bundle; diary): the TOLERANCES below are the pre-registered ones, unchanged.
+# What changed is where they are measured: v1 compared inside the solver's 3-period forcing ramp, so a
+# restart at full forcing was compared with a cold run still ramping. Restarts now start at 4T (after the
+# ramp) and runs end at 8T; replay compares with the record run `rec` (a record build lands one extra step
+# on the record end, so its step sequence differs from the default builds after it).
+
+cold2:
+  ref: cold
+  kind: bitwise
+  exclude: [logstats.dat]
+  source: "golden gate 2026-11-12 (tools/golden/golden.py): two identical serial runs are byte-identical except logstats.dat"
+
+lean:
+  ref: cold
+  kind: bitwise
+  files: [normf.dat, shear_stress.dat, vol_frac_interf.dat, edr_pct.dat]
+  columns_of: {tr_oxy.dat: [i, t, oxy_liq_sum, oxy_liq_sum2]}
+  source: "pre-registered here (spec 2026-11-13 S6): EXTRA_TRACERS=0 removes passive tracers only; nothing feeds back on the flow or the oxygen"
+
+half:
+  ref: cold
+  kind: bitwise
+  rows: common
+  window: [0, 4]
+  files: [normf.dat, shear_stress.dat, vol_frac_interf.dat, edr_pct.dat, tr_oxy.dat]
+  source: "pre-registered here (spec 2026-11-13 S5): stopping at 4T with a dump must not change the history before 4T"
+
+cont:
+  ref: cold
+  kind: metric
+  window: [4, 8]
+  tol: {vel_rms: 0.10, oxy_last: 0.10, c2_last: 0.10}
+  source: "tests/verification/test_mpi_checkpoint_parity.py:64 (_VEL_RTOL_CKPT = 0.10); tests/verification/test_restart_continue.py:82 (tracer and oxygen tail, rel=0.10)"
+
+kill_resume:
+  ref: cold
+  kind: metric
+  window: [7, 8]
+  tol: {vel_rms: 0.10, oxy_last: 0.10, c2_last: 0.10}
+  source: "as cont: tests/verification/test_mpi_checkpoint_parity.py:64; tests/verification/test_restart_continue.py:82"
+
+kill:
+  ref: cold
+  kind: ledger
+  source: "parent of kill_resume; guard: the early dump and its phase sidecar exist, and its time is inside (3T, 7T): after the ramp, before kill_resume's window"
+
+replay:
+  ref: rec
+  kind: metric
+  window: [1, 2]
+  tol: {oxy_liq_sum_max: 1.0e-6, c2_liq_sum_max: 1.0e-6, c2_liq_sum2_max: 1.0e-6}
+  source: "tests/test_replay_gate.py:5-7,107-108 (F1, pre-registered diary 2026-10-16): relative 1e-6 at every logged time"
+
+loop:
+  ref: rec
+  kind: ledger
+  window: [1, 3]
+  source: "tests/test_replay_gate.py:8-11 (F2): reported, not asserted; guard = it ran the whole window and C* is finite"
+
+rec:
+  ref: cold
+  kind: ledger
+  source: "record run (record build, 0 -> 2T): parent of replay and loop; no bar"
+
+l5:
+  ref: cold
+  kind: ledger
+  source: "parent of xl6 (L5 source of the cross-level restart); no bar"
+
+xl6:
+  ref: cold
+  kind: metric
+  window: [6, 8]
+  tol: {tau_rms: 0.15, ediss_rms: 0.30}
+  source: "tests/verification/test_cross_level_warmstart.py:72-73 (_RTOL_TAU = 0.15, _RTOL_EDISS = 0.30); window = the last half of the warm run, as that test (_tau_and_ediss)"
+
+caseB_cold:
+  ref: cold
+  kind: ledger
+  source: "reference of caseB_warm (condition B, cold); no bar of its own"
+
+caseB_warm:
+  ref: caseB_cold
+  kind: metric
+  window: last3
+  tol: {tau_95: 0.05, edr_mean: 0.05}
+  sd_periods: 4
+  window_source: "pre-registered S4 extension (lean diary 2026-11-14), verdict TRANSIENT: last-3 warm vs cold +1.9 % tau_95, +3.1 % edr after 12 more periods; single periods scatter up to +4.3 %. So the runs end at CASEB_END = 14 T_B and the window is their last 3 periods (was: last 1 period at 8 T_B). Tolerances unchanged."
+  source: "diary.md 2026-10 x8 warm-start validation (lines 340, 388): every QoI within max(5%, 2 sd). sd = period-to-period scatter of caseB_cold over its last 4 periods (2026-11-14; before that the bar was a flat 5%, below the 2-4% L6 period scatter, and the guard passed or failed by chance between bundles)"
+
+mpi4:
+  ref: lean
+  kind: metric
+  window: [1, 3]
+  tol: {vel_rms: 0.05}
+  source: "tests/verification/test_mpi_checkpoint_parity.py:63 (_VEL_RTOL_MPI = 0.05)"
+
+refuse_prev:
+  ref: half
+  kind: refusal
+  source: "internal/docs/plans/2026-11-13-restart-label-plan.md: a label and *_prev in params are two sources; the solver must stop with ERROR naming _prev"
+
+refuse_nolabel:
+  ref: half
+  kind: refusal
+  source: "internal/docs/plans/2026-11-13-restart-label-plan.md: a restart with no label has no source forcing; the solver must stop with ERROR naming checkpoint.phase"
+
+refuse_stale:
+  ref: half
+  kind: refusal
+  source: "review finding 2026-11-14: a label written at another time than the dump (here cold's label, 8T, next to half's dump, 4T) gives the wrong source forcing; the solver must stop with ERROR naming the two times"

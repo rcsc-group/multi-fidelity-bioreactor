@@ -38,14 +38,40 @@ def test_l9_warm_params_are_warm_fidelity9_same_binary():
     assert p["t_end"] > 0
 
 
-def test_l9_warm_params_continue_the_source_forcing():
-    """Pitfall restart-ramp (diary 2026-11-13): without *_prev the solver ramps the rocking again from zero after
-    the restart. The W9 validation runs had *_prev; the first 8 campaign L9 runs did not."""
-    src = {"fidelity": 8, "omega_b": 2 * math.pi * 20 / 60, "theta_max": [4.0, 0.0, 0.0], "_binary": "/b/2ef5b07",
-           "geometry": {"a": 0.25, "b": 0.03575, "n": 8.0}, "fill_level": 0.5, "n_harmonics": 1}
-    p = c.l9_warm_params(src, "c2d_l8_rpm20.00_th4.00", t_ck=140.0, rpm=20.0, theta=4.0, binary="/b/2ef5b07")
+def _src(binary):
+    return {"fidelity": 8, "omega_b": 2 * math.pi * 20 / 60, "theta_max": [4.0, 0.0, 0.0], "_binary": str(binary),
+            "geometry": {"a": 0.25, "b": 0.03575, "n": 8.0}, "fill_level": 0.5, "n_harmonics": 1}
+
+
+def test_l9_warm_params_continue_the_source_forcing(tmp_path):
+    """Pitfall restart-ramp (diary 2026-11-13): an older binary (no label reader) ramps the rocking again from
+    zero after the restart unless *_prev give the source forcing. The W9 validation runs had *_prev; the first 8
+    campaign L9 runs did not."""
+    old = tmp_path / "BioReactor-2ef5b07"
+    old.write_bytes(b"\x7fELF old solver")
+    src = _src(old)
+    p = c.l9_warm_params(src, "c2d_l8_rpm20.00_th4.00", t_ck=140.0, rpm=20.0, theta=4.0, binary=str(old))
     assert p["omega_b_prev"] == src["omega_b"]
     assert p["theta_max_prev"] == src["theta_max"]
     for k in ("phi_angular_prev", "amplitude_h_prev", "phi_horizontal_prev"):
         assert p[k] == [0.0, 0.0, 0.0], k
     assert p["omega_h_prev"] == 0.0
+
+
+def test_l9_warm_params_leave_the_source_to_the_label(tmp_path):
+    """A binary that reads the dump's label takes the source forcing from it and refuses *_prev next to it
+    (scripts/simulate.binary_reads_label, src/forcing_state.h): the params must carry no *_prev."""
+    new = tmp_path / "BioReactor-label"
+    new.write_bytes(b"\x7fELF ... restart refused ...")
+    p = c.l9_warm_params(_src(new), "c2d_l8_rpm20.00_th4.00", t_ck=140.0, rpm=20.0, theta=4.0, binary=str(new))
+    assert not [k for k in p if k.endswith("_prev")]
+
+
+def test_l9_warm_params_drop_the_sources_own_prev_keys(tmp_path):
+    """An L8 source that was itself a restart carries its own *_prev keys. With a label binary they must not
+    reach the L9 params (the solver refuses *_prev next to a label). Review finding 2026-11-14."""
+    new = tmp_path / "BioReactor-label"
+    new.write_bytes(b"\x7fELF ... restart refused ...")
+    src = _src(new) | {"omega_b_prev": 1.0, "theta_max_prev": [2.0, 0.0, 0.0], "t_checkpoint": 50.0}
+    p = c.l9_warm_params(src, "c2d_l8_rpm20.00_th4.00", t_ck=140.0, rpm=20.0, theta=4.0, binary=str(new))
+    assert not [k for k in p if k.endswith("_prev")]

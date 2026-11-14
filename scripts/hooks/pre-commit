@@ -1,19 +1,39 @@
 #!/usr/bin/env bash
 # Refuse commits that change code while the lab notebook is stale.
 #
-#   diary.md   (gitignored, local): must be edited since the last commit, or
+#   internal/diary.md (gitignored, local): must be edited since the last commit, or
 #              within DIARY_MAX_AGE_H hours -- whichever is more lenient.
-#   BACKLOG.md (tracked): staged now, or committed within BACKLOG_MAX_AGE_D days.
+#   internal/BACKLOG.md (tracked): staged now, or committed within BACKLOG_MAX_AGE_D days.
 #
 # Only commits touching src/ scripts/ config/ tests/ are checked; docs-only
 # and figure-only commits pass. Deliberate override, one commit at a time:
 #   NOTEBOOK_OK="reason" git commit ...
+#
+# Also refuses newly added or changed media (mp4 gif webm png pdf) over 1 MB:
+# git keeps every version forever. Store large media outside the repo, or
+# override deliberately: MEDIA_OK="reason" git commit ...
 # Installed by `make hooks`; the tracked copy is scripts/hooks/pre-commit.
 set -euo pipefail
 
 DIARY_MAX_AGE_H=${DIARY_MAX_AGE_H:-2}
 BACKLOG_MAX_AGE_D=${BACKLOG_MAX_AGE_D:-7}
+MEDIA_MAX_BYTES=$((1024 * 1024))
 root=$(git rev-parse --show-toplevel)
+
+if [ -z "${MEDIA_OK:-}" ]; then
+    big=""
+    while IFS= read -r f; do
+        [ -n "$f" ] || continue
+        size=$(git cat-file -s ":$f")
+        if [ "$size" -gt "$MEDIA_MAX_BYTES" ]; then
+            big="$big  $f ($((size / 1024)) KB)"$'\n'
+        fi
+    done < <(git diff --cached --name-only --diff-filter=AM | grep -iE '\.(mp4|gif|webm|png|pdf)$' || true)
+    if [ -n "$big" ]; then
+        printf 'pre-commit: media over 1 MB staged:\n%sStore them outside git, or MEDIA_OK="reason" git commit ...\n' "$big" >&2
+        exit 1
+    fi
+fi
 
 if ! git diff --cached --name-only | grep -qE '^(src|scripts|config|tests)/'; then
     exit 0
@@ -26,7 +46,7 @@ fi
 now=$(date +%s)
 fail=0
 
-diary="$root/diary.md"
+diary="$root/internal/diary.md"
 if [ ! -f "$diary" ]; then
     echo "pre-commit: diary.md is missing." >&2
     fail=1
@@ -40,8 +60,8 @@ else
     fi
 fi
 
-if ! git diff --cached --name-only | grep -qx 'BACKLOG.md'; then
-    b_t=$(git log -1 --format=%ct -- BACKLOG.md 2>/dev/null || true)
+if ! git diff --cached --name-only | grep -qx 'internal/BACKLOG.md'; then
+    b_t=$(git log -1 --format=%ct -- internal/BACKLOG.md 2>/dev/null || true)
     if [ -z "$b_t" ] || [ $((now - b_t)) -gt $((BACKLOG_MAX_AGE_D * 86400)) ]; then
         echo "pre-commit: BACKLOG.md not touched in over $BACKLOG_MAX_AGE_D days. Delete what" >&2
         echo "  landed, add what this work surfaced." >&2

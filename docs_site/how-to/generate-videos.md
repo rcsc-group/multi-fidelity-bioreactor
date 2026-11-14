@@ -10,7 +10,7 @@ them:
 ```bash
 make build-video
 build/BioReactor-video runs/my_run/params.json
-uv run python scripts/render_videos.py runs/my_run
+uv run python scripts/figures/render_videos.py runs/my_run
 ```
 
 Needs `ffmpeg` on `PATH` (`module load ffmpeg` on OSCAR) and Basilisk's own
@@ -38,7 +38,7 @@ two steps yourself.
 
 ## The other video pathway (not verified here)
 
-`scripts/submit_video_run.py` + `config/slurm_video_template.sh` exist as a
+`scripts/run/submit_video_run.py` + `config/slurm_video_template.sh` exist as a
 second, standalone way to submit a single video run via SLURM directly.
 It calls the exact same `render_videos.py` step, so it should produce the
 same `volume_fraction*.mp4` files — but that specific script hasn't been

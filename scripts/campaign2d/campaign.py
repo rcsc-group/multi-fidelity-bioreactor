@@ -35,6 +35,7 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(ROOT), str(ROOT / "scripts")]
+from scripts import paths  # noqa: E402  (machine-specific folders)
 STATE = Path(__file__).resolve().parent / "state"
 JOBS = STATE / "jobs.jsonl"                       # written ONLY by a real (--go) submission
 
@@ -45,14 +46,14 @@ FORBIDDEN_PARTITION = "mbessa-condo"              # hard rule: never planned or 
 KIM_CORE_H_PER_CASE = 120.0                       # Kim 2025 p.6. PENDING AUDIT (another agent). Do not cite as final.
 SEED = 20261104
 # Persistent binary (scratch copy of lean-f1c11e0 was purged; kmix params still point there). Pre-flight: see plan.
-BINARY_L8 = "/oscar/data/dharri15/eaguerov/bin/BioReactor-mpi-lean-2ef5b07"
+BINARY_L8 = f"{paths.DATA}/bin/BioReactor-mpi-lean-2ef5b07"
 # L9 warm restarts: the same source (2ef5b07) built with -DCROSS_LEVEL_WARMSTART=1 (lead 2026-11-05).
-BINARY_L9 = "/oscar/data/dharri15/eaguerov/bin/replay-gate/BioReactor-mpi-lean-2ef5b07-xlevel"   # amended 2026-11-04: edr_95 build
+BINARY_L9 = f"{paths.DATA}/bin/replay-gate/BioReactor-mpi-lean-2ef5b07-xlevel"   # amended 2026-11-04: edr_95 build
 # Partitions (sacctmgr 2026-11-04, user eaguerov): batch under account default, batch2 under account batch2.
 # Value = (account, cpu cap for this user's QOS). mbessa-condo is never listed here (hard rule).
 PARTITIONS = {"batch": ("default", 312), "batch2": ("batch2", 512)}
 
-# Central estimates (core-h per point) with [low, high]. Sources in docs/campaign2d_plan.md section 4.
+# Central estimates (core-h per point) with [low, high]. Sources in internal/docs/campaign2d_plan.md section 4.
 COST = {
     "L8_cold":        (55.0, 45.0, 70.0),     # sacct 7156006: 3h13m x 16 ranks = 52; diary kmix ~57
     "L9_warm":        (220.0, 190.0, 260.0),  # sacct 7847552 / 7847553: 6.0 h, 7.0 h x 32 ranks
@@ -285,22 +286,25 @@ def l9_warm_params(src_params: dict, source_run: str, t_ck: float, rpm: float, t
     """L9 warm start (plan 1.3, W9 type): the completed L8 source at the same (rpm, theta), fidelity 9, the same binary,
     t_checkpoint = the source's last logged time, N_WARM_L9 warm-up cycles, release, N_POST_L9 post cycles."""
     from scripts.postprocess import _t_scales
-    p = dict(src_params)
+    p = {k: v for k, v in src_params.items() if not k.endswith("_prev")}   # the source's own restart keys
     for k in ("_canonical_run_dir", "next_run_id", "_err_file", "_source_run"):
         p.pop(k, None)
     _, T = _t_scales(p)
     p.update(run_id=run_id(9, rpm, theta, tag="c2d"), fidelity=9, t_checkpoint=float(t_ck),
              n_mix_cycles=N_WARM_L9, t_end=round((N_WARM_L9 + N_POST_L9) * T, 6),
              _binary=binary, _source_run=source_run)   # forcing kept exactly as the source (no rpm change)
-    # *_prev = the source's forcing. Without them the solver ramps the rocking again from ZERO after the restart
-    # (pitfall "restart-ramp", diary 2026-11-13): the first 8 c2d_l9 runs had none and were still 8-19 % above
-    # the L8 velocity at the release; the W9 runs that validated this warm start had them.
-    z3 = [0.0, 0.0, 0.0]
-    p.update(omega_b_prev=float(src_params["omega_b"]), theta_max_prev=list(src_params["theta_max"]),
-             phi_angular_prev=list(src_params.get("phi_angular", z3)),
-             amplitude_h_prev=list(src_params.get("amplitude_h", z3)),
-             phi_horizontal_prev=list(src_params.get("phi_horizontal", z3)),
-             omega_h_prev=float(src_params.get("omega_h", 0.0)))
+    # The source forcing (pitfall "restart-ramp", diary 2026-11-13): without it the solver ramps the rocking
+    # again from ZERO after the restart; the first 8 c2d_l9 runs had none and were still 8-19 % above the L8
+    # velocity at the release. A binary that reads the dump's label takes it from checkpoint.phase and refuses
+    # *_prev next to it; an older binary needs *_prev = the source's forcing.
+    from scripts.simulate import binary_reads_label
+    if not binary_reads_label(binary):
+        z3 = [0.0, 0.0, 0.0]
+        p.update(omega_b_prev=float(src_params["omega_b"]), theta_max_prev=list(src_params["theta_max"]),
+                 phi_angular_prev=list(src_params.get("phi_angular", z3)),
+                 amplitude_h_prev=list(src_params.get("amplitude_h", z3)),
+                 phi_horizontal_prev=list(src_params.get("phi_horizontal", z3)),
+                 omega_h_prev=float(src_params.get("omega_h", 0.0)))
     if abs(float(src_params["omega_b"]) * 60.0 / (2 * math.pi) - rpm) > 0.01 or \
             abs(float(src_params["theta_max"][0]) - theta) > 0.01:
         raise ValueError("source forcing does not match (rpm, theta) of the point")
@@ -533,7 +537,7 @@ def cmd_check_grid(_args) -> None:
     """Hard guard (lead 2026-11-05): every L9/L10 job in jobs.jsonl whose first logstats line is not the uniform level
     grid (total cells = 4**level, per-rank #Cells x ranks) is cancelled, and the cancellation is printed."""
     jobs = [json.loads(x) for x in JOBS.read_text().splitlines()] if JOBS.exists() else []
-    scratch = Path("/oscar/scratch/eaguerov/mpi_runs")
+    scratch = Path(f"{paths.SCRATCH}/mpi_runs")
     for j in jobs:
         if j["level"] not in ("L9", "L10"):
             continue

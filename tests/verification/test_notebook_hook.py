@@ -36,9 +36,10 @@ def repo(tmp_path: Path):
         r.mkdir()
         git(r, "init", "-q")
         (r / "scripts").mkdir()
+        (r / "internal").mkdir()
         (r / "scripts" / "a.py").write_text("x = 1\n")
-        (r / "BACKLOG.md").write_text("# Backlog\n")
-        (r / ".gitignore").write_text("diary.md\n")
+        (r / "internal" / "BACKLOG.md").write_text("# Backlog\n")
+        (r / ".gitignore").write_text("internal/diary.md\n")
         now = time.time()
         git(r, "add", "-A")
         git(r, "commit", "-qm", "init",
@@ -46,7 +47,7 @@ def repo(tmp_path: Path):
         (r / "docs.md").write_text("d\n")
         git(r, "add", "docs.md")
         git(r, "commit", "-qm", "later", when=now - commit_age)
-        (r / "diary.md").write_text("notes\n")
+        (r / "internal" / "diary.md").write_text("notes\n")
         return r
     return make
 
@@ -72,7 +73,7 @@ def test_hook_is_executable():
 
 def test_stale_diary_blocks_a_code_commit(repo):
     r = repo()
-    age(r / "diary.md", 5 * HOUR)          # older than HEAD (3 h) and > 2 h
+    age(r / "internal" / "diary.md", 5 * HOUR)          # older than HEAD (3 h) and > 2 h
     stage_code(r)
     res = run_hook(r)
     assert res.returncode == 1
@@ -81,28 +82,28 @@ def test_stale_diary_blocks_a_code_commit(repo):
 
 def test_diary_edited_since_last_commit_passes(repo):
     r = repo()
-    age(r / "diary.md", 1 * HOUR)          # newer than HEAD
+    age(r / "internal" / "diary.md", 1 * HOUR)          # newer than HEAD
     stage_code(r)
     assert run_hook(r).returncode == 0
 
 
 def test_diary_within_grace_window_passes_even_before_head(repo):
     r = repo(commit_age=10 * 60)           # HEAD 10 min ago
-    age(r / "diary.md", 30 * 60)           # before HEAD, but only 30 min old
+    age(r / "internal" / "diary.md", 30 * 60)           # before HEAD, but only 30 min old
     stage_code(r)
     assert run_hook(r).returncode == 0
 
 
 def test_missing_diary_blocks(repo):
     r = repo()
-    (r / "diary.md").unlink()
+    (r / "internal" / "diary.md").unlink()
     stage_code(r)
     assert run_hook(r).returncode == 1
 
 
 def test_docs_only_commit_is_not_checked(repo):
     r = repo()
-    age(r / "diary.md", 50 * HOUR)
+    age(r / "internal" / "diary.md", 50 * HOUR)
     (r / "docs.md").write_text("changed\n")
     git(r, "add", "docs.md")
     assert run_hook(r).returncode == 0
@@ -110,7 +111,7 @@ def test_docs_only_commit_is_not_checked(repo):
 
 def test_stale_backlog_blocks(repo):
     r = repo(backlog_age=10 * DAY)
-    age(r / "diary.md", 60)
+    age(r / "internal" / "diary.md", 60)
     stage_code(r)
     res = run_hook(r)
     assert res.returncode == 1
@@ -119,20 +120,45 @@ def test_stale_backlog_blocks(repo):
 
 def test_staging_the_backlog_satisfies_it(repo):
     r = repo(backlog_age=10 * DAY)
-    age(r / "diary.md", 60)
+    age(r / "internal" / "diary.md", 60)
     stage_code(r)
-    (r / "BACKLOG.md").write_text("# Backlog\n- new item\n")
-    git(r, "add", "BACKLOG.md")
+    (r / "internal" / "BACKLOG.md").write_text("# Backlog\n- new item\n")
+    git(r, "add", "internal/BACKLOG.md")
     assert run_hook(r).returncode == 0
 
 
 def test_override_passes_and_says_why(repo):
     r = repo(backlog_age=10 * DAY)
-    age(r / "diary.md", 50 * HOUR)
+    age(r / "internal" / "diary.md", 50 * HOUR)
     stage_code(r)
     res = run_hook(r, NOTEBOOK_OK="typo fix")
     assert res.returncode == 0
     assert "typo fix" in res.stderr
+
+
+def _stage_media(r: Path, name: str, size: int) -> None:
+    (r / name).write_bytes(b"\0" * size)
+    git(r, "add", name)
+
+
+def test_new_media_over_1mb_blocks(repo):
+    r = repo()
+    _stage_media(r, "big.mp4", 1024 * 1024 + 1)
+    res = run_hook(r)
+    assert res.returncode == 1
+    assert "big.mp4" in res.stderr
+
+
+def test_small_media_passes(repo):
+    r = repo()
+    _stage_media(r, "small.png", 200 * 1024)
+    assert run_hook(r).returncode == 0
+
+
+def test_media_override_passes(repo):
+    r = repo()
+    _stage_media(r, "big.gif", 2 * 1024 * 1024)
+    assert run_hook(r, MEDIA_OK="docs hero").returncode == 0
 
 
 @pytest.mark.skipif(shutil.which("git") is None, reason="needs git")

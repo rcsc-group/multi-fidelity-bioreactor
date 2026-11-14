@@ -2,10 +2,11 @@
 
 This is "chaining" in the project's vocabulary, not "checkpointing": the experiment (tracer + oxygen) goes on.
   - params = the source run's params.json (same level, rpm, theta, geometry, binary `_binary`);
-  - t_checkpoint = last logged time of the source (shear_stress.dat, as scripts/submit_x8_extend.py);
+  - t_checkpoint = last logged time of the source (shear_stress.dat, as scripts/run/submit_x8_extend.py);
     the solver re-reads the exact dump time from checkpoint.dump;
   - restart_continue = 1: tracers and oxygen keep their restored values and are NOT re-released;
-  - *_prev = current forcing: no ramp from zero (the solver ramps *_prev -> current over N_RAMP_CYCLES);
+  - same forcing, so no ramp: a binary that reads the checkpoint label takes it from the dump (stage_phase);
+    an older binary gets *_prev = the current forcing (simulate.source_forcing_keys; pitfall "restart-ramp");
   - n_mix_cycles = 0 by default: with restart_continue the oxygen event starts at t_mix = t_checkpoint +
     n_mix_cycles*T, so 0 keeps the gas reservoir reset active from the first step, as in an uninterrupted run;
   - t_end = (cycles - 0.005)*T_per_nd after the checkpoint (relative; the solver stops at the next period
@@ -27,27 +28,36 @@ from pathlib import Path
 
 import numpy as np
 
-ROOT = Path("/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor")
+ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from scripts.postprocess import _t_scales  # noqa: E402
-from scripts.simulate import submit_slurm  # noqa: E402
+from scripts import paths  # noqa: E402  (machine-specific folders)
+from scripts.simulate import source_forcing_keys, submit_slurm  # noqa: E402
 
-MPI_SCRATCH = Path("/oscar/scratch/eaguerov/mpi_runs")
+MPI_SCRATCH = Path(f"{paths.SCRATCH}/mpi_runs")
+
+
+def stage_phase(src: Path, stage: Path) -> None:
+    """Copy the dump's label (checkpoint.phase) next to the staged checkpoint. The solver reads it from its
+    working directory: it gives the forcing and phase that made the dump. Without it a binary that reads the
+    label refuses the restart, and an older one resumes a mid-period dump up to half a period off phase
+    (pitfalls "restart-ramp" and "restart-phase" in docs_site/developer/solver-pitfalls.md)."""
+    if (src / "checkpoint.phase").exists():
+        stage.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src / "checkpoint.phase", stage / "checkpoint.phase")
 
 
 def build_params(src_params: dict, src_id: str, tag: str, t_ck: float, cycles: float, n_mix: float,
                  binary: str | None) -> dict:
-    p = dict(src_params)
+    p = {k: v for k, v in src_params.items() if not k.endswith("_prev")}   # the source's own restart keys
     for k in ("_canonical_run_dir", "next_run_id"):
         p.pop(k, None)
     _, T_nd = _t_scales(p)
     p.update(run_id=f"{src_id}_{tag}", t_checkpoint=t_ck, t_end=round((cycles - 0.005) * T_nd, 6),
-             n_mix_cycles=n_mix, restart_continue=1, _parent_run=src_id,
-             omega_b_prev=p["omega_b"], theta_max_prev=list(p["theta_max"]),
-             phi_angular_prev=list(p["phi_angular"]), amplitude_h_prev=list(p["amplitude_h"]),
-             phi_horizontal_prev=list(p["phi_horizontal"]), omega_h_prev=p["omega_h"])
+             n_mix_cycles=n_mix, restart_continue=1, _parent_run=src_id)
     if binary:
         p["_binary"] = binary
+    p.update(source_forcing_keys(p, p.get("_binary")))
     return p
 
 
@@ -78,8 +88,7 @@ def main() -> None:
         return
     stage = MPI_SCRATCH / p["run_id"]
     stage.mkdir(parents=True, exist_ok=True)
-    if (src / "checkpoint.phase").exists():
-        shutil.copy2(src / "checkpoint.phase", stage / "checkpoint.phase")
+    stage_phase(src, stage)
     job = submit_slurm(p, project_root=ROOT, runs_root=ROOT / "runs", walltime=a.walltime,
                        template=ROOT / "config" / "slurm_mpi_template.sh", checkpoint=str(ck.resolve()),
                        cpus=1, ntasks=a.ntasks, mem="4G", exclude=a.exclude or None)

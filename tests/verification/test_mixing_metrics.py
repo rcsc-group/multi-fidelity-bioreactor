@@ -217,7 +217,7 @@ def test_streaming_vorticity_absent_is_nan_not_zero(tmp_path):
 
 # ── bulk-liquid columns (diary 2026-10-29) ───────────────────────────────────
 # The old c2_liq_sum = sum c2*f counts c*f^2 (c2 is the TOTAL amount per cell in henry_oxy2) and, with the
-# f > 0.5 seed, made every dtmix ~2x slow at chi = 0.2 (scripts/mix_bias_check.py). New runs write bulk-liquid
+# f > 0.5 seed, made every dtmix ~2x slow at chi = 0.2 (scripts/analyse/mix_bias_check.py). New runs write bulk-liquid
 # sums b0 b1 b2 (tr_oxy.dat columns 12-14) and the same sums at the release step (mix_release.dat). When both
 # are present dtmix must come from them, with sigma^2_max from the release row.
 

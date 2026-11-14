@@ -298,11 +298,23 @@ def test_segment_has_t_end():
         assert s.get("t_end", 0.0) > 0.0
 
 
-def test_restart_has_omega_b_prev():
-    """Restart segment records the previous omega_b for smooth ramp in C."""
-    segs = build_segment_list(_group_of_two(), _OPTIONS)
+def test_restart_has_omega_b_prev(tmp_path):
+    """With an older binary (no label reader) the restart segment records the previous forcing as *_prev."""
+    old = tmp_path / "BioReactor-old"
+    old.write_bytes(b"\x7fELF old solver")
+    segs = build_segment_list(_group_of_two(), _OPTIONS | {"binary": str(old)})
     assert "omega_b_prev" in segs[1]
     assert segs[1]["omega_b_prev"] == pytest.approx(3.14159)
+
+
+def test_restart_leaves_the_source_to_the_label(tmp_path):
+    """A binary that reads the dump's label refuses *_prev next to it (two sources): no *_prev in any segment.
+    Review finding 2026-11-14 (sweep chains were refused at segment 2)."""
+    new = tmp_path / "BioReactor-label"
+    new.write_bytes(b"\x7fELF ... restart refused ...")
+    segs = build_segment_list(_group_of_two(), _OPTIONS | {"binary": str(new)})
+    assert segs[1]["t_checkpoint"] > 0
+    assert not [k for s in segs for k in s if k.endswith("_prev")]
 
 
 def test_explicit_n_mix_cycles_respected():
@@ -624,3 +636,16 @@ def test_sweep_slurm_produces_finite_kla(tmp_path):
                 f"Segment {k} ({params['run_id']}): {key}={val} is not finite. "
                 f"Check {run_dir}/logstats.dat and logs/slurm_{job_ids[k]}.err"
             )
+
+
+def test_sweep_options_expand_machine_folders(tmp_path):
+    """A sweep config may name `$MFB_SCRATCH/...` (e.g. the binary); it resolves to this machine's folder."""
+    import json as _json
+    from scripts import paths
+    from scripts.sweep import parse_sweep_config
+    cfg = tmp_path / "s.json"
+    cfg.write_text(_json.dumps({"_sweep": {"binary": "$MFB_SCRATCH/BioReactor-mpi", "mode": "parallel"},
+                                "fidelity": 3, "omega_b": [1.0, 2.0]}))
+    _, options = parse_sweep_config(cfg)
+    assert options["binary"] == f"{paths.SCRATCH}/BioReactor-mpi"
+    assert options["mode"] == "parallel"

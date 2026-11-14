@@ -4,7 +4,7 @@
 // A restart is the hard part. Basilisk's dump/restore does not keep everything a fresh start sets up, and
 // each missing piece fails silently (wrong numbers, no crash). The steps below put each piece back. The
 // reasons, with measurements, are in docs_site/developer/solver-pitfalls.md; the full investigation
-// notes are in docs/history/solver-comment-archive.md (internal).
+// notes are in internal/docs/history/solver-comment-archive.md.
 
 // The bag wall as an embedded boundary: superellipse |x/a|^n + |y/b|^n = 1. For n >= 8 we use a sharp
 // rectangle (no pow() at the corners); at Kim et al.'s values (n = 8, a = L_bio) this is their geometry.
@@ -165,26 +165,21 @@ static void restore_geometry (void)
 
 #if !REPLAY_FLUX
 // A restart may change omega_b or theta_max, which changes the velocity unit U_bio. Convert the stored
-// u, uf, p, pf to the new unit: u scales with su = U_bio_prev/U_bio, pressure with su^2. (Tests show the
-// effect is below the cycle-to-cycle spread even for a 14% change; it is kept because it is the correct
-// conversion. -DLEGACY_SU=1 uses the old omega_b-only ratio, for A/B tests.)
+// u, uf, p, pf to the new unit: u scales with su = U_bio(dump)/U_bio, pressure with su^2. U_bio(dump) comes
+// from the dump's label (fsrc.U_bio, forcing_state.h). (Tests show the effect is below the cycle-to-cycle
+// spread even for a 14% change; it is kept because it is the correct conversion. -DLEGACY_SU=1 uses the
+// old omega_b-only ratio, for A/B tests.)
 // g (pressure gradient + acceleration) has terms with different scalings, so no single factor is right.
 // It only feeds the first predictor half-step, and a cold start runs that step with g = 0, so we set
 // g = 0, as a cold start does. (Tested: scaling g by su^2, or keeping it, gives the same result.)
 static void rescale_to_new_units (void)
 {
-  if (params.omega_b_prev > 0.) {
-    double H_bio_here  = 2.*L_bio*Ly;
-    double T_per_prev  = 2.*pi/params.omega_b_prev;
-    double Th_max_prev = params.theta_max_prev[0] * pi / 180.;
-    double V_bio_prev  = L_bio/4*(H_bio_here + 0.5*L_bio*tan(Th_max_prev));
-    double U_bio_prev  = V_bio_prev/(H_bio_here*0.5)/T_per_prev;
+  if (fsrc.U_bio > 0.) {
 #if LEGACY_SU
-    double su = params.omega_b_prev / params.omega_b;
+    double su = fsrc.omega_b / params.omega_b;
 #else
-    double su = U_bio_prev / U_bio;
+    double su = fsrc.U_bio / U_bio;
 #endif
-    (void) U_bio_prev;
     foreach() {
       u.x[] *= su;
       u.y[] *= su;

@@ -1,4 +1,4 @@
-"""Unit tests for scripts/test_h2_mfbml.py (synthetic data, no runs, no real models)."""
+"""Unit tests for scripts/hypotheses/test_h2_mfbml.py (synthetic data, no runs, no real models)."""
 import sys
 from pathlib import Path
 
@@ -6,8 +6,8 @@ import numpy as np
 import pytest
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
-from scripts.test_h1_mfbml import BOUNDS, h1_verdict  # noqa: E402
-from scripts.test_h2_mfbml import (  # noqa: E402
+from scripts.hypotheses.test_h1_mfbml import BOUNDS, h1_verdict  # noqa: E402
+from scripts.hypotheses.test_h2_mfbml import (  # noqa: E402
     MeanAdapter, h2_verdict, l9_points, l9_run, loo_h2,
 )
 

@@ -1,6 +1,6 @@
 """Protocol-consistent hydrodynamic QoIs from the raw shear_stress.dat series (replaces hydro_dataset.py).
 
-Audit (scripts/hydro_windows.py, diary 2026-10-05): the stored tau_mean_max / tau_95_qss use the window
+Audit (scripts/analyse/hydro_windows.py, diary 2026-10-05): the stored tau_mean_max / tau_95_qss use the window
 "3 periods < t < tracer release", i.e. 77 cycles including spin-up for L6-L9, but only 3 cycles after an rpm
 change for the chained L10 runs; tau_mean_max is also a MAXIMUM over that window, so it grows with its length.
 Here every QoI is computed over the SAME window: the last N_CYC whole cycles before the tracer release:

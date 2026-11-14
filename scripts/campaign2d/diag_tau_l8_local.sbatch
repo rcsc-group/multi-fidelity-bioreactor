@@ -11,5 +11,5 @@
 #SBATCH --output=logs/c2d_diag_tau_l8_%j.out
 #SBATCH --error=logs/c2d_diag_tau_l8_%j.err
 set -euo pipefail
-cd /oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor
+cd ${MFB_REPO:-/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor}
 uv run python scripts/campaign2d/diag_tau_l8_local.py

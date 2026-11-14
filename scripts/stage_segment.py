@@ -10,7 +10,7 @@ ad-hoc `cp`, so that guarantee is never bypassed by hand.
 
 Usage:
     uv run python scripts/stage_segment.py <prev_run_id> <next_run_id> \
-        [--runs-root runs] [--scratch-root /oscar/scratch/eaguerov/mpi_runs]
+        [--runs-root runs] [--scratch-root $MFB_SCRATCH/mpi_runs]
 """
 from __future__ import annotations
 
@@ -19,8 +19,10 @@ import json
 import shutil
 import sys
 from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # repo root
+from scripts import paths  # noqa: E402  (machine-specific folders)
 
-DEFAULT_SCRATCH_ROOT = Path("/oscar/scratch/eaguerov/mpi_runs")
+DEFAULT_SCRATCH_ROOT = Path(f"{paths.SCRATCH}/mpi_runs")
 
 
 class SegmentNotCompleteError(RuntimeError):

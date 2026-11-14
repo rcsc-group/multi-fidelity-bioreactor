@@ -4,7 +4,7 @@
 // Origin: Minki Kim, Radu Cimpeanu and Daniel Harris, driver code of Kim et al. (2025),
 // https://github.com/rcsc-group/BioReactor (DriverCodes). This project extends it: a params.json input,
 // any grid level, checkpoint restart, more outputs (shear stress, dissipation, mixing), and a flux
-// record/replay mode. The history of each change is in docs/history/ (internal).
+// record/replay mode. The history of each change is in internal/docs/history/.
 //
 // How to read this code
 //   1. This file: compile switches, global state, and main(), which only sets up the run.
@@ -204,7 +204,6 @@ BioreactorParams params;       // everything read from params.json; global so ev
 
 // Restart state. See set_run_window() and docs_site/explanation/checkpoint-restart.md.
 static double t_ramp_start      = 0.0;   // time at which the current forcing ramp began
-static double t_phase_offset    = 0.0;   // added to t in the forcing, so a restart resumes in phase
 static double t_dump_checkpoint = 0.0;   // time at which checkpoint.dump is written
 
 // Wall-clock deadline: if the queue says how long we have (env BIOREACTOR_MAXRUNTIME_S), write a
@@ -225,6 +224,7 @@ static int next_period_count (double x) {
   return n < 1 ? 1 : n;
 }
 
+#include "forcing_state.h"   // forcing at any time, the checkpoint label, the source of a restart's ramp
 #include "replay.h"    // record/replay state and functions (empty unless -DRECORD_FLUX or -DREPLAY_FLUX)
 
 // ===================================================================================================
@@ -287,63 +287,53 @@ static void set_run_window (int argc, char * argv[])
       exit (1);
     }
     restart_file     = argv[2];
-    // Forcing phase on restart. The time unit T_bio depends on omega_b AND theta_max, so a dump written
-    // at a whole number of periods of one run is not a whole number of periods of a run with other
-    // values. The restored fields are at phase 0, so the forcing must be too: add t_phase_offset to t
-    // in the forcing (never change t itself: the event scheduler then fails in dtnext()).
-    // The offset comes from the dump time alone (nearest period boundary), never from the ratio of the
-    // old and new periods: that ratio is 1 for the second link of a chain, which would then resume off
-    // phase. Pitfall "restart-phase" in docs_site/developer/solver-pitfalls.md.
+    // Exact dump time, from the first double of the dump file (params.t_checkpoint is an estimate).
     {
-      // Exact dump time, from the first double of the dump file (params.t_checkpoint is an estimate).
-      double t_ck = params.t_checkpoint;
       FILE *fp_ck = fopen (restart_file, "r");
       if (fp_ck) {
         double t_dumped;
         if (fread (&t_dumped, sizeof(double), 1, fp_ck) == 1 && t_dumped > 0.)
-          t_ck = t_dumped;
+          params.t_checkpoint = t_dumped;
         fclose (fp_ck);
       }
-      // Nearest period boundary: right for every planned dump (they are all on a boundary).
-      t_phase_offset      = T_per_st*round (t_ck/T_per_st) - t_ck;
-      params.t_checkpoint = t_ck;
-
-      // An emergency dump is not on a boundary; it records its phase in checkpoint.phase. A recorded
-      // phase wins over the inferred one.
-      {
-        FILE *fp_ph = fopen ("checkpoint.phase", "r");
-        if (fp_ph) {
-          char buf[512];
-          if (fgets (buf, sizeof buf, fp_ph)) {
-            const char *k = strstr (buf, "\"t_phase_offset\"");
-            const char *c = k ? strchr (k, ':') : NULL;
-            if (c) {
-              double rec = atof (c + 1);
-              t_phase_offset = rec;
-              if (pid() == 0)
-                fprintf (ferr, "restart: using recorded phase offset "
-                         "%.6f from checkpoint.phase\n", rec);
-            }
-          }
-          fclose (fp_ph);
-        }
-      }
     }
-    // The ramp starts at the checkpoint and runs N_RAMP_CYCLES forward.
-    // Known open issue: a run split by restart_continue=1 gets ~8% less oxygen transfer than an unbroken
-    // run (measured at level 4); two explanations were tested and rejected. Not used in production.
-    t_ramp_start     = params.t_checkpoint;
-    t_mix            = params.t_checkpoint + T_per_st * params.n_mix_cycles;
+    // The ramp starts at the checkpoint, from the forcing that made the restored state (the dump's label,
+    // checkpoint.phase in the working directory) to the forcing in params.json: amplitude, phase and
+    // frequency (forcing_state.h). Continuation = same forcing = no ramp. No label, or a label plus *_prev
+    // keys, stops the run. Pitfall "restart-ramp" and pitfall "restart-phase" in docs_site/developer/solver-pitfalls.md.
+    t_ramp_start = params.t_checkpoint;
+#if REPLAY_FLUX
+    // a replay has no forcing: keep the target, phase from the nearest period boundary
+    fresh_source ();
+    fsrc.cycles = round (params.t_checkpoint/T_per_st);
+#else
     {
-      // The dump must be on a zero crossing of THIS run's forcing, w*(t + t_phase_offset); otherwise the
-      // next link of a chain inherits an off-phase checkpoint.
+      int kind = restart_source ();
+      if (kind < 0)
+        return;      // refused: main() returns 1
+      if (pid() == 0)
+        fprintf (ferr, "restart: ramp from omega_b %.6g rad/s, theta_max %.6g deg (%s) to omega_b %.6g, "
+                 "theta_max %.6g over %d periods; phase %.6f periods\n", fsrc.omega_b, fsrc.theta_max[0],
+                 kind == 1 ? "label" : "old label + *_prev", params.omega_b, params.theta_max[0],
+                 N_RAMP_CYCLES, fsrc.cycles);
+      _restart_kind = kind;   // restart_forcing.json: first acceleration step (forcing.h)
+    }
+#endif
+    // Release n_mix_cycles forcing periods after the restart (0: at the restart).
+    t_mix = params.n_mix_cycles > 0 ?
+      t_at_psi (2.*pi*(fsrc.cycles + params.n_mix_cycles)) : params.t_checkpoint;
+    {
+      // The dump must be on a zero crossing of THIS run's forcing phase psi; otherwise the next link of a
+      // chain inherits an off-phase checkpoint.
       double t_end_abs = params.t_checkpoint + params.t_end;
-      int n_per        = next_period_count ((t_end_abs + t_phase_offset) / T_per_st);
-      t_dump_checkpoint = n_per * T_per_st - t_phase_offset;
+      double rate;
+      int n_per        = next_period_count (psi_at (t_end_abs, &rate)/(2.*pi));
+      t_dump_checkpoint = t_at_psi (2.*pi*n_per);
       t_end            = t_dump_checkpoint;
     }
   } else {
     // Fresh run: end on the next period boundary.
+    fresh_source ();
     int n_per = next_period_count (t_end / T_per_st);
     t_dump_checkpoint = n_per * T_per_st;
     t_end = t_dump_checkpoint;
@@ -485,6 +475,7 @@ int main (int argc, char * argv[])
 
   set_scales ();
   set_run_window (argc, argv);
+  if (_restart_refused) return 1;   // message printed by restart_refuse() (forcing_state.h)
   set_physics ();
   open_outputs ();
 

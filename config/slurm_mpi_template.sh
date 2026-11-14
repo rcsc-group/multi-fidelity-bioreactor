@@ -42,7 +42,7 @@ if ! module load openmpi 2>/dev/null; then
     export LD_LIBRARY_PATH="$OMPI_FALLBACK/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 fi
 module load ffmpeg 2>/dev/null || echo "WARN: module ffmpeg unavailable (not needed here)" >&2
-export PATH="/oscar/data/dharri15/eaguerov/basilisk/src:$PATH"
+export PATH="${BASILISK:-/oscar/data/dharri15/eaguerov/basilisk/src}:$PATH"
 
 # Set HOME so srun workers can initialise OpenMPI's opal layer.
 if [ -z "${HOME:-}" ]; then
@@ -80,7 +80,7 @@ if [ -z "$CANON_RUN" ]; then
 fi
 
 # Binary must be in /oscar/scratch (accessible from compute nodes)
-BINARY="/oscar/scratch/eaguerov/BioReactor-mpi-video"
+BINARY="${MFB_SCRATCH:-/oscar/scratch/eaguerov}/BioReactor-mpi-video"
 _BINARY_OVERRIDE=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('_binary',''))" "$PARAMS" 2>/dev/null)
 [ -n "$_BINARY_OVERRIDE" ] && BINARY="$_BINARY_OVERRIDE"
 if [ ! -f "$BINARY" ]; then
@@ -125,16 +125,11 @@ fi
 
 echo "Simulation complete. Syncing results..."
 
-# PROJECT_ROOT is hardcoded rather than derived from CANON_RUN/SCRATCH_RUN path
-# arithmetic (2026-08-05, diary.md): that derivation silently resolved to
-# /oscar/scratch whenever _canonical_run_dir was absent from the staged
-# params.json (e.g. a raw sbatch submission that bypassed
-# scripts.simulate._prepare_run_dir) -- hit twice this session (jobs 4645673,
-# 4631100), both times the simulation completed fine but this postprocessing
-# step failed with "can't open file '/oscar/scratch/scripts/postprocess.py'".
-# This repo lives at a single fixed OSCAR path (see CLAUDE.md); no derivation
-# needed.
-PROJECT_ROOT="/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor"
+# The checkout whose postprocess runs: scripts/simulate.py exports MFB_REPO (the submitting checkout). It is not
+# derived from the run paths: that derivation pointed at the scratch folder when a raw sbatch submission skipped
+# simulate.py, and the postprocess failed. The default is the main checkout on OSCAR.
+PROJECT_ROOT="${MFB_REPO:-/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor}"
+echo "Project root : $PROJECT_ROOT"
 
 # Copy output files to canonical Lustre path for postprocessing
 if [ -n "$CANON_RUN" ] && [ "$CANON_RUN" != "$SCRATCH_RUN" ]; then
@@ -173,7 +168,7 @@ if [ -n "$NEXT_RUN" ]; then
     NEXT_CANON="$RUNS_ROOT/$NEXT_RUN"
     NEXT_PARAMS_CANON="$NEXT_CANON/params.json"
     if [ -f "$NEXT_PARAMS_CANON" ]; then
-        NEXT_SCRATCH="/oscar/scratch/eaguerov/mpi_runs/$NEXT_RUN"
+        NEXT_SCRATCH="${MFB_SCRATCH:-/oscar/scratch/eaguerov}/mpi_runs/$NEXT_RUN"
         mkdir -p "$NEXT_SCRATCH"
         # checkpoint.dump is in the current seg's output dir; fall back to scratch
         CURR_CKPT="${CANON_RUN:+$CANON_RUN/checkpoint.dump}"

@@ -113,13 +113,18 @@ def run_bioreactor(params: dict, tmp_path: pathlib.Path, timeout: int = 300,
     if restart_from is not None:
         shutil.copy(restart_from, run_dir / "restart.dump")
         cmd.append("restart.dump")
+        # the dump's label, as production stages it (scripts/submit_continue.stage_phase); without it the
+        # solver refuses the restart (src/forcing_state.h restart_source)
+        label = pathlib.Path(restart_from).parent / "checkpoint.phase"
+        if label.exists():
+            shutil.copy(label, run_dir / "checkpoint.phase")
     for extra in (extra_files or []):
         if pathlib.Path(extra).exists():
             shutil.copy(extra, run_dir / pathlib.Path(extra).name)
     # Single-threaded unless the caller asks otherwise. The binary is built with
     # -fopenmp, and OpenMP reduction order is not fixed. On a 4-core CI runner two
     # identical L4 runs gave kLa_50 = 0.93 and 0.45, while OMP_NUM_THREADS=1 runs
-    # are bit-identical (scripts/diag_omp_determinism.py, 2026-09-30). Every test
+    # are bit-identical (scripts/analyse/diag_omp_determinism.py, 2026-09-30). Every test
     # that compares two runs was therefore comparing round-off noise in CI and
     # the physics locally, where the node has 1 core.
     run_env = {**os.environ, "OMP_NUM_THREADS": "1", **(env or {})}

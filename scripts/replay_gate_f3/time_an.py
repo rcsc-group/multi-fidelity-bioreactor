@@ -1,6 +1,9 @@
 import re
 import sys
-sys.path.insert(0, "/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor/.claude/worktrees/agent-a0a362873e179658b")
+from pathlib import Path  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # repo root
+from scripts import paths  # noqa: E402  (machine-specific folders)
+sys.path.insert(0, f"{paths.REPO}/.claude/worktrees/agent-a0a362873e179658b")
 from scripts import replay_gate as rg
 
 # L6 record: records per time unit and L8 flow: 1305 steps per period (kmix_l8 run), period = 0.60733 time

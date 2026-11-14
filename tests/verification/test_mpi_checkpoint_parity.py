@@ -34,6 +34,9 @@ raises.
 
 All tests here are real CFD runs at fidelity 5 (32x32 cells) or fidelity 6
 where a checkpoint fixture is reused from another test.
+
+L6 counterpart: bundle guards S5 (restart, tests/bundle/test_restart.py; power shown by ramp_from_rest) and S7
+(MPI, tests/bundle/test_builds.py; no mutant yet, so no shown power). The tests here stay the CI check.
 """
 from __future__ import annotations
 
@@ -129,10 +132,10 @@ def test_checkpoint_matches_uninterrupted(tmp_path):
     reproduce an uninterrupted run's post-ramp velocity RMS.
 
     Mandatory assertion, baseline = our own fork's uninterrupted serial run.
-    `*_prev` params are set EQUAL to the current condition so the fork's own
-    smooth-step continuity ramp ((1-alpha)*prev + alpha*current) is a no-op
-    -- this isolates pure checkpoint-restart mechanics from any condition
-    change across the boundary.
+    The dump's label (checkpoint.phase, staged with the dump) gives the same
+    forcing as params.json, so the restart ramp is a no-op -- this isolates
+    pure checkpoint-restart mechanics from any condition change across the
+    boundary.
     """
     uninterrupted_params = {**_BASE_PARAMS, "run_id": "ckpt_parity_uninterrupted"}
     uninterrupted_dir = run_bioreactor(uninterrupted_params, tmp_path, timeout=_TIMEOUT)
@@ -151,13 +154,12 @@ def test_checkpoint_matches_uninterrupted(tmp_path):
     seg2_params = {
         **_BASE_PARAMS, "run_id": "ckpt_parity_seg2", "t_end": 6.0,
         "t_checkpoint": seg1_t_final,
-        "omega_b_prev": _BASE_PARAMS["omega_b"],
-        "theta_max_prev": _BASE_PARAMS["theta_max"],
     }
     seg2_dir = tmp_path / seg2_params["run_id"]
     seg2_dir.mkdir(parents=True, exist_ok=True)
     (seg2_dir / "params.json").write_text(json.dumps(seg2_params))
     shutil.copy(dump_path, seg2_dir / "checkpoint.dump")
+    shutil.copy(seg1_dir / "checkpoint.phase", seg2_dir / "checkpoint.phase")
     binary = PROJECT_ROOT / "build" / "BioReactor"
     try:
         subprocess.run(
@@ -226,14 +228,13 @@ def test_checkpoint_theta_change_matches_independent_reference(tmp_path):
     transition_params = {
         **_BASE_PARAMS, "run_id": "theta_ckpt_transition",
         "theta_max": [theta_to, 0.0, 0.0], "t_end": 12.0,
-        "t_checkpoint": source_t_final,
-        "omega_b_prev": _BASE_PARAMS["omega_b"],
-        "theta_max_prev": [theta_from, 0.0, 0.0],
+        "t_checkpoint": source_t_final,   # the source forcing (theta_from) comes from the dump's label
     }
     transition_dir = tmp_path / transition_params["run_id"]
     transition_dir.mkdir(parents=True, exist_ok=True)
     (transition_dir / "params.json").write_text(json.dumps(transition_params))
     shutil.copy(dump_path, transition_dir / "checkpoint.dump")
+    shutil.copy(source_dir / "checkpoint.phase", transition_dir / "checkpoint.phase")
     binary = PROJECT_ROOT / "build" / "BioReactor"
     try:
         subprocess.run(
@@ -297,13 +298,12 @@ def test_combined_mpi_checkpoint_vs_serial(mpi_binary, tmp_path):
     seg2_params = {
         **combo_params, "run_id": "combo_mpi_ckpt_seg2", "t_end": 5.0,
         "t_checkpoint": seg1_t_final,
-        "omega_b_prev": combo_params["omega_b"],
-        "theta_max_prev": combo_params["theta_max"],
     }
     seg2_dir = tmp_path / seg2_params["run_id"]
     seg2_dir.mkdir(parents=True, exist_ok=True)
     (seg2_dir / "params.json").write_text(json.dumps(seg2_params))
     shutil.copy(dump_path, seg2_dir / "checkpoint.dump")
+    shutil.copy(seg1_dir / "checkpoint.phase", seg2_dir / "checkpoint.phase")
     try:
         subprocess.run(
             ["mpirun", "-np", "4", "--oversubscribe", str(mpi_binary.resolve()),

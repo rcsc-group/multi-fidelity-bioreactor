@@ -5,7 +5,7 @@ via Kim's T_char (H = L/3.5).  Also the chi_scale.py 'kim' block=1 estimator."""
 import json, math, sys, glob
 from pathlib import Path
 import numpy as np
-ROOT = Path("/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor")
+ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
 from scripts import kim_convert as kc, fields, chi_scale
 

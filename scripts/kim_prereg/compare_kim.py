@@ -9,8 +9,10 @@ import sys
 from pathlib import Path
 
 import numpy as np
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # repo root
+from scripts import paths  # noqa: E402  (machine-specific folders)
 
-OUTROOT = Path("/oscar/scratch/eaguerov/kim_pipeline/prereg_out")
+OUTROOT = Path(f"{paths.SCRATCH}/kim_pipeline/prereg_out")
 T_PER = 0.607329   # the producer's T_per_st at 20 rpm, theta 7 (printed by pre_open as the record span / 3); checked below
 VARS = ("off_m1", "off_m1f0", "off_m3", "off_m3f0", "off_m4", "his_S", "his_H", "his_ship", "his_loop")
 

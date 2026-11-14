@@ -122,7 +122,7 @@ quoted:
   jump include run-to-run nondeterminism?). It is no longer the test of H_rep."
   "NEW test P (replaces R as the H_rep test), PRE-REGISTERED: perturbation-size
   scan at L8, theta 7, base 22.5 and 30 rpm (T5 +-0.1 jumps 0.20-0.35 in log),
-  offsets +1e-2, +1e-3, +1e-6 rpm (6 runs, scripts/submit_l8_perturb.py; with
+  offsets +1e-2, +1e-3, +1e-6 rpm (6 runs, scripts/run/submit_l8_perturb.py; with
   the T5 +-0.1 runs that gives 4 decades).
   Model: |Delta log dtmix_0.95| vs |Delta rpm|. Smooth-but-steep structure
   predicts slope ~1 in log-log ... Sensitive dependence (effectively noise)
@@ -192,11 +192,12 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+from scripts import paths  # noqa: E402  (machine-specific folders)
 
 PLANE_NAMES = ["ux", "uy", "omega", "f", "cs", "c", "c1", "c2", "c3", "oxy"]
 SCALE_DIVISORS = (16, 32, 64)           # l = L0 / divisor
 THRESHOLDS = (0.50, 0.75, 0.95)
-SCRATCH = Path("/oscar/scratch/eaguerov/mpi_runs")
+SCRATCH = Path(f"{paths.SCRATCH}/mpi_runs")
 OUT_DIR = ROOT / "experiments" / "multifidelity"
 _HEADER = struct.Struct("<iid")
 

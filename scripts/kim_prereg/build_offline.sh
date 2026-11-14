@@ -1,15 +1,15 @@
 #!/bin/bash
 # Build the offline test variants (diary 2026-10-29) in the staged offline dir of pre_A_N256.
-# Usage: bash /oscar/scratch/eaguerov/kim_pipeline/prereg_src/build_offline.sh <build tag> <N>
+# Usage: bash $MFB_SCRATCH/kim_pipeline/prereg_src/build_offline.sh <build tag> <N>
 set -eu
 module load openmpi >/dev/null 2>&1 || true
-export BASILISK=/oscar/data/dharri15/eaguerov/basilisk/src
+export BASILISK=${BASILISK:-/oscar/data/dharri15/eaguerov/basilisk/src}
 export PATH="$BASILISK:$PATH"
 BUILD=${1:?build tag, e.g. pre_A_N256}; NG=${2:?grid N}
-cd /oscar/scratch/eaguerov/kim_pipeline/prereg/oscar/builds/$BUILD/offline
+cd ${MFB_SCRATCH:-/oscar/scratch/eaguerov}/kim_pipeline/prereg/oscar/builds/$BUILD/offline
 # qcc does not find the absolute include from this dir: use a local copy of the header
-cp -f /oscar/scratch/eaguerov/kim_pipeline/prereg_src/prereg_MK.h .
-sed -i 's|^#include "/oscar/scratch/eaguerov/kim_pipeline/prereg_src/prereg_MK.h"|#include "prereg_MK.h"|' TracerTest_test.c
+cp -f "${MFB_SCRATCH:-/oscar/scratch/eaguerov}/kim_pipeline/prereg_src/prereg_MK.h" .
+sed -i 's|^#include ".*/prereg_MK.h"|#include "prereg_MK.h"|' TracerTest_test.c
 rm -rf .qcc*
 COMMON="-DNN_GRID=$NG -DT_CYCLE=0.6074 -DT_END=2.0 -DMOVIES=0 -DFIGURES=0 -DOUT_FILES=0 -DOUT_INTERFACE=0 -DPREREG_DIAG=1"
 build () {   # name, extra flags

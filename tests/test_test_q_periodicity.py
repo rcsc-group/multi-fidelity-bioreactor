@@ -5,7 +5,7 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from scripts.test_q_periodicity import (classify, floor_error, periodicity_error,  # noqa: E402
+from scripts.hypotheses.test_q_periodicity import (classify, floor_error, periodicity_error,  # noqa: E402
                                         bar_from_floor)
 
 T = 1.0

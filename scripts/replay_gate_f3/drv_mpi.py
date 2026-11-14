@@ -1,8 +1,11 @@
 """Usage: drv_mpi.py ID REC_TAG REPLAY_TAG NTASKS PERIODS LS:PROJ [LS:PROJ ...]   (L6 flow, release after 10 cycles)"""
 import sys
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # repo root
+from scripts import paths  # noqa: E402  (machine-specific folders)
 
-sys.path.insert(0, "/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor/.claude/worktrees/agent-a0a362873e179658b")
+sys.path.insert(0, f"{paths.REPO}/.claude/worktrees/agent-a0a362873e179658b")
 from scripts import replay_gate as rg
 
 rid, rtag, ptag, nt, per = sys.argv[1:6]

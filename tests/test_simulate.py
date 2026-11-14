@@ -16,6 +16,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from scripts.simulate import (
+    binary_reads_label,
+    source_forcing_keys,
     run_local, submit_slurm, wait_for_result, run_trial, get_job_elapsed_seconds,
 )
 from tests.conftest import CANONICAL_PARAMS, PROJECT_ROOT
@@ -81,6 +83,25 @@ def test_submit_slurm_passes_walltime(tmp_path):
 
     cmd = mock_run.call_args[0][0]
     assert any("02:30:00" in a for a in cmd), f"walltime not in sbatch args: {cmd}"
+
+
+def test_submit_slurm_exports_the_machine_folders(tmp_path, monkeypatch):
+    """The job runs with --export=NONE,...: the template gets the submitting checkout and this machine's
+    folders (scripts/paths.py) from the export list, not from defaults written in the template."""
+    from scripts import paths
+    monkeypatch.setattr(paths, "SCRATCH", tmp_path / "scr")
+    monkeypatch.setattr(paths, "BASILISK", tmp_path / "bas")
+    (tmp_path / "repo").mkdir()
+    fake_result = MagicMock()
+    fake_result.stdout = "Submitted batch job 42\n"
+    with patch("subprocess.run", return_value=fake_result) as mock_run:
+        submit_slurm(SHORT_PARAMS, project_root=tmp_path / "repo", runs_root=tmp_path,
+                     mpi_scratch_root=tmp_path / "mpi_scratch")
+    export = next(a for a in mock_run.call_args[0][0] if a.startswith("--export="))
+    items = dict(kv.split("=", 1) for kv in export[len("--export=NONE,"):].split(","))
+    assert items["MFB_REPO"] == str(tmp_path / "repo")
+    assert items["MFB_SCRATCH"] == str(tmp_path / "scr")
+    assert items["BASILISK"] == str(tmp_path / "bas")
 
 
 # ── wait_for_result ───────────────────────────────────────────────────────────
@@ -223,3 +244,129 @@ class TestRunTrial:
                     SHORT_PARAMS, backend="slurm",
                     project_root=PROJECT_ROOT, runs_root=tmp_path,
                 )
+
+
+# ── a restart must say which forcing it continues (pitfall "restart-ramp") ────
+# Every restart ramps the forcing from its source to params.json. Binaries built since 2026-11-13 read the
+# source from the dump's label (checkpoint.phase) and refuse *_prev keys; older binaries read *_prev and, with
+# none, ramp from zero rocking (fig9_l9_rpm37.5_ext1, 2026-11-13). Refused before anything is written.
+
+LABEL = ('{"t": 10.0, "cycles": 4.0, "U_bio": 0.1, "T_bio": 1.0, "omega_b": 3.4, "theta_max": [7, 0, 0], '
+         '"Th": 0.0, "Th_d": 0.4}')
+
+
+def _restart(**extra):
+    return {**SHORT_PARAMS, "run_id": "restart_test", "t_checkpoint": 10.0, "t_end": 5.0,
+            "restart_continue": 1, "n_mix_cycles": 0, **extra}
+
+
+def _prev(p):
+    return {"omega_b_prev": p["omega_b"], "theta_max_prev": list(p["theta_max"]),
+            "phi_angular_prev": list(p["phi_angular"]), "amplitude_h_prev": list(p["amplitude_h"]),
+            "phi_horizontal_prev": list(p["phi_horizontal"]), "omega_h_prev": p["omega_h"]}
+
+
+def _binary(tmp_path, reads_label):
+    b = tmp_path / ("new_bin" if reads_label else "old_bin")
+    b.write_bytes(b"\x7fELF..." + (b"restart refused" if reads_label else b"") + b"...")
+    return str(b)
+
+
+def _dump(tmp_path, label=LABEL):
+    d = tmp_path / "ck"
+    d.mkdir(exist_ok=True)
+    (d / "checkpoint.dump").write_bytes(b"x")
+    if label is not None:
+        (d / "checkpoint.phase").write_text(label)
+    return str(d / "checkpoint.dump")
+
+
+def _submit(tmp_path, params, checkpoint=None):
+    ok = MagicMock(stdout="Submitted batch job 42\n", returncode=0)
+    with patch("subprocess.run", return_value=ok):
+        return submit_slurm(params, project_root=PROJECT_ROOT, runs_root=tmp_path / "runs",
+                            mpi_scratch_root=tmp_path / "mpi", checkpoint=checkpoint)
+
+
+def _refused(tmp_path, params, checkpoint=None, match="restart-ramp"):
+    with patch("subprocess.run", side_effect=AssertionError("sbatch must not be called")):
+        with pytest.raises(ValueError, match=match):
+            submit_slurm(params, project_root=PROJECT_ROOT, runs_root=tmp_path / "runs",
+                         mpi_scratch_root=tmp_path / "mpi", checkpoint=checkpoint)
+    assert not (tmp_path / "runs" / params["run_id"]).exists()
+
+
+def test_binary_reads_label_from_its_marker(tmp_path):
+    assert binary_reads_label(_binary(tmp_path, True))
+    assert not binary_reads_label(_binary(tmp_path, False))
+    assert binary_reads_label(None)                       # the binary built from this src/
+
+
+def test_old_binary_restart_without_prev_is_refused(tmp_path):
+    _refused(tmp_path, _restart(_binary=_binary(tmp_path, False)))
+
+
+def test_old_binary_restart_with_prev_is_submitted(tmp_path):
+    p = _restart(_binary=_binary(tmp_path, False))
+    assert _submit(tmp_path, p | _prev(p)) == "42"
+
+
+def test_label_binary_restart_with_label_is_submitted(tmp_path):
+    assert _submit(tmp_path, _restart(_binary=_binary(tmp_path, True)), _dump(tmp_path)) == "42"
+
+
+def test_label_binary_refuses_prev_next_to_a_label(tmp_path):
+    p = _restart(_binary=_binary(tmp_path, True))
+    _refused(tmp_path, p | _prev(p), _dump(tmp_path), match="two sources")
+
+
+def test_label_binary_refuses_a_dump_without_label(tmp_path):
+    _refused(tmp_path, _restart(_binary=_binary(tmp_path, True)), _dump(tmp_path, label=None),
+             match="checkpoint.phase")
+
+
+def test_label_binary_takes_prev_with_an_old_label(tmp_path):
+    p = _restart(_binary=_binary(tmp_path, True))
+    old = '{"t": 10.0, "t_phase_offset": 0.0, "T_per_st": 2.5}'
+    assert _submit(tmp_path, p | _prev(p), _dump(tmp_path, old)) == "42"
+    _refused(tmp_path, p | {"run_id": "restart_test2"}, _dump(tmp_path, old), match="old label")
+
+
+def test_mpi_staging_copies_the_label_with_the_dump(tmp_path):
+    ck = _dump(tmp_path)
+    ok = MagicMock(stdout="Submitted batch job 44\n", returncode=0)
+    with patch("subprocess.run", return_value=ok):
+        submit_slurm(_restart(_binary=_binary(tmp_path, True)), project_root=PROJECT_ROOT,
+                     runs_root=tmp_path / "runs", mpi_scratch_root=tmp_path / "mpi", checkpoint=ck,
+                     template=PROJECT_ROOT / "config" / "slurm_mpi_template.sh")
+    assert (tmp_path / "mpi" / "restart_test" / "checkpoint.phase").read_text() == LABEL
+
+
+def test_source_forcing_keys_follow_the_binary(tmp_path):
+    p = dict(SHORT_PARAMS)
+    assert source_forcing_keys(p, _binary(tmp_path, True)) == {}
+    assert source_forcing_keys(p, _binary(tmp_path, False)) == _prev(p)
+
+
+def test_replay_restart_needs_no_prev(tmp_path):
+    """A replay run solves only scalars on a recorded flow; the forcing does not drive it."""
+    ok = MagicMock(stdout="Submitted batch job 43\n", returncode=0)
+    with patch("subprocess.run", return_value=ok):
+        assert submit_slurm(_restart(rec_dir="/x"), project_root=PROJECT_ROOT, runs_root=tmp_path,
+                            mpi_scratch_root=tmp_path / "mpi") == "43"
+
+
+def test_submit_slurm_serial_restart_stages_the_label(tmp_path):
+    """Non-MPI restart: the solver runs in runs/<id>/ and reads checkpoint.phase there, so the dump's label must
+    be copied next to params.json (the MPI branch copies it to scratch). Review finding 2026-11-14."""
+    src = tmp_path / "src_run"
+    src.mkdir()
+    (src / "checkpoint.dump").write_bytes(b"\0" * 16)
+    (src / "checkpoint.phase").write_text('{"t": 5.0, "omega_b": 3.0}')
+    fake = MagicMock(stdout="Submitted batch job 1\n", returncode=0)
+    p = {**SHORT_PARAMS, "run_id": "serial_restart", "t_checkpoint": 5.0}
+    with patch("subprocess.run", return_value=fake):
+        submit_slurm(p, project_root=PROJECT_ROOT, runs_root=tmp_path / "runs", checkpoint=str(src / "checkpoint.dump"),
+                     template=PROJECT_ROOT / "config" / "slurm_template.sh", mpi_scratch_root=tmp_path / "mpi")
+    staged = tmp_path / "runs" / "serial_restart" / "checkpoint.phase"
+    assert staged.is_file() and staged.read_text() == (src / "checkpoint.phase").read_text()

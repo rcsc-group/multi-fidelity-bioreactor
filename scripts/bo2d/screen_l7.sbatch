@@ -8,5 +8,5 @@
 #SBATCH --exclude=node2356
 #SBATCH -o logs/screen_l7_%j.out
 # Throttled submitter for the dense L7 screen (screen_l7.py); <= 30 L7 jobs in flight.
-cd /oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor
+cd ${MFB_REPO:-/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor}
 uv run python scripts/bo2d/screen_l7.py run --go

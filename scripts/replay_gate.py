@@ -28,13 +28,14 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from scripts import postprocess as pp  # noqa: E402
+from scripts import paths  # noqa: E402  (machine-specific folders)
 from scripts.simulate import submit_slurm  # noqa: E402
 
-BIN_DIR = Path("/oscar/data/dharri15/eaguerov/bin/replay-gate")
-WORK = Path("/oscar/scratch/eaguerov/replay_gate")
+BIN_DIR = Path(f"{paths.DATA}/bin/replay-gate")
+WORK = Path(f"{paths.SCRATCH}/replay_gate")
 RUNS = WORK / "runs"            # canonical run dirs (results.json lands here)
 MPI_SCRATCH = WORK / "mpi_runs"  # where the job runs and writes the record
-BASILISK = Path("/oscar/data/dharri15/eaguerov/basilisk/src")
+BASILISK = Path(f"{paths.BASILISK}")
 MAGIC = b"FLXREC01"
 FILE_HEADER_BYTES = 16
 STEP_HEADER = np.dtype([("i", "<i4"), ("t", "<f8"), ("dt", "<f8"), ("n", "<i8")])  # 28 bytes, packed
@@ -51,7 +52,7 @@ def binary_is_current(binary: Path, src: Path = ROOT / "src") -> bool:
     return binary.exists() and binary.stat().st_mtime > source_mtime(src)
 
 
-SBUILD = Path("/oscar/scratch/eaguerov/replay_gate/sbuild2.sh")
+SBUILD = Path(f"{paths.SCRATCH}/replay_gate/sbuild2.sh")
 
 
 def build_binary(tag: str, flags: list[str] | None = None, src: Path = ROOT / "src", mpi: bool = False) -> Path:
@@ -80,7 +81,7 @@ def build_binary(tag: str, flags: list[str] | None = None, src: Path = ROOT / "s
 
 def make_params(run_id: str, binary: Path, *, fidelity: int, n_mix_cycles: int, post_cycles: float,
                 rpm: float = 32.5, theta: float = 7.0, **extra) -> dict:
-    """The params() of scripts/submit_l8_t5_t6.py with a configurable level and length."""
+    """The params() of scripts/experiments/submit_l8_t5_t6.py with a configurable level and length."""
     zeros = [0.0, 0.0, 0.0]
     omega_b = rpm * 2 * math.pi / 60.0
     p = {"run_id": run_id, "fidelity": fidelity, "geometry": {"a": 0.25, "b": 0.03575, "n": 8.0},

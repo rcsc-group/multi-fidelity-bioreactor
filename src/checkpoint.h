@@ -1,9 +1,9 @@
 // checkpoint.h -- checkpoint.dump at the end of the run, and an early checkpoint before the wall clock ends.
 // Part of BioReactor.c: included at one fixed place; the place sets the event order.
 
-// checkpoint.phase: the forcing phase of this checkpoint, {"t", "t_phase_offset", "T_per_st"}. A restart
-// reads it (set_run_window()) and resumes the forcing exactly where it stopped. Needed for an early
-// (wall-clock) dump, which is not on a period boundary; written for every dump so there is one path.
+// checkpoint.phase: the LABEL of this checkpoint (forcing_state.h, label_write): its time, forcing phase, the
+// units of the dumped fields and the forcing at that instant. A restart reads it and ramps from that forcing
+// to its own params.json; without it the restart stops. Written for every dump (planned and early).
 // A side file, not a field in the dump, so the dump format stays the same.
 static void write_phase_sidecar (double t_now)
 {
@@ -11,12 +11,10 @@ static void write_phase_sidecar (double t_now)
     return;
   FILE *fp = fopen ("checkpoint.phase", "w");
   if (!fp) {
-    fprintf (ferr, "WARNING: cannot write checkpoint.phase; a restart from "
-             "this dump will have to infer its phase\n");
+    fprintf (ferr, "WARNING: cannot write checkpoint.phase; a restart from this dump will be refused\n");
     return;
   }
-  fprintf (fp, "{\"t\": %.17g, \"t_phase_offset\": %.17g, "
-           "\"T_per_st\": %.17g}\n", t_now, t_phase_offset, T_per_st);
+  label_write (fp, t_now);
   fclose (fp);
 }
 
@@ -36,7 +34,7 @@ event maxruntime_stop (i += 10) {
     fprintf (ferr, "maxruntime: %.0f s of %.0f s used -- checkpointing at "
              "t=%.6f (phase %.4f of a period) and stopping\n",
              wall, _maxruntime_s, t,
-             fmod ((t + t_phase_offset) / T_per_st, 1.0));
+             fmod (_forcing_last.psi/(2.*pi), 1.0));
   write_uv_field (t);
   p.nodump = pf.nodump = false;
   dump (file = "checkpoint.dump");

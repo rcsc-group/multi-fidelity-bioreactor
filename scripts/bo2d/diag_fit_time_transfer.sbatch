@@ -8,6 +8,6 @@
 #SBATCH --exclude=node2356
 #SBATCH -o logs/diag_fit_time_%j.out
 # fit timing and transfer-function fairness.
-cd /oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor
+cd ${MFB_REPO:-/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor}
 export OMP_NUM_THREADS=8 MKL_NUM_THREADS=8
 uv run python scripts/bo2d/diag_fit_time_transfer.py

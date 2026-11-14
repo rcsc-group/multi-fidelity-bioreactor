@@ -10,5 +10,5 @@
 #SBATCH -o %x-%j.out
 set -euo pipefail
 export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1
-cd /oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor
+cd ${MFB_REPO:-/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor}
 uv run --project . python tools/golden/golden.py "${3:-run}" "$1" "$2"

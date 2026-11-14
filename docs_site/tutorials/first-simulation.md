@@ -123,7 +123,7 @@ cat > runs/tutorial_video_demo/params.json <<'EOF'
 }
 EOF
 build/BioReactor-video runs/tutorial_video_demo/params.json
-uv run python scripts/render_videos.py runs/tutorial_video_demo
+uv run python scripts/figures/render_videos.py runs/tutorial_video_demo
 ```
 
 `BioReactor-video` itself only dumps raw binary frames to
@@ -139,7 +139,7 @@ the video is just that field rendered frame by frame, nothing the solver
 computes differently.
 
 !!! note "There's a second, separate video pipeline"
-    `config/slurm_video_template.sh` + `scripts/submit_video_run.py` render
+    `config/slurm_video_template.sh` + `scripts/run/submit_video_run.py` render
     videos a different way — directly from Basilisk's own view/`bview`
     output via `ppm2mp4`, producing `vorticity3.mp4`/`oxygen3.mp4`/`tracer*.mp4`
     instead of `volume_fraction*.mp4`. That path hasn't been exercised while

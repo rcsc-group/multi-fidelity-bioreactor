@@ -13,16 +13,17 @@ import subprocess
 import sys
 from pathlib import Path
 
-ROOT = Path("/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor")
+ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from scripts import simulate  # noqa: E402
+from scripts import paths  # noqa: E402  (machine-specific folders)
 from scripts.submit_continue import build_params  # noqa: E402
 from scripts.postprocess import _t_scales  # noqa: E402
 
-BINARY = "/oscar/data/dharri15/eaguerov/bin/BioReactor-mpi-lean-2ef5b07"
+BINARY = f"{paths.DATA}/bin/BioReactor-mpi-lean-2ef5b07"
 LIST = ROOT / "scripts" / "campaign2d" / "state" / "edr_backfill_list.csv"
 OUT = ROOT / "scripts" / "campaign2d" / "state" / "jobs_edr95.jsonl"
-MPI_SCRATCH = Path("/oscar/scratch/eaguerov/mpi_runs")
+MPI_SCRATCH = Path(f"{paths.SCRATCH}/mpi_runs")
 RANKS = {8: 16, 9: 32, 10: 32}                       # plan 2 (STAGES)
 WALL = {8: "04:00:00", 9: "08:00:00", 10: "12:00:00"}  # 3 cycles; L10 at 42-168 min per cycle, 32 ranks
 N_CYC = 3

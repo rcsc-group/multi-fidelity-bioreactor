@@ -47,6 +47,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parents[2]))
 from tests.conftest import CANONICAL_PARAMS, load_normf, run_bioreactor
+from scripts import paths  # noqa: E402  (machine-specific folders)
 
 PROJECT_ROOT = Path(__file__).parents[2]
 FIXTURE_DIR  = Path(__file__).parent.parent / "fixtures" / "kim_upstream"
@@ -70,7 +71,7 @@ def _find_qcc() -> Path | None:
     basilisk_env = os.environ.get("BASILISK")
     if basilisk_env and (Path(basilisk_env) / "qcc").exists():
         return Path(basilisk_env) / "qcc"
-    oscar_qcc = Path("/oscar/data/dharri15/eaguerov/basilisk/src/qcc")
+    oscar_qcc = Path(f"{paths.BASILISK}/qcc")
     if oscar_qcc.exists():
         return oscar_qcc
     found = _shutil.which("qcc")

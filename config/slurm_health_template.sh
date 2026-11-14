@@ -1,7 +1,7 @@
 #!/bin/bash
 # SLURM template for health-check runs (DIAGNOSTICS=1 binary).
 # Writes pressure_diag.dat in addition to standard outputs.
-# Submit via scripts/submit_health_runs.py.
+# Submit via scripts/run/submit_health_runs.py.
 #
 #SBATCH --job-name=bioreactor-health
 #SBATCH --output=logs/slurm_%j.out

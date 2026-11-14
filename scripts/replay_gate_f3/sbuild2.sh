@@ -9,7 +9,7 @@
 #SBATCH --output=/oscar/scratch/eaguerov/replay_gate/build_%j.log
 set -euo pipefail
 D="$1"; OUT="$2"; shift 2
-BASILISK=/oscar/data/dharri15/eaguerov/basilisk/src
+BASILISK=${BASILISK:-/oscar/data/dharri15/eaguerov/basilisk/src}
 export BASILISK
 cd "$D"
 if [ "${BUILD_MPI:-0}" = "1" ]; then

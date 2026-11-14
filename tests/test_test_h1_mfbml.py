@@ -1,4 +1,4 @@
-"""Unit tests for the pure logic of scripts/test_h1_mfbml.py (no data, no models)."""
+"""Unit tests for the pure logic of scripts/hypotheses/test_h1_mfbml.py (no data, no models)."""
 import sys
 from pathlib import Path
 
@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
-from scripts.test_h1_mfbml import h1_verdict, ratio_baseline, rel_rmse_ratio  # noqa: E402
+from scripts.hypotheses.test_h1_mfbml import h1_verdict, ratio_baseline, rel_rmse_ratio  # noqa: E402
 
 
 def good(n=13):

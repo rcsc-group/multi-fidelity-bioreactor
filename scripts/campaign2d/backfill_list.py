@@ -16,8 +16,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from scripts import postprocess as pp  # noqa: E402
+from scripts import paths  # noqa: E402  (machine-specific folders)
 
-COST_TABLE = Path("/oscar/scratch/eaguerov/tmp/cost_audit/cost_table.tsv")
+COST_TABLE = Path(f"{paths.SCRATCH}/tmp/cost_audit/cost_table.tsv")
 OUT = ROOT / "scripts" / "campaign2d" / "state" / "edr_backfill_list.csv"
 N_CYC = 3
 RPM = (15.0, 37.5)
