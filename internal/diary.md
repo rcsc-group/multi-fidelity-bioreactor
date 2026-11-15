@@ -2212,5 +2212,5 @@ the rectangular bag look like a wedge; smoothing, near-wall fill).
 ## 2026-11-15 — Morning check: dead L9 job on node2411
 - L9 reruns 09:00: 31/49 finished, 9 running, 8 queued, 1 TIMEOUT. The 5 continuations and 69/70 L8 reruns queue (QOSMaxCpuPerUserLimit).
 - bo1_l9_rpm15.45_th5.00_fix (job 9072834, node2411) ran 8 h with no output: every rank failed UCX ibv_reg_mr ("Cannot allocate memory") and the log grew to 57 GB of UCX errors. Log trimmed to head 1 MB + tail 200 kB (mfb-lean/logs/slurm_9072834.{head,tail}.out). Resubmitted with the same params (job 9121689, scontrol top). node2411 added to ExcNodeList of all 84 queued jobs; campaign.EXCLUDE not changed yet (one event).
-- Deck: no [TBD]; spoken 1548 words = 11.9 min at 130 wpm, ~250 over the 1300 target.
+- Deck: no [TBD]; spoken 1232 words = 9.5 min at 130 wpm (under the 1300 target). I first reported 1548: talks/dfd2026/tools/count_spoken.py counted the notes of slide 6, which has `hide: true` (316 words). Fixed the tool to skip hidden slides. Cross-check: the older scratchpad counter gives 1286 = 1232 + 54, the 54 being slide-2 text under a bare 'Backup:' line that it wrongly counted.
 - PR #5 (coldreader) CI green; merged into campaign-2d.
