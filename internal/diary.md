@@ -2208,3 +2208,9 @@ the rectangular bag look like a wedge; smoothing, near-wall fill).
 - Reruns: <old>_fix, same recipe as L9 (old params + *_prev, same binary, source dump, t_checkpoint checked against the dump header: 0 mismatches), 16 ranks, 4 h. 70 jobs (scratchpad l8_all_fix_jobs.txt); bo3_l8_rpm15.00_th6.55 refused by the run-key guard: same key as bo4_l8_rpm15.00_th6.55_fix (bo4 repeated the bo3 point). L9 jobs moved to the top with scontrol top.
 - The 6 sigma-test points are rerun too: sg100_l8_* use binary sigma-38b9279-xlevel, so sg100 vs bo4_l8_*_fix checks that the two binaries agree, and sg100 vs old bo4_l8 now measures the ramp bug at L8 (not old vs new binary as pre-registered).
 - Open question this raises: the L9 runs restart from L8 dumps of runs with the bug. Test: old vs fixed L8 velocity at the dump time. If the difference is not small, the L9 _fix runs need a second fix.
+
+## 2026-11-15 — Morning check: dead L9 job on node2411
+- L9 reruns 09:00: 31/49 finished, 9 running, 8 queued, 1 TIMEOUT. The 5 continuations and 69/70 L8 reruns queue (QOSMaxCpuPerUserLimit).
+- bo1_l9_rpm15.45_th5.00_fix (job 9072834, node2411) ran 8 h with no output: every rank failed UCX ibv_reg_mr ("Cannot allocate memory") and the log grew to 57 GB of UCX errors. Log trimmed to head 1 MB + tail 200 kB (mfb-lean/logs/slurm_9072834.{head,tail}.out). Resubmitted with the same params (job 9121689, scontrol top). node2411 added to ExcNodeList of all 84 queued jobs; campaign.EXCLUDE not changed yet (one event).
+- Deck: no [TBD]; spoken 1548 words = 11.9 min at 130 wpm, ~250 over the 1300 target.
+- PR #5 (coldreader) CI green; merged into campaign-2d.
