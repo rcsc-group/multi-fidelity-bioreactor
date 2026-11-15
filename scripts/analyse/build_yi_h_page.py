@@ -58,7 +58,7 @@ def render(text):
     return out, "\n".join(toc)
 
 
-STYLE = (REPO / "scripts/yi_h_page_style.css").read_text() if (REPO / "scripts/yi_h_page_style.css").exists() else ""
+STYLE = (REPO / "scripts/analyse/yi_h_page_style.css").read_text() if (REPO / "scripts/analyse/yi_h_page_style.css").exists() else ""
 
 
 def main():

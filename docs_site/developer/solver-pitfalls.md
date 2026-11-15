@@ -115,7 +115,7 @@ sloshes at full amplitude.
 
 Found again on 2026-11-13 in all 8 L8 -> L9 campaign warm starts (`campaign.py` wrote no `*_prev`): the
 L9 velocity peaked +40 % and was still +10..+17 % at the tracer release; the BO objective dtmix_0.25 came
-out 14.2 instead of 19.9 periods at 34.8 rpm (diary 2026-11-13).
+out 14.2 instead of 19.9 periods at 34.8 rpm.
 
 **Rule since 2026-11-13 (binaries built from this `src/`):** the dump carries its source. Every dump writes
 a label, `checkpoint.phase`: the forcing at that instant (`omega_b`, `theta_max`, ... ; inside a ramp, the

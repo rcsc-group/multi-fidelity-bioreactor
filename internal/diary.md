@@ -2196,3 +2196,21 @@ the rectangular bag look like a wedge; smoothing, near-wall fill).
 - CI fix: test_pairs_file_names_existing_runs needed OSCAR run data; split into a structure test (unit) and the on-disk check (skips without run data).
 - MPI smoke through simulate (jobs 9077384, 9082649; L5, 2 periods, 4 ranks): COMPLETED, results.json written, log "Project root : .../mfb-lean" (the submitting checkout, not the main one).
 - The 11 test_*.py libraries -> scripts/hypotheses/ (names kept: diary hypotheses). Tests: test_paths (4), test_submit_slurm_exports_the_machine_folders, test_load_pairs_expands_machine_folders, test_sweep_options_expand_machine_folders, each seen RED first. Import check 159 files, 0 regressions; unit suite: only the shared-hook test; mkdocs --strict ok.
+
+## 2026-11-14 — Cold-reader review of docs and src (user: "are the docs ready? is the source astonishingly friendly?")
+- Verdict before fixes: structure good (strict mkdocs build clean, src/README event table, BioReactor.c reading guide); four blockers: (1) public site + default branch are `main`, 215 commits behind campaign-2d, so a cold reader sees the old repo; (2) 7 public pages cited the diary; (3) `geometry.a` called "half-length/half-width" in params.md and BioReactor.c, but init.h builds the wall at |x| = a/L_bio = 1 in a box of side 1, so a is the FULL length (Kim L_x); (4) scripts/ top level had 3 files that break its own layout rule.
+- Fixed on branch coldreader: (2), (3) words only, (4). Unit suite 585 pass (job 9099876), mkdocs strict clean.
+- Open: geometry code fix (pivot from geometry, refuse bags that do not fit, configs) with golden gate; merge main <-> campaign-2d only after the 49 L9 reruns finish and the slides are green (user condition).
+
+## 2026-11-15 — L8 ramp-from-rest audit and 70 L8 reruns (user decision "Now, L9 first")
+- Talk L9 reruns at 2026-11-15 morning: 19/49 finished, 9 running, 21 queued (QOSMaxCpuPerUserLimit). 5 finished runs stopped at the 8 h cap before the old run's end time (ns 17.26, nsf 15.42, nf 15.92, nf 20.38, nf 22.51); continued from their checkpoints with submit_continue.py (--tag cont, 1-21 cycles, jobs 9108116/22/23/26/27). Fixed vs old kLa_25 on the 12 complete runs with both values: 11-138 % change, both signs (ns 33.13/6.66: 35.1 -> 17.0; nf 34.69/4.39: 9.2 -> 21.9). Every L9 number in the deck must come from the _fix runs.
+- Audit (scratchpad ramp_audit.py, same rule as submit_talk_l9_all.py): a restart is safe if params has *_prev, or its binary reads the label AND the source dump has a full label. L7: all 299 runs are cold starts -> unaffected. L8: 71 runs ramp from rest, all with binary BioReactor-mpi-lean-2ef5b07-xlevel: bo4_l8 35, ns_l8 20, pr8_l8 12, bo3_l8 4. Mean cost 13-23 core-h per run (sacct).
+- Reruns: <old>_fix, same recipe as L9 (old params + *_prev, same binary, source dump, t_checkpoint checked against the dump header: 0 mismatches), 16 ranks, 4 h. 70 jobs (scratchpad l8_all_fix_jobs.txt); bo3_l8_rpm15.00_th6.55 refused by the run-key guard: same key as bo4_l8_rpm15.00_th6.55_fix (bo4 repeated the bo3 point). L9 jobs moved to the top with scontrol top.
+- The 6 sigma-test points are rerun too: sg100_l8_* use binary sigma-38b9279-xlevel, so sg100 vs bo4_l8_*_fix checks that the two binaries agree, and sg100 vs old bo4_l8 now measures the ramp bug at L8 (not old vs new binary as pre-registered).
+- Open question this raises: the L9 runs restart from L8 dumps of runs with the bug. Test: old vs fixed L8 velocity at the dump time. If the difference is not small, the L9 _fix runs need a second fix.
+
+## 2026-11-15 — Morning check: dead L9 job on node2411
+- L9 reruns 09:00: 31/49 finished, 9 running, 8 queued, 1 TIMEOUT. The 5 continuations and 69/70 L8 reruns queue (QOSMaxCpuPerUserLimit).
+- bo1_l9_rpm15.45_th5.00_fix (job 9072834, node2411) ran 8 h with no output: every rank failed UCX ibv_reg_mr ("Cannot allocate memory") and the log grew to 57 GB of UCX errors. Log trimmed to head 1 MB + tail 200 kB (mfb-lean/logs/slurm_9072834.{head,tail}.out). Resubmitted with the same params (job 9121689, scontrol top). node2411 added to ExcNodeList of all 84 queued jobs; campaign.EXCLUDE not changed yet (one event).
+- Deck: no [TBD]; spoken 1548 words = 11.9 min at 130 wpm, ~250 over the 1300 target.
+- PR #5 (coldreader) CI green; merged into campaign-2d.

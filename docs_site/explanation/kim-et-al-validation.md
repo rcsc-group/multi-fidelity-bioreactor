@@ -202,10 +202,9 @@ into the tail you look), an open, unexplained asymmetry worth chasing
 separately. This also explains why `tau_100_max`
 gets *worse*, not better, with resolution in the table above: finer
 grids produce smaller, more pathological cell fragments, not a better-
-resolved wall gradient. See diary.md 2026-08-17 for the full derivation,
-including a direct restart-sensitivity check (13.7% shift in `tau_100`
+resolved wall gradient. A restart-sensitivity check (13.7% shift in `tau_100`
 from a single dump/restore cycle, vs. 0.29% for `tau_mean` at the same
-instant) that independently points at the same conclusion: `tau_100` is
+instant) independently points at the same conclusion: `tau_100` is
 exposed to a single-cell artifact that volume-averaging protects
 `tau_mean` from.
 

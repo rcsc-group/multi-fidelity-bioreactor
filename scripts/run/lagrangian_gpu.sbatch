@@ -6,6 +6,6 @@
 #SBATCH -c 4
 #SBATCH -J lagr
 #SBATCH -o logs/lagrangian/%x_%j.out
-# usage: sbatch scripts/lagrangian_gpu.sbatch <script.py> [args...]
+# usage: sbatch scripts/run/lagrangian_gpu.sbatch <script.py> [args...]
 cd ${MFB_REPO:-/oscar/data/dharri15/eaguerov/Github/multi-fidelity-bioreactor}
 uv run python "$@"

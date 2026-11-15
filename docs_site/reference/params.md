@@ -30,9 +30,9 @@ All fields for `runs/<run_id>/params.json`.
 
 | Field | Type | Units | If omitted | Canonical value | Description |
 |-------|------|-------|------------|------------------|-------------|
-| `geometry.a` | float | m | 0.0 (degenerate bag) | 0.25 | Bag half-width (horizontal semi-axis; half the total bag width) |
-| `geometry.b` | float | m | 0.0 (degenerate bag) | 0.03575 | Bag half-height (vertical semi-axis; half the total bag height). Corrected 2026-08-03 (diary.md) — was 0.071, which paired with `H_bio`'s formula to simulate a bag 2x Kim et al.'s actual height; 0.03575 = half of Kim's real full height (`0.286 * 0.25 / 2`, from their upstream driver's hardcoded `Ly=0.286`) |
-| `geometry.n` | float | — | 0.0 (degenerate shape) | 8.0 | Superellipse exponent controlling bag shape: n=2 gives an ellipse, n≥8 gives a rounded rectangle |
+| `geometry.a` | float | m | 0.0 (degenerate bag) | 0.25 | Bag **full** length, and the length unit `L_bio`. The domain is a square of side `a`, so the bag ends are the domain walls (Kim et al.: L_x = 0.250 m) |
+| `geometry.b` | float | m | 0.0 (degenerate bag) | 0.03575 | Bag **half**-height (vertical semi-axis). 0.03575 = Kim et al.'s full height (0.286 × 0.25 m in their driver code; their paper gives the ratio as 0.285), halved. Must be at most `a/2` |
+| `geometry.n` | float | — | 0.0 (degenerate shape) | 8.0 | Superellipse exponent of the top and bottom walls: n ≥ 8 gives a sharp rectangle. The domain walls cut the bag at its ends, so n changes the shape only for n < 8 |
 | `fill_level` | float | fraction | 0.0 (empty bag) | 0.5 | Fraction of bag volume filled with liquid (0 = empty, 1 = full). Typical range: 0.3–0.7 |
 
 ## Simulation control
