@@ -2263,3 +2263,8 @@ the rectangular bag look like a wedge; smoothing, near-wall fill).
 - Daily check 11-17: no bioreactor jobs queued or failed (all r3/oxy/shot jobs COMPLETED; slides-serve 9192962 ended at its 12 h limit). Interactive 9197509 node1934, 9035305 node1943 alive; 8957535 node2336 TIMEOUT. Other sessions' SB_regen30k array held ("user env retrieval failed"), left alone. Deck: 0 [TBD]; 1307 spoken words = 10.1 min.
 - 11-17 deck move: master deck is now on Drive (Harris Lab shared drive, Elvis/Presentations/APS DFD/2026/dfd2026_talk; user edits it on the laptop via Drive sync). Folder holds only slides.md, style.css, global-bottom.vue, components/, public/ (figures, videos, Inter fonts in public/fonts), README. No package files: user runs a global slidev 53. Oscar talks/dfd2026 keeps tools/, data/, figs/, public/ only; old deck files tarred in the session scratchpad and removed.
 - Daily check 11-18: no bioreactor jobs queued or failed since 11-17 (failed/cancelled jobs are other sessions: bessa/mast/smm/adda/g2; left alone). Interactive 9249985 node1834, 9197509 node1934 alive; 9035305 TIMEOUT. Deck (Drive copy, 45081 B, 11-17 13:37): 0 [TBD]; 1311 spoken words = 10.1 min.
+
+## 2026-11-19 daily check
+- Jobs: qS9343/9243/9331/9231, qS-ctl2 and anchorrep array (other session) run. No bioreactor-mpi failures to resubmit.
+- Interactive: 9249985 (node1834), 9197509 (node1934) alive.
+- Deck (Drive master, 11-18 11:49): 0 [TBD], 1,288 spoken words (9.9 min).
