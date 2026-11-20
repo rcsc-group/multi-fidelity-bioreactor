@@ -72,7 +72,8 @@ MUTANTS = {
     # cross-case restart without the velocity rescale to the new units
     "no_rescale": Mutant([("init.h", "#if !REPLAY_FLUX\n    rescale_to_new_units ();\n#endif",
                            "#if !REPLAY_FLUX\n    // (mutant: no rescale)\n#endif")],
-                         ["caseB_warm", "caseB_cold"], ["test_s4_cross_case_warm_start_matches_cold"],
+                         ["caseB_warm", "caseB_cold"], ["test_s4_cross_case_warm_start_matches_cold",
+                          "test_s16_warm_start_keeps_the_physical_speed_at_the_seam[caseB_warm]"],
                          note="S4 is UNSETTLED on the unmutated bundle (diary 2026-11-13): no clean baseline"),
 }
 

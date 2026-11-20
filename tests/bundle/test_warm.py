@@ -9,6 +9,7 @@ S8      early tracer release after a warm start: caseB_warm releases its tracer 
 """
 from pathlib import Path
 
+import pytest
 import numpy as np
 
 from tests.bundle import _series as s
@@ -40,3 +41,37 @@ def test_s8_tracer_released_after_the_transition(bundle):
     t_rel = t[np.argmax(c2 > 0)]
     T_b = bc.period(bc.RPM_B)
     print(f"\ncaseB_warm: tracer released {(t_rel - t[0]) / T_b:.2f} periods after the restart")
+
+
+# S16 seam velocity (diary 2026-11-14: mutant no_rescale was NOT caught by S4, which measures the settled state).
+# A warm start must carry the PHYSICAL velocity across the restart. The solver's velocity unit is L / T_bio, so
+# physical speed ~ v / T_bio. Compared: the liquid rms speed sqrt(ux_rms^2 + uy_rms^2) (normf.dat) on the parent's
+# last row at or before the dump vs the child's first row, each divided by its own T_bio (parent: checkpoint.phase
+# label; child: restart_forcing.json). Bar 10 %: the parent's row-to-row change near the dump is ~5 % at L6
+# (head8: 0.750 -> 0.787 over one output step); without the rescale the jump is |T_A/T_B - 1| = 23 % (32.5 -> 25 rpm,
+# seen in bundle mut_rescale2: child 0.799 nondimensional = parent 0.787, i.e. not rescaled).
+SEAM = ["caseB_warm", "xl6", "cont"]
+
+
+def _speed(rd, row):
+    cols, a = s.table(rd, "normf.dat")
+    r = a[row]
+    return float(np.hypot(r[cols.index("ux_liq_rms")], r[cols.index("uy_liq_rms")])), float(r[cols.index("t")])
+
+
+@pytest.mark.parametrize("name", SEAM)
+def test_s16_warm_start_keeps_the_physical_speed_at_the_seam(bundle, name):
+    import json
+    child = rd(bundle, name)
+    parent = rd(bundle, bc.CASES[name].parent)
+    lab = json.loads((parent / "checkpoint.phase").read_text())
+    new = json.loads((child / "restart_forcing.json").read_text())
+    cols, a = s.table(parent, "normf.dat")
+    t = a[:, cols.index("t")]
+    i = int(np.nonzero(t <= lab["t"] + 1e-9)[0][-1])
+    vp, tp = _speed(parent, i)
+    vc, tc = _speed(child, 0)
+    up, uc = vp / lab["T_bio"], vc / new["T_bio"]
+    d = abs(uc - up) / up
+    print(f"\n{name}: parent {vp:.4f} (t {tp}), child {vc:.4f} (t {tc}); physical rel diff {d:.3f}")
+    assert d <= 0.10, f"physical liquid speed jumps by {d:.1%} at the restart (bar 10 %)"
