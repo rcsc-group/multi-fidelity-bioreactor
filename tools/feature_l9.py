@@ -28,7 +28,7 @@ from scripts import replay_gate as rg  # noqa: E402
 from scripts.campaign2d import campaign as cp  # noqa: E402
 from scripts.simulate import submit_slurm  # noqa: E402
 
-HEAD = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "--short", "HEAD"], capture_output=True, text=True).stdout.strip()
+HEAD = "ee811a9"   # src commit the binaries were built from (src unchanged since; later commits touch tools/docs only)
 import os
 SMOKE = os.environ.get("FT9_SMOKE") == "1"   # the same chain at L5 -> L6, short, 4 ranks: checks the driver only
 TAG = "ft9s" if SMOKE else "ft9"
