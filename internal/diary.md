@@ -2278,3 +2278,14 @@ the rectangular bag look like a wedge; smoothing, near-wall fill).
 - RESULT head9 (jobs 9395470/1, src = HEAD 92b8789): every case ok; guards 36/36 (33 + S16 x3). S16 physical speed change at the seam: caseB_warm 0.0 %, xl6 1.4 %, cont 0.4 %.
 - RESULT mutant no_rescale on HEAD (job 9395908): S16 FAILS (jump 21.9 %, bar 10 %) -> CAUGHT; S4 passes (no power by design, settled window). mutants.py now grades no_rescale on S16 only (the "all listed guards fail" rule would otherwise mark a caught defect as missed). Gap (1) closed.
 - X9/R9 driver tools/feature_l9.py (stages build/sources/warm/record/replay; HEAD binaries BioReactor-mpi-{xlevel,record,replay}-ee811a9). Smoke (FT9_SMOKE=1, L5 -> L6, 4 ranks, short; runs ft9s_*): every stage COMPLETED; warm runs restart from the label; record writes flux_rec + replay_start.dump; replay ends at the record's end time, oxy_liq_sum 0.0511 vs coupled 0.0504 (+1.4 %, L6, 3 cycles). Full sources stage submitted (3 L8 sources, 2 L9 cold).
+
+### 2026-11-20 22:40 — R9 result (L9 replay, pre-registered bar 5 %): FAIL at 37.5 rpm
+tools/grade_r9.py, runs ft9_{rec,rep}_rpm{32.5,37.5}_th7 (scratch mpi_runs).
+| site | kLa_1T_10 coupled / replay | err | dtmix_0.50 coupled / replay | err |
+|---|---|---|---|---|
+| 32.5, 7 | 28.86 / 28.83 | -0.1 % | 37.04 / 36.68 s | -1.0 % |
+| 37.5, 7 | 62.96 / 57.39 | **-8.9 %** | 7.18 / 7.29 s | +1.5 % |
+dtmix_0.95 is NaN in 3 of 4 runs (40 cycles is too short to reach 95 %); reported only.
+Not the cause: interface size. The per-period mean interface length in the record run at 37.5 rpm changes by < 0.1 % over 40 periods, so the flow is period-locked at this measure and K = 2 is not obviously too short.
+Open: why kLa fails at the high-kLa site only. Next experiment: replay with K = 4 at (37.5, 7) — if the error does not fall, the cause is not the loop length.
+Uptime lapse: record runs ended 16:52/17:28, replay sent 18:42 (wait task died at a session restart).
