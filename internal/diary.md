@@ -2296,3 +2296,13 @@ H: the 37.5 flow is not period-locked; a 2-period sample misrepresents it (sampl
 Test (pre-registered): record K = 8 at (37.5, 7) from the same warm source (ft9_rec_rpm37.5_th7_k8, job 9436097), replay, grade with tools/grade_r9.py. H survives if |kLa err| falls clearly below 8.9 % (bar 5 %); it is refuted if it stays near 9 %, and then I look at the loop seam.
 Cheap check (tools/r9_period_spread.py, per-period uptake / undersaturation): sd of period-to-period change 3.8 % at 32.5 and 5.1 % at 37.5. Not decisive: 32.5 passes with similar scatter, and the saturation value is a rough guess. The K = 8 run decides.
 Scratch is over its soft quota (925 of 512 GB, 14 days grace); the K=8 record adds ~200 GB. Clean old flux_rec files after grading.
+
+### 2026-11-21 03:20 — X9 graded (tools/grade_x9.py): hydrodynamics PASS; scalars move with the warm-up length
+| site | tau_95 | edr_95 | vel_rms | kLa_1T_10 | dtmix_0.25 | dtmix_0.50 |
+|---|---|---|---|---|---|---|
+| 25, 4 | +0.2 % | +2.0 % | +0.4 % | -10.8 % | -16.7 % | cold NaN |
+| 32.5, 7 | +1.8 % | +4.6 % | -0.6 % | -7.8 % | -20.4 % | -42.5 % |
+(warm vs cold; bar 5 % for the hydrodynamic three, scalars reported only; edr_95 at 32.5 is close to the bar.)
+Key cross-check at (32.5, 7): the coupled R9 record run starts from the same warm run but releases after 12 + 40 = 52 L9 cycles. Against cold: kLa_1T_10 28.86 vs 28.86 (0.0 %), dtmix_0.50 37.04 vs 37.13 (-0.2 %). So the L8 -> L9 warm start itself carries no scalar bias once the flow has 52 L9 cycles; the scalar gap comes from releasing after only 12 warm-up cycles (production protocol, campaign.l9_warm_params).
+H: 12 L9 warm-up cycles leave a slow flow component (not seen in tau/edr/vel_rms over the last 3 periods) that changes mixing and uptake. Open test: release after 12, 24, 36 cycles from the same warm source; find where dtmix_0.50 settles. Consequence if H holds: production L9 warm-start scalar QoIs carry a bias of up to ~40 % in dtmix_0.50.
+Side note: two coupled record runs from the same checkpoint (K = 2 and K = 8, physics identical) give dtmix_0.95 54.97 vs 49.60 s and kLa_1T_10 62.96 vs 62.89. The 37.5 flow is sensitive to tiny differences (likely rank/IO timing), which agrees with the R9 sampling hypothesis.
