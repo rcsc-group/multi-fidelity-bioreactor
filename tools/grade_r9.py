@@ -6,7 +6,8 @@ from scripts import postprocess as pp  # noqa: E402
 
 S = Path("/oscar/scratch/eaguerov/mpi_runs")
 ok = True
-for site in ("rpm32.5_th7", "rpm37.5_th7"):
+SITES = sys.argv[1:] or ["rpm32.5_th7", "rpm37.5_th7"]   # e.g. rpm37.5_th7_k8
+for site in SITES:
     a, b = pp.main(str(S / f"ft9_rec_{site}")), pp.main(str(S / f"ft9_rep_{site}"))
     for q in ("kLa_1T_10", "dtmix_0.50", "dtmix_0.95"):
         e = 100 * (b[q] - a[q]) / a[q]

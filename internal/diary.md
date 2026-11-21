@@ -2289,3 +2289,10 @@ dtmix_0.95 is NaN in 3 of 4 runs (40 cycles is too short to reach 95 %); reporte
 Not the cause: interface size. The per-period mean interface length in the record run at 37.5 rpm changes by < 0.1 % over 40 periods, so the flow is period-locked at this measure and K = 2 is not obviously too short.
 Open: why kLa fails at the high-kLa site only. Next experiment: replay with K = 4 at (37.5, 7) — if the error does not fall, the cause is not the loop length.
 Uptime lapse: record runs ended 16:52/17:28, replay sent 18:42 (wait task died at a session restart).
+
+### 2026-11-20 23:30 — R9 miss at (37.5, 7): sampling hypothesis, test sent
+Evidence (no new runs): replay/coupled oxygen is exact (1.000) at both sites during the 2 recorded periods; at 37.5 it moves to 0.973 at t=84.4, then 1.05 at the end. Coupled per-period mean vorticity: 32.5 smooth (< 0.3 % drift, no period-to-period scatter); 37.5 scatters ±0.5 % (peak ±4 %), no trend. Interface length steady at both.
+H: the 37.5 flow is not period-locked; a 2-period sample misrepresents it (sampling error, not a loop defect).
+Test (pre-registered): record K = 8 at (37.5, 7) from the same warm source (ft9_rec_rpm37.5_th7_k8, job 9436097), replay, grade with tools/grade_r9.py. H survives if |kLa err| falls clearly below 8.9 % (bar 5 %); it is refuted if it stays near 9 %, and then I look at the loop seam.
+Cheap check (tools/r9_period_spread.py, per-period uptake / undersaturation): sd of period-to-period change 3.8 % at 32.5 and 5.1 % at 37.5. Not decisive: 32.5 passes with similar scatter, and the saturation value is a rough guess. The K = 8 run decides.
+Scratch is over its soft quota (925 of 512 GB, 14 days grace); the K=8 record adds ~200 GB. Clean old flux_rec files after grading.

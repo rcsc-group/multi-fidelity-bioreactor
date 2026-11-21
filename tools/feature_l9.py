@@ -40,6 +40,11 @@ X9 = [(25.0, 4.0), (32.5, 7.0)]
 R9 = [(32.5, 7.0), (37.5, 7.0)]
 SITES = sorted(set(X9 + R9))
 N_L8, N_SPIN, N_WARM, N_POST, K = (4, 4, 12, 3, 2) if SMOKE else (80, 80, 12, 40, 2)
+# FT9_K=n: re-run R9 at (37.5, 7) only with n recorded periods (diary 2026-11-20 sampling hypothesis); ids get _k<n>
+if os.environ.get("FT9_K"):
+    K = int(os.environ["FT9_K"])
+    R9 = [(37.5, 7.0)]
+KSUF = f"_k{K}" if os.environ.get("FT9_K") else ""
 LO, HI = (5, 6) if SMOKE else (8, 9)
 EXCLUDE = "node2356,node2410,node2411"
 RUNS = ROOT / "runs"
@@ -118,7 +123,7 @@ def stage_record(dry: bool) -> None:
         src = rid("l9warm", rpm, th)
         sp = json.loads((RUNS / src / "params.json").read_text())
         p = {k: v for k, v in sp.items() if not k.startswith("_")}
-        p.update(run_id=rid("rec", rpm, th), t_checkpoint=0.0 if dry else last_time(src), n_mix_cycles=1,
+        p.update(run_id=rid("rec", rpm, th) + KSUF, t_checkpoint=0.0 if dry else last_time(src), n_mix_cycles=1,
                  t_end=round((1 + N_POST) * T(sp), 6), n_rec_periods=K, rec_dir=".", _binary=str(BIN["record"]))
         p.pop("restart_continue", None)
         submit(p, 32, "24:00:00", RUNS / src / "checkpoint.dump", dry=dry)
@@ -126,11 +131,11 @@ def stage_record(dry: bool) -> None:
 
 def stage_replay(dry: bool) -> None:
     for rpm, th in R9:
-        src = rid("rec", rpm, th)
+        src = rid("rec", rpm, th) + KSUF
         sp = json.loads((RUNS / src / "params.json").read_text())
         rdir = RUNS / src
         p = {k: v for k, v in sp.items() if not k.startswith("_") and k not in ("t_end", "n_mix_cycles")}
-        p.update(run_id=rid("rep", rpm, th), n_mix_cycles=0, t_end=round(N_POST * T(sp), 6), restart_continue=1,
+        p.update(run_id=rid("rep", rpm, th) + KSUF, n_mix_cycles=0, t_end=round(N_POST * T(sp), 6), restart_continue=1,
                  n_rec_periods=K, replay_loop=1, rec_dir=str(rdir), replay_scalar_level=HI, replay_diag=0,
                  replay_project_flux=0, _binary=str(BIN["replay"]))
         submit(p, 32, "12:00:00", rdir / "replay_start.dump", dry=dry)
