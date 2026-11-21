@@ -7,7 +7,7 @@ from pathlib import Path
 import numpy as np
 
 S = Path("/oscar/scratch/eaguerov/mpi_runs")
-runs = sorted(S.glob("c2d_l9_*")) + sorted(S.glob("ft9_l9warm_*"))
+runs = sorted(r for g in (sys.argv[1:] or ["c2d_l9_*", "ft9_l9warm_*"]) for r in S.glob(g))
 names = {r.name for r in runs}
 print(f"{'run':30s} {'n_rel':>5s} {'n_per':>5s} {'s_rel':>6s} {'s_end':>6s} {'drift%':>7s} {'slope%/per':>10s}")
 for r in runs:
@@ -16,8 +16,13 @@ for r in runs:
     f = r / "streaming.dat"
     if not f.exists():
         continue
-    s = np.atleast_2d(np.loadtxt(f, skiprows=1))[:, 2]
-    n = json.loads((r / "params.json").read_text()).get("n_mix_cycles", 0)
+    d = np.atleast_2d(np.loadtxt(f, skiprows=1))
+    if d.shape[1] < 3:
+        continue
+    s = d[:, 2]
+    if len(s) < 6:
+        continue
+    n = int(json.loads((r / "params.json").read_text()).get("n_mix_cycles") or 0)
     rel = s[min(n, len(s) - 1)]
     sl = 100 * np.polyfit(np.arange(5), s[-5:], 1)[0] / s[-1]
     print(f"{r.name:30s} {n:5d} {len(s):5d} {rel:6.2f} {s[-1]:6.2f} {100 * (s[-1] - rel) / s[-1]:+7.1f} {sl:+10.2f}")
