@@ -2413,3 +2413,25 @@ Control (ctl8_rpm35 vs kmix_l8_rpm35, same inputs, different rank count): tau_95
   c/rank = L10 load), L9 n8 Ice Lake (32768 c/rank, weak scaling). Jobs 9539832-35.
   Reading: if L8 n2 icx ~ 11 us -> per-rank load (cache) explains L10; if L9 n8 ~ 11 us but L8 n2 << 11 ->
   level-dependent cost (deeper multigrid); if clx << icx at L8 n4 -> node arch.
+
+## 2026-11-23 — Profiling: L10 per-cell cost is a LEVEL effect; reductions attributed
+- Arms (gate build, no TRACE, 1 period): L8 n4 Cascade 4.29 us/cell-step, L8 n4 Ice Lake 5.17, L8 n2 Ice Lake
+  (32768 c/rank) 6.16, L9 n8 Ice Lake (32768 c/rank) 5.52; L10 n32 Ice Lake (32768 c/rank) 11.2. So: node arch
+  1.2x (Cascade faster: place jobs there), per-rank load 1.2x, and L9 -> L10 at equal load 2.0x: open.
+  Next arms: L9 n8 TRACE (per-function compare with L10 n32 TRACE), L9 n32, L10 n8 (jobs 9540230-32).
+- Reductions attributed (tools/profile/reduce_callers.py: the generated _BioReactor.c is patched so
+  mpi_all_reduce_array records its 2 return addresses; L8 n16, 1 period, job 9540249): 434/step on average,
+  94 % from point-wise interpolate(): streaming field (forcing.h:73, 4 x NN^2 at each period end) and
+  uv_field (snapshots.h:90-93, 4 x NN^2 at each checkpoint). write_snapshot (10 x NN^2 per frame) has the same
+  pattern. Each call is one MPI_Allreduce. At L8 n64 the trace gives interpolate() 11 % of wall time.
+- PRE-REGISTERED (sampler): replace point-wise interpolate() in the 3 writers by one helper: foreach_point into
+  a local buffer at the SAME points (X0 + (i+0.5) L0/n), interpolate_linear as interpolate() does, then ONE
+  mpi_all_reduce_array (min) per plane (the reduction of output_field(), output.h). Predictions: (a) every
+  .bin file bitwise equal to HEAD at 1 and 4 ranks (L6, snapshots on); (b) reductions per period at L8 n16
+  drop from ~5.6e5 to < 3e4; (c) L8 n16 wall time per period drops by the period-end time (expect 5-15 %).
+  Falsified if any file differs by one bit, or if (b) fails.
+- PRE-REGISTERED (cm restriction): why does the pressure solve need restriction({cm}) each step (cm = cs,
+  embed.h:917; geometry static)? H-a: something overwrites coarse-level cs each step (probe: max|cs - cs(step 1)|
+  on coarse cells > 0 in arm "drop"). H-b: subnormal/non-finite coarse cs (probe: count > 0, explains slow
+  arithmetic with equal call counts). H-c: only remote (halo) coarse cells change. Probe:
+  tools/profile/cm_probe (appended to a copy; src/ untouched). Arms keep/drop x 1/4 ranks, L6, 1 period.
