@@ -2458,3 +2458,8 @@ Control (ctl8_rpm35 vs kmix_l8_rpm35, same inputs, different rank count): tau_95
   -> the check has power. 1-rank arms timed out (1-rank defect) but their 14 files (5 snapshots) are bitwise
   equal. Full + MPI bundle on the sampler src (jobs 9542347/48): 40/40 guards PASS. Committed. Prediction (b)
   (reduction count) is checked by the L10 caller run and the next callers run on the new src.
+- Prediction (b) check (L8 n16, new src, job 9542646): reductions per period 559170 -> 34890 (27/step), 16x
+  fewer; no interpolate() reductions remain. The pre-registered bar (< 3e4) is MISSED: the bar was set wrong,
+  below the non-interpolate baseline (6 % of 5.6e5 = 3.4e4) that the sampler cannot touch. Recorded as a
+  pre-registration error, not a pass. Remaining top callers: tension acceleration (4/step), pressure residual
+  (3.5), stability, cabs gate, viscous residuals (2 each).
