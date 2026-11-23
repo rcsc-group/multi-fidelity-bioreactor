@@ -295,6 +295,19 @@ event tracer_diffusion (i++)
       r[] = - cm[]*c[]/dt;
     }
     delete ({phi1, phi2});
+    // A field that is exactly zero everywhere (before its release at t_mix) stays zero: the RHS r = -cm c/dt
+    // is zero, so the solution is zero. Skip the solve then. Exact, and gated on the data, not on t_mix, so
+    // restarts and replays need no special case. Measured 2026-11-23 (diary, profiling): the solve on zero
+    // fields took 26-28 % of the wall time of a pre-release L8 run at 4/16/64 ranks.
+    double cabs = 0.;
+    foreach (reduction(max:cabs))
+      if (fabs (c[]) > cabs)
+        cabs = fabs (c[]);
+    // Keep OUTSIDE the gate: the pressure multigrid depends on this restriction of cm (2026-11-23, diary:
+    // with it inside the gate, outputs changed at 1e-6 before any release and the run became 5x slower,
+    // all in MPI waits; with it here, outputs are bitwise equal to the ungated code).
+    restriction ({cm});
+    if (cabs > 0.) {
     // Propagate the leaf-only phi1+phi2 update to all coarse tree levels so
     // mg_solve starts from a consistent state.  Without this, stale checkpoint
     // values at coarse levels cause the first V-cycle to diverge in restarts.
@@ -377,6 +390,7 @@ event tracer_diffusion (i++)
     mg_solve ({c}, {r}, h_residual, h_relax, &q);
 
     //*/
+    }   // cabs > 0.
   }
 }
 

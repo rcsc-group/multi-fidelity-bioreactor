@@ -2397,3 +2397,5 @@ Control (ctl8_rpm35 vs kmix_l8_rpm35, same inputs, different rank count): tau_95
   vol_frac_interf, checkpoint.dump); L8 64-rank no-release 39.18 -> 24.18 s (1.62x), diffusion 27.3 -> 1.7 %.
   B CONFIRMED. Open: why does the pressure solve need cm restricted every step (cm is static geometry)?
   Possibly linked to the 1-rank L8 non-convergence. Full + MPI bundle on the final src: jobs 9536526/27.
+- VERDICT gate (2026-11-23): full bundle + MPI bundle on the final src (jobs 9536526/27): 40/40 guards PASS.
+  Gate committed. Production binaries pick it up at the next rebuild (bitwise-equal outputs, ~1.6x pre-release).
