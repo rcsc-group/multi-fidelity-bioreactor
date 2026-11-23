@@ -2399,3 +2399,17 @@ Control (ctl8_rpm35 vs kmix_l8_rpm35, same inputs, different rank count): tau_95
   Possibly linked to the 1-rank L8 non-convergence. Full + MPI bundle on the final src: jobs 9536526/27.
 - VERDICT gate (2026-11-23): full bundle + MPI bundle on the final src (jobs 9536526/27): 40/40 guards PASS.
   Gate committed. Production binaries pick it up at the next rebuild (bitwise-equal outputs, ~1.6x pre-release).
+
+## 2026-11-23 — Profiling: L10 packed vs spread (H6 REFUTED)
+- H6: L10 per-cell cost is high because 32 ranks on one node saturate memory bandwidth. Test: L10, 32 ranks,
+  gate build (bf183e7), no TRACE, Ice Lake: packed 1 node (9537000, node2419) vs spread 4 nodes x 8 (9537001).
+  Power: bandwidth saturation predicts spread >= 1.3x faster; arm-to-arm noise ~2 %.
+- Result: packed 0.367 s/step (11.19 us/cell-step), spread 0.371 (11.31). Difference 1 %. H6 REFUTED.
+- Side results: (a) L10 now 11.2 us/cell-step vs 14.7 with TRACE + pre-gate: gate + no-TRACE ~1.3x, as the L8
+  gate test predicts for a run that never releases. (b) Both arms TIMED OUT (40 min): a fractional t_end
+  (0.1 period) still runs to the next full period boundary (S12 behaviour), so profile runs must ask for whole
+  periods. L10 at 32 ranks = 0.367 s/step x 10.2k steps/period = 63 min/period.
+- Next arms (gate build, no TRACE, 1 period): L8 n4 Ice Lake, L8 n4 Cascade (arch), L8 n2 Ice Lake (32768
+  c/rank = L10 load), L9 n8 Ice Lake (32768 c/rank, weak scaling). Jobs 9539832-35.
+  Reading: if L8 n2 icx ~ 11 us -> per-rank load (cache) explains L10; if L9 n8 ~ 11 us but L8 n2 << 11 ->
+  level-dependent cost (deeper multigrid); if clx << icx at L8 n4 -> node arch.
