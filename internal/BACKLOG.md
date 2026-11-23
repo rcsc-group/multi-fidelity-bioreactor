@@ -7,10 +7,8 @@ lands, delete it here. DFD-era entries were moved out on 2026-11-22 (see diary.m
 
 - **GPU solver.** The production solver runs on a uniform tree (refine(level < L), no adapt_wavelet), so a
   Basilisk GPU multigrid backend (basilisk/src/grid/gpu) is in reach. Blocker: the GPU backend has no
-  embed.h support, and the bag wall is an embedded boundary. Candidate: in the bag frame the wall is fixed and
-  rectangular, so it can be the domain boundary (non-square multigrid domain) with the rocking as a body force,
-  which the solver already applies. Gate: L8 QoIs (tau_95, EDR, kLa, t_mix) vs the embed CPU solver within the
-  replicate scatter, and a measured cost per cycle.
+  embed.h support, and the bag wall is an embedded boundary. Embed STAYS (user 2026-11-22: non-rectangular bags
+  are coming), so a GPU path means porting embed to the GPU backend. Parked behind the profiling campaign.
 - **Profiling campaign.** Where do the core-h go per level (Poisson/multigrid, VOF, embed, tension, scalars,
   I/O, MPI)? Strong and weak scaling per level; rank count vs cost; find the cheapest layout per level.
   Output: a cost model per level that the BO cost curves can use.
