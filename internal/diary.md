@@ -2323,3 +2323,12 @@ The talk (results-3 etc.) uses the nested campaign L9 runs (ns/nf/nsf/bo1 famili
 ### 2026-11-22 — L8 fill runs for Results 1 (ends of the rpm axis)
 Why: in Results 1 the L8 series was empty at 15-19 and 33-37 rpm (user: "the ends of the x axis are kinda empty"). Runs: tools/r1_l8_fill.py, 12 new L8 sites (15.625-19.375 and 33.125-36.875 rpm, step 0.625, theta 7) plus control ctl8_rpm35. Binary rebuilt from git archive f1c11e0 (scratch copy was purged), -DEXTRA_TRACERS=0, 32 ranks/run (measured speed-up vs 8 ranks: 16 -> ~3x, 32 -> ~5.4x; L8 is latency bound). Wall 1.0-2.9 h. All 13 COMPLETED.
 Control (ctl8_rpm35 vs kmix_l8_rpm35, same inputs, different rank count): tau_95_qss -0.08 %, ediss -0.04 %, vel_rms 0.00 %, kLa_1T_10 -0.26 %, dtmix_0.50 0.00 %. Late-time kLa_inst_25 differs +28 % (noisy instantaneous fit, not a talk QoI). Verdict: rebuilt binary = same solver for the talk QoIs. Results 1 frames re-rendered (fig_r1_v2.py --stages --leg-in); L8 now 47 sites per panel.
+
+## 2026-11-22 — Post-DFD backlog rewrite; cross-theta warm start status
+- BACKLOG.md rewritten (user approved): ranked by ambition; DFD-era items dropped (Campaign 2D deadline passed,
+  scratch archive note, Kim offline prereg lines, Fig 9/11/13 replica items). User: the old list is not ambitious;
+  new tracks = profiling campaign and a GPU solver.
+- Cross-theta warm start: the backlog HAZARD (2026-11-07) is fixed in source since b208993 (label carries phase,
+  theta, U_bio; ramp in amplitude/phase/frequency; init.h rescales u/uf/p/pf by U_bio ratio). No bundle case
+  changes theta (cases.py all theta 7), so the fix has no falsification test for theta. Next: theta 7 -> 4 case.
+- GPU check: production grid is a uniform tree (no adapt_wavelet); Basilisk grid/gpu has no embed support.

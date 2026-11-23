@@ -1,72 +1,53 @@
 # Backlog
 
-Ideas and loose ends not yet scheduled. Newest first within a section. When an
-item starts, give it a diary entry; when it lands, delete it here.
+Open work after APS DFD (2026-11-25), ranked by ambition. When an item starts, give it a diary entry; when it
+lands, delete it here. DFD-era entries were moved out on 2026-11-22 (see diary.md, same date).
 
-## APS DFD 2026-11-25 (pivot 2026-10-08: vanilla mfbml, HF target)
+## Ambitious tracks (user, 2026-11-22: "profiling campaign, or a GPU equivalent")
 
-- Campaign 2D (deadline Wed 2026-11-11): L9 round 2 running (8461017-20, refit 8461023 afterany). Open: height gate vs L8 near the 35.2 rpm sloshing mode (34.38/2.66 failed only on height); FAILED-GATE 19.14/2.89 rerun or extend; kLa band rise = theta-dependent L8->L9 correction (diary 2026-11-06 late).
-- Scratch replay_records + mpi_runs archived and verified (2026-11-06, all MATCH); deleting the scratch copies needs Elvis approval (auto-mode blocked rm).
-- HAZARD (2026-11-07): a restart that changes theta_max is not physical. BioReactor.c l.186-189: w_bio_st = w_bio*T_bio depends on theta_max (V_bio), so sin(w_bio_st t) jumps in phase at t_checkpoint; the u rescale (l.360) uses omega_b_prev/omega_b only. scripts/chain.py sweeps theta_max_0 (config/chain_config.yaml). 171 runs in runs/ did this; none is in the kLa or hydro database (scripts/bo2d/audit_cross_theta.py). Fix in C, or forbid theta sweeps in chain.py.
-- H3 variance propagation (owed, zero compute): model 2 uses only the mean of model 1, so the L10 band between design points is too narrow; add rho1^2 var9 (recursive co-kriging; read the reference before citing).
-- kla_mix_dataset.csv needs a binary/protocol column (L9 theta-7 fig9 runs = prod-4b3a435, cold; e9 = lean-f1c11e0, T5 protocol; L10 T10 = lean-eec1f15 warm restart).
-- Tell CCV about node2356 (killed 15 jobs 1 s after start, bursts 2026-10-16 18:48 and 2026-10-17 00:30; Slurm lists it MIXED, not drained).
-- e9_l9_rpm22.6_th7 stopped at the 30 h limit (chi 0.937, t = 134): dtmix_0.95 censored. Continuation needs restart_continue=1 (unexplained ~8% artifact, BioReactor.c ~l.1085) or a longer first walltime; budget 36 h for L9 T5-protocol runs.
-- Same-protocol L9 rpm grid (about 5.8k core-h) only if T10/E9 make L9 necessary; E9 says L9 roughness is local in rpm (22.5 yes, 30 no).
-- L10 roughness near 22.5 rpm (L9 pair split 0.29 in kLa_1T_10 there): add L10 scalar points at 22-23 rpm after T10.
-- F3b follow-ups: Ls = 11 replay (~1.4k core-h), a second rpm, an L10-flow record (cost: ~26 core-h per L10 cycle for the flow, records ~16x bigger than L8).
-- The time-horizon fidelity (truncated chi curve) does not carry the late rate (test B); only
-  revisit with a physical late-rate model, not a prior on r.
+- **GPU solver.** The production solver runs on a uniform tree (refine(level < L), no adapt_wavelet), so a
+  Basilisk GPU multigrid backend (basilisk/src/grid/gpu) is in reach. Blocker: the GPU backend has no
+  embed.h support, and the bag wall is an embedded boundary. Candidate: in the bag frame the wall is fixed and
+  rectangular, so it can be the domain boundary (non-square multigrid domain) with the rocking as a body force,
+  which the solver already applies. Gate: L8 QoIs (tau_95, EDR, kLa, t_mix) vs the embed CPU solver within the
+  replicate scatter, and a measured cost per cycle.
+- **Profiling campaign.** Where do the core-h go per level (Poisson/multigrid, VOF, embed, tension, scalars,
+  I/O, MPI)? Strong and weak scaling per level; rank count vs cost; find the cheapest layout per level.
+  Output: a cost model per level that the BO cost curves can use.
 
-## Methods
+## Urgent
 
-- **Record/replay of the passive scalars (built 2026-10-16/17, branch replay-gate merged).**
-  Exact non-looped replay works (F0, F1, MPI). Looping one period FAILS (F2: the L6 flow is not
-  periodic, defect 9-30%), so it is not a cost saver. Open: F3b (scalar mesh Ls = 8, 9, 10 at a fixed
-  L8 flow, record written, 57 GB). The Floquet-exponent idea needs a periodic flow and is parked.
-- **Heteroscedastic noise in KRR-LR-GPR.** L10 cycle-to-cycle spread of
-  tau_max grows ~35x from 17.5 to 37.5 rpm; the GPR noise is homoscedastic,
-  so the band is too wide at low rpm and the pooled value is set by 37.5.
-- **KRR-LR-GPR band collapses at small n_HF.** The likelihood matches Yi eq 23
-  (checked 2026-10-08), but predict() scales the variance by the plug-in
-  sigma2 = r'K^-1 r / n; with n_HF = 3 and a linear transfer it goes to ~0
-  (test A coverage 0-57%). Fix candidates: prior on the residual amplitude,
-  or n_HF >= 5.
+- **Cross-theta warm start: fixed in source, untested.** Since b208993 (2026-11-13) a dump carries its
+  forcing label (phase, theta, U_bio); a restart ramps amplitude, phase and frequency and rescales u, uf, p, pf
+  by U_bio(dump)/U_bio (src/init.h rescale_to_new_units). Every bundle case is theta = 7, so no guard tests a
+  theta change. Owed: a bundle case theta 7 -> 4 (L6) with S13 seam continuity, the QoIs vs a cold theta-4 run
+  after its ramp, and a mutant (-DLEGACY_SU or the phase dropped) that the guard must catch.
+- The 171 runs in runs/ that swept theta on pre-label binaries stay defective (scripts/bo2d/audit_cross_theta.py);
+  none is in the kLa or hydro database. build/BioReactor-mpi* date from 2026-09 (pre-label): rebuild before use.
 
-## Repository (lean clean-up, branch lean/phase2)
+## Models (zero compute)
 
-- **Fixed /oscar paths in scripts.** 84 scripts contain `Path("/oscar/...")`. Paths to run data are expected on this cluster, but some point at a checkout (e.g. `scripts/figures/plot_fig9.py`: `ROOT = Path(".../multi-fidelity-bioreactor")`), so they read and write the main checkout even when run from another one. Replace checkout paths with `Path(__file__).resolve().parents[k]`; keep run-data paths in one config place.
-- **Merge lean/phase2 only when no chain runs** from the campaign-2d checkout (scripts moved; `make hooks` after the merge installs the media-size hook).
+- Recursive co-kriging variance propagation (add rho1^2 var9; read the reference before citing).
+- Heteroscedastic noise: L10 tau_max spread grows ~35x from 17.5 to 37.5 rpm.
+- KRR-LR-GPR band collapse at n_HF = 3 (plug-in sigma2); prior on the residual amplitude, or n_HF >= 5.
 
-## Figures / runs
+## Physics and data
 
-- **tau_95 histogram quantisation.** tau_95 = upper edge of 200 linear bins up to the per-step tau_max; tau_max/tau_95 grows 3.6 (L8) -> 12-13 (L10), so one bin is 2-7% of tau_95, level-dependent (archive audit 2026-10-10). Fix before final L10 runs: exact per-step percentile (sort) or >= 2000 bins; re-derive tau_95 from snapshots where available.
+- 2D L10 truth over theta: Kim grid theta 3/5/6 (~2k core-h each), theta 2 warm from fig10_l9_th2, T10 tracer
+  continuation of x8_l10_rpm32.5_th5.5. Cost basis: L10 theta 4, 97 min/cycle x 32 ranks. Cheaper after the
+  cross-theta test passes.
+- tau_95 quantisation: 200 linear bins, one bin = 2-7 % of tau_95, level-dependent. Exact percentile or >= 2000 bins.
+- Fig 8(b) tau tails ~13x Kim's: test grid-scale noise with a volume metric at L8/L9/L10 first.
+- F3b replay follow-ups: Ls = 11 (~1.4k core-h), a second rpm.
+- kLa vs MPI rank count at L7 (8 vs 16): if it moves, error bars need a round-off/chaos term.
+- L10 roughness near 22.5 rpm: L10 scalar points at 22-23 rpm.
+- e9_l9_rpm22.6_th7 censored at 30 h: budget 36 h for L9 T5-protocol runs.
 
-- Bare `return;` in VIDEOS-only events movies_output / movies_output_tau (src/BioReactor.c ~2512, ~2623): the CLAUDE.md hazard (can stop the run). Lean production builds are unaffected (no VIDEOS). Fix before any VIDEOS run.
+## Clean-up
 
-- **Fig 8(b) tau tails ~13x Kim's** after the transient cleared. Test for
-  grid-scale noise with a volume metric (EDR field spectrum / |grad u|^2
-  distribution) at L8/L9/L10 before touching anything near the wall.
-- `submit_fig8_hist.py` still restarts from zero forcing: set every `*_prev`
-  to the current condition (as submit_fig11_l10_kla.py does). Cost of not
-  doing it: ~15 cycles of L10 (~15 h) per re-record.
-- Fig 9 L10 anchor (32.5 rpm): segment 2 running (job 6763888); ~4
-  segments total. Add the chain to plot_fig9/plot_fig11 when it lands.
-- MF tau_rpm: replace the 6-cycle L10 HF points at 35/37.5 with the ~30-40
-  L10 cycles logged by fig11_l10_rpm35/37.5 (pre-release window).
-
-- L6->L7->L8 kLa ladder at one bad L9 point (27.5 rpm or theta=4): does it
-  converge toward Kim like 32.5 rpm, or stay anomalous?
-- `make replicas` target wrapping the README's regenerate list.
-- Unsubmitted: `submit_figset.py` (Figs 2-7), `submit_fig14.py` (14/15),
-  `submit_figA18.py`. Parked by request: A.16(c).
-- Reproducibility of production kLa: at L4, OpenMP round-off moves kLa_50 by 2x (diag_omp_determinism.py). Test whether L7 kLa changes with MPI rank count (8 vs 16). If it does, kLa error bars need a round-off/chaos term.
-- t_end period rounding: FIXED in source (2026-09-30). Production scratch binaries still use the old rule; picked up at the next production rebuild.
-- Fig 13 MF figures still use the old buggy 3-grid u_bar (0.24/0.30). Faithful E&H gives 0.5-1.5 (diag_eh_ubar.py). Decide: apply it, or get L11 grids.
-- kLa: whole-period estimator adopted in Figs 11/12 (2026-10-01). Still open: re-check mixing time (dtmix) the same way; the CI restart test still uses the 5-point kLa.
-- src/BioReactor.c ~l.368 comments geometry_a as 'bag half-length (m)', but snapshots show the bag spans the full L0 = 1 = 0.25 m. Check and fix the comment (2026-10-11, test I agent).
-- Kim offline comparison (2026-10-28): when jobs 8051486/8051487 end, compare kim_l8_rpm32.5_th7 with lf_l8_rpm32.5_th7 (tracer total, max concentration, kLa_1T_10, dtmix_0.50); then decide whether to emulate his T/100 snapshot hold and read the rest of TracerTest_test.c.
-
-- 2026-10-29: Kim vs ours offline-vs-DNS test pre-registered (diary.md, 2026-10-29 PRE-REGISTERED); gates G0-G2 next, then T0/T1.
-- 2026-10-29: prereg offline-vs-DNS: gates G1 done (Kim), G0/G2 smoke running (ours L6, Kim N=64).
-- 2026-10-29: prereg L8 ours done (W converges; H, S material); L9 grid test and Kim N=256 running.
+- r1_cost_cv.py: L8 must exclude the 12 fill runs (reads 47, range(35) hardcoded).
+- kla_mix_dataset.csv: add a binary/protocol column.
+- Bare `return;` in VIDEOS-only events movies_output / movies_output_tau (src/BioReactor.c).
+- 84 scripts with Path("/oscar/...") checkout paths -> Path(__file__).resolve().parents[k].
+- `make replicas` target; geometry_a comment (half vs full length).
+- Tell CCV about node2356.
