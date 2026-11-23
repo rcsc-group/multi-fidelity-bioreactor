@@ -50,7 +50,7 @@ def test_s8_tracer_released_after_the_transition(bundle):
 # label; child: restart_forcing.json). Bar 10 %: the parent's row-to-row change near the dump is ~5 % at L6
 # (head8: 0.750 -> 0.787 over one output step); without the rescale the jump is |T_A/T_B - 1| = 23 % (32.5 -> 25 rpm,
 # seen in bundle mut_rescale2: child 0.799 nondimensional = parent 0.787, i.e. not rescaled).
-SEAM = ["caseB_warm", "xl6", "cont"]
+SEAM = ["caseB_warm", "caseT_warm", "xl6", "cont"]
 
 
 def _speed(rd, row):
@@ -75,3 +75,11 @@ def test_s16_warm_start_keeps_the_physical_speed_at_the_seam(bundle, name):
     d = abs(uc - up) / up
     print(f"\n{name}: parent {vp:.4f} (t {tp}), child {vc:.4f} (t {tc}); physical rel diff {d:.3f}")
     assert d <= 0.10, f"physical liquid speed jumps by {d:.1%} at the restart (bar 10 %)"
+
+
+# S17 cross-theta warm start (diary 2026-11-22, pre-registered): half (theta 7, 4T) restarted at theta 2, same rate,
+# must match a cold theta-2 run over each run's last 3 periods (the S4 bar, unchanged). S13 and S16 cover the seam.
+def test_s17_cross_theta_warm_start_matches_cold(bundle, bars):
+    r = s.compare(bars["caseT_warm"], rd(bundle, "caseT_cold"), rd(bundle, "caseT_warm"), theta=bc.THETA_T)
+    print("\ncaseT_warm:", {m: f"{d:.2e}" for m, (_, _, d, _) in r.items()})
+    assert not s.failures(r), "\n".join(s.failures(r))

@@ -11,7 +11,7 @@ RUNS = Path("/tmp/bundle_runs")
 
 def test_case_names_are_the_plan_list():
     assert set(bc.CASES) == {"cold", "cold2", "rec", "half", "cont", "kill", "kill_resume", "replay", "loop",
-                             "lean", "l5", "xl6", "caseB_cold", "caseB_warm", "mpi4", "refuse_prev", "refuse_nolabel",
+                             "lean", "l5", "xl6", "caseB_cold", "caseB_warm", "caseT_cold", "caseT_warm", "mpi4", "refuse_prev", "refuse_nolabel",
                              "refuse_stale"}
 
 
@@ -115,3 +115,26 @@ def test_caseB_runs_end_after_the_warm_start_transient():
     assert abs(bc.params("caseB_cold", RUNS)["t_end"] - 14 * TB) < 1e-12
     w = bc.params("caseB_warm", RUNS)
     assert abs(w["t_end"] - 14 * TB) < 1e-12
+
+
+def test_caseT_warm_changes_theta_at_the_same_rate():
+    """Cross-theta warm start (diary 2026-11-22 pre-registration): half (theta 7) restarted at theta 2, 32.5 rpm."""
+    p = bc.params("caseT_warm", RUNS)
+    assert bc.CASES["caseT_warm"].parent == "half" and bc.CASES["caseT_warm"].restart == "checkpoint.dump"
+    assert p["theta_max"][0] == bc.THETA_T == 2.0
+    assert p["omega_b"] == pytest.approx(bc.omega(bc.RPM_A))
+    assert p["n_transition_cycles"] == 1
+    assert p["t_checkpoint"] >= bc.N_RAMP * bc.period(bc.RPM_A)
+
+
+def test_caseT_runs_end_at_14_periods_of_theta_2():
+    TT = bc.period(bc.RPM_A, bc.THETA_T)
+    assert abs(bc.params("caseT_cold", RUNS)["t_end"] - 14 * TT) < 1e-12
+    assert abs(bc.params("caseT_warm", RUNS)["t_end"] - 14 * TT) < 1e-12
+    assert bc.params("caseT_cold", RUNS)["theta_max"][0] == 2.0
+
+
+def test_theta_changes_the_period_by_the_velocity_unit():
+    """T_per_st = T_per * U_bio / L: theta 7 -> 2 shortens the non-dimensional period by U_bio(7)/U_bio(2) ~ 1.145."""
+    r = bc.period(bc.RPM_A, 7.0) / bc.period(bc.RPM_A, 2.0)
+    assert 1.13 < r < 1.16

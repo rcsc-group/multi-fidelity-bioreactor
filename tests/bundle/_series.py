@@ -28,10 +28,10 @@ def dump_time(path) -> float:
     return struct.unpack("<d", Path(path).read_bytes()[:8])[0]
 
 
-def window(spec, rpm: float = bc.RPM_A, rd=None) -> tuple[float, float]:
+def window(spec, rpm: float = bc.RPM_A, rd=None, theta: float = 7.0) -> tuple[float, float]:
     """bars.yaml window as absolute times: [a, b] in periods, or "last" / "lastN" = the 1 / N periods before
     the run's own final dump (a warm start begins at another absolute time than its cold reference)."""
-    T = bc.period(rpm)
+    T = bc.period(rpm, theta)
     if isinstance(spec, str) and spec.startswith("last"):
         n = int(spec[4:] or 1)
         t1 = dump_time(Path(rd) / "checkpoint.dump")
@@ -82,9 +82,9 @@ def series_max(col: str, rd_ref, rd, w) -> tuple[float, int]:
     return d["max"][head.index(col)], d["n_common"]
 
 
-def compare(bar: dict, rd_ref, rd, rpm: float = bc.RPM_A) -> dict:
+def compare(bar: dict, rd_ref, rd, rpm: float = bc.RPM_A, theta: float = 7.0) -> dict:
     """{metric: (ref value, value, relative difference, tolerance)} for a `kind: metric` bar."""
-    w_ref, w = window(bar["window"], rpm, rd_ref), window(bar["window"], rpm, rd)
+    w_ref, w = window(bar["window"], rpm, rd_ref, theta), window(bar["window"], rpm, rd, theta)
     out = {}
     for m, tol in bar["tol"].items():
         if m.endswith("_max"):
@@ -95,15 +95,15 @@ def compare(bar: dict, rd_ref, rd, rpm: float = bc.RPM_A) -> dict:
         else:
             a, b = metric(m, rd_ref, w_ref), metric(m, rd, w)
             if bar.get("sd_periods"):
-                tol = max(tol, 2 * period_sd(m, rd_ref, w_ref, bar["sd_periods"], rpm))
+                tol = max(tol, 2 * period_sd(m, rd_ref, w_ref, bar["sd_periods"], rpm, theta))
             out[m] = (a, b, rel(a, b), tol)
     return out
 
 
-def period_sd(m: str, rd, w, n: int, rpm: float) -> float:
+def period_sd(m: str, rd, w, n: int, rpm: float, theta: float = 7.0) -> float:
     """Relative period-to-period scatter of metric m in run rd: sample sd / |mean| of its value over the n
     periods that end at w[1] (the x8 bar's "2 sd": a single period of an unsteady flow scatters by this much)."""
-    T = bc.period(rpm)
+    T = bc.period(rpm, theta)
     v = np.array([metric(m, rd, (w[1] - (k + 1) * T, w[1] - k * T)) for k in range(n)])
     return float(np.std(v, ddof=1) / abs(np.mean(v)))
 

@@ -16,7 +16,7 @@ from tests.bundle.conftest import case
 from tools.bundle import cases as bc
 
 T = bc.period(bc.RPM_A)
-RESTARTED = ["cont", "kill_resume", "replay", "loop", "xl6", "caseB_warm"]
+RESTARTED = ["cont", "kill_resume", "replay", "loop", "xl6", "caseB_warm", "caseT_warm"]
 
 
 def rd(bundle, name) -> Path:
@@ -98,7 +98,7 @@ def test_s12_run_stops_on_the_period_boundary(bundle, name, t_request):
 # S13 restart label (internal/docs/plans/2026-11-13-restart-label-plan.md): the dump's label carries the forcing that made
 # the state; the restart ramps from it to params.json. The angle and its rate must not jump at the restart,
 # for a continuation (same forcing), an early dump, a new level, and a new condition (amplitude AND frequency).
-FORCED = ["cont", "kill_resume", "xl6", "caseB_warm"]
+FORCED = ["cont", "kill_resume", "xl6", "caseB_warm", "caseT_warm"]
 
 
 @pytest.mark.parametrize("name", FORCED)

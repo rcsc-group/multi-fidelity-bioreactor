@@ -2332,3 +2332,42 @@ Control (ctl8_rpm35 vs kmix_l8_rpm35, same inputs, different rank count): tau_95
   theta, U_bio; ramp in amplitude/phase/frequency; init.h rescales u/uf/p/pf by U_bio ratio). No bundle case
   changes theta (cases.py all theta 7), so the fix has no falsification test for theta. Next: theta 7 -> 4 case.
 - GPU check: production grid is a uniform tree (no adapt_wavelet); Basilisk grid/gpu has no embed support.
+
+## 2026-11-22 — PRE-REGISTERED (before any run): cross-theta warm-start guards (caseT)
+- Claim under test: since b208993 a restart that changes theta_max (same rpm) is physical: no jump in angle /
+  rate (label phase + ramp), physical speed carried (U_bio rescale), settled state = cold run.
+- Cases (L6, 32.5 rpm): caseT_cold = cold at theta 2, to CASEB_END = 14 periods of theta 2; caseT_warm = half
+  (theta 7, dump at 4T) restarted at theta 2, n_transition_cycles 1, to 14 periods of theta 2.
+- Why theta 2, not 4: U_bio(7)/U_bio(4) = 1.082 is under the S16 10 % bar (no power vs a missing rescale);
+  U_bio(7)/U_bio(2) = 1.145, and a dropped label phase is off by ~0.4 period (4 * 1.145 = 4.58 new periods).
+- Guards (existing bars, no new tolerance): S13 (angle 1e-6 rad, rate 1e-3 peak), S16 (seam physical speed 10 %),
+  S17 = S4 bar on caseT (tau_95, edr_mean within max(5 %, 2 sd), last 3 periods).
+- Power (mutants that MUST fail): theta_src_is_target (label theta ignored) -> S13[caseT_warm];
+  no_rescale on caseT -> S16[caseT_warm] (expected jump 14.5 % vs bar 10 %, parent row noise ~5 %: power modest,
+  stated); legacy_su (-DLEGACY_SU=1, omega-only ratio = 1 at fixed rpm) -> S16[caseT_warm].
+- Verdict rule: fix holds if all three guards pass on src/ AND every mutant is caught. A pass with an uncaught
+  mutant = guard has no power, not evidence.
+
+## 2026-11-23 — PRE-REGISTERED (user approved "as drafted"): profiling campaign — where do our core-h go?
+- Aim (user): find inefficiencies in OUR code, not only size a GPU gain. Budget < 100 core-h. Runs after caseT.
+- Evidence that motivates it (zero compute): x8_l10_rpm32.5_th5.5 (32 ranks, 32768 cells/rank) runs 0.647 s
+  wall per step = ~20 us per cell-step per rank; dt fixed at 5.6338e-5 over 122k steps. My belief that 2D
+  Basilisk two-phase runs at a few us/cell-step is NOT measured (no stock baseline in this plan).
+- H1 dt limit: log each candidate limit per step (CFL, capillary sqrt(rho dx^3/(pi sigma)), DT, scalar diffusion).
+  Falsified if dt is CFL-set; if capillary-set, cost per level scales dx^-3.5 (~11x/level, not 8x).
+- H2 Poisson: mean multigrid iterations/step for p, viscosity, oxygen (TOLERANCE 5e-4, NITERMAX 1000). Target
+  if mean > ~5 or any solve hits NITERMAX.
+- H3 shares: -DTRACE=2 (basilisk/src/README.trace: calls / total / self per traced function and event) at L8
+  (few periods, 1 rank) and L10 (1 cycle, 32 ranks). Expect extra scalars (4 tracers + Henry oxygen) to be a
+  large share; falsified if < 15 %.
+- H4 MPI: L8 strong scaling 1/4/16/64 ranks; per-rank min/avg/max time (imbalance near the embed wall).
+- H5 I/O: share of per-step outputs and dumps (L10 dump 173 MB).
+- Output: ranked fixes with measured gain; per-level cost model for the BO cost curves.
+
+## 2026-11-23 — VERDICT caseT (cross-theta warm start, theta 7 -> 2, L6): fix holds, guards have power
+- Real src (job 9520262, 6 min): S9, S13, S16 (seam speed diff 0.3 %), S17 (last 3 periods vs cold theta 2:
+  tau_95 1.0 %, edr_mean 1.7 %, bar max(5 %, 2 sd)) all PASS.
+- Mutants (9520263-65): theta_src_is_target -> S13 FAILED; no_rescale_theta -> S16 FAILED; legacy_su -> S16
+  FAILED. All caught. Bundle work: /oscar/scratch/eaguerov/bundle_caseT_20261123.
+- Consequence: theta sweeps by warm start are allowed on binaries built from src/ since b208993. Old
+  pre-label runs (171) stay excluded.

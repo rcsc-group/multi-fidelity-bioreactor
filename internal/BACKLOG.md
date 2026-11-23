@@ -17,11 +17,6 @@ lands, delete it here. DFD-era entries were moved out on 2026-11-22 (see diary.m
 
 ## Urgent
 
-- **Cross-theta warm start: fixed in source, untested.** Since b208993 (2026-11-13) a dump carries its
-  forcing label (phase, theta, U_bio); a restart ramps amplitude, phase and frequency and rescales u, uf, p, pf
-  by U_bio(dump)/U_bio (src/init.h rescale_to_new_units). Every bundle case is theta = 7, so no guard tests a
-  theta change. Owed: a bundle case theta 7 -> 4 (L6) with S13 seam continuity, the QoIs vs a cold theta-4 run
-  after its ramp, and a mutant (-DLEGACY_SU or the phase dropped) that the guard must catch.
 - The 171 runs in runs/ that swept theta on pre-label binaries stay defective (scripts/bo2d/audit_cross_theta.py);
   none is in the kLa or hydro database. build/BioReactor-mpi* date from 2026-09 (pre-label): rebuild before use.
 

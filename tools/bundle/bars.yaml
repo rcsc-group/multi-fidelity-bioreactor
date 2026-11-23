@@ -116,6 +116,19 @@ caseB_warm:
   window_source: "pre-registered S4 extension (lean diary 2026-11-14), verdict TRANSIENT: last-3 warm vs cold +1.9 % tau_95, +3.1 % edr after 12 more periods; single periods scatter up to +4.3 %. So the runs end at CASEB_END = 14 T_B and the window is their last 3 periods (was: last 1 period at 8 T_B). Tolerances unchanged."
   source: "diary.md 2026-10 x8 warm-start validation (lines 340, 388): every QoI within max(5%, 2 sd). sd = period-to-period scatter of caseB_cold over its last 4 periods (2026-11-14; before that the bar was a flat 5%, below the 2-4% L6 period scatter, and the guard passed or failed by chance between bundles)"
 
+caseT_cold:
+  ref: cold
+  kind: ledger
+  source: "reference of caseT_warm (theta 2, 32.5 rpm, cold); no bar of its own"
+
+caseT_warm:
+  ref: caseT_cold
+  kind: metric
+  window: last3
+  tol: {tau_95: 0.05, edr_mean: 0.05}
+  sd_periods: 4
+  source: "the S4 bar (caseB_warm) applied to a theta change, unchanged (diary 2026-11-22 pre-registration)"
+
 mpi4:
   ref: lean
   kind: metric

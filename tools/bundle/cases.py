@@ -15,6 +15,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from scripts.postprocess import _t_scales  # noqa: E402  (the solver's own period, as golden.py uses it)
 
 RPM_A, RPM_B = 32.5, 25.0
+# caseT: a restart that changes theta_max at RPM_A. 2, not 4: U_bio(7)/U_bio(4) = 1.08 is under the S16 bar (no
+# power vs a missing rescale); U_bio(7)/U_bio(2) = 1.145 (diary 2026-11-22 pre-registration).
+THETA_T = 2.0
 ZERO3 = [0.0, 0.0, 0.0]
 
 # golden's five builds, plus the cross-level restart and the MPI lean build (made by a separate MPI job)
@@ -62,6 +65,8 @@ CASES = {c.name: c for c in [
     Case("xl6", "crosslevel", "l5", "checkpoint.dump", 6, 1),
     Case("caseB_cold", "default", None, None, 6, 1),
     Case("caseB_warm", "default", "half", "checkpoint.dump", 6, 1),
+    Case("caseT_cold", "default", None, None, 6, 1),
+    Case("caseT_warm", "default", "half", "checkpoint.dump", 6, 1),
     Case("mpi4", "mpi", None, None, 6, 4),
     # the solver must refuse two sources of the source forcing (label + *_prev), and no source (no label)
     Case("refuse_prev", "default", "half", "checkpoint.dump", 6, 1, expect_refusal=True),
@@ -90,15 +95,15 @@ def omega(rpm: float) -> float:
     return rpm * 2 * math.pi / 60
 
 
-def base(run_id: str, rpm: float = RPM_A, level: int = 6) -> dict:
+def base(run_id: str, rpm: float = RPM_A, level: int = 6, theta: float = 7.0) -> dict:
     """tools/golden/golden.py base_params, with the rate and level as arguments."""
     return {"run_id": run_id, "fidelity": level, "geometry": {"a": 0.25, "b": 0.03575, "n": 8.0}, "fill_level": 0.5,
-            "n_harmonics": 1, "theta_max": [7.0, 0.0, 0.0], "phi_angular": ZERO3, "omega_b": omega(rpm),
+            "n_harmonics": 1, "theta_max": [theta, 0.0, 0.0], "phi_angular": ZERO3, "omega_b": omega(rpm),
             "omega_h": 0.0, "amplitude_h": ZERO3, "phi_horizontal": ZERO3, "n_mix_cycles": 1}
 
 
-def period(rpm: float = RPM_A) -> float:
-    return _t_scales(base("x", rpm))[1]
+def period(rpm: float = RPM_A, theta: float = 7.0) -> float:
+    return _t_scales(base("x", rpm, theta=theta))[1]
 
 
 def _prev(rpm: float) -> dict:
@@ -140,6 +145,11 @@ def params(name: str, runs: Path) -> dict:
     if name == "caseB_warm":    # condition A's state at 4T -> condition B, 1 transition cycle, then release
         return base(name, RPM_B) | {"t_checkpoint": R_START * T, "t_end": CASEB_END * period(RPM_B),
                                     "n_transition_cycles": 1}
+    if name == "caseT_cold":
+        return base(name, theta=THETA_T) | {"t_end": CASEB_END * period(RPM_A, THETA_T)}
+    if name == "caseT_warm":    # theta 7 state at 4T -> theta 2, same rate, 1 transition cycle, then release
+        return base(name, theta=THETA_T) | {"t_checkpoint": R_START * T, "t_end": CASEB_END * period(RPM_A, THETA_T),
+                                            "n_transition_cycles": 1}
     if name == "mpi4":
         return base(name) | {"t_end": 3 * T}
     if name == "refuse_prev":

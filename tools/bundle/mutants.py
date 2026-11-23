@@ -74,6 +74,22 @@ MUTANTS = {
                            "#if !REPLAY_FLUX\n    // (mutant: no rescale)\n#endif")],
                          ["caseB_warm", "caseB_cold"], ["test_s16_warm_start_keeps_the_physical_speed_at_the_seam[caseB_warm]"],
                          note="S4 has no power here by design (settled-state window; diary 2026-11-14); S16 is the seam guard"),
+    # cross-theta restart (diary 2026-11-22 pre-registration): the ramp ignores the label's theta, so the rocking
+    # rate jumps from omega*7 deg to omega*2 deg at the seam (the pre-b208993 behaviour of a theta sweep)
+    "theta_src_is_target": Mutant([("forcing_state.h", "  fsrc = s;\n  return kind;",
+                                    "  s.theta_max[0] = params.theta_max[0];\n  fsrc = s;\n  return kind;")],
+                                  ["caseT_warm", "caseT_cold"],
+                                  ["test_s13_restart_continues_the_angle_and_its_rate[caseT_warm]"]),
+    # cross-theta restart without the velocity rescale: expected seam jump |U(7)/U(2) - 1| = 14.5 % vs the 10 % bar
+    "no_rescale_theta": Mutant([("init.h", "#if !REPLAY_FLUX\n    rescale_to_new_units ();\n#endif",
+                                 "#if !REPLAY_FLUX\n    // (mutant: no rescale)\n#endif")],
+                               ["caseT_warm", "caseT_cold"],
+                               ["test_s16_warm_start_keeps_the_physical_speed_at_the_seam[caseT_warm]"],
+                               note="power modest: 14.5 % expected jump, 10 % bar, ~5 % parent row-to-row noise"),
+    # the pre-label rescale: omega_b ratio only, = 1 when only theta changes
+    "legacy_su": Mutant([], ["caseT_warm", "caseT_cold"],
+                        ["test_s16_warm_start_keeps_the_physical_speed_at_the_seam[caseT_warm]"],
+                        flags={"default": ["-DLEGACY_SU=1"]}),
 }
 
 
