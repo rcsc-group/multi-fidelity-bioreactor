@@ -2435,3 +2435,26 @@ Control (ctl8_rpm35 vs kmix_l8_rpm35, same inputs, different rank count): tau_95
   on coarse cells > 0 in arm "drop"). H-b: subnormal/non-finite coarse cs (probe: count > 0, explains slow
   arithmetic with equal call counts). H-c: only remote (halo) coarse cells change. Probe:
   tools/profile/cm_probe (appended to a copy; src/ untouched). Arms keep/drop x 1/4 ranks, L6, 1 period.
+
+## 2026-11-23 — VERDICT cm restriction (partial): not the cs values; deterministic; MPI-only. Parked in task 2.
+- Probe (cm_probe.h, foreach_cell, L6, 1 and 4 ranks, keep/drop): max|cs - cs(step 1)| = 0 on local/remote
+  leaf/coarse cells, every step to 300; no subnormal or non-finite cs. H-a, H-b, H-c REFUTED.
+- Keep vs drop: 1 rank bitwise equal; 4 ranks differ (185 vs 196 steps, final dt 3.33e-3 vs 2.5e-3).
+  Arms "once" (restriction({cm}) after fractions_cleanup at step 0) and "every" (after it each step) ALSO
+  differ from keep (192, 191 steps) and from each other. Control: keep x3 and drop x3 repeat bitwise
+  (jobs 9541821, 9542054-57): the effect is deterministic, not noise.
+- Reading of Basilisk (multigrid-common.h:424-459): restriction() writes coarse values (unchanged here),
+  exchanges coarse-level halos (boundary_iterate level) and sets the s_restriction flag. So the effect is in
+  cells foreach_cell does not visit (coarse halo/ghost) or in the flag state. Where the pressure solve reads
+  them is the next question: this IS task 2 (upstream test), not profiling. Production (keep) = HEAD bitwise.
+- NEW DEFECT (not production): the MPI build on 1 rank (-D_MPI=1, srun -n 1) at L6: p NITERMAX at 1743 of
+  1717 steps, dt 2.8e-4 vs 3.3e-3 at 4 ranks. The serial (non-MPI) bundle runs have 0 warnings
+  (caseT_cold, caseT_warm, half). So the bundle guards are not affected; never run the MPI build on 1 rank.
+- Sampler (pre-registered above), 4 ranks L6: all 24 outputs bitwise equal to HEAD (14 snapshots,
+  uv_field.bin, streaming_field.bin, all .dat without wall-time fields), wall 5.57 -> 4.61 s. First mutant
+  (nearest value instead of bilinear) was EQUIVALENT: at cell centres interpolate_linear() returns s[]
+  exactly. Replaced by a transposed index (job 9542207).
+- VERDICT sampler (2026-11-23): transposed-index mutant (job 9542207) changes all 16 .bin files and no .dat
+  -> the check has power. 1-rank arms timed out (1-rank defect) but their 14 files (5 snapshots) are bitwise
+  equal. Full + MPI bundle on the sampler src (jobs 9542347/48): 40/40 guards PASS. Committed. Prediction (b)
+  (reduction count) is checked by the L10 caller run and the next callers run on the new src.

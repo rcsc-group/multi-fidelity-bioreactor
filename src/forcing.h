@@ -59,22 +59,12 @@ event streaming_vorticity (i++)
     // an n x n grid. f_acc / window = fraction of the period the cell was water.
     {
       int    n_s  = NN;
-      double dx_s = L0 / n_s;
       scalar *sp = {ubar.x, ubar.y, omega_bar, f_acc};
       int np_s = 4;
       float *bs = (float *) malloc ((size_t) np_s * n_s * n_s * sizeof (float));
       int ks = 0;
-      for (scalar s in sp) {
-        for (int j = 0; j < n_s; j++) {
-          double yj = Y0 + (j + 0.5) * dx_s;
-          for (int ii = 0; ii < n_s; ii++) {
-            double xi = X0 + (ii + 0.5) * dx_s;
-            bs[(size_t) ks * n_s * n_s + j * n_s + ii] =
-              (float) interpolate (s, xi, yj);
-          }
-        }
-        ks++;
-      }
+      for (scalar s in sp)
+        sample_grid (s, n_s, bs + (size_t) (ks++) * n_s * n_s);
 #if _MPI
       if (pid() == 0)
 #endif

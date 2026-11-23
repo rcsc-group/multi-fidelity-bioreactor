@@ -13,7 +13,6 @@
 static void write_snapshot (const char *path, double t_nd)
 {
   int    n  = NN;
-  double dx = L0 / n;
   scalar omega[];
   vorticity (u, omega);
 
@@ -21,17 +20,8 @@ static void write_snapshot (const char *path, double t_nd)
   int np = SNAP_NPLANES;
   float *buf = (float *) malloc ((size_t) np * n * n * sizeof (float));
   int k = 0;
-  for (scalar s in planes) {
-    for (int j = 0; j < n; j++) {
-      double yj = Y0 + (j + 0.5) * dx;
-      for (int i = 0; i < n; i++) {
-        double xi = X0 + (i + 0.5) * dx;
-        // interpolate() is collective: every rank calls it for every cell.
-        buf[(size_t) k * n * n + j * n + i] = (float) interpolate (s, xi, yj);
-      }
-    }
-    k++;
-  }
+  for (scalar s in planes)
+    sample_grid (s, n, buf + (size_t) (k++) * n * n);   // collective: every rank calls it
 #if _MPI
   if (pid() == 0)
 #endif
@@ -72,28 +62,18 @@ event field_snapshots (i++)
 
 // uv_field.bin: velocity at the checkpoint instant (a period boundary), for grid-convergence norms across
 // levels (Kim et al., Fig. A.16c). Format: int n, double t, then float planes ux, uy, f, cs of n*n values.
-// interpolate() is collective: every rank calls it for every point.
+// sample_grid() is collective: every rank calls it.
 static void write_uv_field (double t_nd)
 {
   int    n  = NN;
-  double dx = L0 / n;
   float *bux = (float *) malloc (n * n * sizeof (float));
   float *buy = (float *) malloc (n * n * sizeof (float));
   float *bf  = (float *) malloc (n * n * sizeof (float));
   float *bcs = (float *) malloc (n * n * sizeof (float));
-  int idx = 0;
-  for (int j = 0; j < n; j++) {
-    double yj = Y0 + (j + 0.5) * dx;
-    for (int i = 0; i < n; i++) {
-      double xi = X0 + (i + 0.5) * dx;
-      // interpolate() is collective -- every rank must call it for all cells.
-      bux[idx] = (float) interpolate (u.x, xi, yj);
-      buy[idx] = (float) interpolate (u.y, xi, yj);
-      bf [idx] = (float) interpolate (f,   xi, yj);
-      bcs[idx] = (float) interpolate (cs,  xi, yj);
-      idx++;
-    }
-  }
+  sample_grid (u.x, n, bux);
+  sample_grid (u.y, n, buy);
+  sample_grid (f,   n, bf);
+  sample_grid (cs,  n, bcs);
 #if _MPI
   if (pid() == 0)
 #endif

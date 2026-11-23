@@ -493,6 +493,7 @@ int main (int argc, char * argv[])
 #include "restart.h"        // restart checks (functions only)
 #include "init.h"           // event init: geometry, initial fields, or restore
 #include "scalars.h"        // tracer and oxygen release
+#include "sample_grid.h"    // scalars on a uniform grid, one MPI reduction per field
 #include "forcing.h"        // rocking acceleration, streaming vorticity, droplet removal
 #include "snapshots.h"      // uniform-grid field snapshots
 #include "checkpoint.h"     // wall-clock stop and checkpoint dump
