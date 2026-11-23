@@ -2382,3 +2382,18 @@ Control (ctl8_rpm35 vs kmix_l8_rpm35, same inputs, different rank count): tau_95
   has 0 warnings. So not a flag artifact, not a regression; layout-dependent (deep coarsening?). Not used in
   production; may share a cause with the L10 per-cell cost. tools/profile/profile.sbatch: unset inherited
   SLURM_MEM_*/TRES/CPUS before srun (srun refused).
+
+## 2026-11-23 — Profiling: L8 strong scaling, zero-field diffusion gate (bitwise exact, 1.62x pre-release)
+- L8 strong scaling (TRACE=2, 32.5 rpm, 2 periods): 4 ranks 93.5 ms/step (5.7 us/cell-step), 16: 28.2 (6.9),
+  64: 13.6 (13.3). At 64 ranks 77 % of time is MPI (waitany, boundary_level, all_reduce: ~330 reductions/step).
+  At 4 ranks multigrid (mg_cycle, mg_solve, restriction) ~65 %.
+- tracer_diffusion (henry_oxy2.h, c2 + oxy) = 26/28/25 % of wall time at 4/16/64 ranks, and 27.3 % in a run that
+  never releases (n_mix_cycles 100): the Henry solve ran every step on fields that are exactly zero.
+- Fix: skip the solve while max|c| == 0 (data gate, not t_mix: restarts/replays need no special case).
+  FIRST TRY FAILED: outputs differed at 1e-6 before release (b0 column, t = 0.06) and the run was 5x slower
+  (all_reduce 10 -> 150 us/call, same node node2428, same call count). Hypothesis B: the gated block held
+  restriction({D, beta, cm}); the pressure multigrid depends on that restriction of cm. Test: keep
+  restriction({cm}) outside the gate -> L6 cold run bitwise equal to HEAD (tr_oxy, shear_stress, normf,
+  vol_frac_interf, checkpoint.dump); L8 64-rank no-release 39.18 -> 24.18 s (1.62x), diffusion 27.3 -> 1.7 %.
+  B CONFIRMED. Open: why does the pressure solve need cm restricted every step (cm is static geometry)?
+  Possibly linked to the 1-rank L8 non-convergence. Full + MPI bundle on the final src: jobs 9536526/27.

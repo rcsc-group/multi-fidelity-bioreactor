@@ -3,7 +3,12 @@
 Open work after APS DFD (2026-11-25), ranked by ambition. When an item starts, give it a diary entry; when it
 lands, delete it here. DFD-era entries were moved out on 2026-11-22 (see diary.md, same date).
 
-## Ambitious tracks (user, 2026-11-22: "profiling campaign, or a GPU equivalent")
+## Ambitious tracks — ORDER (user 2026-11-23): 1 finish profiling, 2 upstream cm test, 3 capillary dt wall
+
+- **Upstream cm test.** Reproduce the pressure-multigrid dependence on restriction({cm}) (5x slower without it)
+  and the 1-rank L8 non-convergence in a STOCK Basilisk embed example. Prior ~25 % Basilisk-side.
+- **Capillary dt wall.** dt = capillary limit at L10 (0.24 % match): cost ~11x/level. Full-paper lit review on
+  relaxing the explicit capillary constraint, then a falsifiable prototype. Prior ~10-15 %.
 
 - **GPU solver.** The production solver runs on a uniform tree (refine(level < L), no adapt_wavelet), so a
   Basilisk GPU multigrid backend (basilisk/src/grid/gpu) is in reach. Blocker: the GPU backend has no
