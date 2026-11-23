@@ -2371,3 +2371,14 @@ Control (ctl8_rpm35 vs kmix_l8_rpm35, same inputs, different rank count): tau_95
   FAILED. All caught. Bundle work: /oscar/scratch/eaguerov/bundle_caseT_20261123.
 - Consequence: theta sweeps by warm start are allowed on binaries built from src/ since b208993. Old
   pre-label runs (171) stay excluded.
+
+## 2026-11-23 — Profiling, first findings
+- H1 CONFIRMED (zero compute): L10 dt = capillary limit (tension.h:60): predicted 5.6473e-5, measured 5.6338e-5
+  (0.24 %, dtnext rounding). Cost/level ~ dx^-3.5 = 11.3x; L10 ~10.4k steps/period. Script: scratchpad dt_cap.py.
+- Per cell-step: prod L8 (bo1, 16 ranks, 4096 c/rank) 7 us; current src L8 16 ranks 6 us; L10 x8 (32 ranks,
+  32768 c/rank) 20 us. L10 ~3x worse per cell: open lead.
+- NEW DEFECT: fresh L8 on ONE MPI rank: p, u.x, oxy multigrid hit NITERMAX 1000 every step (~48 s/step).
+  Arms: +TRACE only, +DIAGNOSTICS only, and production binary 2ef5b07 all show it; current src at 16 ranks
+  has 0 warnings. So not a flag artifact, not a regression; layout-dependent (deep coarsening?). Not used in
+  production; may share a cause with the L10 per-cell cost. tools/profile/profile.sbatch: unset inherited
+  SLURM_MEM_*/TRES/CPUS before srun (srun refused).
